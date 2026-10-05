@@ -86,24 +86,28 @@ terms consistent, and rewrite idioms. That's the core of this design (§5).
 Manifest V3, built with **WXT + TypeScript**. The panel UI uses Preact or Svelte, kept small.
 
 ```
-┌──────────────┐  extract / highlight  ┌──────────────────────┐   provider API
-│Content script│◀─────────────────────▶│ Service worker       │◀──────────────▶ Claude / OpenAI-compat
-│ - Readability│   segments, viewport  │ (orchestrator)       │                 / Chrome built-in AI
-│ - segmenter  │   events              │ - job queue/priority │
-│ - IO/scroll  │                       │ - chunker            │
-│   observers  │                       │ - prompt builder     │
-└──────────────┘                       │ - provider adapters  │
-                                       │ - cache (IndexedDB)  │
-┌──────────────┐  long-lived Port      │                      │
-│ Side panel UI│◀─────────────────────▶│                      │
-│ - render     │  stream of segment    └──────────────────────┘
-│ - settings   │  translations
-└──────────────┘
+┌──────────────┐  segments, viewport,   ┌──────────────────────────┐   provider API
+│Content script│◀──────────────────────▶│ Side panel (engine host) │◀──────────────▶ Claude / OpenAI-compat
+│ - Readability│  hover / scroll events │ - render, settings       │                 / Chrome built-in AI
+│ - segmenter  │  (tabs.connect)        │ - translation engine (§5)│
+│ - IO/scroll  │                        │   chunker, prompts,      │
+│   observers  │                        │   parsing                │
+└──────▲───────┘                        │ - provider adapters      │
+       │ inject                         │ - cache (IndexedDB)      │
+┌──────┴───────────────┐                │ - per-tab jobs           │
+│ Service worker       │  open panel,   │                          │
+│ (coordinator)        │───────────────▶│                          │
+│ - action / Alt+T     │  tab lifecycle └──────────────────────────┘
+│ - context menu       │
+│ - injection          │
+│ - tab lifecycle      │
+└──────────────────────┘
 ```
 
 ### 4.1 Components
 1. **Content script** (injected only when you open the panel, using the `activeTab` and
-   `scripting` permissions rather than a blanket `<all_urls>` content script):
+   `scripting` permissions rather than a blanket `<all_urls>` content script; re-injected on
+   navigation while the `activeTab` grant or a site permission holds (decision S5)):
    - Runs Readability on a cloned DOM. If the result is poor (too little text compared with the
      page), it falls back to walking `main`/`article`/`[role=main]`.
    - **Segmenter**: produces `Segment { id, kind: heading|p|li|quote|code|table-cell|caption, text,
@@ -115,16 +119,12 @@ Manifest V3, built with **WXT + TypeScript**. The panel UI uses Preact or Svelte
      scroll sync.
    - A MutationObserver plus URL-change detection handles SPAs: only new or changed segments are
      sent again.
-2. **Service worker (orchestrator)**:
-   - Holds one job per tab: segments go into chunks, chunks go into a priority queue (viewport
-     first) with 2–3 requests in flight at once.
-   - Hands each job to the **translation engine** (§5), which owns prompts, model calls, and
-     output parsing. The worker just forwards the engine's segment events to the panel.
-   - Caches results (§7).
-   - MV3 workers can be suspended. Each job keeps its state in `chrome.storage.session` and can
-     resume. A long-lived Port to the panel keeps the worker alive while a stream is active.
-3. **Side panel**: renders segments, settings, and glossary, and sends hover and scroll events
-   back to the content script through the worker.
+2. **Service worker (coordinator)**: handles the toolbar action, `Alt+T` and the context menu,
+   injects the content script, and tracks tab lifecycle. It holds no translation state and never
+   awaits a model stream (decision S1: an open Port does not keep a worker alive).
+3. **Side panel** (engine host): owns one job per tab in its window, runs the translation engine
+   and provider calls, caches results (§7), renders segments, settings and glossary, and exchanges
+   segments, viewport, hover and scroll events with the content script directly (`tabs.connect`).
 
 ### 4.2 Provider layer: protocols, not vendors
 
