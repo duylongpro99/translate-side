@@ -1,6 +1,6 @@
 # S5 — `activeTab` and navigation → permission and allowlist design
 
-Status: proposed (awaiting review; amended after review round 1) · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS) · Spike code: `spikes/s5/`
+Status: **user decisions 2026-10-05 recorded** (deviation (a) approved with `http://*/*`; (c) open-only in M0; R1 pause on tab switch); manual checklist still pending; amended after review round 1 · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS) · Spike code: `spikes/s5/`
 
 ## Question
 
@@ -102,6 +102,16 @@ should behave exactly like the toolbar rows above, in both modes. Context-menu c
 
 ## Decision
 
+**User decisions 2026-10-05:**
+
+- **Deviation (a): approved.** That covers `action.onClicked` → `sidePanel.open({tabId})` → inject,
+  `openPanelOnActionClick: false`, and `http://*/*` added to `optional_host_permissions` (Decision 6). Phase C (M0-E3)
+  implements it. This spike changes no master code.
+- **Deviation (c): open-only in M0** (option 1). The panel closes with its own X. The toggle is revisited in M5.
+- **R1, jobs under the global panel: pause on tab switch.** Only the active tab's job schedules chunks. This is
+  formalized in M1 (see Consequences).
+- **Spec change 7** (ROADMAP §8 item 6) stays conditional on the manual checklist, as written.
+
 1. **Do not use `setPanelBehavior({ openPanelOnActionClick: true })`.** It opens the panel without granting
    `activeTab` and without firing `action.onClicked`, so the extension can never read the page it opened on. Use
    `openPanelOnActionClick: false`. In `action.onClicked` (toolbar or `Alt+T`), call `sidePanel.open({ tabId })` and
@@ -156,6 +166,8 @@ should behave exactly like the toolbar rows above, in both modes. Context-menu c
   (`results/onclicked-optional.jsonl`), the panel opened and injection worked.
 - Proposed change: `setPanelBehavior({ openPanelOnActionClick: false })`. The action handler opens the panel and injects
   (Decision 1). Phase A code is not changed by this spike.
+- **User decision 2026-10-05: approved**, together with `http://*/*` in `optional_host_permissions`. Phase C (M0-E3)
+  implements it.
 
 **Deviation (c): the toolbar and `Alt+T` no longer toggle the panel closed.**
 
@@ -164,6 +176,7 @@ should behave exactly like the toolbar rows above, in both modes. Context-menu c
 - Evidence: in `behavior` mode a second click closed the panel (`panel-UNLOAD` 0.4 s later). In `onclicked` mode a
   second click (`onclicked-optional.jsonl`, step 13) kept it open, because `sidePanel.open()` on an open panel does
   nothing.
+- **User decision 2026-10-05: option 1, open-only in M0; the toggle is revisited in M5.**
 - Options for the user:
   1. **Accept open-only** in M0. `Alt+T` and the toolbar always open the panel and inject; the panel has its own close
      button.
@@ -190,7 +203,7 @@ when the panel is already open"; `minimum_chrome_version` 138.
 
 ## Consequences
 
-- **M0-E2**, master code this changes (if the user accepts deviation (a)):
+- **M0-E2 / M0-E3**, master code this changes (deviation (a), approved 2026-10-05; Phase C implements it):
   - `src/shared/panel.ts:14`: `setPanelBehavior({ openPanelOnActionClick: true })` → `false`, plus an
     `action.onClicked` handler. `src/shared/panel.test.ts:11` asserts the old value.
   - `src/shared/panel.ts:33`: the context-menu handler follows the same rule, open first, then inject.
@@ -212,9 +225,9 @@ when the panel is already open"; `minimum_chrome_version` 138.
 - **M0-E4:** injection starts while the panel is still loading (in the spike, `panel-LOADED` arrived after
   `inject-OK`). The protocol needs a panel-ready handshake. The content script waits for, or answers, the panel's
   connect; it never pushes into a panel that may not exist yet.
-- **Jobs under the global panel (affects S1's per-tab jobs).** "Auto-translate when the panel is already open"
-  applies to every allowlisted tab in the window. Switching to an allowlisted tab would start a job there. Proposed
-  rule: only the active tab's job schedules new chunks; a tab that loses focus finishes its in-flight chunks and stops.
+- **Jobs under the global panel (affects S1's per-tab jobs). R1, user decision 2026-10-05: pause on tab switch,
+  formalized in M1.** "Auto-translate when the panel is already open" applies to every allowlisted tab in the window.
+  Switching to an allowlisted tab would start a job there. The rule: only the active tab's job schedules new chunks; a tab that loses focus finishes its in-flight chunks and stops.
   Switching back resumes, served from the cache. This keeps the per-window concurrency limit meaningful. Not tested.
 - The panel needs a "lost access" state with the two actions above. A panel button never triggers injection on its own
   without a grant.
