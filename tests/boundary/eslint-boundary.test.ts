@@ -12,6 +12,7 @@ const BOUNDARY_RULES = new Set([
   'no-restricted-syntax',
   'no-new-func',
   'no-eval',
+  '@typescript-eslint/ban-ts-comment',
 ]);
 
 async function boundaryErrors(code: string, filePath: string): Promise<string[]> {
@@ -105,6 +106,11 @@ const violations: [string, string, string][] = [
   ['self.browser', `export const id = self.browser.runtime.id;`, 'no-restricted-globals'],
   ['globalThis["document"]', `export const d = globalThis['document'];`, 'no-restricted-globals'],
   ['shell module', `import { setupPanelBehavior } from '../../shared/panel.ts';\nexport const s = setupPanelBehavior;`, 'boundary/engine-imports'],
+  // Round 3 (tester B): other window references reach the DOM.
+  ['top global', `export const t = top;`, 'no-restricted-globals'],
+  ['frames global', `export const f = frames;`, 'no-restricted-globals'],
+  ['parent global', `export const p = parent;`, 'no-restricted-globals'],
+  ['opener global', `export const o = opener;`, 'no-restricted-globals'],
 ];
 
 describe('engine/ boundary (ESLint)', () => {
@@ -132,8 +138,29 @@ describe('engine/ boundary (ESLint)', () => {
     ['interface via relative path', `import type { LLMClient } from '../../llm/types.ts';\nexport type C = LLMClient;`],
     ['interface without extension', `import type { LLMClient } from '../../llm/types';\nexport type C = LLMClient;`],
     ['interface via @/ alias', `import type { LLMClient } from '@/llm/types';\nexport type C = LLMClient;`],
+    // Round 3 (NB-2): `require` as a property name and `new.target` are not loaders.
+    ['require as an object key', `export const o = { require: 1 };`],
+    ['require as a member property', `export const r = (o: { require: number }) => o.require;`],
+    ['require as an interface key', `export interface R { require: string; require2(): void }`],
+    ['require as a class member', `export class C { require = 1; run() { return this.require; } }`],
+    ['new.target', `export class C { constructor() { if (new.target !== C) throw new Error('subclass'); } }`],
   ])('allows %s', async (_name, code) => {
     expect(await boundaryErrors(code, ENGINE_FILE)).toEqual([]);
+  });
+
+  // Round 3 (NB-3): an alias into engine/ gets a hint to use a relative path.
+  it('explains that engine files are imported by relative path, not alias', async () => {
+    const [result] = await eslint.lintText(`import { a } from '@/engine/util';\nexport const b = a;`, { filePath: ENGINE_FILE });
+    expect(result?.messages.map((m) => m.message).join('\n')).toMatch(/relative path/);
+  });
+
+  // Round 3 (tester B): TypeScript suppressions would hide the type layer (no DOM/chrome types).
+  it.each([
+    ['@ts-expect-error', `// @ts-expect-error engine has no DOM lib, read the title anyway\nexport const t: string = document.title;`],
+    ['@ts-ignore', `// @ts-ignore\nexport const id: string = chrome.runtime.id;`],
+    ['@ts-nocheck', `// @ts-nocheck\nexport const x = 1;`],
+  ])('rejects %s in engine source', async (_name, code) => {
+    expect(await boundaryErrors(code, ENGINE_FILE)).toContain('@typescript-eslint/ban-ts-comment');
   });
 
   it('allows engine tests to import vitest, and nothing else outside engine/', async () => {
@@ -176,8 +203,33 @@ describe('llm/types.ts stays import-free', () => {
     ['re-export', `export * from './anthropic.ts';`],
     ['named re-export', `export { AnthropicClient } from './anthropic.ts';`],
     ['dynamic import', `export const m = () => import('./anthropic.ts');`],
+    // Round 3 (tester A): types only, so importing it can never run code.
+    ['const', `export const x = 1;`],
+    ['let', `let x = 1;\nexport type X = typeof x;`],
+    ['function', `export function f(): void {}`],
+    ['class', `export class C {}`],
+    ['enum', `export enum E { A }`],
+    ['expression statement', `console.log('side effect');\nexport type X = 1;`],
+    ['declare global', `declare global { var chrome: unknown }\nexport type X = 1;`],
+    ['declare const', `declare const chrome: unknown;\nexport type X = typeof chrome;`],
+    ['export declare const', `export declare const x: number;`],
+    ['declare module', `declare module 'wxt/browser' { export const b: unknown }\nexport type X = 1;`],
+    ['namespace', `export namespace N { export type X = 1 }`],
+    ['export default', `export default 1;`],
+    ['value export list', `interface I { a: 1 }\nexport { I };`],
   ])('rejects %s', async (_name, code) => {
     expect(await boundaryErrors(code, 'src/llm/types.ts')).not.toEqual([]);
+  });
+
+  it('allows type aliases, interfaces and type-only exports', async () => {
+    const code = [
+      `type A = 1;`,
+      `interface B { a: A; require: string }`,
+      `export type C = A | B;`,
+      `export interface D { b: B }`,
+      `export type { A, B };`,
+    ].join('\n');
+    expect(await boundaryErrors(code, 'src/llm/types.ts')).toEqual([]);
   });
 
   it('the real src/llm/types.ts is clean', async () => {

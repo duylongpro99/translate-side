@@ -7,13 +7,18 @@
 //      another folder, an alias, or a package (wxt, @types/chrome, …) shows up here.
 //   3. ESLint itself confirms the boundary applies: only the root eslint.config.js exists (ESLint
 //      10 looks up config per file, so a nested one would replace it), and the effective config
-//      for every engine file has the boundary rules on and inline config off.
+//      for every engine file has the boundary rules on, inline config off, TS suppressions
+//      banned, and the shared package allowlist (eslint/boundary-plugin.js).
+//   4. src/engine/tsconfig.json is the expected shape: no DOM/WebWorker lib, no ambient types,
+//      no extends/paths/baseUrl/typeRoots/files, and the expected include/exclude. Lib files
+//      are trusted by step 2, so the lib list is what keeps DOM types out.
 // Run: node scripts/check-engine-boundary.mjs [root]
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ESLint } from 'eslint';
 import ts from 'typescript';
+import { ENGINE_PACKAGES, ENGINE_TEST_PACKAGES } from '../eslint/boundary-plugin.js';
 
 const TEST_FILE = /\.test\.ts$/;
 
@@ -30,6 +35,43 @@ function walk(dir, out = []) {
 const CONFIG_FILE = /^(eslint\.config\.(js|mjs|cjs|ts|mts|cts)|\.eslintrc(\..+)?)$/;
 const SKIP_DIRS = new Set(['node_modules', '.git', '.output', '.wxt', 'coverage']);
 const REQUIRED_RULES = ['boundary/engine-imports', 'no-restricted-globals', 'no-restricted-syntax', 'no-eval', 'no-new-func'];
+const SUPPRESSIONS = ['ts-expect-error', 'ts-ignore', 'ts-nocheck'];
+
+const sameList = (a, b) => JSON.stringify([...(a ?? [])].sort()) === JSON.stringify([...b].sort());
+
+/** Package name of a file under node_modules (the innermost one), or null. */
+function packageOf(file) {
+  const parts = file.split(path.sep);
+  const i = parts.lastIndexOf('node_modules');
+  if (i < 0 || i + 1 >= parts.length) return null;
+  return parts[i + 1].startsWith('@') ? `${parts[i + 1]}/${parts[i + 2]}` : parts[i + 1];
+}
+
+const EXPECTED_INCLUDE = ['./**/*.ts'];
+const EXPECTED_EXCLUDE = ['./**/*.test.ts'];
+const FORBIDDEN_OPTIONS = ['paths', 'baseUrl', 'typeRoots', 'rootDirs'];
+const FORBIDDEN_TOP = ['extends', 'files', 'references'];
+
+function checkTsconfig(configPath, rel) {
+  const problems = [];
+  const { config, error } = ts.readConfigFile(configPath, ts.sys.readFile);
+  if (error || !config) return [`${rel}: cannot be read: ${error ? ts.flattenDiagnosticMessageText(error.messageText, '\n') : 'empty'}`];
+  const opts = config.compilerOptions ?? {};
+  for (const key of FORBIDDEN_TOP) if (key in config) problems.push(`${rel}: ${key} is not allowed`);
+  for (const key of FORBIDDEN_OPTIONS) if (key in opts) problems.push(`${rel}: compilerOptions.${key} is not allowed`);
+  if (!Array.isArray(opts.lib)) problems.push(`${rel}: compilerOptions.lib must be set (the default lib includes the DOM)`);
+  for (const lib of opts.lib ?? []) {
+    if (!/^es(\d+|next)(\..+)?$/i.test(lib) || /dom|webworker|scripthost/i.test(lib)) {
+      problems.push(`${rel}: compilerOptions.lib must not include "${lib}" (ES libs only)`);
+    }
+  }
+  if (!Array.isArray(opts.types) || opts.types.length > 0) {
+    problems.push(`${rel}: compilerOptions.types must be [] (no ambient @types such as chrome or node)`);
+  }
+  if (!sameList(config.include, EXPECTED_INCLUDE)) problems.push(`${rel}: include must be ${JSON.stringify(EXPECTED_INCLUDE)}`);
+  if (!sameList(config.exclude, EXPECTED_EXCLUDE)) problems.push(`${rel}: exclude must be ${JSON.stringify(EXPECTED_EXCLUDE)}`);
+  return problems;
+}
 
 function findConfigFiles(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -64,8 +106,16 @@ async function checkEslintApplies(root, engineFiles) {
       const severity = config?.rules?.[rule]?.[0];
       if (severity !== 2 && severity !== 'error') problems.push(`${rel}: ESLint rule ${rule} is not on`);
     }
-    if (!/\.test\.[a-z]+$/.test(file) && config?.linterOptions?.noInlineConfig !== true) {
-      problems.push(`${rel}: inline ESLint config is not disabled`);
+    const isTest = /\.test\.[a-z]+$/.test(file);
+    const allowed = config?.rules?.['boundary/engine-imports']?.[1]?.allowedPackages;
+    if (!sameList(allowed, isTest ? ENGINE_TEST_PACKAGES : ENGINE_PACKAGES)) {
+      problems.push(`${rel}: boundary/engine-imports allows packages ${JSON.stringify(allowed ?? [])}, not the shared list in eslint/boundary-plugin.js`);
+    }
+    if (isTest) continue;
+    if (config?.linterOptions?.noInlineConfig !== true) problems.push(`${rel}: inline ESLint config is not disabled`);
+    const [severity, banTs = {}] = config?.rules?.['@typescript-eslint/ban-ts-comment'] ?? [];
+    if ((severity !== 2 && severity !== 'error') || SUPPRESSIONS.some((d) => banTs[d] !== true)) {
+      problems.push(`${rel}: @ts-expect-error/@ts-ignore/@ts-nocheck are not banned`);
     }
   }
   return problems;
@@ -87,6 +137,7 @@ export async function checkEngineBoundary(root) {
   }
 
   const configPath = path.join(engineDir, 'tsconfig.json');
+  problems.push(...checkTsconfig(configPath, rel(configPath)));
   const parsed = ts.getParsedCommandLineOfConfigFile(configPath, {}, {
     ...ts.sys,
     onUnRecoverableConfigFileDiagnostic: (d) => {
@@ -104,7 +155,7 @@ export async function checkEngineBoundary(root) {
     const inside = !path.relative(realEngine, real).startsWith('..');
     if (TEST_FILE.test(real) && inside) {
       problems.push(`${rel(sf.fileName)}: engine source must not import test files`);
-    } else if (!inside && real !== interfaceFile) {
+    } else if (!inside && real !== interfaceFile && !ENGINE_PACKAGES.includes(packageOf(real))) {
       problems.push(`${rel(sf.fileName)}: outside the engine boundary, but reachable from src/engine/`);
     }
   }
@@ -119,5 +170,5 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.error(`engine boundary violated (DESIGN.md §5.1):\n- ${problems.join('\n- ')}`);
     process.exit(1);
   }
-  console.log('engine boundary: OK (closure = src/engine/ + src/llm/types.ts + TS lib; ESLint boundary applies to every engine file)');
+  console.log('engine boundary: OK (closure = src/engine/ + src/llm/types.ts + TS lib; ESLint boundary applies to every engine file; engine tsconfig as expected)');
 }

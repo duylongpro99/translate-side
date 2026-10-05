@@ -6,8 +6,26 @@
 // Everything else fails: other src/ folders, aliases, node: builtins, URLs, Vite `?query`
 // suffixes. The same resolution is re-checked with TypeScript's resolver over the whole
 // engine program by scripts/check-engine-boundary.mjs.
+//
+// Boundary threat model and residuals (user decision, round 3): the boundary guards against
+// ACCIDENTAL coupling, i.e. engine code that picks up chrome, the DOM, wxt or an llm/ adapter
+// by habit or autocomplete. It is not a sandbox against deliberately hostile code, and it
+// stops growing here. Known, accepted gaps:
+//   - O-21: keys built at runtime (`f['constr' + 'uctor']`) still reach the Function
+//     constructor. MV3 CSP blocks string evaluation in the extension anyway.
+//   - C / NB-1: the same escape spelled so the selectors miss it: a template-literal or
+//     computed destructuring `constructor` key, or `Object['getPrototypeOf']`.
+//   - D: the root config can loosen a layer, e.g. a vitest/vite `resolve.alias` that points an
+//     allowed specifier somewhere else. check:engine catches the common ESLint edits only.
+//   - E: engine test files (*.test.ts) may use inline eslint-disable and are not built.
+// Root-config edits and test files are out of scope here and are guarded by code review.
 import fs from 'node:fs';
 import path from 'node:path';
+
+/** Packages engine source may import. One list, used by eslint.config.js and check:engine. */
+export const ENGINE_PACKAGES = Object.freeze([]);
+/** Packages engine tests may import. */
+export const ENGINE_TEST_PACKAGES = Object.freeze(['vitest']);
 
 const INTERFACE_ALIASES = ['@/llm/types', '@/llm/types.ts', '~/llm/types', '~/llm/types.ts'];
 const STRIP_EXT = /\.(ts|js|mts|mjs|cts|cjs|tsx|jsx)$/;
@@ -42,6 +60,9 @@ export function checkSpecifier(spec, { filename, root, allowedPackages = [] }) {
   const interfaceFile = path.join(root, 'src/llm/types.ts');
   if (/[?#]/.test(spec)) return 'query or hash suffixes (Vite `?raw`, `?worker`, …) are not allowed';
   if (INTERFACE_ALIASES.includes(spec)) return null;
+  if (/^(@|~|~~)\/(src\/)?engine(\/|$)/.test(spec)) {
+    return `'${spec}': import files inside src/engine/ by relative path (e.g. './util.ts'); aliases are not allowed`;
+  }
   if (!spec.startsWith('.')) {
     const pkg = spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0];
     return allowedPackages.includes(pkg) ? null : `'${spec}' is not an allowed package or path`;

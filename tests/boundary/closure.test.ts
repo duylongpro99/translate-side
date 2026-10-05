@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import ts from 'typescript';
 import { afterEach, describe, expect, it } from 'vitest';
 import { checkEngineBoundary } from '../../scripts/check-engine-boundary.mjs';
 
@@ -127,5 +128,62 @@ describe('engine/ boundary (resolver closure)', () => {
       'src/engine/x.ts': `import { t } from './x.test.ts';\nexport const u = t;\n`,
     });
     expect(await checkEngineBoundary(root)).toContain('src/engine/x.test.ts: engine source must not import test files');
+  });
+
+  it('rejects a root config that stops banning TS suppressions in engine source (tester round 3 B)', async () => {
+    const root = makeRoot();
+    const config = fs.readFileSync(path.join(root, 'eslint.config.js'), 'utf8');
+    const off = config.replace("{ 'ts-expect-error': true,", "{ 'ts-expect-error': 'allow-with-description',");
+    expect(off).not.toBe(config);
+    fs.writeFileSync(path.join(root, 'eslint.config.js'), off);
+    expect(await checkEngineBoundary(root)).toContain('src/engine/index.ts: @ts-expect-error/@ts-ignore/@ts-nocheck are not banned');
+  });
+
+  // Round 3 (NB-4): one allowlist, used by ESLint and by this check.
+  it('rejects a root config whose engine package allowlist differs from the shared one', async () => {
+    const root = makeRoot();
+    const config = fs.readFileSync(path.join(root, 'eslint.config.js'), 'utf8');
+    const widened = config.replace('allowedPackages: ENGINE_PACKAGES', "allowedPackages: ['wxt']");
+    expect(widened).not.toBe(config);
+    fs.writeFileSync(path.join(root, 'eslint.config.js'), widened);
+    expect((await checkEngineBoundary(root)).join('\n')).toMatch(/src\/engine\/index\.ts: boundary\/engine-imports allows packages \["wxt"\]/);
+  });
+});
+
+// Round 3 (tester D): the type layer is only as good as src/engine/tsconfig.json, so its
+// contents are checked too (a DOM lib file counts as a TS lib file in the closure above).
+describe('engine/ boundary (tsconfig contents)', () => {
+  type Options = Record<string, unknown>;
+  function withTsconfig(edit: (cfg: { compilerOptions: Options } & Options) => void): string {
+    const root = makeRoot();
+    const file = path.join(root, 'src/engine/tsconfig.json');
+    const { config } = ts.parseConfigFileTextToJson(file, fs.readFileSync(file, 'utf8'));
+    edit(config);
+    fs.writeFileSync(file, JSON.stringify(config, null, 2));
+    return root;
+  }
+
+  it.each([
+    ['DOM lib', (c: Options & { compilerOptions: Options }) => { c.compilerOptions.lib = ['ES2022', 'DOM']; }, /lib must not include "DOM"/],
+    ['DOM.Iterable lib', (c: Options & { compilerOptions: Options }) => { c.compilerOptions.lib = ['ES2022', 'dom.iterable']; }, /lib must not include "dom\.iterable"/],
+    ['WebWorker lib', (c: Options & { compilerOptions: Options }) => { c.compilerOptions.lib = ['ES2022', 'WebWorker']; }, /lib must not include "WebWorker"/],
+    ['WebWorker.ImportScripts lib', (c: Options & { compilerOptions: Options }) => { c.compilerOptions.lib = ['ES2022', 'webworker.importscripts']; }, /lib must not include/],
+    ['default lib (no lib option)', (c: Options & { compilerOptions: Options }) => { delete c.compilerOptions.lib; }, /lib must be set/],
+    ['ambient chrome types', (c: Options & { compilerOptions: Options }) => { c.compilerOptions.types = ['chrome']; }, /types must be \[\]/],
+    ['all ambient types (no types option)', (c: Options & { compilerOptions: Options }) => { delete c.compilerOptions.types; }, /types must be \[\]/],
+    ['typeRoots', (c: Options & { compilerOptions: Options }) => { c.compilerOptions.typeRoots = ['../../node_modules/@types']; }, /typeRoots is not allowed/],
+    ['paths', (c: Options & { compilerOptions: Options }) => { c.compilerOptions.paths = { '@/*': ['../*'] }; }, /paths is not allowed/],
+    ['baseUrl', (c: Options & { compilerOptions: Options }) => { c.compilerOptions.baseUrl = '..'; }, /baseUrl is not allowed/],
+    ['extends', (c: Options & { compilerOptions: Options }) => { c.extends = '../../tsconfig.json'; }, /extends is not allowed/],
+    ['wider include', (c: Options & { compilerOptions: Options }) => { c.include = ['../**/*.ts']; }, /include must be/],
+    ['changed exclude', (c: Options & { compilerOptions: Options }) => { c.exclude = []; }, /exclude must be/],
+    ['files', (c: Options & { compilerOptions: Options }) => { c.files = ['../shared/panel.ts']; }, /files is not allowed/],
+  ])('rejects %s', async (_name, edit, pattern) => {
+    expect((await checkEngineBoundary(withTsconfig(edit))).join('\n')).toMatch(pattern);
+  });
+
+  it('allows a newer ES lib', async () => {
+    const root = withTsconfig((c) => { c.compilerOptions.lib = ['ES2023', 'ESNext.Disposable']; });
+    expect(await checkEngineBoundary(root)).toEqual([]);
   });
 });
