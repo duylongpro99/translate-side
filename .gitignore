@@ -1,0 +1,13 @@
+node_modules/
+.output/
+.wxt/
+dist/
+coverage/
+*.log
+.DS_Store
+.env
+.env.*
+web-ext.config.ts
+.impl-*-state.md
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
