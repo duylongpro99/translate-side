@@ -1,6 +1,6 @@
 # S4 — Ollama from an extension → error classifier rule
 
-Status: proposed (review round 1 addressed) · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS), headless · Spike code: `spikes/s4/`
+Status: **user decisions 2026-10-05 recorded** (deviations (d) and (e) approved; spec changes 1–4 approved, applied in the final Phase B step); review rounds 1–2 addressed · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS), headless · Spike code: `spikes/s4/`
 
 Model = gpt-oss:20b (Ollama cloud). The user picked it on 2026-10-05 (decision D5) after `qwen3.5:9b`, the plan's
 model, returned 404 on the cloud (§2 below).
@@ -76,7 +76,7 @@ Ollama answers **403** (per the ROADMAP; not tested here), while the cloud gives
 
 ### 1a. Other `TypeError`s look the same (review round 1, `results/typeerrors-*.json`)
 
-Every failure below throws `TypeError`, in the panel and in the worker alike:
+Every failure below throws `TypeError`. Each case ran in both the panel and the worker, except the offline case, which ran in the panel only (CDP network emulation was applied to the panel's target):
 
 | Case | Granted variant | None variant |
 |---|---|---|
@@ -177,7 +177,11 @@ can.
    | # | Check before `fetch` | `LLMError.kind` | Retry / fallback | Message |
    |---|---|---|---|---|
    | 0a | `new URL(base)` throws, or the scheme is not `http:`/`https:`, or the host is empty | `bad_request` | stop | "Invalid base URL" |
-   | 0b | the key fails `/^[\x20-\x7E\x80-\xFF]*$/` (it can't go in an HTTP header) | `auth` | stop | "Key has characters that can't be sent" + **Fix key** (usually a pasted newline or a smart dash) |
+   | 0b | after trimming, the key fails `/^[\x20-\x7E\x80-\xFF]*$/` (it can't go in an HTTP header) | `auth` | stop | "Key has characters that can't be sent" + **Fix key** (usually a pasted newline or a smart dash) |
+
+   **Trim the key when it is saved** (leading and trailing whitespace, including a pasted newline or tab), and run 0b
+   on the trimmed key. The regex rejects tabs and newlines, but at the edges of a value `fetch` would trim them (review
+   round 2). Without the trim, 0b would reject a key that works.
 
    Without them, a malformed base URL would reach row 1 or 2 as a plain `TypeError` (§1a), and a bad key character
    would throw a `TypeError` whose message is the only clue.
@@ -213,6 +217,9 @@ can.
    the key).
 
 ## Deviation from plan default
+
+**User decisions 2026-10-05:** deviation (d) is **approved**: `cors` with `cause: "permission" | "origin"`. Deviation
+(e) is **approved**: a new `LLMError` kind `quota`, which stops with no fallback and shows the provider's message.
 
 The default rule ("`403` + auth `none` + localhost → `cors`") is **kept unchanged**, as row 9. It is neither confirmed
 nor refuted, because localhost was not tested (user decision).
