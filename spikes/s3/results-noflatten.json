@@ -1,0 +1,383 @@
+[
+  {
+    "slug": "docusaurus-code-blocks",
+    "truthLen": 19445,
+    "truthPre": 59,
+    "truthTables": 2,
+    "truthDetails": 0,
+    "readerable": true,
+    "R": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [
+        "version: 3.10.2 code blocks code",
+        "3.10.2 code blocks code blocks",
+        "code blocks code blocks within",
+        "blocks code blocks within documentation",
+        "documentation are super-powered 💪. code",
+        "are super-powered 💪. code title",
+        "super-powered 💪. code title ​",
+        "💪. code title ​ you"
+      ],
+      "len": 17358,
+      "recall": 0.8850383205598134,
+      "precision": 0.9581529581529582,
+      "preKept": 40,
+      "tables": 2,
+      "details": 0
+    },
+    "W": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 19445,
+      "recall": 1,
+      "precision": 1,
+      "preKept": 59,
+      "tables": 2,
+      "details": 0
+    }
+  },
+  {
+    "slug": "mkdocs-material-admonitions",
+    "truthLen": 13916,
+    "truthPre": 17,
+    "truthTables": 0,
+    "truthDetails": 3,
+    "readerable": true,
+    "R": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [
+        "admonitions ¶ admonitions, also known",
+        "¶ admonitions, also known as",
+        "show alternate icon sets octicons",
+        "alternate icon sets octicons fontawesome",
+        "icon sets octicons fontawesome theme",
+        "sets octicons fontawesome theme :",
+        "octicons fontawesome theme : icon",
+        "fontawesome theme : icon :"
+      ],
+      "len": 13787,
+      "recall": 0.9790619765494137,
+      "precision": 0.9864978902953586,
+      "preKept": 17,
+      "tables": 0,
+      "details": 3
+    },
+    "W": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 13916,
+      "recall": 1,
+      "precision": 1,
+      "preKept": 17,
+      "tables": 0,
+      "details": 3
+    }
+  },
+  {
+    "slug": "gitbook-code-block",
+    "truthLen": 4013,
+    "truthPre": 6,
+    "truthTables": 0,
+    "truthDetails": 0,
+    "readerable": true,
+    "R": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [
+        "for the complete documentation index,",
+        "the complete documentation index, see",
+        "complete documentation index, see llms.txt",
+        "documentation index, see llms.txt .",
+        "index, see llms.txt . this",
+        "see llms.txt . this page",
+        "llms.txt . this page is",
+        ". this page is also"
+      ],
+      "len": 3554,
+      "recall": 0.8722222222222222,
+      "precision": 0.9936708860759493,
+      "preKept": 6,
+      "tables": 0,
+      "details": 0
+    },
+    "W": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 4013,
+      "recall": 1,
+      "precision": 1,
+      "preKept": 6,
+      "tables": 0,
+      "details": 0
+    }
+  },
+  {
+    "slug": "mdn-promise-then",
+    "truthLen": 6239,
+    "truthPre": 0,
+    "truthTables": 1,
+    "truthDetails": 1,
+    "readerable": true,
+    "R": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [
+        "promise.prototype.then() baseline widely available this",
+        "baseline widely available this feature",
+        "widely available this feature is",
+        "available this feature is well",
+        "this feature is well established",
+        "feature is well established and",
+        "is well established and works",
+        "well established and works across"
+      ],
+      "len": 5548,
+      "recall": 0.8820403825717322,
+      "precision": 1,
+      "preKept": 0,
+      "tables": 1,
+      "details": 0
+    },
+    "W": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 6239,
+      "recall": 1,
+      "precision": 1,
+      "preKept": 0,
+      "tables": 1,
+      "details": 1
+    }
+  },
+  {
+    "slug": "docsrs-tokio",
+    "truthLen": 14401,
+    "truthPre": 8,
+    "truthTables": 0,
+    "truthDetails": 1,
+    "readerable": true,
+    "R": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [
+        "crate tokio search settings help",
+        "tokio search settings help source",
+        "search settings help source expand",
+        "settings help source expand description",
+        "help source expand description a",
+        "source expand description a runtime",
+        "[\"full\"] } § authoring applications",
+        "} § authoring applications tokio"
+      ],
+      "len": 14285,
+      "recall": 0.9840496233938857,
+      "precision": 0.9910754127621597,
+      "preKept": 8,
+      "tables": 0,
+      "details": 1
+    },
+    "W": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 14401,
+      "recall": 1,
+      "precision": 1,
+      "preKept": 8,
+      "tables": 0,
+      "details": 1
+    }
+  },
+  {
+    "slug": "github-readme-bat",
+    "truthLen": 27334,
+    "truthPre": 58,
+    "truthTables": 2,
+    "truthDetails": 0,
+    "readerable": true,
+    "R": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 27334,
+      "recall": 1,
+      "precision": 1,
+      "preKept": 58,
+      "tables": 2,
+      "details": 0
+    },
+    "W": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 27334,
+      "recall": 1,
+      "precision": 1,
+      "preKept": 58,
+      "tables": 2,
+      "details": 0
+    }
+  },
+  {
+    "slug": "medium-software-2-0",
+    "truthLen": 13549,
+    "truthPre": 0,
+    "truthTables": 0,
+    "truthDetails": 0,
+    "readerable": true,
+    "R": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [
+        "machine learning artificial intelligence programming",
+        "learning artificial intelligence programming software",
+        "artificial intelligence programming software development",
+        "intelligence programming software development future",
+        "programming software development future software",
+        "software development future software 2.0",
+        "development future software 2.0 andrej",
+        "future software 2.0 andrej karpathy"
+      ],
+      "len": 13439,
+      "recall": 0.9945429740791268,
+      "precision": 1,
+      "preKept": 0,
+      "tables": 0,
+      "details": 0
+    },
+    "W": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 13549,
+      "recall": 1,
+      "precision": 1,
+      "preKept": 0,
+      "tables": 0,
+      "details": 0
+    }
+  },
+  {
+    "slug": "substack-pragmatic-shopify",
+    "truthLen": 17937,
+    "truthPre": 0,
+    "truthTables": 0,
+    "truthDetails": 0,
+    "readerable": true,
+    "R": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [
+        "flutter, and kmp apps. 1.",
+        "and kmp apps. 1. why",
+        "kmp apps. 1. why shopify",
+        "apps. 1. why shopify chose",
+        "1. why shopify chose react",
+        "chose react native in 2020",
+        "react native in 2020 let’s",
+        "native in 2020 let’s rewind"
+      ],
+      "len": 17465,
+      "recall": 0.9627554383651945,
+      "precision": 0.9868243243243243,
+      "preKept": 0,
+      "tables": 0,
+      "details": 0
+    },
+    "W": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 18256,
+      "recall": 1,
+      "precision": 0.9818770226537217,
+      "preKept": 0,
+      "tables": 0,
+      "details": 0
+    }
+  },
+  {
+    "slug": "wikipedia-futures-promises",
+    "truthLen": 31402,
+    "truthPre": 4,
+    "truthTables": 0,
+    "truthDetails": 0,
+    "readerable": true,
+    "R": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [
+        "computer science constructs not to",
+        "science constructs not to be",
+        "constructs not to be confused",
+        "not to be confused with",
+        "to be confused with promise",
+        "be confused with promise theory",
+        "confused with promise theory .",
+        "with promise theory . in"
+      ],
+      "len": 30964,
+      "recall": 0.9759312320916905,
+      "precision": 0.9908844065166796,
+      "preKept": 4,
+      "tables": 0,
+      "details": 0
+    },
+    "W": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 32003,
+      "recall": 1,
+      "precision": 0.9866189219751225,
+      "preKept": 4,
+      "tables": 0,
+      "details": 0
+    }
+  },
+  {
+    "slug": "guardian-iphone-review",
+    "truthLen": 9335,
+    "truthPre": 0,
+    "truthTables": 0,
+    "truthDetails": 0,
+    "readerable": true,
+    "R": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [
+        "lag behind top competitors. explore",
+        "behind top competitors. explore more",
+        "top competitors. explore more on",
+        "competitors. explore more on these",
+        "explore more on these topics",
+        "more on these topics iphone",
+        "on these topics iphone apple",
+        "these topics iphone apple mobile"
+      ],
+      "len": 9204,
+      "recall": 0.9888059701492538,
+      "precision": 1,
+      "preKept": 0,
+      "tables": 0,
+      "details": 0
+    },
+    "W": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 10179,
+      "recall": 1,
+      "precision": 0.9305555555555556,
+      "preKept": 0,
+      "tables": 0,
+      "details": 0
+    }
+  }
+]

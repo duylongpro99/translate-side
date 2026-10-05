@@ -1,0 +1,12 @@
+[
+  { "slug": "docusaurus-code-blocks", "generator": "Docusaurus", "url": "https://docusaurus.io/docs/markdown-features/code-blocks", "contentSelector": "article" },
+  { "slug": "mkdocs-material-admonitions", "generator": "MkDocs Material", "url": "https://squidfunk.github.io/mkdocs-material/reference/admonitions/", "contentSelector": "article.md-content__inner" },
+  { "slug": "gitbook-code-block", "generator": "GitBook", "url": "https://gitbook.com/docs/creating-content/blocks/code-block", "contentSelector": "main" },
+  { "slug": "mdn-promise-then", "generator": "MDN", "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then", "contentSelector": "main#content" },
+  { "slug": "docsrs-tokio", "generator": "docs.rs (rustdoc)", "url": "https://docs.rs/tokio/latest/tokio/", "contentSelector": "#main-content" },
+  { "slug": "github-readme-bat", "generator": "GitHub README", "url": "https://github.com/sharkdp/bat", "contentSelector": "article.markdown-body" },
+  { "slug": "medium-software-2-0", "generator": "Medium", "url": "https://medium.com/@karpathy/software-2-0-a64152b37c35", "contentSelector": "article" },
+  { "slug": "substack-pragmatic-shopify", "generator": "Substack", "url": "https://newsletter.pragmaticengineer.com/p/shopify-native-mobile", "contentSelector": ".available-content, .body.markup" },
+  { "slug": "wikipedia-futures-promises", "generator": "Wikipedia (MediaWiki)", "url": "https://en.wikipedia.org/wiki/Futures_and_promises", "contentSelector": "#mw-content-text .mw-parser-output" },
+  { "slug": "guardian-iphone-review", "generator": "News (The Guardian)", "url": "https://www.theguardian.com/technology/2026/oct/05/apple-iphone-18-pro-review-battery-life-screen-siri-camera-variable-aperture-ios-27", "contentSelector": "article #maincontent, [data-gu-name=body]" }
+]

@@ -1,0 +1,32 @@
+| fixture | variant | chosen | recall | precision | chrome leak | pre kept | walk link density |
+|---|---|---|---|---|---|---|---|
+| docusaurus-code-blocks | as-is | walk | 100% | 100% | 0 | 59/59 | 0.02 |
+| docusaurus-code-blocks | nosemantic | readability | 89% | 96% | 0 | 40/59 | - |
+| docusaurus-code-blocks | wholepage | walk | 100% | 98% | 2 | 59/59 | 0.04 |
+| mkdocs-material-admonitions | as-is | walk | 100% | 100% | 0 | 17/17 | 0.03 |
+| mkdocs-material-admonitions | nosemantic | readability | 98% | 99% | 0 | 17/17 | - |
+| mkdocs-material-admonitions | wholepage | walk | 100% | 100% | 0 | 17/17 | 0.03 |
+| gitbook-code-block | as-is | walk | 100% | 100% | 0 | 6/6 | 0.04 |
+| gitbook-code-block | nosemantic | readability | 87% | 99% | 0 | 6/6 | - |
+| gitbook-code-block | wholepage | walk | 100% | 94% | 5 | 6/6 | 0.06 |
+| mdn-promise-then | as-is | walk | 99% | 100% | 0 | 12/12 | 0.05 |
+| mdn-promise-then | nosemantic | readability | 92% | 100% | 0 | 12/12 | - |
+| mdn-promise-then | wholepage | walk | 99% | 98% | 15 | 12/12 | 0.07 |
+| docsrs-tokio | as-is | walk | 100% | 100% | 0 | 8/8 | 0.06 |
+| docsrs-tokio | nosemantic | readability | 98% | 99% | 0 | 8/8 | - |
+| docsrs-tokio | wholepage | walk | 100% | 100% | 0 | 8/8 | 0.07 |
+| github-readme-bat | as-is | walk | 100% | 100% | 0 | 58/58 | 0.04 |
+| github-readme-bat | nosemantic | readability | 100% | 100% | 0 | 58/58 | - |
+| github-readme-bat | wholepage | walk | 100% | 92% | 0 | 58/58 | 0.11 |
+| medium-software-2-0 | as-is | walk | 100% | 100% | 0 | 0/0 | 0.02 |
+| medium-software-2-0 | nosemantic | readability | 99% | 100% | 0 | 0/0 | - |
+| medium-software-2-0 | wholepage | walk | 100% | 95% | 0 | 0/0 | 0.05 |
+| substack-pragmatic-shopify | as-is | walk | 100% | 98% | 0 | 0/0 | 0.02 |
+| substack-pragmatic-shopify | nosemantic | readability | 96% | 99% | 0 | 0/0 | - |
+| substack-pragmatic-shopify | wholepage | walk | 100% | 97% | 0 | 0/0 | 0.03 |
+| wikipedia-futures-promises | as-is | walk | 100% | 99% | 0 | 4/4 | 0.19 |
+| wikipedia-futures-promises | nosemantic | readability | 98% | 99% | 0 | 4/4 | - |
+| wikipedia-futures-promises | wholepage | walk | 100% | 99% | 0 | 4/4 | 0.19 |
+| guardian-iphone-review | as-is | walk | 100% | 93% | 0 | 0/0 | 0.10 |
+| guardian-iphone-review | nosemantic | readability | 99% | 100% | 0 | 0/0 | - |
+| guardian-iphone-review | wholepage | walk | 100% | 92% | 2 | 0/0 | 0.10 |

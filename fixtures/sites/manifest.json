@@ -1,0 +1,122 @@
+{
+  "docusaurus-code-blocks": {
+    "slug": "docusaurus-code-blocks",
+    "generator": "Docusaurus",
+    "url": "https://docusaurus.io/docs/markdown-features/code-blocks",
+    "contentSelector": "article",
+    "finalUrl": "https://docusaurus.io/docs/markdown-features/code-blocks",
+    "title": "Code blocks | Docusaurus",
+    "capturedAt": "2026-10-05T13:56:42.739Z",
+    "bytes": 325315,
+    "openShadowRoots": 0,
+    "contentFound": true
+  },
+  "mkdocs-material-admonitions": {
+    "slug": "mkdocs-material-admonitions",
+    "generator": "MkDocs Material",
+    "url": "https://squidfunk.github.io/mkdocs-material/reference/admonitions/",
+    "contentSelector": "article.md-content__inner",
+    "finalUrl": "https://squidfunk.github.io/mkdocs-material/reference/admonitions/",
+    "title": "Admonitions - Material for MkDocs",
+    "capturedAt": "2026-10-05T13:56:50.646Z",
+    "bytes": 128367,
+    "openShadowRoots": 0,
+    "contentFound": true
+  },
+  "gitbook-code-block": {
+    "slug": "gitbook-code-block",
+    "generator": "GitBook",
+    "url": "https://gitbook.com/docs/creating-content/blocks/code-block",
+    "contentSelector": "main",
+    "finalUrl": "https://gitbook.com/docs/create-content/blocks/code-block",
+    "title": "Code blocks | GitBook Documentation",
+    "capturedAt": "2026-10-05T13:56:58.261Z",
+    "bytes": 707645,
+    "openShadowRoots": 1,
+    "contentFound": true
+  },
+  "mdn-promise-then": {
+    "slug": "mdn-promise-then",
+    "generator": "MDN",
+    "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then",
+    "contentSelector": "main#content",
+    "finalUrl": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then",
+    "title": "Promise.prototype.then() - JavaScript | MDN",
+    "capturedAt": "2026-10-05T13:57:06.393Z",
+    "bytes": 242592,
+    "openShadowRoots": 88,
+    "contentFound": true
+  },
+  "docsrs-tokio": {
+    "slug": "docsrs-tokio",
+    "generator": "docs.rs (rustdoc)",
+    "url": "https://docs.rs/tokio/latest/tokio/",
+    "contentSelector": "#main-content",
+    "finalUrl": "https://docs.rs/tokio/latest/tokio/",
+    "title": "tokio - Rust",
+    "capturedAt": "2026-10-05T13:57:14.888Z",
+    "bytes": 57338,
+    "openShadowRoots": 1,
+    "contentFound": true
+  },
+  "github-readme-bat": {
+    "slug": "github-readme-bat",
+    "generator": "GitHub README",
+    "url": "https://github.com/sharkdp/bat",
+    "contentSelector": "article.markdown-body",
+    "finalUrl": "https://github.com/sharkdp/bat",
+    "title": "GitHub - sharkdp/bat: A cat(1) clone with wings. · GitHub",
+    "capturedAt": "2026-10-05T13:57:26.106Z",
+    "bytes": 550703,
+    "openShadowRoots": 30,
+    "contentFound": true
+  },
+  "medium-software-2-0": {
+    "slug": "medium-software-2-0",
+    "generator": "Medium",
+    "url": "https://medium.com/@karpathy/software-2-0-a64152b37c35",
+    "contentSelector": "article",
+    "finalUrl": "https://karpathy.medium.com/software-2-0-a64152b37c35",
+    "title": "Software 2.0. I sometimes see people refer to neural… | by Andrej Karpathy | Medium",
+    "capturedAt": "2026-10-05T13:57:35.289Z",
+    "bytes": 150125,
+    "openShadowRoots": 0,
+    "contentFound": true
+  },
+  "substack-pragmatic-shopify": {
+    "slug": "substack-pragmatic-shopify",
+    "generator": "Substack",
+    "url": "https://newsletter.pragmaticengineer.com/p/shopify-native-mobile",
+    "contentSelector": ".available-content, .body.markup",
+    "finalUrl": "https://newsletter.pragmaticengineer.com/p/shopify-native-mobile",
+    "title": "Why has Shopify dropped React Native? - by Gergely Orosz",
+    "capturedAt": "2026-10-05T13:57:45.229Z",
+    "bytes": 99901,
+    "openShadowRoots": 0,
+    "contentFound": true
+  },
+  "wikipedia-futures-promises": {
+    "slug": "wikipedia-futures-promises",
+    "generator": "Wikipedia (MediaWiki)",
+    "url": "https://en.wikipedia.org/wiki/Futures_and_promises",
+    "contentSelector": "#mw-content-text .mw-parser-output",
+    "finalUrl": "https://en.wikipedia.org/wiki/Futures_and_promises",
+    "title": "Futures and promises - Wikipedia",
+    "capturedAt": "2026-10-05T13:57:53.990Z",
+    "bytes": 492408,
+    "openShadowRoots": 0,
+    "contentFound": true
+  },
+  "guardian-iphone-review": {
+    "slug": "guardian-iphone-review",
+    "generator": "News (The Guardian)",
+    "url": "https://www.theguardian.com/technology/2026/oct/05/apple-iphone-18-pro-review-battery-life-screen-siri-camera-variable-aperture-ios-27",
+    "contentSelector": "article #maincontent, [data-gu-name=body]",
+    "finalUrl": "https://www.theguardian.com/technology/2026/oct/05/apple-iphone-18-pro-review-battery-life-screen-siri-camera-variable-aperture-ios-27",
+    "title": "Apple iPhone 18 Pro review: big changes for small differences | iPhone | The Guardian",
+    "capturedAt": "2026-10-05T13:58:04.590Z",
+    "bytes": 355562,
+    "openShadowRoots": 0,
+    "contentFound": true
+  }
+}

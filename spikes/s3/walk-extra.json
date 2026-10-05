@@ -1,0 +1,79 @@
+[
+  {
+    "slug": "docusaurus-code-blocks",
+    "extra": []
+  },
+  {
+    "slug": "mkdocs-material-admonitions",
+    "extra": []
+  },
+  {
+    "slug": "gitbook-code-block",
+    "extra": []
+  },
+  {
+    "slug": "mdn-promise-then",
+    "extra": []
+  },
+  {
+    "slug": "docsrs-tokio",
+    "extra": [
+      "Crate tokio"
+    ]
+  },
+  {
+    "slug": "github-readme-bat",
+    "extra": []
+  },
+  {
+    "slug": "medium-software-2-0",
+    "extra": []
+  },
+  {
+    "slug": "substack-pragmatic-shopify",
+    "extra": [
+      "Why has Shopify dropped React Native?",
+      "It’s only been a year since the e-commerce platform declared it was very happy with React Native, but now Shopify is dumping it – and the reason, unsurprisingly, is AI",
+      "This post is for paid subscribers"
+    ]
+  },
+  {
+    "slug": "wikipedia-futures-promises",
+    "extra": [
+      "Futures and promises",
+      "A lazy future is a future that deterministically has lazy evaluation semantics: the computation of the future's value starts when the value is first needed, as in call by need. Lazy futures are of use in languages which evaluation strategy is by default not lazy. For example, in C++11 such lazy futures can be created by passing the std::launch::deferred launch policy to std::async(), along with the function to compute the value.",
+      "↑ Friedman, Daniel; David Wise (1976). The Impact of Applicative Programming on Multiprocessing. International Conference on Parallel Processing. pp. 263–272.Preliminary version of: Friedman, Daniel; Wise, David (April 1978). \"Aspects of Applicative Programming for Parallel Processing\". IEEE Transactions on Computers. C-27 (4): 289–296. doi:10.1109/tc.1978.1675100. S2CID 16333366.",
+      "Inter-process communication",
+      "Actor model (computer science)",
+      "Articles with short description",
+      "Short description is different from Wikidata",
+      "Use dmy dates from November 2023",
+      "All articles with unsourced statements",
+      "Articles with unsourced statements from March 2018",
+      "CS1: unfit URL",
+      "CS1 errors: deprecated parameters",
+      "Wikipedia articles needing clarification from March 2016",
+      "Webarchive template wayback links"
+    ]
+  },
+  {
+    "slug": "guardian-iphone-review",
+    "extra": [
+      "The iPhone 18 Pro packs all of Apple’s best technology into a pocketable package. Photograph: Samuel Gibbs/The Guardian",
+      "The iPhone 18 Pro packs all of Apple’s best technology into a pocketable package. Photograph: Samuel Gibbs/The Guardian",
+      "Apple iPhone 18 Pro review: big changes for small differences",
+      "Longer battery life, better screen, upgraded Siri and new variable aperture camera in refreshed design from last year’s model",
+      "Most viewed",
+      "Quebec poised to elect separatists to power for first time more than decade",
+      "Quebec poised to elect separatists to power for first time more than decade",
+      "Monday briefing: You asked, we answered – how will the US midterms go?",
+      "Monday briefing: You asked, we answered – how will the US midterms go?",
+      "Brazil’s presidential race goes to second round as Flávio Bolsonaro leads incumbent Lula",
+      "Brazil’s presidential race goes to second round as Flávio Bolsonaro leads incumbent Lula",
+      "My sister Nicole married OJ Simpson. This is what I wish I had known",
+      "My sister Nicole married OJ Simpson. This is what I wish I had known",
+      "Trump’s recent statements on the economy are even more bonkers than usualSteven Greenhouse",
+      "Trump’s recent statements on the economy are even more bonkers than usualSteven Greenhouse"
+    ]
+  }
+]
