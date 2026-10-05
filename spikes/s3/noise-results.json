@@ -1,0 +1,730 @@
+[
+  {
+    "slug": "docusaurus-code-blocks",
+    "generator": "Docusaurus",
+    "R": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 5,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 0.9135802469135802,
+      "pre": 40,
+      "truthPre": 59
+    },
+    "W": {
+      "visible": 20,
+      "hidden": 0,
+      "glyph": 17,
+      "present": [
+        "Version: 3.10.2",
+        "http://localhost:3000 ×13",
+        "Live Editor ×3",
+        "Result ×3"
+      ],
+      "chars": 339,
+      "pct": 0.0174337876060684,
+      "recall": 1,
+      "pre": 59,
+      "truthPre": 59
+    },
+    "R+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 0.9135802469135802,
+      "pre": 40,
+      "truthPre": 59
+    },
+    "W+G": {
+      "visible": 20,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [
+        "Version: 3.10.2",
+        "http://localhost:3000 ×13",
+        "Live Editor ×3",
+        "Result ×3"
+      ],
+      "chars": 339,
+      "pct": 0.017464324352171448,
+      "recall": 1,
+      "pre": 59,
+      "truthPre": 59
+    },
+    "W+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 59,
+      "truthPre": 59
+    }
+  },
+  {
+    "slug": "mkdocs-material-admonitions",
+    "generator": null,
+    "R": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 12,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 17,
+      "truthPre": 17
+    },
+    "W": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 13,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 17,
+      "truthPre": 17
+    },
+    "R+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 17,
+      "truthPre": 17
+    },
+    "W+G": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 17,
+      "truthPre": 17
+    },
+    "W+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 17,
+      "truthPre": 17
+    }
+  },
+  {
+    "slug": "mdn-promise-then",
+    "generator": "MDN",
+    "R": {
+      "visible": 1,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [
+        "Browser compatibility settings"
+      ],
+      "chars": 30,
+      "pct": 0.0025875452820424355,
+      "recall": 0.925,
+      "pre": 12,
+      "truthPre": 12
+    },
+    "W": {
+      "visible": 11,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [
+        "Baseline Widely available",
+        "See full compatibility",
+        "Learn more",
+        "Report problems with this compatibility data",
+        "View data on GitHub",
+        "Help improve MDN",
+        "Learn how to contribute",
+        "MDN contributors",
+        "Sep 1, 2026",
+        "View this page on GitHub",
+        "Report a problem with this content"
+      ],
+      "chars": 244,
+      "pct": 0.019552848785960412,
+      "recall": 1,
+      "pre": 12,
+      "truthPre": 12
+    },
+    "R+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 0.925,
+      "pre": 12,
+      "truthPre": 12
+    },
+    "W+G": {
+      "visible": 11,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [
+        "Baseline Widely available",
+        "See full compatibility",
+        "Learn more",
+        "Report problems with this compatibility data",
+        "View data on GitHub",
+        "Help improve MDN",
+        "Learn how to contribute",
+        "MDN contributors",
+        "Sep 1, 2026",
+        "View this page on GitHub",
+        "Report a problem with this content"
+      ],
+      "chars": 244,
+      "pct": 0.01961887915092064,
+      "recall": 1,
+      "pre": 12,
+      "truthPre": 12
+    },
+    "W+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 12,
+      "truthPre": 12
+    }
+  },
+  {
+    "slug": "docsrs-tokio",
+    "generator": "rustdoc",
+    "R": {
+      "visible": 1,
+      "hidden": 0,
+      "glyph": 13,
+      "present": [
+        "Expand description"
+      ],
+      "chars": 18,
+      "pct": 0.0012600630031501575,
+      "recall": 0.981651376146789,
+      "pre": 8,
+      "truthPre": 8
+    },
+    "W": {
+      "visible": 5,
+      "hidden": 0,
+      "glyph": 18,
+      "present": [
+        "Search",
+        "Settings",
+        "Help",
+        "Source",
+        "Expand description"
+      ],
+      "chars": 42,
+      "pct": 0.0029164641344351086,
+      "recall": 1,
+      "pre": 8,
+      "truthPre": 8
+    },
+    "R+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 0.981651376146789,
+      "pre": 8,
+      "truthPre": 8
+    },
+    "W+G": {
+      "visible": 5,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [
+        "Search",
+        "Settings",
+        "Help",
+        "Source",
+        "Expand description"
+      ],
+      "chars": 42,
+      "pct": 0.002923773059519666,
+      "recall": 1,
+      "pre": 8,
+      "truthPre": 8
+    },
+    "W+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 8,
+      "truthPre": 8
+    }
+  },
+  {
+    "slug": "github-readme-bat",
+    "generator": null,
+    "R": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 58,
+      "truthPre": 58
+    },
+    "W": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 58,
+      "truthPre": 58
+    },
+    "R+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 58,
+      "truthPre": 58
+    },
+    "W+G": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 58,
+      "truthPre": 58
+    },
+    "W+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 58,
+      "truthPre": 58
+    }
+  },
+  {
+    "slug": "wikipedia-futures-promises",
+    "generator": "MediaWiki",
+    "R": {
+      "visible": 16,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [
+        "[ edit ] ×9",
+        "Jump up to: ×7"
+      ],
+      "chars": 149,
+      "pct": 0.004812039788141067,
+      "recall": 0.9914163090128756,
+      "pre": 4,
+      "truthPre": 4
+    },
+    "W": {
+      "visible": 31,
+      "hidden": 10,
+      "glyph": 0,
+      "present": [
+        "[ edit ] ×19",
+        "Edit links",
+        "From Wikipedia, the free encyclopedia",
+        "Jump up to: ×7",
+        "Categories",
+        "Inter-process communication",
+        "Actor model (computer science)"
+      ],
+      "chars": 343,
+      "pct": 0.010717745211386432,
+      "recall": 1,
+      "pre": 4,
+      "truthPre": 4
+    },
+    "R+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 0.9957081545064378,
+      "pre": 4,
+      "truthPre": 4
+    },
+    "W+G": {
+      "visible": 12,
+      "hidden": 10,
+      "glyph": 0,
+      "present": [
+        "Edit links",
+        "From Wikipedia, the free encyclopedia",
+        "Jump up to: ×7",
+        "Categories",
+        "Inter-process communication",
+        "Actor model (computer science)"
+      ],
+      "chars": 191,
+      "pct": 0.006039334724593688,
+      "recall": 1,
+      "pre": 4,
+      "truthPre": 4
+    },
+    "W+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 4,
+      "truthPre": 4
+    }
+  },
+  {
+    "slug": "mdbook-rust-book-ownership",
+    "generator": null,
+    "R": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 0.9896907216494846,
+      "pre": 15,
+      "truthPre": 15
+    },
+    "W": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 15,
+      "truthPre": 15
+    },
+    "R+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 0.9896907216494846,
+      "pre": 15,
+      "truthPre": 15
+    },
+    "W+G": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 15,
+      "truthPre": 15
+    },
+    "W+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 15,
+      "truthPre": 15
+    }
+  },
+  {
+    "slug": "goblog-pipelines",
+    "generator": "GoDev",
+    "R": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 10,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 0.9710144927536232,
+      "pre": 9,
+      "truthPre": 26
+    },
+    "W": {
+      "visible": 4,
+      "hidden": 0,
+      "glyph": 10,
+      "present": [
+        "The Go Blog",
+        "Go talks at FOSDEM 2014",
+        "The Go Gopher",
+        "Blog Index"
+      ],
+      "chars": 57,
+      "pct": 0.0029396596183599794,
+      "recall": 1,
+      "pre": 26,
+      "truthPre": 26
+    },
+    "R+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 0.9710144927536232,
+      "pre": 9,
+      "truthPre": 26
+    },
+    "W+G": {
+      "visible": 4,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [
+        "The Go Blog",
+        "Go talks at FOSDEM 2014",
+        "The Go Gopher",
+        "Blog Index"
+      ],
+      "chars": 57,
+      "pct": 0.002942694889003614,
+      "recall": 1,
+      "pre": 26,
+      "truthPre": 26
+    },
+    "W+G+S": {
+      "visible": 1,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [
+        "The Go Blog"
+      ],
+      "chars": 11,
+      "pct": 0.0005702732127119084,
+      "recall": 1,
+      "pre": 26,
+      "truthPre": 26
+    }
+  },
+  {
+    "slug": "twir-671",
+    "generator": null,
+    "R": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 0.9948186528497409,
+      "pre": 0,
+      "truthPre": 0
+    },
+    "W": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 0,
+      "truthPre": 0
+    },
+    "R+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 0.9948186528497409,
+      "pre": 0,
+      "truthPre": 0
+    },
+    "W+G": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 0,
+      "truthPre": 0
+    },
+    "W+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 0,
+      "truthPre": 0
+    }
+  },
+  {
+    "slug": "globalvoices-bangladesh-protests",
+    "generator": "WordPress",
+    "R": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 0,
+      "truthPre": 0
+    },
+    "W": {
+      "visible": 29,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [
+        "Read this post in",
+        "Categories",
+        "Regions",
+        "Topics",
+        "Breaking News",
+        "Censorship",
+        "Citizen Media",
+        "Digital Activism",
+        "Elections",
+        "Freedom of Speech",
+        "Governance",
+        "Human Rights",
+        "Media & Journalism",
+        "Youth",
+        "Protest in democracy",
+        "Support our work",
+        "Donate now",
+        "Recent South Asia Stories",
+        "The sound of resistance",
+        "Equating protest with terrorism: A narrative against dissent",
+        "More »",
+        "Top World Stories",
+        "4 days ago ×2",
+        "6 days ago",
+        "1 week ago",
+        "2 days ago",
+        "Cancel this reply",
+        "Start the conversation"
+      ],
+      "chars": 429,
+      "pct": 0.05275454992621741,
+      "recall": 1,
+      "pre": 0,
+      "truthPre": 0
+    },
+    "R+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 0,
+      "truthPre": 0
+    },
+    "W+G": {
+      "visible": 29,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [
+        "Read this post in",
+        "Categories",
+        "Regions",
+        "Topics",
+        "Breaking News",
+        "Censorship",
+        "Citizen Media",
+        "Digital Activism",
+        "Elections",
+        "Freedom of Speech",
+        "Governance",
+        "Human Rights",
+        "Media & Journalism",
+        "Youth",
+        "Protest in democracy",
+        "Support our work",
+        "Donate now",
+        "Recent South Asia Stories",
+        "The sound of resistance",
+        "Equating protest with terrorism: A narrative against dissent",
+        "More »",
+        "Top World Stories",
+        "4 days ago ×2",
+        "6 days ago",
+        "1 week ago",
+        "2 days ago",
+        "Cancel this reply",
+        "Start the conversation"
+      ],
+      "chars": 429,
+      "pct": 0.05275454992621741,
+      "recall": 1,
+      "pre": 0,
+      "truthPre": 0
+    },
+    "W+G+S": {
+      "visible": 0,
+      "hidden": 0,
+      "glyph": 0,
+      "present": [],
+      "chars": 0,
+      "pct": 0,
+      "recall": 1,
+      "pre": 0,
+      "truthPre": 0
+    }
+  }
+]

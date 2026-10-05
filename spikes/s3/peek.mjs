@@ -5,4 +5,6 @@ const doc = new JSDOM(fs.readFileSync(`../../fixtures/sites/${slug}.html`, 'utf8
 const src = [...doc.querySelectorAll('h1,h2,h3,p')].find((e) => e.textContent.includes(needle));
 console.log('SOURCE:', src?.outerHTML.slice(0, 400));
 const art = new Readability(doc.cloneNode(true)).parse();
-const i = art.content.indexOf(needle.slice(0, 20)); console.log('IN OUTPUT at', i, i >= 0 ? art.content.slice(Math.max(0, i - 200), i + 150) : '');
+// Search the output's text, not its raw HTML, so inline markup inside the needle doesn't cause a false negative.
+const out = new JSDOM(art.content).window.document.body.textContent.replace(/\s+/g, ' ');
+const i = out.indexOf(needle); console.log('IN OUTPUT TEXT at', i, i >= 0 ? out.slice(Math.max(0, i - 200), i + 150) : '');

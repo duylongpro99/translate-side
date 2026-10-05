@@ -1,17 +1,18 @@
-<!DOCTYPE html><html><head><base href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then">
+<!DOCTYPE html><!-- fixture-attribution: "Promise.prototype.then() - JavaScript | MDN" — https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then — by Mozilla Contributors — license CC-BY-SA-2.5 (prose); code samples CC0-1.0 / MIT per MDN LICENSE.md — modified: see ATTRIBUTION.md -->
+<html><head><base href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then">
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Promise.prototype.then() - JavaScript | MDN</title>
           
           
           <link rel="stylesheet" href="/static/client/styles-global.13616ebb1fc8ee2f.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/270.66bae6059a1c23f9.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-reference-layout.632d2f3884f10ca3.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/9228.c46ef79d5582674d.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-content-section.1eb240d1720d8ac3.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-heading-anchor.0eec5185ab9425b7.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-baseline-indicator.dcd17e42ea043f53.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-reference-toc.9b9bd019efd16b86.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-article-footer.81ae18c89fc527dc.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-left-sidebar.46e37af4d0b5c883.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-page-layout.5a4354f33e894319.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-a11y-menu.5796ee87cb69f93f.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-navigation.c3ebf384e65df345.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-logo.aea5ff6edf1b9cfb.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-menu.e2c5c8a53a8854c2.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-breadcrumbs-bar.9a51a3c76a6231d0.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-breadcrumbs.87eb742f4e711dc3.css" fetchpriority="high"><link rel="stylesheet" href="/static/client/styles-footer.66072dd619a4ef50.css" fetchpriority="high">
-          <link rel="preload" href="/static/client/jetbrains-mono-latin.119994ed445212c7.woff2" as="font" type="font/woff2" crossorigin="anonymous" fetchpriority="low"><link rel="preload" href="/static/client/inter-latin.9a3b1bc220d426ef.woff2" as="font" type="font/woff2" crossorigin="anonymous" fetchpriority="low">
+          
           
           
           
     <link rel="icon" sizes="32x32" href="https://developer.mozilla.org/favicon.ico">
     <link rel="icon" type="image/svg+xml" href="https://developer.mozilla.org/favicon.svg">
-   <meta name="description" content="The then() method of Promise instances takes up to two arguments: callback functions for the fulfilled and rejected cases of the Promise. It stores the callbacks within the promise it is called on and immediately returns another Promise object, allowing you to chain calls to other promise methods."><meta name="og:url" content="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then"><meta name="og:title" content="Promise.prototype.then() - JavaScript | MDN"><meta name="og:locale" content="en_US"><meta name="og:description" content="The then() method of Promise instances takes up to two arguments: callback functions for the fulfilled and rejected cases of the Promise. It stores the callbacks within the promise it is called on and immediately returns another Promise object, allowing you to chain calls to other promise methods."><meta name="og:image" content="https://developer.mozilla.org/mdn-social-image.46ac2375.png"><meta name="og:image:type" content="image/png"><meta name="og:image:height" content="1024"><meta name="og:image:width" content="1024"><meta name="og:image:alt" content="The MDN logo"><meta name="og:site_name" content="MDN Web Docs"><meta name="twitter:card" content="summary"><meta name="twitter:creator" content="MozDevNet">
+   <meta name="description" content="The then() method of Promise instances takes up to two arguments: callback functions for the fulfilled and rejected cases of the Promise. It stores the callbacks within the promise it is called on and immediately returns another Promise object, allowing you to chain calls to other promise methods.">
           <link rel="canonical" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then">
           <link rel="apple-touch-icon" href="/apple-touch-icon.png">
           <link rel="manifest" href="/manifest.json">
@@ -504,32 +505,32 @@
         
             <li property="itemListElement" typeof="ListItem">
               <a href="/en-US/docs/Web" property="item" typeof="WebPage" data-glean-id="breadcrumb_click: 6/6"><span property="name">Web</span></a>
-              <meta property="position" content="1">
+              
             </li>
           
             <li property="itemListElement" typeof="ListItem">
               <a href="/en-US/docs/Web/JavaScript" property="item" typeof="WebPage" data-glean-id="breadcrumb_click: 5/6"><span property="name">JavaScript</span></a>
-              <meta property="position" content="2">
+              
             </li>
           
             <li property="itemListElement" typeof="ListItem">
               <a href="/en-US/docs/Web/JavaScript/Reference" property="item" typeof="WebPage" data-glean-id="breadcrumb_click: 4/6"><span property="name">Reference</span></a>
-              <meta property="position" content="3">
+              
             </li>
           
             <li property="itemListElement" typeof="ListItem">
               <a href="/en-US/docs/Web/JavaScript/Reference/Global_Objects" property="item" typeof="WebPage" data-glean-id="breadcrumb_click: 3/6"><span property="name">Standard built-in objects</span></a>
-              <meta property="position" content="4">
+              
             </li>
           
             <li property="itemListElement" typeof="ListItem">
               <a href="/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise" property="item" typeof="WebPage" data-glean-id="breadcrumb_click: 2/6"><span property="name">Promise</span></a>
-              <meta property="position" content="5">
+              
             </li>
           
             <li property="itemListElement" typeof="ListItem">
               <a href="/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then" property="item" typeof="WebPage" data-glean-id="breadcrumb_click: 1/6"><span property="name">then()</span></a>
-              <meta property="position" content="6">
+              
             </li>
           
       </ol>
@@ -738,7 +739,7 @@
       </ul>
     </template></mdn-play-console>
             <mdn-play-runner sandbox="allow-modals"><template shadowrootmode="open"><!---->
-        <iframe title="runner" aria-live="polite" src="https://388e7034-d737-45cd-ba2b-48f0bb704072.mdnplay.dev/runner.html?uuid=388e7034-d737-45cd-ba2b-48f0bb704072&amp;state=q1bKKMnNUbJSUtJRSi4uhjCyoHRJRmpuqpKVUkpiUbZSLQA%3D" sandbox="allow-scripts allow-same-origin allow-forms allow-modals"></iframe>
+        
       </template></mdn-play-runner>
           </div>
         </mdn-play-controller>

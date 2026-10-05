@@ -1,0 +1,3 @@
+wikipedia-futures-promises: remove .mw-editsection: h2/h3 9 → 18
+docsrs-tokio: drop class on h2.section-header: h2-h4 11 → 15
+goblog-pipelines: drop class on pre span.comment: identical pre (of 26) 9 → 25

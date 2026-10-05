@@ -78,45 +78,6 @@
     }
   },
   {
-    "slug": "gitbook-code-block",
-    "truthLen": 4013,
-    "truthPre": 6,
-    "truthTables": 0,
-    "truthDetails": 0,
-    "readerable": true,
-    "R": {
-      "leak": 0,
-      "leakPct": 0,
-      "missingSample": [
-        "for the complete documentation index,",
-        "the complete documentation index, see",
-        "complete documentation index, see llms.txt",
-        "documentation index, see llms.txt .",
-        "index, see llms.txt . this",
-        "see llms.txt . this page",
-        "llms.txt . this page is",
-        ". this page is also"
-      ],
-      "len": 3554,
-      "recall": 0.8722222222222222,
-      "precision": 0.9936708860759493,
-      "preKept": 6,
-      "tables": 0,
-      "details": 0
-    },
-    "W": {
-      "leak": 0,
-      "leakPct": 0,
-      "missingSample": [],
-      "len": 4013,
-      "recall": 1,
-      "precision": 1,
-      "preKept": 6,
-      "tables": 0,
-      "details": 0
-    }
-  },
-  {
     "slug": "mdn-promise-then",
     "truthLen": 12479,
     "truthPre": 13,
@@ -225,84 +186,6 @@
     }
   },
   {
-    "slug": "medium-software-2-0",
-    "truthLen": 13549,
-    "truthPre": 0,
-    "truthTables": 0,
-    "truthDetails": 0,
-    "readerable": true,
-    "R": {
-      "leak": 0,
-      "leakPct": 0,
-      "missingSample": [
-        "machine learning artificial intelligence programming",
-        "learning artificial intelligence programming software",
-        "artificial intelligence programming software development",
-        "intelligence programming software development future",
-        "programming software development future software",
-        "software development future software 2.0",
-        "development future software 2.0 andrej",
-        "future software 2.0 andrej karpathy"
-      ],
-      "len": 13439,
-      "recall": 0.9945429740791268,
-      "precision": 1,
-      "preKept": 0,
-      "tables": 0,
-      "details": 0
-    },
-    "W": {
-      "leak": 0,
-      "leakPct": 0,
-      "missingSample": [],
-      "len": 13549,
-      "recall": 1,
-      "precision": 1,
-      "preKept": 0,
-      "tables": 0,
-      "details": 0
-    }
-  },
-  {
-    "slug": "substack-pragmatic-shopify",
-    "truthLen": 17937,
-    "truthPre": 0,
-    "truthTables": 0,
-    "truthDetails": 0,
-    "readerable": true,
-    "R": {
-      "leak": 0,
-      "leakPct": 0,
-      "missingSample": [
-        "flutter, and kmp apps. 1.",
-        "and kmp apps. 1. why",
-        "kmp apps. 1. why shopify",
-        "apps. 1. why shopify chose",
-        "1. why shopify chose react",
-        "chose react native in 2020",
-        "react native in 2020 let’s",
-        "native in 2020 let’s rewind"
-      ],
-      "len": 17465,
-      "recall": 0.9627554383651945,
-      "precision": 0.9868243243243243,
-      "preKept": 0,
-      "tables": 0,
-      "details": 0
-    },
-    "W": {
-      "leak": 0,
-      "leakPct": 0,
-      "missingSample": [],
-      "len": 18256,
-      "recall": 1,
-      "precision": 0.9818770226537217,
-      "preKept": 0,
-      "tables": 0,
-      "details": 0
-    }
-  },
-  {
     "slug": "wikipedia-futures-promises",
     "truthLen": 31402,
     "truthPre": 4,
@@ -342,8 +225,120 @@
     }
   },
   {
-    "slug": "guardian-iphone-review",
-    "truthLen": 9335,
+    "slug": "mdbook-rust-book-ownership",
+    "truthLen": 24487,
+    "truthPre": 15,
+    "truthTables": 0,
+    "truthDetails": 0,
+    "readerable": true,
+    "R": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [
+        "what is ownership? ownership is",
+        "is ownership? ownership is a",
+        "ownership? ownership is a set"
+      ],
+      "len": 24468,
+      "recall": 0.9993145990404386,
+      "precision": 1,
+      "preKept": 15,
+      "tables": 0,
+      "details": 0
+    },
+    "W": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 24487,
+      "recall": 1,
+      "precision": 1,
+      "preKept": 15,
+      "tables": 0,
+      "details": 0
+    }
+  },
+  {
+    "slug": "goblog-pipelines",
+    "truthLen": 19309,
+    "truthPre": 26,
+    "truthTables": 0,
+    "truthDetails": 0,
+    "readerable": true,
+    "R": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [
+        "the go blog go concurrency",
+        "go blog go concurrency patterns:",
+        "blog go concurrency patterns: pipelines",
+        "go concurrency patterns: pipelines and",
+        "concurrency patterns: pipelines and cancellation",
+        "patterns: pipelines and cancellation sameer",
+        "pipelines and cancellation sameer ajmani",
+        "and cancellation sameer ajmani 13"
+      ],
+      "len": 16568,
+      "recall": 0.8109534806994392,
+      "precision": 0.9527131782945737,
+      "preKept": 9,
+      "tables": 0,
+      "details": 0
+    },
+    "W": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 19390,
+      "recall": 1,
+      "precision": 0.9954022988505747,
+      "preKept": 26,
+      "tables": 0,
+      "details": 0
+    }
+  },
+  {
+    "slug": "twir-671",
+    "truthLen": 14070,
+    "truthPre": 0,
+    "truthTables": 1,
+    "truthDetails": 0,
+    "readerable": true,
+    "R": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [
+        "inbox? subscribe here . updates",
+        "subscribe here . updates from",
+        "here . updates from rust",
+        ". updates from rust community",
+        "updates from rust community newsletters",
+        "from rust community newsletters scientific",
+        "rust community newsletters scientific computing",
+        "community newsletters scientific computing in"
+      ],
+      "len": 14021,
+      "recall": 0.9930458970792768,
+      "precision": 0.9962790697674418,
+      "preKept": 0,
+      "tables": 1,
+      "details": 0
+    },
+    "W": {
+      "leak": 0,
+      "leakPct": 0,
+      "missingSample": [],
+      "len": 14070,
+      "recall": 1,
+      "precision": 1,
+      "preKept": 0,
+      "tables": 1,
+      "details": 0
+    }
+  },
+  {
+    "slug": "globalvoices-bangladesh-protests",
+    "truthLen": 6275,
     "truthPre": 0,
     "truthTables": 0,
     "truthDetails": 0,
@@ -352,18 +347,17 @@
       "leak": 0,
       "leakPct": 0,
       "missingSample": [
-        "lag behind top competitors. explore",
-        "behind top competitors. explore more",
-        "top competitors. explore more on",
-        "competitors. explore more on these",
-        "explore more on these topics",
-        "more on these topics iphone",
-        "on these topics iphone apple",
-        "these topics iphone apple mobile"
+        "while talking to bdnews24.com: translation",
+        "talking to bdnews24.com: translation original",
+        "to bdnews24.com: translation original quote",
+        "bdnews24.com: translation original quote the",
+        "translation original quote the july",
+        "original quote the july uprising",
+        "quote the july uprising won"
       ],
-      "len": 9204,
-      "recall": 0.9888059701492538,
-      "precision": 1,
+      "len": 6248,
+      "recall": 0.9927835051546392,
+      "precision": 0.9958634953464323,
       "preKept": 0,
       "tables": 0,
       "details": 0
@@ -372,9 +366,9 @@
       "leak": 0,
       "leakPct": 0,
       "missingSample": [],
-      "len": 10179,
+      "len": 8132,
       "recall": 1,
-      "precision": 0.9305555555555556,
+      "precision": 0.7778668805132317,
       "preKept": 0,
       "tables": 0,
       "details": 0

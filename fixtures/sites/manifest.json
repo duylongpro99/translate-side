@@ -7,9 +7,16 @@
     "finalUrl": "https://docusaurus.io/docs/markdown-features/code-blocks",
     "title": "Code blocks | Docusaurus",
     "capturedAt": "2026-10-05T13:56:42.739Z",
-    "bytes": 325315,
+    "bytes": 270606,
     "openShadowRoots": 0,
-    "contentFound": true
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "CC-BY-4.0",
+    "attribution": {
+      "authors": "Meta Platforms, Inc. and Docusaurus contributors",
+      "licenseSource": "https://github.com/facebook/docusaurus (LICENSE-docs); site code MIT",
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
+    }
   },
   "mkdocs-material-admonitions": {
     "slug": "mkdocs-material-admonitions",
@@ -19,21 +26,16 @@
     "finalUrl": "https://squidfunk.github.io/mkdocs-material/reference/admonitions/",
     "title": "Admonitions - Material for MkDocs",
     "capturedAt": "2026-10-05T13:56:50.646Z",
-    "bytes": 128367,
+    "bytes": 127246,
     "openShadowRoots": 0,
-    "contentFound": true
-  },
-  "gitbook-code-block": {
-    "slug": "gitbook-code-block",
-    "generator": "GitBook",
-    "url": "https://gitbook.com/docs/creating-content/blocks/code-block",
-    "contentSelector": "main",
-    "finalUrl": "https://gitbook.com/docs/create-content/blocks/code-block",
-    "title": "Code blocks | GitBook Documentation",
-    "capturedAt": "2026-10-05T13:56:58.261Z",
-    "bytes": 707645,
-    "openShadowRoots": 1,
-    "contentFound": true
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "MIT",
+    "attribution": {
+      "authors": "Martin Donath and contributors",
+      "licenseSource": "https://github.com/squidfunk/mkdocs-material (LICENSE)",
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
+    }
   },
   "mdn-promise-then": {
     "slug": "mdn-promise-then",
@@ -43,9 +45,17 @@
     "finalUrl": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then",
     "title": "Promise.prototype.then() - JavaScript | MDN",
     "capturedAt": "2026-10-05T13:57:06.393Z",
-    "bytes": 242592,
+    "bytes": 241075,
     "openShadowRoots": 88,
-    "contentFound": true
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "CC-BY-SA-2.5 (prose); code samples CC0-1.0 / MIT per MDN LICENSE.md",
+    "attribution": {
+      "authors": "Mozilla Contributors",
+      "history": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then/contributors.txt",
+      "licenseSource": "https://github.com/mdn/content/blob/main/LICENSE.md",
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
+    }
   },
   "docsrs-tokio": {
     "slug": "docsrs-tokio",
@@ -55,9 +65,16 @@
     "finalUrl": "https://docs.rs/tokio/latest/tokio/",
     "title": "tokio - Rust",
     "capturedAt": "2026-10-05T13:57:14.888Z",
-    "bytes": 57338,
+    "bytes": 56331,
     "openShadowRoots": 1,
-    "contentFound": true
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "MIT",
+    "attribution": {
+      "authors": "Tokio Contributors",
+      "licenseSource": "https://github.com/tokio-rs/tokio (tokio/LICENSE); rustdoc/docs.rs page code MIT OR Apache-2.0",
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
+    }
   },
   "github-readme-bat": {
     "slug": "github-readme-bat",
@@ -67,33 +84,16 @@
     "finalUrl": "https://github.com/sharkdp/bat",
     "title": "GitHub - sharkdp/bat: A cat(1) clone with wings. · GitHub",
     "capturedAt": "2026-10-05T13:57:26.106Z",
-    "bytes": 550703,
+    "bytes": 509826,
     "openShadowRoots": 30,
-    "contentFound": true
-  },
-  "medium-software-2-0": {
-    "slug": "medium-software-2-0",
-    "generator": "Medium",
-    "url": "https://medium.com/@karpathy/software-2-0-a64152b37c35",
-    "contentSelector": "article",
-    "finalUrl": "https://karpathy.medium.com/software-2-0-a64152b37c35",
-    "title": "Software 2.0. I sometimes see people refer to neural… | by Andrej Karpathy | Medium",
-    "capturedAt": "2026-10-05T13:57:35.289Z",
-    "bytes": 150125,
-    "openShadowRoots": 0,
-    "contentFound": true
-  },
-  "substack-pragmatic-shopify": {
-    "slug": "substack-pragmatic-shopify",
-    "generator": "Substack",
-    "url": "https://newsletter.pragmaticengineer.com/p/shopify-native-mobile",
-    "contentSelector": ".available-content, .body.markup",
-    "finalUrl": "https://newsletter.pragmaticengineer.com/p/shopify-native-mobile",
-    "title": "Why has Shopify dropped React Native? - by Gergely Orosz",
-    "capturedAt": "2026-10-05T13:57:45.229Z",
-    "bytes": 99901,
-    "openShadowRoots": 0,
-    "contentFound": true
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "README: MIT OR Apache-2.0",
+    "attribution": {
+      "authors": "David Peter and bat contributors",
+      "licenseSource": "https://github.com/sharkdp/bat (LICENSE-MIT, LICENSE-APACHE)",
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
+    }
   },
   "wikipedia-futures-promises": {
     "slug": "wikipedia-futures-promises",
@@ -103,20 +103,92 @@
     "finalUrl": "https://en.wikipedia.org/wiki/Futures_and_promises",
     "title": "Futures and promises - Wikipedia",
     "capturedAt": "2026-10-05T13:57:53.990Z",
-    "bytes": 492408,
+    "bytes": 492048,
     "openShadowRoots": 0,
-    "contentFound": true
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "CC-BY-SA-4.0",
+    "attribution": {
+      "authors": "Wikipedia contributors",
+      "history": "https://en.wikipedia.org/w/index.php?title=Futures_and_promises&action=history",
+      "licenseSource": "https://en.wikipedia.org/wiki/Wikipedia:Text_of_the_Creative_Commons_Attribution-ShareAlike_4.0_International_License",
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
+    }
   },
-  "guardian-iphone-review": {
-    "slug": "guardian-iphone-review",
-    "generator": "News (The Guardian)",
-    "url": "https://www.theguardian.com/technology/2026/oct/05/apple-iphone-18-pro-review-battery-life-screen-siri-camera-variable-aperture-ios-27",
-    "contentSelector": "article #maincontent, [data-gu-name=body]",
-    "finalUrl": "https://www.theguardian.com/technology/2026/oct/05/apple-iphone-18-pro-review-battery-life-screen-siri-camera-variable-aperture-ios-27",
-    "title": "Apple iPhone 18 Pro review: big changes for small differences | iPhone | The Guardian",
-    "capturedAt": "2026-10-05T13:58:04.590Z",
-    "bytes": 355562,
+  "mdbook-rust-book-ownership": {
+    "slug": "mdbook-rust-book-ownership",
+    "generator": "mdBook (GitBook-style)",
+    "url": "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html",
+    "contentSelector": "main",
+    "finalUrl": "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html",
+    "title": "What is Ownership? - The Rust Programming Language",
+    "capturedAt": "2026-10-05T14:23:55.776Z",
+    "bytes": 103002,
     "openShadowRoots": 0,
-    "contentFound": true
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "MIT OR Apache-2.0",
+    "attribution": {
+      "authors": "Steve Klabnik, Carol Nichols, Chris Krycho and Rust community contributors",
+      "licenseSource": "https://github.com/rust-lang/book (LICENSE-MIT, LICENSE-APACHE)",
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
+    }
+  },
+  "goblog-pipelines": {
+    "slug": "goblog-pipelines",
+    "generator": "Blog essay (go.dev blog)",
+    "url": "https://go.dev/blog/pipelines",
+    "contentSelector": ".Article[data-slug]",
+    "finalUrl": "https://go.dev/blog/pipelines",
+    "title": "Go Concurrency Patterns: Pipelines and cancellation - The Go Programming Language",
+    "capturedAt": "2026-10-05T14:24:27.438Z",
+    "bytes": 59256,
+    "openShadowRoots": 0,
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "CC-BY-4.0 (text); code BSD-3-Clause",
+    "attribution": {
+      "authors": "Sameer Ajmani (The Go Authors)",
+      "licenseSource": "https://go.dev/copyright",
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
+    }
+  },
+  "twir-671": {
+    "slug": "twir-671",
+    "generator": "Newsletter (This Week in Rust)",
+    "url": "https://this-week-in-rust.org/blog/2026/09/30/this-week-in-rust-671/",
+    "contentSelector": "article.post-content",
+    "finalUrl": "https://this-week-in-rust.org/blog/2026/09/30/this-week-in-rust-671/",
+    "title": "This Week in Rust 671 · This Week in Rust",
+    "capturedAt": "2026-10-05T14:24:56.794Z",
+    "bytes": 44812,
+    "openShadowRoots": 0,
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "CC-BY-SA-4.0",
+    "attribution": {
+      "authors": "This Week in Rust editors (nellshamrell, llogiq, ericseppanen, extrawurst, U007D, mariannegoldin, bdillo, opeolluwa, bnchi, KannanPalani57, tzilist) and contributors",
+      "licenseSource": "https://this-week-in-rust.org/ (footer license link)",
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
+    }
+  },
+  "globalvoices-bangladesh-protests": {
+    "slug": "globalvoices-bangladesh-protests",
+    "generator": "News (Global Voices, WordPress)",
+    "url": "https://globalvoices.org/2026/09/24/bangladesh-protests-can-change-governments-but-can-they-strengthen-democracy/",
+    "contentSelector": ".entry",
+    "finalUrl": "https://globalvoices.org/2026/09/24/bangladesh-protests-can-change-governments-but-can-they-strengthen-democracy/",
+    "title": "Bangladesh: Protests can change governments, but can they strengthen democracy? · Global Voices",
+    "capturedAt": "2026-10-05T14:25:32.660Z",
+    "bytes": 147962,
+    "openShadowRoots": 0,
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "CC-BY-3.0 (text; third-party images not covered — no image files are stored, only their URLs)",
+    "attribution": {
+      "authors": "Pantha Rahman Reza (পান্থ রহমান রেজা), original in Bangla; translated to English by Rezwan",
+      "licenseSource": "https://globalvoices.org/about/global-voices-attribution-policy/",
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
+    }
   }
 }

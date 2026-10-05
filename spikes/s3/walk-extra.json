@@ -8,10 +8,6 @@
     "extra": []
   },
   {
-    "slug": "gitbook-code-block",
-    "extra": []
-  },
-  {
     "slug": "mdn-promise-then",
     "extra": []
   },
@@ -24,18 +20,6 @@
   {
     "slug": "github-readme-bat",
     "extra": []
-  },
-  {
-    "slug": "medium-software-2-0",
-    "extra": []
-  },
-  {
-    "slug": "substack-pragmatic-shopify",
-    "extra": [
-      "Why has Shopify dropped React Native?",
-      "It’s only been a year since the e-commerce platform declared it was very happy with React Native, but now Shopify is dumping it – and the reason, unsurprisingly, is AI",
-      "This post is for paid subscribers"
-    ]
   },
   {
     "slug": "wikipedia-futures-promises",
@@ -57,23 +41,54 @@
     ]
   },
   {
-    "slug": "guardian-iphone-review",
+    "slug": "mdbook-rust-book-ownership",
+    "extra": []
+  },
+  {
+    "slug": "goblog-pipelines",
     "extra": [
-      "The iPhone 18 Pro packs all of Apple’s best technology into a pocketable package. Photograph: Samuel Gibbs/The Guardian",
-      "The iPhone 18 Pro packs all of Apple’s best technology into a pocketable package. Photograph: Samuel Gibbs/The Guardian",
-      "Apple iPhone 18 Pro review: big changes for small differences",
-      "Longer battery life, better screen, upgraded Siri and new variable aperture camera in refreshed design from last year’s model",
-      "Most viewed",
-      "Quebec poised to elect separatists to power for first time more than decade",
-      "Quebec poised to elect separatists to power for first time more than decade",
-      "Monday briefing: You asked, we answered – how will the US midterms go?",
-      "Monday briefing: You asked, we answered – how will the US midterms go?",
-      "Brazil’s presidential race goes to second round as Flávio Bolsonaro leads incumbent Lula",
-      "Brazil’s presidential race goes to second round as Flávio Bolsonaro leads incumbent Lula",
-      "My sister Nicole married OJ Simpson. This is what I wish I had known",
-      "My sister Nicole married OJ Simpson. This is what I wish I had known",
-      "Trump’s recent statements on the economy are even more bonkers than usualSteven Greenhouse",
-      "Trump’s recent statements on the economy are even more bonkers than usualSteven Greenhouse"
+      "Next article: The Go Gopher Previous article: Go talks at FOSDEM 2014 Blog Index"
+    ]
+  },
+  {
+    "slug": "twir-671",
+    "extra": []
+  },
+  {
+    "slug": "globalvoices-bangladesh-protests",
+    "extra": [
+      "Bangladesh: Protests can change governments, but can they strengthen democracy?",
+      "Categories",
+      "South Asia",
+      "Bangladesh",
+      "Breaking News",
+      "Censorship",
+      "Citizen Media",
+      "Digital Activism",
+      "Education",
+      "Elections",
+      "Freedom of Speech",
+      "Governance",
+      "History",
+      "Human Rights",
+      "Media & Journalism",
+      "Politics",
+      "Protest",
+      "Youth",
+      "Protest in democracy",
+      "Support our work",
+      "Global Voices stands out as one of the earliest and strongest examples of how media committed to building community and defending human rights can positively influence how people experience events happening beyond their own communities and national borders.",
+      "Please consider making a donation to help us continue this work.",
+      "Donate now",
+      "Recent South Asia Stories",
+      "The sound of resistance",
+      "Equating protest with terrorism: A narrative against dissent",
+      "Beyond protest: Mob violence and the struggle for institutional response in Bangladesh",
+      "Top World Stories",
+      "How a farmers’ protest in Bucharest was inflated online, then hijacked",
+      "West-to-east energy, east-to-west computing: The Uyghur costs of China’s digital order",
+      "The shock wave of Sister Hong: Catfishing, gender imbalance, and sexual education in China",
+      "Start the conversation"
     ]
   }
 ]

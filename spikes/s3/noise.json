@@ -1,0 +1,337 @@
+{
+  "_doc": "Hand-checked UI noise per fixture, labelled by reading the actual W and R outputs (dump-blocks.mjs), not derived from the walk's rules. text = exact normalized text of an element. kind: ui = page controls, edit/feedback/share links, widget labels; meta = read time, last-updated, version badges, tags, categories; promo = subscribe/paywall/newsletter/most-viewed; hidden = hidden by site CSS in the real page (jsdom can't see it); glyph = permalink symbols with no letters (scored separately). Bylines and publication dates of the article itself and the author's own in-body links are treated as content.",
+  "docusaurus-code-blocks": [
+    {
+      "text": "Version: 3.10.2",
+      "kind": "meta"
+    },
+    {
+      "text": "http://localhost:3000",
+      "kind": "ui",
+      "note": "fake browser-window address bar around live demos"
+    },
+    {
+      "text": "Live Editor",
+      "kind": "ui"
+    },
+    {
+      "text": "Result",
+      "kind": "ui"
+    },
+    {
+      "text": "​",
+      "kind": "glyph",
+      "note": "a.hash-link permalink"
+    }
+  ],
+  "mkdocs-material-admonitions": [
+    {
+      "text": "¶",
+      "kind": "glyph",
+      "note": "a.headerlink permalink"
+    }
+  ],
+  "mdn-promise-then": [
+    {
+      "text": "Baseline Widely available",
+      "kind": "meta"
+    },
+    {
+      "text": "See full compatibility",
+      "kind": "ui"
+    },
+    {
+      "text": "Learn more",
+      "kind": "ui"
+    },
+    {
+      "text": "Report problems with this compatibility data",
+      "kind": "ui"
+    },
+    {
+      "text": "View data on GitHub",
+      "kind": "ui"
+    },
+    {
+      "text": "Browser compatibility settings",
+      "kind": "ui"
+    },
+    {
+      "text": "Help improve MDN",
+      "kind": "ui"
+    },
+    {
+      "text": "Learn how to contribute",
+      "kind": "ui"
+    },
+    {
+      "text": "MDN contributors",
+      "kind": "meta"
+    },
+    {
+      "text": "Sep 1, 2026",
+      "kind": "meta",
+      "note": "last-modified date"
+    },
+    {
+      "text": "View this page on GitHub",
+      "kind": "ui"
+    },
+    {
+      "text": "Report a problem with this content",
+      "kind": "ui"
+    }
+  ],
+  "docsrs-tokio": [
+    {
+      "text": "Search",
+      "kind": "ui",
+      "note": "rustdoc toolbar"
+    },
+    {
+      "text": "Settings",
+      "kind": "ui"
+    },
+    {
+      "text": "Help",
+      "kind": "ui"
+    },
+    {
+      "text": "Source",
+      "kind": "ui"
+    },
+    {
+      "text": "Expand description",
+      "kind": "ui"
+    },
+    {
+      "text": "§",
+      "kind": "glyph",
+      "note": "a.anchor permalink"
+    }
+  ],
+  "github-readme-bat": [],
+  "wikipedia-futures-promises": [
+    {
+      "text": "[ edit ]",
+      "kind": "ui",
+      "note": "span.mw-editsection"
+    },
+    {
+      "text": "Edit links",
+      "kind": "ui"
+    },
+    {
+      "text": "From Wikipedia, the free encyclopedia",
+      "kind": "meta"
+    },
+    {
+      "text": "Jump up to:",
+      "kind": "ui",
+      "note": "footnote back-links"
+    },
+    {
+      "text": "Categories",
+      "kind": "meta"
+    },
+    {
+      "text": "Inter-process communication",
+      "kind": "meta",
+      "note": "category link"
+    },
+    {
+      "text": "Actor model (computer science)",
+      "kind": "meta",
+      "note": "category link"
+    },
+    {
+      "text": "Computer science constructs",
+      "kind": "hidden",
+      "note": "div.shortdescription"
+    },
+    {
+      "text": "Articles with short description",
+      "kind": "hidden",
+      "note": "hidden maintenance categories"
+    },
+    {
+      "text": "Short description is different from Wikidata",
+      "kind": "hidden"
+    },
+    {
+      "text": "Use dmy dates from November 2023",
+      "kind": "hidden"
+    },
+    {
+      "text": "All articles with unsourced statements",
+      "kind": "hidden"
+    },
+    {
+      "text": "Articles with unsourced statements from March 2018",
+      "kind": "hidden"
+    },
+    {
+      "text": "CS1: unfit URL",
+      "kind": "hidden"
+    },
+    {
+      "text": "CS1 errors: deprecated parameters",
+      "kind": "hidden"
+    },
+    {
+      "text": "Webarchive template wayback links",
+      "kind": "hidden"
+    },
+    {
+      "text": "{{ cite conference }} :",
+      "kind": "hidden",
+      "note": "citation error message"
+    }
+  ],
+  "mdbook-rust-book-ownership": [],
+  "goblog-pipelines": [
+    {
+      "text": "The Go Blog",
+      "kind": "meta",
+      "note": "blog section label"
+    },
+    {
+      "text": "Go talks at FOSDEM 2014",
+      "kind": "ui",
+      "note": "next/previous article links"
+    },
+    {
+      "text": "The Go Gopher",
+      "kind": "ui"
+    },
+    {
+      "text": "Blog Index",
+      "kind": "ui"
+    },
+    {
+      "text": "¶",
+      "kind": "glyph",
+      "note": "heading permalinks"
+    }
+  ],
+  "twir-671": [],
+  "globalvoices-bangladesh-protests": [
+    {
+      "text": "Read this post in",
+      "kind": "ui",
+      "note": "language switcher"
+    },
+    {
+      "text": "Categories",
+      "kind": "meta",
+      "note": "post category/tag lists"
+    },
+    {
+      "text": "Regions",
+      "kind": "meta"
+    },
+    {
+      "text": "Topics",
+      "kind": "meta"
+    },
+    {
+      "text": "Breaking News",
+      "kind": "meta"
+    },
+    {
+      "text": "Censorship",
+      "kind": "meta"
+    },
+    {
+      "text": "Citizen Media",
+      "kind": "meta"
+    },
+    {
+      "text": "Digital Activism",
+      "kind": "meta"
+    },
+    {
+      "text": "Elections",
+      "kind": "meta"
+    },
+    {
+      "text": "Freedom of Speech",
+      "kind": "meta"
+    },
+    {
+      "text": "Governance",
+      "kind": "meta"
+    },
+    {
+      "text": "Human Rights",
+      "kind": "meta"
+    },
+    {
+      "text": "Media & Journalism",
+      "kind": "meta"
+    },
+    {
+      "text": "Youth",
+      "kind": "meta"
+    },
+    {
+      "text": "Protest in democracy",
+      "kind": "meta"
+    },
+    {
+      "text": "Support our work",
+      "kind": "promo",
+      "note": "donation widget, related-story lists"
+    },
+    {
+      "text": "Donate now",
+      "kind": "promo"
+    },
+    {
+      "text": "Recent South Asia Stories",
+      "kind": "promo"
+    },
+    {
+      "text": "The sound of resistance",
+      "kind": "promo"
+    },
+    {
+      "text": "Equating protest with terrorism: A narrative against dissent",
+      "kind": "promo"
+    },
+    {
+      "text": "More »",
+      "kind": "promo"
+    },
+    {
+      "text": "Top World Stories",
+      "kind": "promo"
+    },
+    {
+      "text": "4 days ago",
+      "kind": "meta",
+      "note": "related-card dates"
+    },
+    {
+      "text": "6 days ago",
+      "kind": "meta"
+    },
+    {
+      "text": "1 week ago",
+      "kind": "meta"
+    },
+    {
+      "text": "2 days ago",
+      "kind": "meta"
+    },
+    {
+      "text": "Cancel this reply",
+      "kind": "ui",
+      "note": "comment form"
+    },
+    {
+      "text": "Start the conversation",
+      "kind": "ui"
+    }
+  ]
+}

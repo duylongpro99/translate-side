@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import { launch, openPage } from './cdp.mjs';
 import { JSDOM } from 'jsdom';
+import { scrub } from './scrub.mjs';
 const OUT = '../../fixtures/sites';
 fs.mkdirSync(OUT, { recursive: true });
 const sites = JSON.parse(fs.readFileSync('sites.json', 'utf8'));
@@ -28,10 +29,11 @@ for (const site of sites) {
   const D = dom.window.document;
   D.querySelectorAll('script, noscript, iframe, template:not([shadowrootmode])').forEach((e) => e.remove());
   for (const t of D.querySelectorAll('template[shadowrootmode]')) t.content.querySelectorAll('script, noscript, iframe').forEach((e) => e.remove());
+  scrub(D);
   const base = D.createElement('base'); base.href = s.finalUrl; D.head.prepend(base);
   s.html = dom.serialize();
   fs.writeFileSync(`${OUT}/${site.slug}.html`, s.html);
-  manifest[site.slug] = { ...site, finalUrl: s.finalUrl, title: s.title, capturedAt: new Date().toISOString(), bytes: s.html.length, openShadowRoots: s.openShadowRoots, contentFound: s.contentFound };
+  manifest[site.slug] = { ...site, finalUrl: s.finalUrl, title: s.title, capturedAt: new Date().toISOString(), bytes: s.html.length, openShadowRoots: s.openShadowRoots, contentFound: s.contentFound, scrubbed: true };
   console.log(site.slug, s.title.slice(0, 60), s.html.length, 'shadowRoots=' + s.openShadowRoots, 'contentFound=' + s.contentFound);
   await p.close();
 }
