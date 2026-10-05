@@ -1,0 +1,53 @@
+{
+ "at": "2026-10-05T15:13:30.216Z",
+ "rows": [
+  {
+   "ep": "/api/chat",
+   "stream": false,
+   "model": "kimi-k3",
+   "status": 402,
+   "contentType": "application/json",
+   "body": "{\"error\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 1ce343c1-e307-4de5-b7fb-1df36f5b09b6)\"}\n"
+  },
+  {
+   "ep": "/api/chat",
+   "stream": false,
+   "model": "glm-5.3",
+   "status": 402,
+   "contentType": "application/json",
+   "body": "{\"error\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: d9dd97c5-2adb-41a4-b706-c7508a85a15d)\"}\n"
+  },
+  {
+   "ep": "/v1/chat/completions",
+   "stream": false,
+   "model": "kimi-k3",
+   "status": 402,
+   "contentType": "application/json",
+   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 3e1a6dbf-ca74-4cf4-9cf0-a23c44bbcf1e)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
+  },
+  {
+   "ep": "/v1/chat/completions",
+   "stream": false,
+   "model": "glm-5.3",
+   "status": 402,
+   "contentType": "application/json",
+   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 03053e0c-2cd1-4e3b-b771-93348e0de6cc)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
+  },
+  {
+   "ep": "/v1/chat/completions",
+   "stream": true,
+   "model": "kimi-k3",
+   "status": 402,
+   "contentType": "application/json",
+   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 3317c642-c4d9-4acb-b257-e9350b42ea57)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
+  },
+  {
+   "ep": "/v1/chat/completions",
+   "stream": true,
+   "model": "glm-5.3",
+   "status": 402,
+   "contentType": "application/json",
+   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 16510bcf-01e9-40e7-bab8-afa6fb8866b8)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
+  }
+ ]
+}

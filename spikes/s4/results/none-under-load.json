@@ -1,0 +1,280 @@
+{
+ "variant": "none",
+ "chrome": "see results/chrome-version.txt",
+ "host_permissions": [],
+ "at": "2026-10-05T14:56:07.285Z",
+ "rows": [
+  {
+   "ctx": "panel",
+   "name": "GET /api/tags, no key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 469
+  },
+  {
+   "ctx": "panel",
+   "name": "GET /v1/models, no key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 979
+  },
+  {
+   "ctx": "panel",
+   "name": "GET /v1/models, invalid key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 315
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions stream, valid key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 445
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, invalid key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 328
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, missing key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 317
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, Basic auth",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 314
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, unknown model",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 319
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, qwen3.5:9b",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 313
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, unknown model, invalid key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 339
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, bad JSON",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 333
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, no messages",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 319
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /api/chat, valid key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 310
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /api/chat, invalid key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 319
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /api/chat, missing key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 310
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /api/chat, unknown model",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 597
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, wrong base path",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 348
+  },
+  {
+   "ctx": "worker",
+   "name": "GET /api/tags, no key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 326
+  },
+  {
+   "ctx": "worker",
+   "name": "GET /v1/models, no key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 1004
+  },
+  {
+   "ctx": "worker",
+   "name": "GET /v1/models, invalid key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 314
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions stream, valid key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 322
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, invalid key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 314
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, missing key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 316
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, Basic auth",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 306
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, unknown model",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 318
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, qwen3.5:9b",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 320
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, unknown model, invalid key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 319
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, bad JSON",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 313
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, no messages",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 341
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /api/chat, valid key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 320
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /api/chat, invalid key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 312
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /api/chat, missing key",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 316
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /api/chat, unknown model",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 320
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, wrong base path",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 317
+  }
+ ]
+}

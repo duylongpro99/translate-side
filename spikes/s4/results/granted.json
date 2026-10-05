@@ -1,0 +1,418 @@
+{
+ "variant": "granted",
+ "chrome": "see results/chrome-version.txt",
+ "host_permissions": [
+  "https://ollama.com/*"
+ ],
+ "at": "2026-10-05T15:07:50.007Z",
+ "rows": [
+  {
+   "ctx": "panel",
+   "name": "GET /api/tags, no key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"models\":[{\"name\":\"glm-5.3\",\"model\":\"glm-5.3\",\"modified_at\":\"2026-08-28T08:00:00-07:00\",\"size\":755433728000,\"digest\":\"632dfda18c6d\",\"details\":{\"parent_model\":\"\",\"format\":\"\",\"family\":\"\",\"families\":null,\"parameter_size\":\"\",\"quantization_leve",
+   "ms": 308
+  },
+  {
+   "ctx": "panel",
+   "name": "GET /v1/models, no key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"object\":\"list\",\"data\":[{\"id\":\"kimi-k2.7-code\",\"object\":\"model\",\"created\":1781222400,\"owned_by\":\"ollama\"},{\"id\":\"deepseek-v4-pro:0813\",\"object\":\"model\",\"created\":1786633200,\"owned_by\":\"ollama\"},{\"id\":\"glm-5.2\",\"object\":\"model\",\"created\":17",
+   "ms": 313
+  },
+  {
+   "ctx": "panel",
+   "name": "GET /v1/models, invalid key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"object\":\"list\",\"data\":[{\"id\":\"kimi-k2.6\",\"object\":\"model\",\"created\":1776643200,\"owned_by\":\"ollama\"},{\"id\":\"nemotron-3-nano:30b\",\"object\":\"model\",\"created\":1765756800,\"owned_by\":\"ollama\"},{\"id\":\"kimi-k2.7-code\",\"object\":\"model\",\"created\":1",
+   "ms": 300
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions stream, valid key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "text/event-stream"
+   },
+   "body": "data: {\"id\":\"chatcmpl-933\",\"object\":\"chat.completion.chunk\",\"created\":1791212771,\"model\":\"gpt-oss:20b\",\"system_fingerprint\":\"fp_ollama\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\",\"reasoning\":\"User\"},\"finish_reason\":null}",
+   "ms": 34585
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, invalid key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 311
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, missing key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 313
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, Basic auth",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 312
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, unknown model",
+   "ok": true,
+   "status": 404,
+   "type": "basic",
+   "headers": {
+    "content-type": "text/html; charset=utf-8"
+   },
+   "body": "{\"error\":{\"message\":\"model \\\"no-such-model:1b\\\" not found\",\"type\":\"not_found_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 26252
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, qwen3.5:9b",
+   "ok": true,
+   "status": 404,
+   "type": "basic",
+   "headers": {
+    "content-type": "text/html; charset=utf-8"
+   },
+   "body": "{\"error\":{\"message\":\"model \\\"qwen3.5:9b\\\" not found\",\"type\":\"not_found_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 23877
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, unknown model, invalid key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 299
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, bad JSON",
+   "ok": true,
+   "status": 400,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"invalid character 'n' looking for beginning of object key string (ref: 7e1ce47a-9e34-40d6-9e41-db206a4b8538)\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 16753
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, no messages",
+   "ok": true,
+   "status": 400,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"[] is too short - 'messages' (ref: 7bdf3e68-2848-436c-ae86-52251ad17e84)\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 9207
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /api/chat, valid key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-10-05T15:07:29.870835598Z\",\"message\":{\"role\":\"assistant\",\"content\":\"ok.\",\"thinking\":\"The user: \\\"Say ok.\\\" They just want assistant to say \\\"ok.\\\" So answer: \\\"ok.\\\"\"},\"done\":true,\"done_reason\":\"sto",
+   "ms": 1120
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /api/chat, invalid key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":\"Unauthorized\"}\n",
+   "ms": 310
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /api/chat, missing key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":\"Unauthorized\"}\n",
+   "ms": 312
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /api/chat, unknown model",
+   "ok": true,
+   "status": 404,
+   "type": "basic",
+   "headers": {
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "body": "{\"error\": \"model 'no-such-model:1b' not found\"}\n",
+   "ms": 18982
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, wrong base path",
+   "ok": true,
+   "status": 404,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":\"path \\\"/api/v1/chat/completions\\\" not found\"}\n",
+   "ms": 425
+  },
+  {
+   "ctx": "worker",
+   "name": "GET /api/tags, no key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"models\":[{\"name\":\"deepseek-v4.1-flash\",\"model\":\"deepseek-v4.1-flash\",\"modified_at\":\"2026-09-10T03:00:00Z\",\"size\":486723007816,\"digest\":\"97308b916fc3\",\"details\":{\"parent_model\":\"\",\"format\":\"\",\"family\":\"\",\"families\":null,\"parameter_size\":\"\"",
+   "ms": 477
+  },
+  {
+   "ctx": "worker",
+   "name": "GET /v1/models, no key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"object\":\"list\",\"data\":[{\"id\":\"glm-5.3\",\"object\":\"model\",\"created\":1787929200,\"owned_by\":\"ollama\"},{\"id\":\"kimi-k2.7-code\",\"object\":\"model\",\"created\":1781222400,\"owned_by\":\"ollama\"},{\"id\":\"minimax-m3\",\"object\":\"model\",\"created\":1780272000,\"",
+   "ms": 1049
+  },
+  {
+   "ctx": "worker",
+   "name": "GET /v1/models, invalid key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"object\":\"list\",\"data\":[{\"id\":\"glm-5.3\",\"object\":\"model\",\"created\":1787929200,\"owned_by\":\"ollama\"},{\"id\":\"minimax-m2.7\",\"object\":\"model\",\"created\":1773792000,\"owned_by\":\"ollama\"},{\"id\":\"deepseek-v4.1-flash\",\"object\":\"model\",\"created\":17890",
+   "ms": 321
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions stream, valid key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "text/event-stream"
+   },
+   "body": "data: {\"id\":\"chatcmpl-366\",\"object\":\"chat.completion.chunk\",\"created\":1791212623,\"model\":\"gpt-oss:20b\",\"system_fingerprint\":\"fp_ollama\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\",\"reasoning\":\"User\"},\"finish_reason\":null}",
+   "ms": 17214
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, invalid key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 316
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, missing key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 335
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, Basic auth",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 325
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, unknown model",
+   "ok": true,
+   "status": 404,
+   "type": "basic",
+   "headers": {
+    "content-type": "text/html; charset=utf-8"
+   },
+   "body": "{\"error\":{\"message\":\"model \\\"no-such-model:1b\\\" not found\",\"type\":\"not_found_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 13671
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, qwen3.5:9b",
+   "ok": true,
+   "status": 404,
+   "type": "basic",
+   "headers": {
+    "content-type": "text/html; charset=utf-8"
+   },
+   "body": "{\"error\":{\"message\":\"model \\\"qwen3.5:9b\\\" not found\",\"type\":\"not_found_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 18539
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, unknown model, invalid key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 1125
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, bad JSON",
+   "ok": true,
+   "status": 400,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"invalid character 'n' looking for beginning of object key string (ref: 8b84a823-046f-488d-9d5b-24ab3ec7d83b)\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 13594
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, no messages",
+   "ok": true,
+   "status": 400,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"[] is too short - 'messages' (ref: 47d439e0-9953-4732-99e0-a8bdcf446b04)\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 18721
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /api/chat, valid key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-10-05T15:05:07.793869513Z\",\"message\":{\"role\":\"assistant\",\"content\":\"ok.\",\"thinking\":\"The user is simply saying \\\"Say ok.\\\" The instruction is straightforward: respond with \\\"ok.\\\" But we also need t",
+   "ms": 17378
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /api/chat, invalid key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":\"Unauthorized\"}\n",
+   "ms": 308
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /api/chat, missing key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":\"Unauthorized\"}\n",
+   "ms": 302
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /api/chat, unknown model",
+   "ok": true,
+   "status": 404,
+   "type": "basic",
+   "headers": {
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "body": "{\"error\": \"model 'no-such-model:1b' not found\"}\n",
+   "ms": 27064
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, wrong base path",
+   "ok": true,
+   "status": 404,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":\"path \\\"/api/v1/chat/completions\\\" not found\"}\n",
+   "ms": 447
+  }
+ ]
+}

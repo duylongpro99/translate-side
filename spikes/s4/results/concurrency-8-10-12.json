@@ -1,0 +1,78 @@
+{
+ "at": "2026-10-05T14:58:29.300Z",
+ "model": "gpt-oss:20b",
+ "rows": [
+  {
+   "n": 8,
+   "statuses": [
+    429,
+    200,
+    200,
+    429,
+    200,
+    200,
+    200,
+    200
+   ],
+   "retryAfter": [
+    "19",
+    "14"
+   ],
+   "bodies": [
+    "{\"error\":\"too many concurrent requests\"}\n"
+   ]
+  },
+  {
+   "n": 10,
+   "statuses": [
+    429,
+    429,
+    200,
+    200,
+    429,
+    200,
+    429,
+    200,
+    200,
+    200
+   ],
+   "retryAfter": [
+    "12",
+    "13",
+    "17",
+    "11"
+   ],
+   "bodies": [
+    "{\"error\":\"too many concurrent requests\"}\n"
+   ]
+  },
+  {
+   "n": 12,
+   "statuses": [
+    200,
+    429,
+    200,
+    200,
+    200,
+    429,
+    429,
+    429,
+    200,
+    429,
+    200,
+    429
+   ],
+   "retryAfter": [
+    "17",
+    "20",
+    "18",
+    "14",
+    "15",
+    "13"
+   ],
+   "bodies": [
+    "{\"error\":\"too many concurrent requests\"}\n"
+   ]
+  }
+ ]
+}

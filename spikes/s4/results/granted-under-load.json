@@ -1,0 +1,432 @@
+{
+ "variant": "granted",
+ "chrome": "see results/chrome-version.txt",
+ "host_permissions": [
+  "https://ollama.com/*"
+ ],
+ "at": "2026-10-05T14:55:51.850Z",
+ "rows": [
+  {
+   "ctx": "panel",
+   "name": "GET /api/tags, no key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"models\":[{\"name\":\"kimi-k3\",\"model\":\"kimi-k3\",\"modified_at\":\"2026-07-27T08:00:00-07:00\",\"size\":1560860324864,\"digest\":\"d189309738f0\",\"details\":{\"parent_model\":\"\",\"format\":\"\",\"family\":\"\",\"families\":null,\"parameter_size\":\"\",\"quantization_lev",
+   "ms": 1109
+  },
+  {
+   "ctx": "panel",
+   "name": "GET /v1/models, no key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"object\":\"list\",\"data\":[{\"id\":\"deepseek-v4-pro:0813\",\"object\":\"model\",\"created\":1786633200,\"owned_by\":\"ollama\"},{\"id\":\"gemma4:31b\",\"object\":\"model\",\"created\":1775149200,\"owned_by\":\"ollama\"},{\"id\":\"mistral-large-3:675b\",\"object\":\"model\",\"cr",
+   "ms": 296
+  },
+  {
+   "ctx": "panel",
+   "name": "GET /v1/models, invalid key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"object\":\"list\",\"data\":[{\"id\":\"gpt-oss:120b\",\"object\":\"model\",\"created\":1754352000,\"owned_by\":\"ollama\"},{\"id\":\"minimax-m3\",\"object\":\"model\",\"created\":1780272000,\"owned_by\":\"ollama\"},{\"id\":\"nemotron-3-super\",\"object\":\"model\",\"created\":17731",
+   "ms": 407
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions stream, valid key",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "14"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 381
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, invalid key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 310
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, missing key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 1014
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, Basic auth",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 313
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, unknown model",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "12"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 382
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, qwen3.5:9b",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "15"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 385
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, unknown model, invalid key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 300
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, bad JSON",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "12"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 403
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, no messages",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "18"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 389
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /api/chat, valid key",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "20"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 393
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /api/chat, invalid key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":\"Unauthorized\"}\n",
+   "ms": 303
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /api/chat, missing key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":\"Unauthorized\"}\n",
+   "ms": 318
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /api/chat, unknown model",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "13"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 1087
+  },
+  {
+   "ctx": "panel",
+   "name": "POST /v1/chat/completions, wrong base path",
+   "ok": true,
+   "status": 404,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":\"path \\\"/api/v1/chat/completions\\\" not found\"}\n",
+   "ms": 381
+  },
+  {
+   "ctx": "worker",
+   "name": "GET /api/tags, no key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"models\":[{\"name\":\"gemma4:31b\",\"model\":\"gemma4:31b\",\"modified_at\":\"2026-04-02T09:00:00-08:00\",\"size\":62546177752,\"digest\":\"221b330d11a8\",\"details\":{\"parent_model\":\"\",\"format\":\"\",\"family\":\"\",\"families\":null,\"parameter_size\":\"\",\"quantization",
+   "ms": 1003
+  },
+  {
+   "ctx": "worker",
+   "name": "GET /v1/models, no key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"object\":\"list\",\"data\":[{\"id\":\"kimi-k2.6\",\"object\":\"model\",\"created\":1776643200,\"owned_by\":\"ollama\"},{\"id\":\"minimax-m3\",\"object\":\"model\",\"created\":1780272000,\"owned_by\":\"ollama\"},{\"id\":\"glm-5.3\",\"object\":\"model\",\"created\":1787929200,\"owned",
+   "ms": 348
+  },
+  {
+   "ctx": "worker",
+   "name": "GET /v1/models, invalid key",
+   "ok": true,
+   "status": 200,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"object\":\"list\",\"data\":[{\"id\":\"kimi-k3\",\"object\":\"model\",\"created\":1785164400,\"owned_by\":\"ollama\"},{\"id\":\"deepseek-v4-pro:0813\",\"object\":\"model\",\"created\":1786633200,\"owned_by\":\"ollama\"},{\"id\":\"mistral-large-3:675b\",\"object\":\"model\",\"creat",
+   "ms": 1057
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions stream, valid key",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "18"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 384
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, invalid key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 314
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, missing key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 325
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, Basic auth",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 313
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, unknown model",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "20"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 393
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, qwen3.5:9b",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "11"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 393
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, unknown model, invalid key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n",
+   "ms": 312
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, bad JSON",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "16"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 388
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, no messages",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "16"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 392
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /api/chat, valid key",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "15"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 394
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /api/chat, invalid key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":\"Unauthorized\"}\n",
+   "ms": 308
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /api/chat, missing key",
+   "ok": true,
+   "status": 401,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":\"Unauthorized\"}\n",
+   "ms": 399
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /api/chat, unknown model",
+   "ok": true,
+   "status": 429,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json",
+    "retry-after": "11"
+   },
+   "body": "{\"error\":\"too many concurrent requests\"}\n",
+   "ms": 413
+  },
+  {
+   "ctx": "worker",
+   "name": "POST /v1/chat/completions, wrong base path",
+   "ok": true,
+   "status": 404,
+   "type": "basic",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "body": "{\"error\":\"path \\\"/api/v1/chat/completions\\\" not found\"}\n",
+   "ms": 1065
+  }
+ ]
+}
