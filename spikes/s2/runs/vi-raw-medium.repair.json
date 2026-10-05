@@ -1,0 +1,48 @@
+{
+ "arm": "vi-raw-medium",
+ "chunks": 54,
+ "segments": 572,
+ "rerequestedSegs": 14,
+ "repairCalls": 1,
+ "lostAfterOneRepair": 0,
+ "detail": [
+  {
+   "chunk": "twir-671#1",
+   "rerequest": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  }
+ ]
+}

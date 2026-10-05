@@ -1,0 +1,996 @@
+{
+ "arm": "cut-1.0",
+ "chunks": 49,
+ "segments": 541,
+ "rerequestedSegs": 248,
+ "repairCalls": 49,
+ "lostAfterOneRepair": 0,
+ "detail": [
+  {
+   "chunk": "docusaurus-code-blocks#0",
+   "rerequest": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "docusaurus-code-blocks#2",
+   "rerequest": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "docusaurus-code-blocks#1",
+   "rerequest": [
+    13,
+    14
+   ],
+   "fixed": [
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "docusaurus-code-blocks#3",
+   "rerequest": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "docusaurus-code-blocks#4",
+   "rerequest": [
+    5,
+    6
+   ],
+   "fixed": [
+    5,
+    6
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mkdocs-material-admonitions#0",
+   "rerequest": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mkdocs-material-admonitions#1",
+   "rerequest": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mkdocs-material-admonitions#2",
+   "rerequest": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mkdocs-material-admonitions#3",
+   "rerequest": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mkdocs-material-admonitions#4",
+   "rerequest": [
+    10,
+    11
+   ],
+   "fixed": [
+    10,
+    11
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mdn-promise-then#0",
+   "rerequest": [
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mdn-promise-then#1",
+   "rerequest": [
+    10,
+    11,
+    12,
+    13
+   ],
+   "fixed": [
+    10,
+    11,
+    12,
+    13
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mdn-promise-then#2",
+   "rerequest": [
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mdn-promise-then#3",
+   "rerequest": [
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mdn-promise-then#4",
+   "rerequest": [
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "fixed": [
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "docsrs-tokio#0",
+   "rerequest": [
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "docsrs-tokio#1",
+   "rerequest": [
+    7
+   ],
+   "fixed": [
+    7
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "docsrs-tokio#2",
+   "rerequest": [
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "docsrs-tokio#3",
+   "rerequest": [
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "docsrs-tokio#4",
+   "rerequest": [
+    9,
+    10,
+    11,
+    12,
+    13
+   ],
+   "fixed": [
+    9,
+    10,
+    11,
+    12,
+    13
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "github-readme-bat#0",
+   "rerequest": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "github-readme-bat#1",
+   "rerequest": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "github-readme-bat#2",
+   "rerequest": [
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "github-readme-bat#3",
+   "rerequest": [
+    7,
+    8,
+    9,
+    10
+   ],
+   "fixed": [
+    7,
+    8,
+    9,
+    10
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "github-readme-bat#4",
+   "rerequest": [
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "fixed": [
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "wikipedia-futures-promises#0",
+   "rerequest": [
+    3,
+    4
+   ],
+   "fixed": [
+    3,
+    4
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "wikipedia-futures-promises#1",
+   "rerequest": [
+    4,
+    5
+   ],
+   "fixed": [
+    4,
+    5
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "wikipedia-futures-promises#2",
+   "rerequest": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "wikipedia-futures-promises#3",
+   "rerequest": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "wikipedia-futures-promises#4",
+   "rerequest": [
+    3,
+    4,
+    5
+   ],
+   "fixed": [
+    3,
+    4,
+    5
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mdbook-rust-book-ownership#0",
+   "rerequest": [
+    6
+   ],
+   "fixed": [
+    6
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mdbook-rust-book-ownership#1",
+   "rerequest": [
+    4
+   ],
+   "fixed": [
+    4
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mdbook-rust-book-ownership#2",
+   "rerequest": [
+    7,
+    8,
+    9
+   ],
+   "fixed": [
+    7,
+    8,
+    9
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mdbook-rust-book-ownership#3",
+   "rerequest": [
+    6,
+    7,
+    8
+   ],
+   "fixed": [
+    6,
+    7,
+    8
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mdbook-rust-book-ownership#4",
+   "rerequest": [
+    6,
+    7,
+    8,
+    9
+   ],
+   "fixed": [
+    6,
+    7,
+    8,
+    9
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "goblog-pipelines#0",
+   "rerequest": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "goblog-pipelines#1",
+   "rerequest": [
+    9,
+    10
+   ],
+   "fixed": [
+    9,
+    10
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "goblog-pipelines#2",
+   "rerequest": [
+    7
+   ],
+   "fixed": [
+    7
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "goblog-pipelines#3",
+   "rerequest": [
+    8,
+    9,
+    10,
+    11
+   ],
+   "fixed": [
+    8,
+    9,
+    10,
+    11
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "goblog-pipelines#4",
+   "rerequest": [
+    8,
+    9,
+    10
+   ],
+   "fixed": [
+    8,
+    9,
+    10
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "twir-671#0",
+   "rerequest": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "twir-671#1",
+   "rerequest": [
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "twir-671#2",
+   "rerequest": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "twir-671#3",
+   "rerequest": [
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "twir-671#4",
+   "rerequest": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+   ],
+   "fixed": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "globalvoices-bangladesh-protests#0",
+   "rerequest": [
+    6,
+    7,
+    8
+   ],
+   "fixed": [
+    6,
+    7,
+    8
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "globalvoices-bangladesh-protests#1",
+   "rerequest": [
+    9,
+    10,
+    11,
+    12
+   ],
+   "fixed": [
+    9,
+    10,
+    11,
+    12
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "globalvoices-bangladesh-protests#2",
+   "rerequest": [
+    3,
+    4
+   ],
+   "fixed": [
+    3,
+    4
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "globalvoices-bangladesh-protests#3",
+   "rerequest": [
+    5,
+    6,
+    7
+   ],
+   "fixed": [
+    5,
+    6,
+    7
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  }
+ ]
+}

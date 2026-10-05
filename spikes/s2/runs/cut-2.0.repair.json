@@ -1,0 +1,152 @@
+{
+ "arm": "cut-2.0",
+ "chunks": 49,
+ "segments": 541,
+ "rerequestedSegs": 31,
+ "repairCalls": 8,
+ "lostAfterOneRepair": 0,
+ "detail": [
+  {
+   "chunk": "mdn-promise-then#3",
+   "rerequest": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "mdn-promise-then#4",
+   "rerequest": [
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "fixed": [
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "github-readme-bat#1",
+   "rerequest": [
+    14
+   ],
+   "fixed": [
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "github-readme-bat#2",
+   "rerequest": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "wikipedia-futures-promises#2",
+   "rerequest": [
+    13,
+    14
+   ],
+   "fixed": [
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "twir-671#1",
+   "rerequest": [
+    12,
+    13,
+    14
+   ],
+   "fixed": [
+    12,
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "twir-671#3",
+   "rerequest": [
+    13,
+    14
+   ],
+   "fixed": [
+    13,
+    14
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  },
+  {
+   "chunk": "twir-671#4",
+   "rerequest": [
+    6,
+    7,
+    8,
+    9
+   ],
+   "fixed": [
+    6,
+    7,
+    8,
+    9
+   ],
+   "still": [],
+   "secondFinish": "stop",
+   "secondFixes": []
+  }
+ ]
+}

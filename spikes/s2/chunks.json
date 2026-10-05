@@ -1,0 +1,3050 @@
+[
+ {
+  "id": "docusaurus-code-blocks#0",
+  "slug": "docusaurus-code-blocks",
+  "title": "Code blocks | Docusaurus",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h1",
+    "text": "Code blocks"
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "Code blocks within documentation are super-powered 💪."
+   },
+   {
+    "id": 3,
+    "kind": "h2",
+    "text": "Code title"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "You can add a title to the code block by adding a `title` key after the language (leave a space between them)."
+   },
+   {
+    "id": 5,
+    "kind": "h2",
+    "text": "Syntax highlighting"
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "Code blocks are text blocks wrapped around by strings of 3 backticks. You may check out [link]this reference[/link] for the specifications of MDX."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "Use the matching language meta string for your code block, and Docusaurus will pick up syntax highlighting automatically, powered by [link]Prism React Renderer[/link]."
+   },
+   {
+    "id": 8,
+    "kind": "h3",
+    "text": "Theming"
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "By default, the Prism [link]syntax highlighting theme[/link] we use is [link]Palenight[/link]. You can change this to another theme by passing `theme` field in `prism` as `themeConfig` in your docusaurus.config.js."
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "For example, if you prefer to use the `dracula` highlighting theme:"
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "Because a Prism theme is just a JS object, you can also write your own theme if you are not satisfied with the default. Docusaurus enhances the `github` and `vsDark` themes to provide richer highlight, and you can check our implementations for the [link]light[/link] and [link]dark[/link] code block themes."
+   },
+   {
+    "id": 12,
+    "kind": "h3",
+    "text": "Supported Languages"
+   },
+   {
+    "id": 13,
+    "kind": "p",
+    "text": "By default, Docusaurus comes with a subset of [link]commonly used languages[/link]."
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "Some popular languages like Java, C#, or PHP are not enabled by default."
+   }
+  ]
+ },
+ {
+  "id": "docusaurus-code-blocks#1",
+  "slug": "docusaurus-code-blocks",
+  "title": "Code blocks | Docusaurus",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "You can use comments with `highlight-next-line`, `highlight-start`, and `highlight-end` to select which lines are highlighted."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "Supported commenting syntax:"
+   },
+   {
+    "id": 3,
+    "kind": "th",
+    "text": "Style"
+   },
+   {
+    "id": 4,
+    "kind": "th",
+    "text": "Syntax"
+   },
+   {
+    "id": 5,
+    "kind": "td",
+    "text": "C-style"
+   },
+   {
+    "id": 6,
+    "kind": "td",
+    "text": "`/* ... */` and `// ...`"
+   },
+   {
+    "id": 7,
+    "kind": "td",
+    "text": "JSX-style"
+   },
+   {
+    "id": 8,
+    "kind": "td",
+    "text": "`{/* ... */}`"
+   },
+   {
+    "id": 9,
+    "kind": "td",
+    "text": "Bash-style"
+   },
+   {
+    "id": 10,
+    "kind": "td",
+    "text": "`# ...`"
+   },
+   {
+    "id": 11,
+    "kind": "td",
+    "text": "HTML-style"
+   },
+   {
+    "id": 12,
+    "kind": "td",
+    "text": "`<!-- ... -->`"
+   },
+   {
+    "id": 13,
+    "kind": "p",
+    "text": "We will do our best to infer which set of comment styles to use based on the language, and default to allowing *all* comment styles. If there's a comment style that is not currently supported, we are open to adding them! Pull requests welcome. Note that different comment styles have no semantic difference, only their content does."
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "You can set your own background color for highlighted code line in your `src/css/custom.css` which will better fit to your selected syntax highlighting theme. The color given below works for the default highlighting theme (Palenight), so if you are using another theme, you will have to tweak the color accordingly."
+   }
+  ]
+ },
+ {
+  "id": "docusaurus-code-blocks#2",
+  "slug": "docusaurus-code-blocks",
+  "title": "Code blocks | Docusaurus",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "You can create an interactive coding editor with the `@docusaurus/theme-live-codeblock` plugin. First, add the plugin to your package."
+   },
+   {
+    "id": 2,
+    "kind": "li",
+    "text": "npm"
+   },
+   {
+    "id": 3,
+    "kind": "li",
+    "text": "Yarn"
+   },
+   {
+    "id": 4,
+    "kind": "li",
+    "text": "pnpm"
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "Bun"
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "You will also need to add the plugin to your `docusaurus.config.js`."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "To use the plugin, create a code block with `live` attached to the language meta string."
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "The code block will be rendered as an interactive editor. Changes to the code will reflect on the result panel live."
+   },
+   {
+    "id": 9,
+    "kind": "h2",
+    "text": "It is 8:56:41 PM."
+   },
+   {
+    "id": 10,
+    "kind": "h3",
+    "text": "Imports"
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "It is not possible to import components directly from the react-live code editor, you have to define available imports upfront."
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "By default, all React imports are available. If you need more imports available, swizzle the react-live scope:"
+   },
+   {
+    "id": 13,
+    "kind": "li",
+    "text": "npm"
+   },
+   {
+    "id": 14,
+    "kind": "li",
+    "text": "Yarn"
+   }
+  ]
+ },
+ {
+  "id": "docusaurus-code-blocks#3",
+  "slug": "docusaurus-code-blocks",
+  "title": "Code blocks | Docusaurus",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "With MDX, you can easily create interactive components within your documentation, for example, to display code in multiple programming languages and switch between them using a tabs component."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "Instead of implementing a dedicated component for multi-language support code blocks, we've implemented a general-purpose [link]`<Tabs>`[/link] component in the classic theme so that you can use it for other non-code scenarios as well."
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "The following example is how you can have multi-language code tabs in your docs. Note that the empty lines above and below each language block are **intentional**. This is a [link]current limitation of MDX[/link]: you have to leave empty lines around Markdown syntax for the MDX parser to know that it's Markdown syntax and not JSX."
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "And you will get the following:"
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "JavaScript"
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "Python"
+   },
+   {
+    "id": 7,
+    "kind": "li",
+    "text": "Java"
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "If you have multiple of these multi-language code tabs, and you want to sync the selection across the tab instances, refer to the [link]Syncing tab choices section[/link]."
+   },
+   {
+    "id": 9,
+    "kind": "h3",
+    "text": "Docusaurus npm2yarn remark plugin"
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "Displaying CLI commands in both npm and Yarn is a very common need, for example:"
+   },
+   {
+    "id": 11,
+    "kind": "li",
+    "text": "npm"
+   },
+   {
+    "id": 12,
+    "kind": "li",
+    "text": "Yarn"
+   },
+   {
+    "id": 13,
+    "kind": "li",
+    "text": "pnpm"
+   },
+   {
+    "id": 14,
+    "kind": "li",
+    "text": "Bun"
+   }
+  ]
+ },
+ {
+  "id": "docusaurus-code-blocks#4",
+  "slug": "docusaurus-code-blocks",
+  "title": "Code blocks | Docusaurus",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "td",
+    "text": "The list of converters to use. The order of the converters is important, as the first converter will be used as the default choice."
+   },
+   {
+    "id": 2,
+    "kind": "h2",
+    "text": "Usage in JSX"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "Outside of Markdown, you can use the `@theme/CodeBlock` component to get the same output."
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "The props accepted are `language`, `title` and `showLineNumbers`, in the same way as you write Markdown code blocks."
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "Although discouraged, you can also pass in a `metastring` prop like `metastring='{1-2} title=\"/src/components/HelloCodeTitle.js\" showLineNumbers'`, which is how Markdown code blocks are handled under the hood. However, we recommend you [link]use comments for highlighting lines[/link]."
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "As [link]previously stated[/link], syntax highlighting is only applied when the children is a simple string."
+   }
+  ]
+ },
+ {
+  "id": "mkdocs-material-admonitions#0",
+  "slug": "mkdocs-material-admonitions",
+  "title": "Admonitions - Material for MkDocs",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h1",
+    "text": "Admonitions"
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "Admonitions, also known as *call-outs*, are an excellent choice for including side content without significantly interrupting the document flow. Material for MkDocs provides several different types of admonitions and allows for the inclusion and nesting of arbitrary content."
+   },
+   {
+    "id": 3,
+    "kind": "h2",
+    "text": "Configuration"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "This configuration enables admonitions, allows to make them collapsible and to nest arbitrary content inside admonitions. Add the following lines to `mkdocs.yml`:"
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "See additional configuration options:"
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "[link]Admonition[/link]"
+   },
+   {
+    "id": 7,
+    "kind": "li",
+    "text": "[link]Details[/link]"
+   },
+   {
+    "id": 8,
+    "kind": "li",
+    "text": "[link]SuperFences[/link]"
+   },
+   {
+    "id": 9,
+    "kind": "h3",
+    "text": "Admonition icons"
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "[link]8.3.0[/link]"
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "Each of the supported admonition types has a distinct icon, which can be changed to any icon bundled with the theme, or even a [link]custom icon[/link]. Add the following lines to `mkdocs.yml`:"
+   },
+   {
+    "id": 12,
+    "kind": "summary",
+    "text": "Expand to show alternate icon sets"
+   },
+   {
+    "id": 13,
+    "kind": "h2",
+    "text": "Usage"
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "Admonitions follow a simple syntax: a block starts with `!!!`, followed by a single keyword used as a [link]type qualifier[/link]. The content of the block follows on the next line, indented by four spaces:"
+   }
+  ]
+ },
+ {
+  "id": "mkdocs-material-admonitions#1",
+  "slug": "mkdocs-material-admonitions",
+  "title": "Admonitions - Material for MkDocs",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 2,
+    "kind": "h3",
+    "text": "Collapsible blocks"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "When [link]Details[/link] is enabled and an admonition block is started with `???` instead of `!!!`, the admonition is rendered as an expandable block with a small toggle on the right side:"
+   },
+   {
+    "id": 4,
+    "kind": "summary",
+    "text": "Note"
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "Adding a `+` after the `???` token renders the block expanded:"
+   },
+   {
+    "id": 7,
+    "kind": "summary",
+    "text": "Note"
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 9,
+    "kind": "h3",
+    "text": "Inline blocks"
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "Admonitions can also be rendered as inline blocks (e.g., for sidebars), placing them to the right using the `inline` + `end` modifiers, or to the left using only the `inline` modifier:"
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "Lorem ipsum"
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 13,
+    "kind": "p",
+    "text": "Use `inline end` to align to the right (left for rtl languages)."
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "Lorem ipsum"
+   }
+  ]
+ },
+ {
+  "id": "mkdocs-material-admonitions#2",
+  "slug": "mkdocs-material-admonitions",
+  "title": "Admonitions - Material for MkDocs",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "Use `inline` to align to the left (right for rtl languages)."
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "**Important**: admonitions that use the `inline` modifiers *must* be declared prior to the content block you want to place them beside. If there's insufficient space to render the admonition next to the block, the admonition will stretch to the full width of the viewport, e.g., on mobile viewports."
+   },
+   {
+    "id": 4,
+    "kind": "h3",
+    "text": "Supported types"
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "Following is a list of type qualifiers provided by Material for MkDocs, whereas the default type, and thus fallback for unknown type qualifiers, is `note`[link]1[/link]:"
+   },
+   {
+    "id": 6,
+    "kind": "dt",
+    "text": "[link]`note`[/link]"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "Note"
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 9,
+    "kind": "dt",
+    "text": "[link]`abstract`[/link]"
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "Abstract"
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 12,
+    "kind": "dt",
+    "text": "[link]`info`[/link]"
+   },
+   {
+    "id": 13,
+    "kind": "p",
+    "text": "Info"
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   }
+  ]
+ },
+ {
+  "id": "mkdocs-material-admonitions#3",
+  "slug": "mkdocs-material-admonitions",
+  "title": "Admonitions - Material for MkDocs",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 2,
+    "kind": "dt",
+    "text": "[link]`danger`[/link]"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "Danger"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 5,
+    "kind": "dt",
+    "text": "[link]`bug`[/link]"
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "Bug"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 8,
+    "kind": "dt",
+    "text": "[link]`example`[/link]"
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "Example"
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 11,
+    "kind": "dt",
+    "text": "[link]`quote`[/link]"
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "Quote"
+   },
+   {
+    "id": 13,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 14,
+    "kind": "h2",
+    "text": "Customization"
+   }
+  ]
+ },
+ {
+  "id": "mkdocs-material-admonitions#4",
+  "slug": "mkdocs-material-admonitions",
+  "title": "Admonitions - Material for MkDocs",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h3",
+    "text": "Classic admonitions"
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "Prior to version [link]8.5.6[/link], admonitions had a slightly different appearance:"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "Note"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "If you want to restore this appearance, add the following CSS to an [link]additional style sheet[/link]:"
+   },
+   {
+    "id": 6,
+    "kind": "h3",
+    "text": "Custom admonitions"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "If you want to add a custom admonition type, all you need is a color and an `*.svg` icon. Copy the icon's code from the [link]`.icons`[/link] folder and add the following CSS to an [link]additional style sheet[/link]:"
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "After applying the customization, you can use the custom admonition type:"
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "Pied Piper"
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "Previously, some of the supported types defined more than one qualifier. For example, authors could use `summary` or `tldr` as alternative qualifiers to render an [link]`abstract`[/link] admonition. As this increased the size of the CSS that is shipped with Material for MkDocs, the additional type qualifiers are now all deprecated and will be removed in the next major version. This will also be mentioned in the upgrade guide."
+   }
+  ]
+ },
+ {
+  "id": "mdn-promise-then#0",
+  "slug": "mdn-promise-then",
+  "title": "Promise.prototype.then() - JavaScript | MDN",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h1",
+    "text": "Promise.prototype.then()"
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "The **`then()`** method of [link]`Promise`[/link] instances takes up to two arguments: callback functions for the fulfilled and rejected cases of the `Promise`. It stores the callbacks within the promise it is called on and immediately returns another [link]`Promise`[/link] object, allowing you to [link]chain[/link] calls to other promise methods."
+   },
+   {
+    "id": 3,
+    "kind": "h2",
+    "text": "[link]Try it[/link]"
+   },
+   {
+    "id": 4,
+    "kind": "h4",
+    "text": "JavaScript Demo: Promise.prototype.then()"
+   },
+   {
+    "id": 5,
+    "kind": "h2",
+    "text": "[link]Syntax[/link]"
+   },
+   {
+    "id": 6,
+    "kind": "h3",
+    "text": "[link]Parameters[/link]"
+   },
+   {
+    "id": 7,
+    "kind": "dt",
+    "text": "[link]`onFulfilled`[/link]"
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "A function to asynchronously execute when this promise becomes fulfilled. Its return value becomes the fulfillment value of the promise returned by `then()`. The function is called with the following arguments:"
+   },
+   {
+    "id": 9,
+    "kind": "dt",
+    "text": "[link]`value`[/link]"
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "The value that the promise was fulfilled with."
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "If it is not a function, it is internally replaced with an *identity* function (`(x) => x`) which simply passes the fulfillment value forward."
+   },
+   {
+    "id": 12,
+    "kind": "dt",
+    "text": "[link]`onRejected` Optional[/link]"
+   },
+   {
+    "id": 13,
+    "kind": "p",
+    "text": "A function to asynchronously execute when this promise becomes rejected. Its return value becomes the fulfillment value of the promise returned by `then()`. The function is called with the following arguments:"
+   },
+   {
+    "id": 14,
+    "kind": "dt",
+    "text": "[link]`reason`[/link]"
+   }
+  ]
+ },
+ {
+  "id": "mdn-promise-then#1",
+  "slug": "mdn-promise-then",
+  "title": "Promise.prototype.then() - JavaScript | MDN",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "The value that the promise was rejected with."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "If it is not a function, it is internally replaced with a *thrower* function (`(x) => { throw x; }`) which throws the rejection reason it received."
+   },
+   {
+    "id": 3,
+    "kind": "h3",
+    "text": "[link]Return value[/link]"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "Returns a new [link]`Promise`[/link] immediately. This returned promise is always pending when returned, regardless of the current promise's status."
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "One of the `onFulfilled` and `onRejected` handlers will be executed to handle the current promise's fulfillment or rejection. The call always happens asynchronously, even when the current promise is already settled. The behavior of the promise returned by `then()` (referred to as `p` in the following list) depends on the handler's execution result, following a specific set of rules. If the handler function:"
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "returns a value: `p` gets fulfilled with the returned value as its value."
+   },
+   {
+    "id": 7,
+    "kind": "li",
+    "text": "doesn't return anything: `p` gets fulfilled with `undefined` as its value."
+   },
+   {
+    "id": 8,
+    "kind": "li",
+    "text": "throws an error: `p` gets rejected with the thrown error as its value."
+   },
+   {
+    "id": 9,
+    "kind": "li",
+    "text": "returns an already fulfilled promise: `p` gets fulfilled with that promise's value as its value."
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "returns an already rejected promise: `p` gets rejected with that promise's value as its value."
+   },
+   {
+    "id": 11,
+    "kind": "li",
+    "text": "returns another pending promise: `p` is pending and becomes fulfilled/rejected with that promise's value as its value immediately after that promise becomes fulfilled/rejected."
+   },
+   {
+    "id": 12,
+    "kind": "h2",
+    "text": "[link]Description[/link]"
+   },
+   {
+    "id": 13,
+    "kind": "p",
+    "text": "The `then()` method schedules callback functions for the eventual completion of a Promise — either fulfillment or rejection. It is the primitive method of promises: the [link]thenable[/link] protocol expects all promise-like objects to expose a `then()` method, and the [link]`catch()`[/link] and [link]`finally()`[/link] methods both work by invoking the object's `then()` method."
+   }
+  ]
+ },
+ {
+  "id": "mdn-promise-then#2",
+  "slug": "mdn-promise-then",
+  "title": "Promise.prototype.then() - JavaScript | MDN",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h3",
+    "text": "[link]Using the then() method[/link]"
+   },
+   {
+    "id": 2,
+    "kind": "h3",
+    "text": "[link]Having a non-function as either parameter[/link]"
+   },
+   {
+    "id": 3,
+    "kind": "h3",
+    "text": "[link]Chaining[/link]"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "The `then` method returns a new `Promise`, which allows for method chaining."
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "If the function passed as handler to `then` returns a `Promise`, an equivalent `Promise` will be exposed to the subsequent `then` in the method chain. The below snippet simulates asynchronous code with the `setTimeout` function."
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "The value returned from `then()` is resolved in the same way as [link]`Promise.resolve()`[/link]. This means [link]thenable objects[/link] are supported, and if the return value is not a promise, it's implicitly wrapped in a `Promise` and then resolved."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "A `then` call returns a promise that eventually rejects if the function throws an error or returns a rejected Promise."
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "In practice, it is often desirable to [link]`catch()`[/link] rejected promises rather than `then()`'s two-case syntax, as demonstrated below."
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "In all other cases, the returned promise eventually fulfills. In the following example, the first `then()` returns `42` wrapped in a fulfilled Promise, even though the previous Promise in the chain was rejected."
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "If `onFulfilled` returns a promise, the return value of `then` will be fulfilled/rejected based on the eventual state of that promise."
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "You can use chaining to implement one function with a Promise-based API on top of another such function."
+   },
+   {
+    "id": 12,
+    "kind": "h3",
+    "text": "[link]Asynchronicity of then()[/link]"
+   },
+   {
+    "id": 13,
+    "kind": "p",
+    "text": "The following is an example to demonstrate the asynchronicity of the `then` method."
+   },
+   {
+    "id": 14,
+    "kind": "h2",
+    "text": "[link]Specifications[/link]"
+   }
+  ]
+ },
+ {
+  "id": "mdn-promise-then#3",
+  "slug": "mdn-promise-then",
+  "title": "Promise.prototype.then() - JavaScript | MDN",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "th",
+    "text": "Specification"
+   },
+   {
+    "id": 2,
+    "kind": "td",
+    "text": "[link]ECMAScript® 2027 Language Specification # sec-promise.prototype.then[/link]"
+   },
+   {
+    "id": 3,
+    "kind": "h2",
+    "text": "[link]Browser compatibility[/link]"
+   },
+   {
+    "id": 4,
+    "kind": "th",
+    "text": "Chrome"
+   },
+   {
+    "id": 5,
+    "kind": "th",
+    "text": "Edge"
+   },
+   {
+    "id": 6,
+    "kind": "th",
+    "text": "Firefox"
+   },
+   {
+    "id": 7,
+    "kind": "th",
+    "text": "Opera"
+   },
+   {
+    "id": 8,
+    "kind": "th",
+    "text": "Safari"
+   },
+   {
+    "id": 9,
+    "kind": "th",
+    "text": "Chrome Android"
+   },
+   {
+    "id": 10,
+    "kind": "th",
+    "text": "Firefox for Android"
+   },
+   {
+    "id": 11,
+    "kind": "th",
+    "text": "Opera Android"
+   },
+   {
+    "id": 12,
+    "kind": "th",
+    "text": "Safari on iOS"
+   },
+   {
+    "id": 13,
+    "kind": "th",
+    "text": "Samsung Browser"
+   },
+   {
+    "id": 14,
+    "kind": "th",
+    "text": "WebView Android"
+   }
+  ]
+ },
+ {
+  "id": "mdn-promise-then#4",
+  "slug": "mdn-promise-then",
+  "title": "Promise.prototype.then() - JavaScript | MDN",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "th",
+    "text": "WebView on iOS"
+   },
+   {
+    "id": 2,
+    "kind": "th",
+    "text": "Bun"
+   },
+   {
+    "id": 3,
+    "kind": "th",
+    "text": "Deno"
+   },
+   {
+    "id": 4,
+    "kind": "th",
+    "text": "Node.js"
+   },
+   {
+    "id": 5,
+    "kind": "th",
+    "text": "`then()`"
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "Tip: you can click/tap on a cell for more information."
+   },
+   {
+    "id": 7,
+    "kind": "dd",
+    "text": "Full support"
+   },
+   {
+    "id": 8,
+    "kind": "h2",
+    "text": "[link]See also[/link]"
+   },
+   {
+    "id": 9,
+    "kind": "li",
+    "text": "[link]`Promise`[/link]"
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "[link]`Promise.prototype.catch()`[/link]"
+   }
+  ]
+ },
+ {
+  "id": "docsrs-tokio#0",
+  "slug": "docsrs-tokio",
+  "title": "tokio - Rust",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h1",
+    "text": "Crate tokio"
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "A runtime for writing reliable network applications without compromising speed."
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "Tokio is an event-driven, non-blocking I/O platform for writing asynchronous applications with the Rust programming language. At a high level, it provides a few major components:"
+   },
+   {
+    "id": 4,
+    "kind": "li",
+    "text": "Tools for [link]working with asynchronous tasks[/link], including [link]synchronization primitives and channels[/link] and [link]timeouts, sleeps, and intervals[/link]."
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "APIs for [link]performing asynchronous I/O[/link], including [link]TCP and UDP[/link] sockets, [link]filesystem[/link] operations, and [link]process[/link] and [link]signal[/link] management."
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "A [link]runtime[/link] for executing asynchronous code, including a task scheduler, an I/O driver backed by the operating system’s event queue (`epoll`, `kqueue`, `IOCP`, etc…), and a high performance timer."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "Guide level documentation is found on the [link]website[/link]."
+   },
+   {
+    "id": 8,
+    "kind": "h2",
+    "text": "A Tour of Tokio"
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "Tokio consists of a number of modules that provide a range of functionality essential for implementing asynchronous applications in Rust. In this section, we will take a brief tour of Tokio, summarizing the major APIs and their uses."
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "The easiest way to get started is to enable all features. Do this by enabling the `full` feature flag:"
+   },
+   {
+    "id": 11,
+    "kind": "h4",
+    "text": "Authoring applications"
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "Tokio is great for writing applications and most users in this case shouldn’t worry too much about what features they should pick. If you’re unsure, we suggest going with `full` to ensure that you don’t run into any road blocks while you’re building your application."
+   },
+   {
+    "id": 13,
+    "kind": "h5",
+    "text": "Example"
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "This example shows the quickest way to get started with Tokio."
+   }
+  ]
+ },
+ {
+  "id": "docsrs-tokio#1",
+  "slug": "docsrs-tokio",
+  "title": "tokio - Rust",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "The blocking threads are spawned on demand, can be used to run blocking code that would otherwise block other tasks from running and are kept alive when not used for a certain amount of time which can be configured with [link]`thread_keep_alive`[/link]. Since it is not possible for Tokio to swap out blocking tasks, like it can do with asynchronous code, the upper limit on the number of blocking threads is very large. These limits can be configured on the [link]`Builder`[/link]."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "To spawn a blocking task, you should use the [link]`spawn_blocking`[/link] function."
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "If your code is CPU-bound and you wish to limit the number of threads used to run it, you should use a separate thread pool dedicated to CPU bound tasks. For example, you could consider using the [link]rayon[/link] library for CPU-bound tasks. It is also possible to create an extra Tokio runtime dedicated to CPU-bound tasks, but if you do this, you should be careful that the extra runtime runs *only* CPU-bound tasks, as IO-bound tasks on that runtime will behave poorly."
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "Hint: If using rayon, you can use a [link]`oneshot`[/link] channel to send the result back to Tokio when the rayon task finishes."
+   },
+   {
+    "id": 5,
+    "kind": "h3",
+    "text": "Asynchronous IO"
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "As well as scheduling and running tasks, Tokio provides everything you need to perform input and output asynchronously."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "The [link]`tokio::io`[/link] module provides Tokio’s asynchronous core I/O primitives, the [link]`AsyncRead`[/link], [link]`AsyncWrite`[/link], and [link]`AsyncBufRead`[/link] traits. In addition, when the “io-util” feature flag is enabled, it also provides combinators and functions for working with these traits, forming as an asynchronous counterpart to [link]`std::io`[/link]."
+   }
+  ]
+ },
+ {
+  "id": "docsrs-tokio#2",
+  "slug": "docsrs-tokio",
+  "title": "tokio - Rust",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "li",
+    "text": "`net`: Enables `tokio::net` types such as `TcpStream`, `UnixStream` and `UdpSocket`, as well as (on Unix-like systems) `AsyncFd` and (on FreeBSD) `PollAio`."
+   },
+   {
+    "id": 2,
+    "kind": "li",
+    "text": "`time`: Enables `tokio::time` types and allows the schedulers to enable the built-in timer."
+   },
+   {
+    "id": 3,
+    "kind": "li",
+    "text": "`process`: Enables `tokio::process` types."
+   },
+   {
+    "id": 4,
+    "kind": "li",
+    "text": "`macros`: Enables `#[tokio::main]` and `#[tokio::test]` macros."
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "`sync`: Enables all `tokio::sync` types."
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "`signal`: Enables all `tokio::signal` types."
+   },
+   {
+    "id": 7,
+    "kind": "li",
+    "text": "`fs`: Enables `tokio::fs` types."
+   },
+   {
+    "id": 8,
+    "kind": "li",
+    "text": "`test-util`: Enables testing based infrastructure for the Tokio runtime."
+   },
+   {
+    "id": 9,
+    "kind": "li",
+    "text": "`parking_lot`: As a potential optimization, use the [link]`parking_lot`[/link] crate’s synchronization primitives internally. Also, this dependency is necessary to construct some of our primitives in a `const` context. `MSRV` may increase according to the [link]`parking_lot`[/link] release in use."
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "*Note: `AsyncRead` and `AsyncWrite` traits do not require any features and are always available.*"
+   },
+   {
+    "id": 11,
+    "kind": "h3",
+    "text": "Unstable features"
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "Some feature flags are only available when specifying the `tokio_unstable` flag:"
+   },
+   {
+    "id": 13,
+    "kind": "li",
+    "text": "`tracing`: Enables tracing events."
+   },
+   {
+    "id": 14,
+    "kind": "li",
+    "text": "`schedule-latency`: Allows measurement of task scheduling latencies."
+   }
+  ]
+ },
+ {
+  "id": "docsrs-tokio#3",
+  "slug": "docsrs-tokio",
+  "title": "tokio - Rust",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "Tokio also has unstable support for some additional `WASM` features. This requires the use of the `tokio_unstable` flag."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "Using this flag enables the use of `tokio::net` on the wasm32-wasi target. However, not all methods are available on the networking types as `WASI` currently does not support the creation of new sockets from within `WASM`. Because of this, sockets must currently be created via the `FromRawFd` trait."
+   },
+   {
+    "id": 3,
+    "kind": "h2",
+    "text": "Re-exports"
+   },
+   {
+    "id": 4,
+    "kind": "dt",
+    "text": "`pub use task::spawn;``rt`"
+   },
+   {
+    "id": 5,
+    "kind": "h2",
+    "text": "Modules"
+   },
+   {
+    "id": 6,
+    "kind": "dt",
+    "text": "[link]doc[/link]`docsrs` and Unix"
+   },
+   {
+    "id": 7,
+    "kind": "dd",
+    "text": "Types which are documented locally in the Tokio crate, but does not actually live here."
+   },
+   {
+    "id": 8,
+    "kind": "dt",
+    "text": "[link]fs[/link]`fs`"
+   },
+   {
+    "id": 9,
+    "kind": "dd",
+    "text": "Asynchronous file utilities."
+   },
+   {
+    "id": 10,
+    "kind": "dd",
+    "text": "Traits, helpers, and type definitions for asynchronous I/O functionality."
+   },
+   {
+    "id": 11,
+    "kind": "dt",
+    "text": "[link]net[/link]"
+   },
+   {
+    "id": 12,
+    "kind": "dd",
+    "text": "TCP/UDP/Unix bindings for `tokio`."
+   },
+   {
+    "id": 13,
+    "kind": "dt",
+    "text": "[link]process[/link]`process`"
+   },
+   {
+    "id": 14,
+    "kind": "dd",
+    "text": "An implementation of asynchronous process management for Tokio."
+   }
+  ]
+ },
+ {
+  "id": "docsrs-tokio#4",
+  "slug": "docsrs-tokio",
+  "title": "tokio - Rust",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "dd",
+    "text": "Waits on multiple concurrent branches, returning when **all** branches complete."
+   },
+   {
+    "id": 2,
+    "kind": "dd",
+    "text": "Pins a value on the stack."
+   },
+   {
+    "id": 3,
+    "kind": "dt",
+    "text": "[link]select[/link]`macros`"
+   },
+   {
+    "id": 4,
+    "kind": "dd",
+    "text": "Waits on multiple concurrent branches, returning when the **first** branch completes, cancelling the remaining branches."
+   },
+   {
+    "id": 5,
+    "kind": "dt",
+    "text": "[link]task_local[/link]`rt`"
+   },
+   {
+    "id": 6,
+    "kind": "dd",
+    "text": "Declares a new task-local key of type [link]`tokio::task::LocalKey`[/link]."
+   },
+   {
+    "id": 7,
+    "kind": "dt",
+    "text": "[link]try_join[/link]`macros`"
+   },
+   {
+    "id": 8,
+    "kind": "dd",
+    "text": "Waits on multiple concurrent branches, returning when **all** branches complete with `Ok(_)` or on the first `Err(_)`."
+   },
+   {
+    "id": 9,
+    "kind": "h2",
+    "text": "Attribute Macros"
+   },
+   {
+    "id": 10,
+    "kind": "dt",
+    "text": "[link]main[/link]`macros` and `rt`"
+   },
+   {
+    "id": 11,
+    "kind": "dd",
+    "text": "Marks async function to be executed by the selected runtime. This macro helps set up a `Runtime` without requiring the user to use [link]Runtime[/link] or [link]Builder[/link] directly."
+   },
+   {
+    "id": 12,
+    "kind": "dt",
+    "text": "[link]test[/link]`macros` and `rt`"
+   },
+   {
+    "id": 13,
+    "kind": "dd",
+    "text": "Marks async function to be executed by runtime, suitable to test environment. This macro helps set up a `Runtime` without requiring the user to use [link]Runtime[/link] or [link]Builder[/link] directly."
+   }
+  ]
+ },
+ {
+  "id": "github-readme-bat#0",
+  "slug": "github-readme-bat",
+  "title": "GitHub - sharkdp/bat: A cat(1) clone with wings. · GitHub",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "A *cat(1)* clone with syntax highlighting and Git integration."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "[link]Key Features[/link] • [link]How To Use[/link] • [link]Installation[/link] • [link]Customization[/link] • [link]Project goals, alternatives[/link] [English] [[link]中文[/link]] [[link]日本語[/link]] [[link]한국어[/link]] [[link]Русский[/link]]"
+   },
+   {
+    "id": 3,
+    "kind": "h3",
+    "text": "Syntax highlighting"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "`bat` supports syntax highlighting for a large number of programming and markup languages:"
+   },
+   {
+    "id": 5,
+    "kind": "h3",
+    "text": "Git integration"
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "`bat` communicates with `git` to show modifications with respect to the index (see left sidebar):"
+   },
+   {
+    "id": 7,
+    "kind": "h3",
+    "text": "Show non-printable characters"
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "You can use the `-A`/`--show-all` option to show and highlight non-printable characters:"
+   },
+   {
+    "id": 9,
+    "kind": "h3",
+    "text": "Automatic paging"
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "By default, `bat` pipes its own output to a pager (e.g. `less`) if the output is too large for one screen. If you would rather `bat` work like `cat` all the time (never page output), you can set `--paging=never` as an option, either on the command line or in your configuration file. If you intend to alias `cat` to `bat` in your shell configuration, you can use `alias cat='bat --paging=never'` to preserve the default behavior."
+   },
+   {
+    "id": 11,
+    "kind": "h4",
+    "text": "File concatenation"
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "Even with a pager set, you can still use `bat` to concatenate files 😉. Whenever `bat` detects a non-interactive terminal (i.e. when you pipe into another process or into a file), `bat` will act as a drop-in replacement for `cat` and fall back to printing the plain file contents, regardless of the `--pager` option's value."
+   },
+   {
+    "id": 13,
+    "kind": "h2",
+    "text": "How to use"
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "Display a single file on the terminal"
+   }
+  ]
+ },
+ {
+  "id": "github-readme-bat#1",
+  "slug": "github-readme-bat",
+  "title": "GitHub - sharkdp/bat: A cat(1) clone with wings. · GitHub",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "You can install [link]the `bat` package[/link] from the official sources, provided you have the appropriate repository enabled:"
+   },
+   {
+    "id": 2,
+    "kind": "h3",
+    "text": "On Arch Linux"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "You can install [link]the `bat` package[/link] from the official sources:"
+   },
+   {
+    "id": 4,
+    "kind": "h3",
+    "text": "On Fedora"
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "You can install [link]the `bat` package[/link] from the official sources:"
+   },
+   {
+    "id": 6,
+    "kind": "h3",
+    "text": "On Gentoo Linux"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "You can install [link]the `bat` package[/link] from the official sources:"
+   },
+   {
+    "id": 8,
+    "kind": "h3",
+    "text": "On FreeBSD"
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "You can install a precompiled [link]`bat` package[/link] with pkg:"
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "or build it on your own from the FreeBSD ports:"
+   },
+   {
+    "id": 11,
+    "kind": "h3",
+    "text": "On OpenBSD"
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "You can install `bat` package using [link]`pkg_add(1)`[/link]:"
+   },
+   {
+    "id": 13,
+    "kind": "h3",
+    "text": "Via nix"
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "You can install `bat` using the [link]nix package manager[/link]:"
+   }
+  ]
+ },
+ {
+  "id": "github-readme-bat#2",
+  "slug": "github-readme-bat",
+  "title": "GitHub - sharkdp/bat: A cat(1) clone with wings. · GitHub",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "td",
+    "text": "`full`"
+   },
+   {
+    "id": 2,
+    "kind": "td",
+    "text": "Enables all available components."
+   },
+   {
+    "id": 3,
+    "kind": "td",
+    "text": "`auto`"
+   },
+   {
+    "id": 4,
+    "kind": "td",
+    "text": "Same as `default`, unless the output is piped."
+   },
+   {
+    "id": 5,
+    "kind": "td",
+    "text": "`plain`"
+   },
+   {
+    "id": 6,
+    "kind": "td",
+    "text": "Disables all available components."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "The available individual components are:"
+   },
+   {
+    "id": 8,
+    "kind": "th",
+    "text": "Component"
+   },
+   {
+    "id": 9,
+    "kind": "th",
+    "text": "Description"
+   },
+   {
+    "id": 10,
+    "kind": "td",
+    "text": "`changes`"
+   },
+   {
+    "id": 11,
+    "kind": "td",
+    "text": "Show Git modification markers."
+   },
+   {
+    "id": 12,
+    "kind": "td",
+    "text": "`header`"
+   },
+   {
+    "id": 13,
+    "kind": "td",
+    "text": "Alias for `header-filename`."
+   },
+   {
+    "id": 14,
+    "kind": "td",
+    "text": "`header-filename`"
+   }
+  ]
+ },
+ {
+  "id": "github-readme-bat#3",
+  "slug": "github-readme-bat",
+  "title": "GitHub - sharkdp/bat: A cat(1) clone with wings. · GitHub",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "li",
+    "text": "The `BAT_PAGING` environment is set to `always`."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "The `-R`/`--RAW-CONTROL-CHARS` option is needed to interpret ANSI colors correctly."
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "The `-F`/`--quit-if-one-screen` option instructs `less` to exit immediately if the output size is smaller than the vertical size of the terminal. This is convenient for small files because you do not have to press `q` to quit the pager."
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "The `-K`/`--quit-on-intr` option instructs `less` to exit immediately when an interrupt signal is received. This is useful to ensure that `less` quits together with `bat` on SIGINT."
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "The `-X`/`--no-init` option is added to versions of `less` older than version 530 (older than 558 on Windows) to fix a bug with the `-F`/`--quit-if-one-screen` feature. Unfortunately, it also breaks mouse-wheel support in `less`. If you want to enable mouse-wheel scrolling on older versions of `less` and do not mind losing the quit-if-one-screen feature, you can set the pager (via `--pager` or `BAT_PAGER`) to `less -R`. For `less` 530 or newer, it should work out of the box."
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "The `-S`/`--chop-long-lines` option is added when `bat`'s `-S`/`--chop-long-lines` option is used. This tells `less` to truncate any lines larger than the terminal width."
+   },
+   {
+    "id": 7,
+    "kind": "h3",
+    "text": "Indentation"
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "`bat` expands tabs to 4 spaces by itself, not relying on the pager. To change this, simply add the `--tabs` argument with the number of spaces you want to be displayed."
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "**Note**: Defining tab stops for the pager (via the `--pager` argument by `bat`, or via the `LESS` environment variable for `less`) won't be taken into account because the pager will already get expanded spaces instead of tabs. This behaviour is added to avoid indentation issues caused by the sidebar. Calling `bat` with `--tabs=0` will override it and let tabs be consumed by the pager."
+   },
+   {
+    "id": 10,
+    "kind": "h3",
+    "text": "Dark mode"
+   }
+  ]
+ },
+ {
+  "id": "github-readme-bat#4",
+  "slug": "github-readme-bat",
+  "title": "GitHub - sharkdp/bat: A cat(1) clone with wings. · GitHub",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "li",
+    "text": "Be a drop-in replacement for (POSIX) `cat`"
+   },
+   {
+    "id": 2,
+    "kind": "li",
+    "text": "Offer a user-friendly command-line interface"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "There are a lot of alternatives, if you are looking for similar programs. See [link]this document[/link] for a comparison."
+   },
+   {
+    "id": 4,
+    "kind": "h2",
+    "text": "License"
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "Copyright (c) 2018-2025 [link]bat-developers[/link]."
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "`bat` is made available under the terms of either the MIT License or the Apache License 2.0, at your option."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "See the [link]LICENSE-APACHE[/link] and [link]LICENSE-MIT[/link] files for license details."
+   }
+  ]
+ },
+ {
+  "id": "wikipedia-futures-promises#0",
+  "slug": "wikipedia-futures-promises",
+  "title": "Futures and promises - Wikipedia",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "In [link]computer science[/link], **futures**, **promises**, **delays**, and **deferreds** are constructs used for [link]synchronizing[/link] program [link]execution[/link] in some [link]concurrent programming languages[/link]. Each is an object that acts as a proxy for a result that is initially unknown, usually because the [link]computation[/link] of its value is not yet complete."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "The term *promise* was proposed in 1976 by [link]Daniel P. Friedman[/link] and David Wise,[link][1][/link] and Peter Hibbard called it *eventual*.[link][2][/link] A somewhat similar concept *future* was introduced in 1977 in a paper by [link]Henry Baker[/link] and [link]Carl Hewitt[/link].[link][3][/link]"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "The terms *future*, *promise*, *delay*, and *deferred* are often used interchangeably, although there can be some differences in usage between *future* and *promise*. Specifically, when usage is distinguished, a future is a *read-only* placeholder view of a variable, while a promise is a writable, [link]single assignment[/link] container which sets the value of the future. Notably, a future may be defined without specifying which specific promise will set its value, and different possible promises may set the value of a given future, though this can be done only once for a given future. In other cases a future and a promise are created together and associated with each other: the future is the value, the promise is the function that sets the value – essentially the return value (future) of an asynchronous function (promise). Setting the value of a future is also called *resolving*, *fulfilling*, or *binding* it."
+   },
+   {
+    "id": 4,
+    "kind": "h2",
+    "text": "Applications"
+   }
+  ]
+ },
+ {
+  "id": "wikipedia-futures-promises#1",
+  "slug": "wikipedia-futures-promises",
+  "title": "Futures and promises - Wikipedia",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "*Futures* are a particular case of the [link]synchronization primitive[/link] \"[link]events[/link]\", which can be completed only once. In general, events can be reset to initial empty state and, thus, completed as many times as desired.[link][11][/link]"
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "An *I-var* (as in the language [link]Id[/link]) is a future with blocking semantics as defined above. An *I-structure* is a [link]data structure[/link] containing I-vars. A related synchronization construct that can be set multiple times with different values is called an *M-var*. M-vars support atomic operations to *take* or *put* the current value, where taking the value also sets the M-var back to its initial *empty* state.[link][12][/link]"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "A *concurrent logic variable*[*[link]citation needed[/link]*] is similar to a future, but is updated by [link]unification[/link], in the same way as *logic variables* in [link]logic programming[/link]. Thus it can be bound more than once to unifiable values, but cannot be set back to an empty or unresolved state. The dataflow variables of Oz act as concurrent logic variables, and also have blocking semantics as mentioned above."
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "A *concurrent constraint variable* is a generalization of concurrent logic variables to support [link]constraint logic programming[/link]: the constraint may be *narrowed* multiple times, indicating smaller sets of possible values. Typically there is a way to specify a thunk that should run whenever the constraint is narrowed further; this is needed to support *constraint propagation*."
+   },
+   {
+    "id": 5,
+    "kind": "h2",
+    "text": "Relations between the expressiveness of different forms of future"
+   }
+  ]
+ },
+ {
+  "id": "wikipedia-futures-promises#2",
+  "slug": "wikipedia-futures-promises",
+  "title": "Futures and promises - Wikipedia",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "li",
+    "text": "[link]R[/link] (promises for lazy evaluation, still single threaded)"
+   },
+   {
+    "id": 2,
+    "kind": "li",
+    "text": "[link]Racket[/link][link][41][/link]"
+   },
+   {
+    "id": 3,
+    "kind": "li",
+    "text": "[link]Raku[/link][link][42][/link]"
+   },
+   {
+    "id": 4,
+    "kind": "li",
+    "text": "[link]Rust[/link] (future as `std::future::Future`, promise achieved via `.await`)[link][43][/link]"
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "[link]Scala[/link] via [link]scala.concurrent package[/link]"
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "[link]Scheme[/link]"
+   },
+   {
+    "id": 7,
+    "kind": "li",
+    "text": "[link]Squeak[/link] [link]Smalltalk[/link]"
+   },
+   {
+    "id": 8,
+    "kind": "li",
+    "text": "[link]Strand[/link]"
+   },
+   {
+    "id": 9,
+    "kind": "li",
+    "text": "[link]Swift[/link] (only via third-party libraries)"
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "[link]Visual Basic[/link][*[link]clarification needed[/link]*] 11 (via the keywords *Async* and *Await*)[link][23][/link]"
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "Languages also supporting promise pipelining include:"
+   },
+   {
+    "id": 12,
+    "kind": "li",
+    "text": "[link]Joule[/link]"
+   },
+   {
+    "id": 13,
+    "kind": "h3",
+    "text": "List of library-based implementations of futures"
+   },
+   {
+    "id": 14,
+    "kind": "li",
+    "text": "For [link]Common Lisp[/link]:"
+   }
+  ]
+ },
+ {
+  "id": "wikipedia-futures-promises#3",
+  "slug": "wikipedia-futures-promises",
+  "title": "Futures and promises - Wikipedia",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "li",
+    "text": "[link]1[/link] [link]2[/link] [link]\"Future\"[/link], *Alice manual*, DE: Uni-SB, archived from [link]the original[/link] on 6 October 2008, retrieved 21 March 2007"
+   },
+   {
+    "id": 2,
+    "kind": "li",
+    "text": "[link]*Promise*[/link], E rights"
+   },
+   {
+    "id": 3,
+    "kind": "li",
+    "text": "[link]500 lines or less, \"A Web Crawler With asyncio Coroutines\" by A. Jesse Jiryu Davis and Guido van Rossum[/link] says \"implementation uses an asyncio.Event in place of the Future shown here. The difference is an Event can be reset, whereas a Future cannot transition from resolved back to pending.\""
+   },
+   {
+    "id": 4,
+    "kind": "li",
+    "text": "[link]*Control Concurrent MVar*[/link], Haskell, archived from [link]the original[/link] on 18 April 2009"
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "[link]*WaitNeeded*[/link], Mozart Oz, archived from the original on 17 May 2013, retrieved 21 March 2007"
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "[link]*Promise*[/link], Sunless Sea, archived from [link]the original[/link] on 23 October 2007"
+   },
+   {
+    "id": 7,
+    "kind": "li",
+    "text": "[link]*Argus*[/link], MIT"
+   },
+   {
+    "id": 8,
+    "kind": "li",
+    "text": "Liskov, Barbara (26 January 2021), [link]*Distributed computing and Argus*[/link], Oral history, IEEE GHN"
+   },
+   {
+    "id": 9,
+    "kind": "li",
+    "text": "[link]*Gold*[/link], Udanax, archived from [link]the original[/link] on 11 October 2008"
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "[link]*Pipeline*[/link], E rights"
+   },
+   {
+    "id": 11,
+    "kind": "li",
+    "text": "Henry Lieberman (June 1981). \"A Preview of Act 1\". *MIT AI Memo 625*."
+   },
+   {
+    "id": 12,
+    "kind": "li",
+    "text": "Henry Lieberman (June 1981). \"Thinking About Lots of Things at Once without Getting Confused: Parallelism in Act 1\". *MIT AI Memo 626*."
+   },
+   {
+    "id": 13,
+    "kind": "li",
+    "text": "Goetz, Brian (23 November 2004). [link]\"Concurrency in JDK 5.0\"[/link]. *[link]IBM[/link]*."
+   },
+   {
+    "id": 14,
+    "kind": "li",
+    "text": "[link]1[/link] [link]2[/link] [link]\"Async in 4.5: Worth the Await – .NET Blog – Site Home – MSDN Blogs\"[/link]. Blogs.msdn.com. Retrieved 13 May 2014."
+   }
+  ]
+ },
+ {
+  "id": "wikipedia-futures-promises#4",
+  "slug": "wikipedia-futures-promises",
+  "title": "Futures and promises - Wikipedia",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "li",
+    "text": "[link]\"Go Language Patterns\"[/link]. Archived from [link]the original[/link] on 11 November 2020. Retrieved 9 February 2014."
+   },
+   {
+    "id": 2,
+    "kind": "h2",
+    "text": "External links"
+   },
+   {
+    "id": 3,
+    "kind": "li",
+    "text": "[link]Concurrency patterns presentation[/link] given at [link]scaleconf[/link]"
+   },
+   {
+    "id": 4,
+    "kind": "li",
+    "text": "[link]Future Value[/link] and [link]Promise Pipelining[/link] at the [link]Portland Pattern Repository[/link]"
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "[link]Easy Threading with Futures[/link] in [link]Python[/link]"
+   }
+  ]
+ },
+ {
+  "id": "mdbook-rust-book-ownership#0",
+  "slug": "mdbook-rust-book-ownership",
+  "title": "What is Ownership? - The Rust Programming Language",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h2",
+    "text": "[link]What Is Ownership?[/link]"
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "*Ownership* is a set of rules that govern how a Rust program manages memory. All programs have to manage the way they use a computer’s memory while running. Some languages have garbage collection that regularly looks for no-longer-used memory as the program runs; in other languages, the programmer must explicitly allocate and free the memory. Rust uses a third approach: Memory is managed through a system of ownership with a set of rules that the compiler checks. If any of the rules are violated, the program won’t compile. None of the features of ownership will slow down your program while it’s running."
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "Because ownership is a new concept for many programmers, it does take some time to get used to. The good news is that the more experienced you become with Rust and the rules of the ownership system, the easier you’ll find it to naturally develop code that is safe and efficient. Keep at it!"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "When you understand ownership, you’ll have a solid foundation for understanding the features that make Rust unique. In this chapter, you’ll learn ownership by working through some examples that focus on a very common data structure: strings."
+   },
+   {
+    "id": 5,
+    "kind": "h3",
+    "text": "[link]The Stack and the Heap[/link]"
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "Many programming languages don’t require you to think about the stack and the heap very often. But in a systems programming language like Rust, whether a value is on the stack or the heap affects how the language behaves and why you have to make certain decisions. Parts of ownership will be described in relation to the stack and the heap later in this chapter, so here is a brief explanation in preparation."
+   }
+  ]
+ },
+ {
+  "id": "mdbook-rust-book-ownership#1",
+  "slug": "mdbook-rust-book-ownership",
+  "title": "What is Ownership? - The Rust Programming Language",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h3",
+    "text": "[link]The `String` Type[/link]"
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "To illustrate the rules of ownership, we need a data type that is more complex than those we covered in the [link]“Data Types”[/link] section of Chapter 3. The types covered previously are of a known size, can be stored on the stack and popped off the stack when their scope is over, and can be quickly and trivially copied to make a new, independent instance if another part of code needs to use the same value in a different scope. But we want to look at data that is stored on the heap and explore how Rust knows when to clean up that data, and the `String` type is a great example."
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "We’ll concentrate on the parts of `String` that relate to ownership. These aspects also apply to other complex data types, whether they are provided by the standard library or created by you. We’ll discuss non-ownership aspects of `String` in [link]Chapter 8[/link]."
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "We’ve already seen string literals, where a string value is hardcoded into our program. String literals are convenient, but they aren’t suitable for every situation in which we may want to use text. One reason is that they’re immutable. Another is that not every string value can be known when we write our code: For example, what if we want to take user input and store it? It is for these situations that Rust has the `String` type. This type manages data allocated on the heap and as such is able to store an amount of text that is unknown to us at compile time. You can create a `String` from a string literal using the `from` function, like so:"
+   }
+  ]
+ },
+ {
+  "id": "mdbook-rust-book-ownership#2",
+  "slug": "mdbook-rust-book-ownership",
+  "title": "What is Ownership? - The Rust Programming Language",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h4",
+    "text": "[link]Variables and Data Interacting with Move[/link]"
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "Multiple variables can interact with the same data in different ways in Rust. Listing 4-2 shows an example using an integer."
+   },
+   {
+    "id": 3,
+    "kind": "figcaption",
+    "text": "[link]Listing 4-2[/link]: Assigning the integer value of variable `x` to `y`"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "We can probably guess what this is doing: “Bind the value `5` to `x`; then, make a copy of the value in `x` and bind it to `y`.” We now have two variables, `x` and `y`, and both equal `5`. This is indeed what is happening, because integers are simple values with a known, fixed size, and these two `5` values are pushed onto the stack."
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "Now let’s look at the `String` version:"
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "This looks very similar, so we might assume that the way it works would be the same: That is, the second line would make a copy of the value in `s1` and bind it to `s2`. But this isn’t quite what happens."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "Take a look at Figure 4-1 to see what is happening to `String` under the covers. A `String` is made up of three parts, shown on the left: a pointer to the memory that holds the contents of the string, a length, and a capacity. This group of data is stored on the stack. On the right is the memory on the heap that holds the contents."
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "Figure 4-1: The representation in memory of a `String` holding the value `\"hello\"` bound to `s1`"
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "The length is how much memory, in bytes, the contents of the `String` are currently using. The capacity is the total amount of memory, in bytes, that the `String` has received from the allocator. The difference between length and capacity matters, but not in this context, so for now, it’s fine to ignore the capacity."
+   }
+  ]
+ },
+ {
+  "id": "mdbook-rust-book-ownership#3",
+  "slug": "mdbook-rust-book-ownership",
+  "title": "What is Ownership? - The Rust Programming Language",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "If you’ve heard the terms *shallow copy* and *deep copy* while working with other languages, the concept of copying the pointer, length, and capacity without copying the data probably sounds like making a shallow copy. But because Rust also invalidates the first variable, instead of being called a shallow copy, it’s known as a *move*. In this example, we would say that `s1` was *moved* into `s2`. So, what actually happens is shown in Figure 4-4."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "Figure 4-4: The representation in memory after `s1` has been invalidated"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "That solves our problem! With only `s2` valid, when it goes out of scope it alone will free the memory, and we’re done."
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "In addition, there’s a design choice that’s implied by this: Rust will never automatically create “deep” copies of your data. Therefore, any *automatic* copying can be assumed to be inexpensive in terms of runtime performance."
+   },
+   {
+    "id": 5,
+    "kind": "h4",
+    "text": "[link]Scope and Assignment[/link]"
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "The inverse of this is true for the relationship between scoping, ownership, and memory being freed via the `drop` function as well. When you assign a completely new value to an existing variable, Rust will call `drop` and free the original value’s memory immediately. Consider this code, for example:"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "We initially declare a variable `s` and bind it to a `String` with the value `\"hello\"`. Then, we immediately create a new `String` with the value `\"ahoy\"` and assign it to `s`. At this point, nothing is referring to the original value on the heap at all. Figure 4-5 illustrates the stack and heap data now:"
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "Figure 4-5: The representation in memory after the initial value has been replaced in its entirety"
+   }
+  ]
+ },
+ {
+  "id": "mdbook-rust-book-ownership#4",
+  "slug": "mdbook-rust-book-ownership",
+  "title": "What is Ownership? - The Rust Programming Language",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "If we tried to use `s` after the call to `takes_ownership`, Rust would throw a compile-time error. These static checks protect us from mistakes. Try adding code to `main` that uses `s` and `x` to see where you can use them and where the ownership rules prevent you from doing so."
+   },
+   {
+    "id": 2,
+    "kind": "h3",
+    "text": "[link]Return Values and Scope[/link]"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "Returning values can also transfer ownership. Listing 4-4 shows an example of a function that returns some value, with similar annotations as those in Listing 4-3."
+   },
+   {
+    "id": 4,
+    "kind": "figcaption",
+    "text": "[link]Listing 4-4[/link]: Transferring ownership of return values"
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "The ownership of a variable follows the same pattern every time: Assigning a value to another variable moves it. When a variable that includes data on the heap goes out of scope, the value will be cleaned up by `drop` unless ownership of the data has been moved to another variable."
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "While this works, taking ownership and then returning ownership with every function is a bit tedious. What if we want to let a function use a value but not take ownership? It’s quite annoying that anything we pass in also needs to be passed back if we want to use it again, in addition to any data resulting from the body of the function that we might want to return as well."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "Rust does let us return multiple values using a tuple, as shown in Listing 4-5."
+   },
+   {
+    "id": 8,
+    "kind": "figcaption",
+    "text": "[link]Listing 4-5[/link]: Returning ownership of parameters"
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "But this is too much ceremony and a lot of work for a concept that should be common. Luckily for us, Rust has a feature for using a value without transferring ownership: references."
+   }
+  ]
+ },
+ {
+  "id": "goblog-pipelines#0",
+  "slug": "goblog-pipelines",
+  "title": "Go Concurrency Patterns: Pipelines and cancellation - The Go Programming Language",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h1",
+    "text": "[link]The Go Blog[/link]"
+   },
+   {
+    "id": 2,
+    "kind": "h1",
+    "text": "Go Concurrency Patterns: Pipelines and cancellation"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "Sameer Ajmani 13 March 2014"
+   },
+   {
+    "id": 4,
+    "kind": "h2",
+    "text": "Introduction"
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "Go’s concurrency primitives make it easy to construct streaming data pipelines that make efficient use of I/O and multiple CPUs. This article presents examples of such pipelines, highlights subtleties that arise when operations fail, and introduces techniques for dealing with failures cleanly."
+   },
+   {
+    "id": 6,
+    "kind": "h2",
+    "text": "What is a pipeline?"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "There’s no formal definition of a pipeline in Go; it’s just one of many kinds of concurrent programs. Informally, a pipeline is a series of *stages* connected by channels, where each stage is a group of goroutines running the same function. In each stage, the goroutines"
+   },
+   {
+    "id": 8,
+    "kind": "li",
+    "text": "receive values from *upstream* via *inbound* channels"
+   },
+   {
+    "id": 9,
+    "kind": "li",
+    "text": "perform some function on that data, usually producing new values"
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "send values *downstream* via *outbound* channels"
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "Each stage has any number of inbound and outbound channels, except the first and last stages, which have only outbound or inbound channels, respectively. The first stage is sometimes called the *source* or *producer*; the last stage, the *sink* or *consumer*."
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "We’ll begin with a simple example pipeline to explain the ideas and techniques. Later, we’ll present a more realistic example."
+   },
+   {
+    "id": 13,
+    "kind": "h2",
+    "text": "Squaring numbers"
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "Consider a pipeline with three stages."
+   }
+  ]
+ },
+ {
+  "id": "goblog-pipelines#1",
+  "slug": "goblog-pipelines",
+  "title": "Go Concurrency Patterns: Pipelines and cancellation - The Go Programming Language",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "Sends on a closed channel panic, so it’s important to ensure all sends are done before calling close. The [link]`sync.WaitGroup`[/link] type provides a simple way to arrange this synchronization:"
+   },
+   {
+    "id": 2,
+    "kind": "h2",
+    "text": "Stopping short"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "There is a pattern to our pipeline functions:"
+   },
+   {
+    "id": 4,
+    "kind": "li",
+    "text": "stages close their outbound channels when all the send operations are done."
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "stages keep receiving values from inbound channels until those channels are closed."
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "This pattern allows each receiving stage to be written as a `range` loop and ensures that all goroutines exit once all values have been successfully sent downstream."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "But in real pipelines, stages don’t always receive all the inbound values. Sometimes this is by design: the receiver may only need a subset of values to make progress. More often, a stage exits early because an inbound value represents an error in an earlier stage. In either case the receiver should not have to wait for the remaining values to arrive, and we want earlier stages to stop producing values that later stages don’t need."
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "In our example pipeline, if a stage fails to consume all the inbound values, the goroutines attempting to send those values will block indefinitely:"
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "This is a resource leak: goroutines consume memory and runtime resources, and heap references in goroutine stacks keep data from being garbage collected. Goroutines are not garbage collected; they must exit on their own."
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "We need to arrange for the upstream stages of our pipeline to exit even when the downstream stages fail to receive all the inbound values. One way to do this is to change the outbound channels to have a buffer. A buffer can hold a fixed number of values; send operations complete immediately if there’s room in the buffer:"
+   }
+  ]
+ },
+ {
+  "id": "goblog-pipelines#2",
+  "slug": "goblog-pipelines",
+  "title": "Go Concurrency Patterns: Pipelines and cancellation - The Go Programming Language",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "When the number of values to be sent is known at channel creation time, a buffer can simplify the code. For example, we can rewrite `gen` to copy the list of integers into a buffered channel and avoid creating a new goroutine:"
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "Returning to the blocked goroutines in our pipeline, we might consider adding a buffer to the outbound channel returned by `merge`:"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "While this fixes the blocked goroutine in this program, this is bad code. The choice of buffer size of 1 here depends on knowing the number of values `merge` will receive and the number of values downstream stages will consume. This is fragile: if we pass an additional value to `gen`, or if the downstream stage reads any fewer values, we will again have blocked goroutines."
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "Instead, we need to provide a way for downstream stages to indicate to the senders that they will stop accepting input."
+   },
+   {
+    "id": 5,
+    "kind": "h2",
+    "text": "Explicit cancellation"
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "When `main` decides to exit without receiving all the values from `out`, it must tell the goroutines in the upstream stages to abandon the values they’re trying to send. It does so by sending values on a channel called `done`. It sends two values since there are potentially two blocked senders:"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "The sending goroutines replace their send operation with a `select` statement that proceeds either when the send on `out` happens or when they receive a value from `done`. The value type of `done` is the empty struct because the value doesn’t matter: it is the receive event that indicates the send on `out` should be abandoned. The `output` goroutines continue looping on their inbound channel, `c`, so the upstream stages are not blocked. (We’ll discuss in a moment how to allow this loop to return early.)"
+   }
+  ]
+ },
+ {
+  "id": "goblog-pipelines#3",
+  "slug": "goblog-pipelines",
+  "title": "Go Concurrency Patterns: Pipelines and cancellation - The Go Programming Language",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "Let’s consider a more realistic pipeline."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "MD5 is a message-digest algorithm that’s useful as a file checksum. The command line utility `md5sum` prints digest values for a list of files."
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "Our example program is like `md5sum` but instead takes a single directory as an argument and prints the digest values for each regular file under that directory, sorted by path name."
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "The main function of our program invokes a helper function `MD5All`, which returns a map from path name to digest value, then sorts and prints the results:"
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "The `MD5All` function is the focus of our discussion. In [link]serial.go[/link], the implementation uses no concurrency and simply reads and sums each file as it walks the tree."
+   },
+   {
+    "id": 6,
+    "kind": "h2",
+    "text": "Parallel digestion"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "In [link]parallel.go[/link], we split `MD5All` into a two-stage pipeline. The first stage, `sumFiles`, walks the tree, digests each file in a new goroutine, and sends the results on a channel with value type `result`:"
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "`sumFiles` returns two channels: one for the `results` and another for the error returned by `filepath.Walk`. The walk function starts a new goroutine to process each regular file, then checks `done`. If `done` is closed, the walk stops immediately:"
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "`MD5All` receives the digest values from `c`. `MD5All` returns early on error, closing `done` via a `defer`:"
+   },
+   {
+    "id": 10,
+    "kind": "h2",
+    "text": "Bounded parallelism"
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "The `MD5All` implementation in [link]parallel.go[/link] starts a new goroutine for each file. In a directory with many large files, this may allocate more memory than is available on the machine."
+   }
+  ]
+ },
+ {
+  "id": "goblog-pipelines#4",
+  "slug": "goblog-pipelines",
+  "title": "Go Concurrency Patterns: Pipelines and cancellation - The Go Programming Language",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "We can limit these allocations by bounding the number of files read in parallel. In [link]bounded.go[/link], we do this by creating a fixed number of goroutines for reading files. Our pipeline now has three stages: walk the tree, read and digest the files, and collect the digests."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "The first stage, `walkFiles`, emits the paths of regular files in the tree:"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "The middle stage starts a fixed number of `digester` goroutines that receive file names from `paths` and send `results` on channel `c`:"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "Unlike our previous examples, `digester` does not close its output channel, as multiple goroutines are sending on a shared channel. Instead, code in `MD5All` arranges for the channel to be closed when all the `digesters` are done:"
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "We could instead have each digester create and return its own output channel, but then we would need additional goroutines to fan-in the results."
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "The final stage receives all the `results` from `c` then checks the error from `errc`. This check cannot happen any earlier, since before this point, `walkFiles` may block sending values downstream:"
+   },
+   {
+    "id": 7,
+    "kind": "h2",
+    "text": "Conclusion"
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "This article has presented techniques for constructing streaming data pipelines in Go. Dealing with failures in such pipelines is tricky, since each stage in the pipeline may block attempting to send values downstream, and the downstream stages may no longer care about the incoming data. We showed how closing a channel can broadcast a “done” signal to all the goroutines started by a pipeline and defined guidelines for constructing pipelines correctly."
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "Further reading:"
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "[link]Go Concurrency Patterns[/link] ([link]video[/link]) presents the basics of Go’s concurrency primitives and several ways to apply them."
+   }
+  ]
+ },
+ {
+  "id": "twir-671#0",
+  "slug": "twir-671",
+  "title": "This Week in Rust 671 · This Week in Rust",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "Hello and welcome to another issue of *This Week in Rust*! [link]Rust[/link] is a programming language empowering everyone to build reliable and efficient software. This is a weekly summary of its progress and community. Want something mentioned? Tag us at [link]@thisweekinrust.bsky.social[/link] on Bluesky or [link]@ThisWeekinRust[/link] on mastodon.social, or [link]send us a pull request[/link]. Want to get involved? [link]We love contributions[/link]."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "*This Week in Rust* is openly developed [link]on GitHub[/link] and archives can be viewed at [link]this-week-in-rust.org[/link]. If you find any errors in this week's issue, [link]please submit a PR[/link]."
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "Want TWIR in your inbox? [link]Subscribe here[/link]."
+   },
+   {
+    "id": 4,
+    "kind": "h2",
+    "text": "[link]Updates from Rust Community[/link]"
+   },
+   {
+    "id": 5,
+    "kind": "h3",
+    "text": "[link]Newsletters[/link]"
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "[link]Scientific Computing in Rust #22 (September 2026)[/link]"
+   },
+   {
+    "id": 7,
+    "kind": "li",
+    "text": "[link]The Embedded Rustacean Issue #81[/link]"
+   },
+   {
+    "id": 8,
+    "kind": "h3",
+    "text": "[link]Observations/Thoughts[/link]"
+   },
+   {
+    "id": 9,
+    "kind": "li",
+    "text": "[link]Can safe Rust ever beat Google's C Brotli?[/link]"
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "[link]Building a DMA based driver for the RP2350 I2C (safety not included)[/link]"
+   },
+   {
+    "id": 11,
+    "kind": "li",
+    "text": "[link]Advanced soft-bodies for games with the Rapier physics engine[/link]"
+   },
+   {
+    "id": 12,
+    "kind": "li",
+    "text": "[link]Supporting native Rust in Workers with the new Emscripten target for wasm-bindgen[/link]"
+   },
+   {
+    "id": 13,
+    "kind": "li",
+    "text": "[link]Rusty thoughts on \"Parse, don't validate\"[/link]"
+   },
+   {
+    "id": 14,
+    "kind": "li",
+    "text": "[link]The state of SIMD in Rust in 2026[/link]"
+   }
+  ]
+ },
+ {
+  "id": "twir-671#1",
+  "slug": "twir-671",
+  "title": "This Week in Rust 671 · This Week in Rust",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "li",
+    "text": "[link]add `Div` and `Mul` for `Complex<{float}>`[/link]"
+   },
+   {
+    "id": 2,
+    "kind": "li",
+    "text": "[link]alloc: stabilise `Allocator`[/link]"
+   },
+   {
+    "id": 3,
+    "kind": "li",
+    "text": "[link]additional `NonZero` conversions[/link]"
+   },
+   {
+    "id": 4,
+    "kind": "li",
+    "text": "[link]allow elided (`'static`) lifetimes in `thread_local!`[/link]"
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "[link]implement `PartialEq<VecDeque<U>>` for `Vec<T>`, `&[T]`, `&mut [T]`, `[T; N]`, `&[T; N]` and `&mut [T; N]`[/link]"
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "[link]make dropping an empty BTreeMap free[/link]"
+   },
+   {
+    "id": 7,
+    "kind": "li",
+    "text": "[link]stabilize SyncView[/link]"
+   },
+   {
+    "id": 8,
+    "kind": "li",
+    "text": "[link]stabilize `Box::take`[/link]"
+   },
+   {
+    "id": 9,
+    "kind": "li",
+    "text": "[link]stabilize `Result::into_{ok,err}`[/link]"
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "[link]stabilize `funnel_shifts` (including `const`)[/link]"
+   },
+   {
+    "id": 11,
+    "kind": "li",
+    "text": "[link]stabilize `mem::conjure_zst`[/link]"
+   },
+   {
+    "id": 12,
+    "kind": "li",
+    "text": "[link]stabilize `vec_try_remove`[/link]"
+   },
+   {
+    "id": 13,
+    "kind": "li",
+    "text": "[link]use wrapping arithmetic in `from_str_radix`[/link]"
+   },
+   {
+    "id": 14,
+    "kind": "h4",
+    "text": "[link]Cargo[/link]"
+   }
+  ]
+ },
+ {
+  "id": "twir-671#2",
+  "slug": "twir-671",
+  "title": "This Week in Rust 671 · This Week in Rust",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "td",
+    "text": "-0.6%"
+   },
+   {
+    "id": 2,
+    "kind": "td",
+    "text": "[-1.7%, 0.8%]"
+   },
+   {
+    "id": 3,
+    "kind": "td",
+    "text": "200"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "0 Regressions, 2 Improvements, 6 Mixed; 3 of them in rollups 26 artifact comparisons made in total"
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "[link]Full report here[/link]"
+   },
+   {
+    "id": 6,
+    "kind": "h3",
+    "text": "[link]Approved RFCs[/link]"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "Changes to Rust follow the Rust [link]RFC (request for comments) process[/link]. These are the RFCs that were approved for implementation this week:"
+   },
+   {
+    "id": 8,
+    "kind": "li",
+    "text": "*No RFCs were approved this week.*"
+   },
+   {
+    "id": 9,
+    "kind": "h3",
+    "text": "[link]Final Comment Period[/link]"
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "Every week, [link]the team[/link] announces the 'final comment period' for RFCs and key PRs which are reaching a decision. Express your opinions now."
+   },
+   {
+    "id": 11,
+    "kind": "h4",
+    "text": "[link]Tracking Issues & PRs[/link]"
+   },
+   {
+    "id": 12,
+    "kind": "h5",
+    "text": "[link]Rust[/link]"
+   },
+   {
+    "id": 13,
+    "kind": "li",
+    "text": "[link]Stop using dlltool for generating import libraries on MinGW[/link]"
+   },
+   {
+    "id": 14,
+    "kind": "li",
+    "text": "[link]Stabilize `ptr::try_cast_aligned`[/link]"
+   }
+  ]
+ },
+ {
+  "id": "twir-671#3",
+  "slug": "twir-671",
+  "title": "This Week in Rust 671 · This Week in Rust",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "li",
+    "text": "[link]**Rust Hack and Learn**[/link]"
+   },
+   {
+    "id": 2,
+    "kind": "li",
+    "text": "2026-10-27 | Virtual (Dallas, TX, US) | [link]Dallas Rust User Meetup[/link]"
+   },
+   {
+    "id": 3,
+    "kind": "li",
+    "text": "[link]**Fourth Tuesday Rust Bookclub**[/link]"
+   },
+   {
+    "id": 4,
+    "kind": "li",
+    "text": "2026-10-27 | Virtual (London, UK) | [link]Women in Rust[/link]"
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "[link]**Lunch & Learn: Reasoning with Async Rust**[/link]"
+   },
+   {
+    "id": 6,
+    "kind": "h3",
+    "text": "[link]Asia[/link]"
+   },
+   {
+    "id": 7,
+    "kind": "li",
+    "text": "2026-10-09 | Hybrid (Kuala Lumpur, MY) | [link]Rust Malaysia Meetup[/link]"
+   },
+   {
+    "id": 8,
+    "kind": "li",
+    "text": "[link]**Rust Meetup August 2026**[/link]"
+   },
+   {
+    "id": 9,
+    "kind": "h3",
+    "text": "[link]Europe[/link]"
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "2026-09-30 | Basel, CH | [link]Rust Basel[/link]"
+   },
+   {
+    "id": 11,
+    "kind": "li",
+    "text": "[link]**Rust Meetup #16 @ ERNI**[/link]"
+   },
+   {
+    "id": 12,
+    "kind": "li",
+    "text": "2026-09-30 | Berlin, DE | [link]Rust Berlin[/link]"
+   },
+   {
+    "id": 13,
+    "kind": "li",
+    "text": "[link]**Rust Berlin Talks: The next generation**[/link]"
+   },
+   {
+    "id": 14,
+    "kind": "li",
+    "text": "2026-10-01 | Berlin, DE | [link]Rust Berlin[/link]"
+   }
+  ]
+ },
+ {
+  "id": "twir-671#4",
+  "slug": "twir-671",
+  "title": "This Week in Rust 671 · This Week in Rust",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "li",
+    "text": "[link]U007D[/link]"
+   },
+   {
+    "id": 2,
+    "kind": "li",
+    "text": "[link]mariannegoldin[/link]"
+   },
+   {
+    "id": 3,
+    "kind": "li",
+    "text": "[link]bdillo[/link]"
+   },
+   {
+    "id": 4,
+    "kind": "li",
+    "text": "[link]opeolluwa[/link]"
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "[link]bnchi[/link]"
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "[link]KannanPalani57[/link]"
+   },
+   {
+    "id": 7,
+    "kind": "li",
+    "text": "[link]tzilist[/link]"
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "*Email list hosting is sponsored by [link]The Rust Foundation[/link]*"
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "[link]Discuss on r/rust[/link]"
+   }
+  ]
+ },
+ {
+  "id": "globalvoices-bangladesh-protests#0",
+  "slug": "globalvoices-bangladesh-protests",
+  "title": "Bangladesh: Protests can change governments, but can they strengthen democracy? · Global Voices",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "People cheering in front of the Prime Minister's Office after Sheikh Hasina's resignation. [link]Image[/link] via Wikipedia by Md Joni Hossain. CC [link]BY-SA 4.0[/link]."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "*This post is part of Global Voices’ September 2026 Spotlight series, “**[link]Protest in Democracy[/link]**.” With this Spotlight, we seek to explore the many forms of protest, the tactics states use to delegitimize and suppress them, and the complex relationship between protest and democracy. You can support this coverage by donating **[link]here[/link]**.*"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "On August 5, 2024, thousands of people filled the streets of Dhaka, Bangladesh, as the government that had ruled the country for over 15 years [link]collapsed[/link] amid [link]mass protests[/link] against authoritarianism and demands for accountability."
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "Weeks earlier, nobody could have imagined it. The day it happened, crowds filled the streets celebrating a government’s fall, celebrating a demand for accountability finally met."
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "Two years on, a different question follows that victory. Did the country only change a government, or could it also change the system that drove people to the streets in the first place?"
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "The [link]July uprising[/link] started over [link]quota reform[/link] in government jobs, then grew into wider political and social anger. The Office of the United Nations High Commissioner for Human Rights (OHCHR) [link]counted[/link] roughly 1,400 deaths between July 1 and August 15, 2024. On August 5, [link]Sheikh Hasina[/link] [link]resigned[/link] as prime minister and fled the country."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "The government fell, and that was the visible outcome. But people who marched in July [link]wanted more[/link]: reformed institutions, accountability, power structures rebuilt from the ground up."
+   },
+   {
+    "id": 8,
+    "kind": "h3",
+    "text": "What the July revolutions promised"
+   }
+  ]
+ },
+ {
+  "id": "globalvoices-bangladesh-protests#1",
+  "slug": "globalvoices-bangladesh-protests",
+  "title": "Bangladesh: Protests can change governments, but can they strengthen democracy? · Global Voices",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "[link]Hasnat Abdullah[/link], one of the key student leaders of the movement, told BDNews24.com, an online news portal, that some of the structural changes discussed during the uprising have never materialized."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "In [link]his words[/link]:"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "People expected reforms across the judiciary, executive and every institution of the state. Instead, the same old structure that repeatedly allows authoritarianism to return has survived."
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "Other observers push back on that assessment. Political analyst Kazi Mohammad Mahbubur Rahman put [link]it this way[/link] while talking to BDNews24.com:"
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "[link]Translation[/link]"
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "[link]Original Quote[/link]"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "The July uprising won Bangladesh freedom from ‘authoritarian rule,’ and ‘after years without one,’ people got to vote again in an election that brought a government to power democratically."
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "The election gives a message of democracy. But whether that democracy holds, depends on the works still ahead: keeping the process effective, keeping it active."
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "Building a full democratic system takes time, he said. So the question after July isn’t only who holds power. It’s how much the rules of holding it have actually changed."
+   },
+   {
+    "id": 10,
+    "kind": "h3",
+    "text": "Reform, measured two years after"
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "Surveys measure the gap between what people expected and what they got."
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "[link]BRAC Institute of Governance and Development[/link] (BIGD)’s three-phase Pulse Surveys, run through 2024 and 2025, track a steady drop in optimism. In August 2024, 71 percent of respondents believed the country’s political direction was on the right track. By July 2025, that number had fallen to 42 percent. Meanwhile, 57 percent ranked police and judicial reform among the most urgent priorities; 38 percent pointed to electoral and constitutional reform instead."
+   }
+  ]
+ },
+ {
+  "id": "globalvoices-bangladesh-protests#2",
+  "slug": "globalvoices-bangladesh-protests",
+  "title": "Bangladesh: Protests can change governments, but can they strengthen democracy? · Global Voices",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "Institutions mattered to these citizens as much as elections did, as much as the change in government itself. Whether those reforms hold is still an open question."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "Al Jazeera [link]reported[/link] in April 2026 that at least 23 of the 133 ordinances issued under the [link]interim government[/link] (August 2024 to February 2026) had been revoked or left to expire, covering human rights, judicial oversight, anti-corruption efforts, and police reform. Opposition parties and some analysts called it backtracking. The government calls it something else: a review process, [link]laws pulled back[/link] for amendment and re-introduction, not reforms canceled."
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "The slow pace of state reform isn’t the only complaint. Opposition parties and human rights activists point to old political habits resurfacing under new names, according to [link]media reports[/link]. Contract-based appointments have [link]crept back[/link] into key institutions. The controversial [link]Rapid Action Battalion[/link], dissolved amid accusations of abuse, has a successor called [link]SRB[/link]. Critics ask the obvious question: does [link]renaming a problem[/link] solve it?"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "Cyber laws and the right to freedom of speech are a [link]newer fight[/link]. State [link]control over online speech[/link] marked the 2024 protests, including Facebook blackouts and internet shutdowns, according to the OHCHR [link]report[/link]. The government [link]defends[/link] its proposed amendments to the Cyber Security Act as necessary to fight online crime, misinformation, and AI-generated content. Critics hear something else: the old machinery for silencing dissent, rebuilt."
+   }
+  ]
+ },
+ {
+  "id": "globalvoices-bangladesh-protests#3",
+  "slug": "globalvoices-bangladesh-protests",
+  "title": "Bangladesh: Protests can change governments, but can they strengthen democracy? · Global Voices",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "The fate of [link]the July Charter[/link], signed by major political parties including the ruling [link]Bangladesh Nationalist Party[/link] (BNP), raises the same question. It promised structural reform across state institutions: checks and balances, judicial independence, the electoral system, the police, anti-corruption measures. Two years later, political parties [link]still disagree[/link] on how far those reforms should go, and how fast."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "A female protester holding sign reading মানবে না হার এই গণজোয়ার (“This mass wave won't give up”). [link]Image[/link] via Wikipedia by Wasiul Bahar. [link]CC BY-SA 4.0[/link]."
+   },
+   {
+    "id": 3,
+    "kind": "h3",
+    "text": "What comes after the protests?"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "A protest can topple a government quickly. However, rebuilding institutions, rewriting laws, redistributing power — that work takes years, not weeks. A new democratic government is visible upfront. But a functioning democracy shows up somewhere else: in institutions, in accountability, in checks and balances, in civil rights people can actually exercise."
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "[link]July 2024 uprising[/link] proved that protest can remove political power. Two years later, the test is different: How much of what people expected from that protest [link]now exists[/link] in practice?"
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "Hasnat Abdullah’s question isn't just for the movement’s leaders. It belongs to the people who carried the injured to hospitals, who handed out food and water, who backed the protests from wherever they were."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "The government changed. Anyone can see that. Whether July’s promises took root in the institutions and power structures underneath it, that [link]accounting isn’t finished[/link]."
+   }
+  ]
+ }
+]
