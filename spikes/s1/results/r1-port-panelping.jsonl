@@ -1,0 +1,17 @@
+{"t":"0.0","src":"server","ev":"listening","port":8807}
+{"t":"4.2","src":"cdp","ev":"loaded","extId":"dnaljajihcmjmgcdidienbcpncfeejjn","scenario":"port-panelping"}
+{"t":"4.7","src":"cdp","ev":"SW-TARGET-UP","scenario":"port-panelping"}
+{"t":"9.0","src":"sw","ev":"job-start","scenario":"port-panelping","dur":90}
+{"t":"9.0","src":"server","ev":"stream-open","who":"sw-port-panelping","dur":90}
+{"t":"19.0","src":"sw","ev":"progress","n":10,"upSec":10}
+{"t":"29.1","src":"sw","ev":"progress","n":20,"upSec":20}
+{"t":"39.1","src":"sw","ev":"progress","n":30,"upSec":30}
+{"t":"49.1","src":"sw","ev":"progress","n":40,"upSec":40}
+{"t":"59.1","src":"sw","ev":"progress","n":50,"upSec":51}
+{"t":"69.1","src":"sw","ev":"progress","n":60,"upSec":61}
+{"t":"79.1","src":"sw","ev":"progress","n":70,"upSec":71}
+{"t":"89.1","src":"sw","ev":"progress","n":80,"upSec":81}
+{"t":"99.1","src":"server","ev":"stream-complete","who":"sw-port-panelping","n":90}
+{"t":"99.1","src":"sw","ev":"progress","n":90,"upSec":91}
+{"t":"99.1","src":"sw","ev":"job-COMPLETE","n":90}
+{"t":"135.1","src":"cdp","ev":"driver-exit","scenario":"port-panelping"}

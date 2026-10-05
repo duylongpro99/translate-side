@@ -1,0 +1,13 @@
+{"t":"0.0","src":"server","ev":"listening","port":8828}
+{"t":"20.4","src":"cdp","ev":"loaded","extId":"dnaljajihcmjmgcdidienbcpncfeejjn","scenario":"port-portmsgs-ttfb45"}
+{"t":"20.4","src":"cdp","ev":"SW-TARGET-UP","scenario":"port-portmsgs-ttfb45"}
+{"t":"20.6","src":"sw","ev":"job-start","scenario":"port-portmsgs-ttfb45","dur":60}
+{"t":"20.6","src":"server","ev":"stream-open","who":"sw-port-portmsgs-ttfb45","dur":60,"ttfb":45}
+{"t":"50.6","src":"server","ev":"stream-ABORTED-by-client","who":"sw-port-portmsgs-ttfb45","n":0}
+{"t":"50.6","src":"panel","ev":"port-DISCONNECTED","msgsReceived":0}
+{"t":"50.6","src":"cdp","ev":"SW-TARGET-DOWN","scenario":"port-portmsgs-ttfb45"}
+{"t":"52.6","src":"cdp","ev":"SW-TARGET-UP","scenario":"port-portmsgs-ttfb45"}
+{"t":"52.6","src":"sw","ev":"sw-start","session":{"base":"http://127.0.0.1:8828","job":{"n":0,"scenario":"port-portmsgs-ttfb45","startedAt":1791208094396,"state":"running"}}}
+{"t":"52.6","src":"sw","ev":"port-hello-after-reconnect"}
+{"t":"82.6","src":"cdp","ev":"SW-TARGET-DOWN","scenario":"port-portmsgs-ttfb45"}
+{"t":"170.6","src":"cdp","ev":"driver-exit","scenario":"port-portmsgs-ttfb45"}

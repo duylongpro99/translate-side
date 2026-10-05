@@ -1,0 +1,15 @@
+{"t":"0.0","src":"server","ev":"listening","port":8882}
+{"t":"4.0","src":"cdp","ev":"loaded","extId":"dnaljajihcmjmgcdidienbcpncfeejjn","scenario":"port-idle"}
+{"t":"4.0","src":"cdp","ev":"SW-TARGET-UP","scenario":"port-idle"}
+{"t":"4.8","src":"sw","ev":"job-start","scenario":"port-idle","dur":90}
+{"t":"4.8","src":"server","ev":"stream-open","who":"sw-port-idle","dur":90,"ttfb":0}
+{"t":"14.8","src":"sw","ev":"progress","n":10,"upSec":10}
+{"t":"24.8","src":"sw","ev":"progress","n":20,"upSec":20}
+{"t":"34.8","src":"server","ev":"stream-ABORTED-by-client","who":"sw-port-idle","n":29}
+{"t":"34.8","src":"panel","ev":"port-DISCONNECTED","msgsReceived":0}
+{"t":"34.8","src":"cdp","ev":"SW-TARGET-DOWN","scenario":"port-idle"}
+{"t":"36.8","src":"cdp","ev":"SW-TARGET-UP","scenario":"port-idle"}
+{"t":"36.8","src":"sw","ev":"sw-start","session":{"base":"http://127.0.0.1:8882","job":{"n":0,"scenario":"port-idle","startedAt":1791208419846,"state":"running"}}}
+{"t":"36.8","src":"sw","ev":"port-hello-after-reconnect"}
+{"t":"66.8","src":"cdp","ev":"SW-TARGET-DOWN","scenario":"port-idle"}
+{"t":"134.2","src":"cdp","ev":"driver-exit","scenario":"port-idle"}

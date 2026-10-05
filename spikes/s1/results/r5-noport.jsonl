@@ -1,0 +1,11 @@
+{"t":"0.0","src":"server","ev":"listening","port":8701}
+{"t":"3.1","src":"cdp","ev":"loaded","extId":"dnaljajihcmjmgcdidienbcpncfeejjn","scenario":"noport"}
+{"t":"3.1","src":"cdp","ev":"SW-TARGET-UP","scenario":"noport"}
+{"t":"3.5","src":"panel","ev":"sent-start-msg"}
+{"t":"3.5","src":"sw","ev":"job-start","scenario":"noport","dur":90}
+{"t":"3.5","src":"server","ev":"stream-open","who":"sw-noport","dur":90,"ttfb":0}
+{"t":"13.5","src":"sw","ev":"progress","n":10,"upSec":10}
+{"t":"23.5","src":"sw","ev":"progress","n":20,"upSec":20}
+{"t":"33.5","src":"server","ev":"stream-ABORTED-by-client","who":"sw-noport","n":29}
+{"t":"33.5","src":"cdp","ev":"SW-TARGET-DOWN","scenario":"noport"}
+{"t":"133.2","src":"cdp","ev":"driver-exit","scenario":"noport"}

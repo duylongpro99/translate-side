@@ -1,0 +1,16 @@
+{"t":"0.0","src":"server","ev":"listening","port":8849}
+{"t":"14.7","src":"cdp","ev":"loaded","extId":"dnaljajihcmjmgcdidienbcpncfeejjn","scenario":"noport-platformping-ttfb45"}
+{"t":"15.0","src":"cdp","ev":"SW-TARGET-UP","scenario":"noport-platformping-ttfb45"}
+{"t":"19.3","src":"panel","ev":"sent-start-msg"}
+{"t":"20.0","src":"sw","ev":"job-start","scenario":"noport-platformping-ttfb45","dur":60}
+{"t":"20.0","src":"server","ev":"stream-open","who":"sw-noport-platformping-ttfb45","dur":60,"ttfb":45}
+{"t":"75.0","src":"sw","ev":"progress","n":10,"upSec":55}
+{"t":"85.0","src":"sw","ev":"progress","n":20,"upSec":65}
+{"t":"95.0","src":"sw","ev":"progress","n":30,"upSec":75}
+{"t":"105.0","src":"sw","ev":"progress","n":40,"upSec":85}
+{"t":"115.0","src":"sw","ev":"progress","n":50,"upSec":95}
+{"t":"125.1","src":"server","ev":"stream-complete","who":"sw-noport-platformping-ttfb45","n":60}
+{"t":"125.1","src":"sw","ev":"progress","n":60,"upSec":105}
+{"t":"125.1","src":"sw","ev":"job-COMPLETE","n":60}
+{"t":"155.1","src":"cdp","ev":"SW-TARGET-DOWN","scenario":"noport-platformping-ttfb45"}
+{"t":"167.9","src":"cdp","ev":"driver-exit","scenario":"noport-platformping-ttfb45"}
