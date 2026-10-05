@@ -40,6 +40,12 @@ describe('engine/ boundary (TypeScript)', () => {
     expect(errors.join('\n')).toMatch(pattern);
   });
 
+  // N1: the repo uses .ts specifiers; value imports must typecheck under the engine config.
+  it('accepts value imports with .ts specifiers', () => {
+    const source = `import { describeEngine } from './index.ts';\nexport const d = describeEngine;`;
+    expect(diagnosticsFor(source)).toEqual([]);
+  });
+
   it('accepts plain TypeScript using the LLMClient interface', () => {
     const source = [
       `import type { LLMClient } from '../llm/types.ts';`,

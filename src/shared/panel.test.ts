@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CONTEXT_MENU_ID, setupContextMenu, setupPanelBehavior } from './panel.ts';
+import { CONTEXT_MENU_ID, createContextMenu, listenForContextMenuClicks, setupPanelBehavior } from './panel.ts';
 
 type Api = Parameters<typeof setupPanelBehavior>[0];
 
@@ -17,17 +17,27 @@ describe('setupPanelBehavior', () => {
   });
 });
 
-describe('setupContextMenu', () => {
-  it('creates the stub entry and opens the panel for the clicked tab window', () => {
+describe('context menu', () => {
+  it('removes old entries before creating the stub entry', async () => {
+    const calls: string[] = [];
+    const api = {
+      contextMenus: {
+        removeAll: () => (calls.push('removeAll'), Promise.resolve()),
+        create: (o: { id: string }) => calls.push(`create:${o.id}`),
+      },
+    } as unknown as Api;
+    await createContextMenu(api);
+    expect(calls).toEqual(['removeAll', `create:${CONTEXT_MENU_ID}`]);
+  });
+
+  it('opens the panel only for its own menu item', () => {
     let onClicked: ((info: { menuItemId: string }, tab?: { windowId: number }) => void) | undefined;
-    const create = vi.fn();
     const open = vi.fn().mockResolvedValue(undefined);
     const api = {
-      contextMenus: { create, onClicked: { addListener: (fn: typeof onClicked) => (onClicked = fn) } },
+      contextMenus: { onClicked: { addListener: (fn: typeof onClicked) => (onClicked = fn) } },
       sidePanel: { open },
     } as unknown as Api;
-    setupContextMenu(api);
-    expect(create).toHaveBeenCalledWith(expect.objectContaining({ id: CONTEXT_MENU_ID }));
+    listenForContextMenuClicks(api);
     onClicked?.({ menuItemId: 'other' }, { windowId: 1 });
     expect(open).not.toHaveBeenCalled();
     onClicked?.({ menuItemId: CONTEXT_MENU_ID }, { windowId: 7 });

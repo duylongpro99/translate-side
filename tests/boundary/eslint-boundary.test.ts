@@ -9,6 +9,8 @@ const BOUNDARY_RULES = new Set([
   'no-restricted-imports',
   'no-restricted-globals',
   '@typescript-eslint/triple-slash-reference',
+  'no-restricted-syntax',
+  'no-restricted-properties',
 ]);
 
 async function boundaryErrors(code: string, filePath: string): Promise<string[]> {
@@ -35,6 +37,22 @@ const violations: [string, string, string][] = [
   ['llm implementation (relative)', `import { AnthropicClient } from '../../llm/anthropic-messages';\nexport const c = AnthropicClient;`, 'no-restricted-imports'],
   ['llm implementation (alias)', `import { OpenAIChat } from '@/llm/openai-chat.ts';\nexport const c = OpenAIChat;`, 'no-restricted-imports'],
   ['llm nested implementation', `import { x } from '../../llm/adapters/builtin.ts';\nexport const c = x;`, 'no-restricted-imports'],
+  // B1: dynamic import() and require() are not seen by no-restricted-imports.
+  ['dynamic import of wxt', `export const m = async () => (await import('wxt/browser')).browser.runtime.id;`, 'no-restricted-syntax'],
+  ['dynamic import of llm implementation', `export const m = () => import('../llm/anthropic.ts');`, 'no-restricted-syntax'],
+  ['dynamic import of llm/types', `export const m = () => import('../../llm/types.ts');`, 'no-restricted-syntax'],
+  ['require()', `export const m = require('wxt/browser');`, 'no-restricted-syntax'],
+  // B2: barrel paths with no segment after llm/.
+  ['llm barrel (relative)', `import { x } from '../llm';\nexport const c = x;`, 'no-restricted-imports'],
+  ['llm barrel (alias)', `import { x } from '@/llm';\nexport const c = x;`, 'no-restricted-imports'],
+  ['llm barrel (tilde alias)', `import { x } from '~/llm';\nexport const c = x;`, 'no-restricted-imports'],
+  ['llm barrel re-export', `export * from '../../llm';`, 'no-restricted-imports'],
+  // N3: extension/DOM globals reached through the global object.
+  ['globalThis.chrome', `export const id = globalThis.chrome.runtime.id;`, 'no-restricted-properties'],
+  ['(globalThis as any).chrome', `export const id = (globalThis as any).chrome.runtime.id;`, 'no-restricted-syntax'],
+  ['(globalThis as any)["chrome"]', `export const id = (globalThis as any)['chrome'].runtime.id;`, 'no-restricted-syntax'],
+  ['self.browser', `export const id = self.browser.runtime.id;`, 'no-restricted-properties'],
+  ['globalThis["document"]', `export const d = globalThis['document'];`, 'no-restricted-properties'],
   ['shell module', `import { setupPanelBehavior } from '../../shared/panel.ts';\nexport const s = setupPanelBehavior;`, 'no-restricted-imports'],
 ];
 
@@ -67,5 +85,24 @@ describe('engine/ boundary (ESLint)', () => {
     const results = await eslint.lintFiles(['src/engine']);
     expect(results.length).toBeGreaterThan(0);
     expect(results.flatMap((r) => r.messages)).toEqual([]);
+  });
+});
+
+// N4: engine/ may import llm/types.ts, so that file must not import anything itself, or it
+// becomes a transitive hole in the boundary.
+describe('llm/types.ts stays import-free', () => {
+  it.each([
+    ['type import from wxt', `import type { Browser } from 'wxt/browser';\nexport type B = Browser;`],
+    ['llm implementation', `import { AnthropicClient } from './anthropic.ts';\nexport const c = AnthropicClient;`],
+    ['re-export', `export * from './anthropic.ts';`],
+    ['named re-export', `export { AnthropicClient } from './anthropic.ts';`],
+    ['dynamic import', `export const m = () => import('./anthropic.ts');`],
+  ])('rejects %s', async (_name, code) => {
+    expect(await boundaryErrors(code, 'src/llm/types.ts')).not.toEqual([]);
+  });
+
+  it('the real src/llm/types.ts is clean', async () => {
+    const [result] = await eslint.lintFiles(['src/llm/types.ts']);
+    expect(result?.messages).toEqual([]);
   });
 });

@@ -31,6 +31,13 @@ const engineBoundary = {
             message: 'engine/ may import only the LLMClient interface (llm/types), not implementations.',
           },
           {
+            // Barrels ('../llm', '@/llm') have no segment after llm/, so the group above misses
+            // them. It can't list '**/llm' itself: in gitignore syntax, excluding the directory
+            // would stop '!**/llm/types' from re-including the interface.
+            regex: '(^|/)llm/?$',
+            message: 'engine/ may import only the LLMClient interface (llm/types), not the llm/ barrel.',
+          },
+          {
             group: ['**/entrypoints/**', '**/shared/**', 'preact', 'preact/*'],
             message: 'engine/ must not depend on the extension shell or UI.',
           },
@@ -46,6 +53,47 @@ const engineBoundary = {
       ...['window', 'document', 'navigator', 'localStorage', 'sessionStorage', 'indexedDB', 'location', 'HTMLElement', 'Element', 'Node', 'DOMParser', 'MutationObserver', 'IntersectionObserver'].map(
         (name) => ({ name, message: 'engine/ must not touch the DOM (DESIGN.md §5.1).' }),
       ),
+    ],
+    // no-restricted-imports only sees static imports, so ban the dynamic forms outright.
+    'no-restricted-syntax': [
+      'error',
+      { selector: 'ImportExpression', message: 'engine/ must use static imports so the boundary rule can check them.' },
+      { selector: "CallExpression[callee.name='require']", message: 'engine/ must use static imports so the boundary rule can check them.' },
+      {
+        // `(globalThis as any).chrome`: no-restricted-properties doesn't see through the cast.
+        selector:
+          'MemberExpression[object.type=/^(TSAsExpression|TSSatisfiesExpression|TSNonNullExpression|TSTypeAssertion)$/][object.expression.name=/^(globalThis|self|global)$/]',
+        message: 'engine/ must not reach into the global object (DESIGN.md §5.1).',
+      },
+    ],
+    // Reaching the same globals through the global object (not airtight, but closes the easy path).
+    'no-restricted-properties': [
+      'error',
+      ...['globalThis', 'self', 'global'].flatMap((object) =>
+        ['chrome', 'browser', 'window', 'document', 'navigator', 'localStorage', 'sessionStorage', 'indexedDB', 'location'].map(
+          (property) => ({ object, property, message: 'engine/ must not use extension APIs or the DOM (DESIGN.md §5.1).' }),
+        ),
+      ),
+    ],
+    '@typescript-eslint/triple-slash-reference': ['error', { path: 'never', types: 'never', lib: 'never' }],
+  },
+};
+
+// engine/ may import llm/types.ts, so that file imports nothing; otherwise it would be a
+// transitive way around the engine boundary.
+const IMPORT_FREE = 'llm/types.ts is imported by engine/ and must not import anything (DESIGN.md §5.1).';
+const llmTypesImportFree = {
+  name: 'llm/types import-free',
+  files: ['src/llm/types.ts'],
+  rules: {
+    'no-restricted-syntax': [
+      'error',
+      { selector: 'ImportDeclaration', message: IMPORT_FREE },
+      { selector: 'ImportExpression', message: IMPORT_FREE },
+      { selector: 'ExportAllDeclaration', message: IMPORT_FREE },
+      { selector: 'ExportNamedDeclaration[source]', message: IMPORT_FREE },
+      { selector: 'TSImportType', message: IMPORT_FREE },
+      { selector: "CallExpression[callee.name='require']", message: IMPORT_FREE },
     ],
     '@typescript-eslint/triple-slash-reference': ['error', { path: 'never', types: 'never', lib: 'never' }],
   },
@@ -68,4 +116,5 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.webextensions } },
   },
   engineBoundary,
+  llmTypesImportFree,
 );

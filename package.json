@@ -12,13 +12,13 @@
     "dev": "wxt",
     "build": "wxt build",
     "zip": "wxt zip",
-    "prepare": "wxt prepare",
     "postinstall": "wxt prepare",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p src/engine/tsconfig.json",
     "lint": "eslint --max-warnings=0 .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build"
+    "check:manifest": "node scripts/check-manifest.mjs",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm run check:manifest"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
