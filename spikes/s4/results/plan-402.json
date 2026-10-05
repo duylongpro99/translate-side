@@ -1,5 +1,5 @@
 {
- "at": "2026-10-05T15:13:30.216Z",
+ "at": "2026-10-05T15:58:07.356Z",
  "rows": [
   {
    "ep": "/api/chat",
@@ -7,7 +7,7 @@
    "model": "kimi-k3",
    "status": 402,
    "contentType": "application/json",
-   "body": "{\"error\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 1ce343c1-e307-4de5-b7fb-1df36f5b09b6)\"}\n"
+   "body": "{\"error\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 1a503f6f-fec1-4e1b-8f79-de88886eb297)\"}\n"
   },
   {
    "ep": "/api/chat",
@@ -15,7 +15,15 @@
    "model": "glm-5.3",
    "status": 402,
    "contentType": "application/json",
-   "body": "{\"error\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: d9dd97c5-2adb-41a4-b706-c7508a85a15d)\"}\n"
+   "body": "{\"error\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 251ba581-f2b1-4b17-8029-abf2848f3030)\"}\n"
+  },
+  {
+   "ep": "/api/chat",
+   "stream": false,
+   "model": "deepseek-v4-pro:0813",
+   "status": 402,
+   "contentType": "application/json",
+   "body": "{\"error\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: dbb6a902-16f5-406e-8fc2-c63ac8e3c952)\"}\n"
   },
   {
    "ep": "/v1/chat/completions",
@@ -23,7 +31,7 @@
    "model": "kimi-k3",
    "status": 402,
    "contentType": "application/json",
-   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 3e1a6dbf-ca74-4cf4-9cf0-a23c44bbcf1e)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
+   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 1f932873-ce7c-4d8b-9fbe-a15c011b176f)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
   },
   {
    "ep": "/v1/chat/completions",
@@ -31,7 +39,15 @@
    "model": "glm-5.3",
    "status": 402,
    "contentType": "application/json",
-   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 03053e0c-2cd1-4e3b-b771-93348e0de6cc)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
+   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 933db832-1f01-411a-87fd-a944cc34a57f)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
+  },
+  {
+   "ep": "/v1/chat/completions",
+   "stream": false,
+   "model": "deepseek-v4-pro:0813",
+   "status": 402,
+   "contentType": "application/json",
+   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 65c7f32d-6c54-4a6f-add2-81afa3d15235)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
   },
   {
    "ep": "/v1/chat/completions",
@@ -39,7 +55,7 @@
    "model": "kimi-k3",
    "status": 402,
    "contentType": "application/json",
-   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 3317c642-c4d9-4acb-b257-e9350b42ea57)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
+   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 2701d3c3-81aa-464c-8b3c-852691219d8e)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
   },
   {
    "ep": "/v1/chat/completions",
@@ -47,7 +63,15 @@
    "model": "glm-5.3",
    "status": 402,
    "contentType": "application/json",
-   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: 16510bcf-01e9-40e7-bab8-afa6fb8866b8)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
+   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: e80dd8be-7fef-4c72-aa39-aa846c7ae885)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
+  },
+  {
+   "ep": "/v1/chat/completions",
+   "stream": true,
+   "model": "deepseek-v4-pro:0813",
+   "status": 402,
+   "contentType": "application/json",
+   "body": "{\"error\":{\"message\":\"This model is not in the Free plan. Pro is $20/month for $60 of usage, with no 5-hour or weekly caps: https://ollama.com/upgrade (ref: e4fed32d-084b-4c2c-b999-1473b7529d27)\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
   }
  ]
 }

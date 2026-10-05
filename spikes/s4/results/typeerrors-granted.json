@@ -1,0 +1,160 @@
+{
+ "variant": "granted",
+ "host_permissions": [
+  "https://ollama.com/*",
+  "https://no-such-host.invalid/*",
+  "https://127.0.0.1/*"
+ ],
+ "at": "2026-10-05T15:57:31.929Z",
+ "rows": [
+  {
+   "ctx": "worker",
+   "name": "pre-network: key with a non-ISO-8859-1 char (é)",
+   "ok": true,
+   "status": 401,
+   "ms": 608
+  },
+  {
+   "ctx": "worker",
+   "name": "pre-network: key with an em dash and a newline",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to execute 'fetch' on 'WorkerGlobalScope': Failed to read the 'headers' property from 'RequestInit': String contains non ISO-8859-1 code point.",
+   "ms": 0
+  },
+  {
+   "ctx": "worker",
+   "name": "pre-network: unparsable base URL \"https://ollama .com/v1\"",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 1
+  },
+  {
+   "ctx": "worker",
+   "name": "pre-network: base URL without scheme \"ollama.com/v1\"",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 1
+  },
+  {
+   "ctx": "worker",
+   "name": "network: unresolvable host, permission held (https://no-such-host.invalid)",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 33
+  },
+  {
+   "ctx": "worker",
+   "name": "network: closed port, permission held (https://127.0.0.1:9/)",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 1
+  },
+  {
+   "ctx": "worker",
+   "name": "permissions.contains origin pattern https://ollama.com/*",
+   "ok": true,
+   "contains": true
+  },
+  {
+   "ctx": "worker",
+   "name": "permissions.contains base URL https://ollama.com/v1 (not a pattern)",
+   "ok": true,
+   "contains": true
+  },
+  {
+   "ctx": "worker",
+   "name": "permissions.contains https://ollama.com/v1/* (path pattern)",
+   "ok": true,
+   "contains": true
+  },
+  {
+   "ctx": "worker",
+   "name": "permissions.contains https://no-such-host.invalid/*",
+   "ok": true,
+   "contains": true
+  },
+  {
+   "ctx": "panel",
+   "name": "pre-network: key with a non-ISO-8859-1 char (é)",
+   "ok": true,
+   "status": 401,
+   "ms": 370
+  },
+  {
+   "ctx": "panel",
+   "name": "pre-network: key with an em dash and a newline",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to execute 'fetch' on 'Window': Failed to read the 'headers' property from 'RequestInit': String contains non ISO-8859-1 code point.",
+   "ms": 0
+  },
+  {
+   "ctx": "panel",
+   "name": "pre-network: unparsable base URL \"https://ollama .com/v1\"",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 5
+  },
+  {
+   "ctx": "panel",
+   "name": "pre-network: base URL without scheme \"ollama.com/v1\"",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 1
+  },
+  {
+   "ctx": "panel",
+   "name": "network: unresolvable host, permission held (https://no-such-host.invalid)",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 21
+  },
+  {
+   "ctx": "panel",
+   "name": "network: closed port, permission held (https://127.0.0.1:9/)",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch",
+   "ms": 1
+  },
+  {
+   "ctx": "panel",
+   "name": "permissions.contains origin pattern https://ollama.com/*",
+   "ok": true,
+   "contains": true
+  },
+  {
+   "ctx": "panel",
+   "name": "permissions.contains base URL https://ollama.com/v1 (not a pattern)",
+   "ok": true,
+   "contains": true
+  },
+  {
+   "ctx": "panel",
+   "name": "permissions.contains https://ollama.com/v1/* (path pattern)",
+   "ok": true,
+   "contains": true
+  },
+  {
+   "ctx": "panel",
+   "name": "permissions.contains https://no-such-host.invalid/*",
+   "ok": true,
+   "contains": true
+  },
+  {
+   "ctx": "panel",
+   "name": "offline (CDP emulation), permission held",
+   "ok": false,
+   "errorName": "TypeError",
+   "errorMessage": "Failed to fetch"
+  }
+ ]
+}

@@ -1,0 +1,49 @@
+{
+ "at": "2026-10-05T15:58:01.287Z",
+ "rows": [
+  {
+   "name": "/v1 non-stream, max_tokens 1, valid key",
+   "status": 200,
+   "finish": "length",
+   "contentChars": 0,
+   "reasoningChars": 0
+  },
+  {
+   "name": "/v1 stream, max_tokens 1, valid key",
+   "status": 200,
+   "finish": "length",
+   "contentChars": 0,
+   "reasoningChars": 0
+  },
+  {
+   "name": "/v1 non-stream, max_tokens 1, reasoning_effort low",
+   "status": 200,
+   "finish": "length",
+   "contentChars": 0,
+   "reasoningChars": 0
+  },
+  {
+   "name": "/v1 non-stream, max_tokens 1, invalid key",
+   "status": 401,
+   "finish": null,
+   "contentChars": 0,
+   "reasoningChars": 0,
+   "body": "{\"error\":{\"message\":\"Unauthorized\",\"type\":\"api_error\",\"param\":null,\"code\":null}}\n"
+  },
+  {
+   "name": "/v1 non-stream, max_tokens 1, unknown model",
+   "status": 404,
+   "finish": null,
+   "contentChars": 0,
+   "reasoningChars": 0,
+   "body": "{\"error\":{\"message\":\"model \\\"no-such-model:1b\\\" not found\",\"type\":\"not_found_error\",\"param\":null,\"code\":null}}\n"
+  },
+  {
+   "name": "/api/chat, num_predict 1, valid key",
+   "status": 200,
+   "finish": "length",
+   "contentChars": 0,
+   "reasoningChars": 0
+  }
+ ]
+}
