@@ -15,7 +15,12 @@ export function scrub(doc) {
   const roots = allRoots(doc);
   let metas = 0, attrs = 0, removed = 0;
   for (const r of roots) {
-    for (const e of r.querySelectorAll(`script, noscript, iframe, ${HINTS}`)) { e.remove(); removed++; }
+    // Round 2 (C3): hidden form inputs (comment-form nonces), Gravatar avatars (hash of a commenter's email).
+    for (const e of r.querySelectorAll(`script, noscript, iframe, ${HINTS}, input[type=hidden i], img[src*="gravatar.com"]`)) { e.remove(); removed++; }
+    // HTML comments, except the fixture-attribution header.
+    const it = (r.ownerDocument ?? r).createNodeIterator(r, 128); const cs = []; let c;
+    while ((c = it.nextNode())) if (!c.data.trimStart().startsWith('fixture-attribution:')) cs.push(c);
+    for (const x of cs) { x.remove(); removed++; }
     for (const m of r.querySelectorAll('meta')) if (!KEEP_META(m)) { m.remove(); metas++; }
     for (const e of r.querySelectorAll('*')) for (const a of [...e.attributes]) if (TRACK_ATTR.test(a.name)) { e.removeAttribute(a.name); attrs++; }
   }

@@ -1,4 +1,5 @@
 // Headful isolated Chrome; scripted S5 scenario. Usage: node drive.mjs <mode: behavior|onclicked> <port> <variant: optional|granted>
+// NOPERM=1 skips the permission-prompt step, so a run never depends on someone clicking "Allow".
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -96,8 +97,12 @@ await step('close 2nd tab (back to tab 1)', () => send('Target.closeTarget', { t
 await step('worker probe back on tab 1', () => probe('tab1-back'));
 await step('click link to C (cross origin)', () => clickIn(sess, '#cross'), 2500);
 await step('worker probe on C', () => probe('C'));
-await step('panel click: request site permission (C origin)', () => panelClick('#perm'), 15000);
-await step('worker probe on C after permission request', () => probe('C-after-perm'));
+// Decision 3 case: after the cross-origin navigation the grant is gone; a panel click must not be able to inject.
+await step('panel click: inject on C after grant loss (expect FAIL)', () => panelClick('#inject'));
+if (!process.env.NOPERM) {
+  await step('panel click: request site permission (C origin)', () => panelClick('#perm'), 15000);
+  await step('worker probe on C after permission request', () => probe('C-after-perm'));
+}
 await step('click back to A via history', () => send('Runtime.evaluate', { expression: 'history.back()' }, sess), 2500);
 await step('worker probe after back', () => probe('back'));
 }

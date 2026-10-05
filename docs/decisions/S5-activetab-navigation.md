@@ -36,6 +36,12 @@ Added by the supervisor from the Phase A review:
 
 Logs: `spikes/s5/results/{behavior-optional,onclicked-optional,onclicked-granted,permtest,permtest-undeclared}.jsonl`.
 
+Tester round, re-runs with the committed `drive.mjs` and `NOPERM=1` (the permission-prompt step skipped, so no run
+depends on a person): `results/onclicked-optional-rerun.jsonl` and `results/behavior-optional-rerun.jsonl`. The
+original `behavior-optional.jsonl` came from an older `drive.mjs`. The re-run reproduces every row of its column:
+inject FAIL at every step, `onClicked` never fired, panel-click inject FAIL, and the second toolbar click closed the
+panel.
+
 ### Who can inject, and when (worker `executeScript` probe, no gesture)
 
 | Step | `behavior` + optional | `onclicked` + optional | `onclicked` + host permission |
@@ -50,6 +56,7 @@ Logs: `spikes/s5/results/{behavior-optional,onclicked-optional,onclicked-granted
 | Second tab opened (B) | – | FAIL (no grant for that tab) | OK |
 | Back on the first tab | – | OK | OK |
 | Link click → C (cross origin) | FAIL | **FAIL** (grant revoked) | OK |
+| Panel click "inject" on C after the grant loss | – | **FAIL** (`onclicked-optional-rerun.jsonl`, step 24) | – |
 | `history.back()` C → A | – | FAIL | OK |
 
 In the `onclicked` + optional run, `tabs.onUpdated` exposed `tab.url` exactly while the grant was alive (`urlVisible`
@@ -66,10 +73,10 @@ is null once it is revoked). That gives the worker a cheap "do I still have acce
 | `permissions.request({origins:["http://localhost/*"]})` from a panel click | the prompt appears (still pending after 3 s and 12 s), then resolved `true`; `permissions.getAll()` shows the new origin |
 | `permissions.request` for an origin not in the manifest (`http://192.168.1.50/*`) | FAIL: "Only permissions specified in the manifest may be requested." |
 
-Note: the permission prompt resolved `true` 8–18 s after it appeared, in 3 of 3 runs. The driver never clicks it, and the
-test window was visible on the desktop. **Unexplained** (the user has been asked whether someone clicked "Allow"). The
-conclusion holds either way: the prompt appears from a panel click, and once it resolves `true` the grant is real
-(`permissions.getAll()`).
+Note: the permission prompt resolved `true` 8–18 s after it appeared, in 3 of 3 runs. The driver never clicks it. **The
+user clicked "Allow" by hand** (user, 2026-10-05: "i clicked allow before"). So the "resolved `true`" evidence and the
+`permissions.getAll()` grant check come from that manual click. The tester's re-run with nobody clicking left the
+prompt pending, as expected. What is automated: the prompt appears from a panel click.
 
 ### Panel lifetime
 
@@ -192,6 +199,9 @@ when the panel is already open"; `minimum_chrome_version` 138.
   - `wxt.config.ts:17`: `optional_host_permissions` gains `http://*/*`. `scripts/check-manifest.mjs:16` pins the exact
     list and must change with it.
 - **M0-E3:**
+  - Injection triggers: action click, `Alt+T` and the context menu (each a grant), plus `tabs.onUpdated` `complete`
+    (re-inject while the grant or host permission holds). "Cannot inject here" covers `chrome://`, the Web Store, a lost
+    grant and a denied permission.
   - Injection must be idempotent. `tabs.onUpdated` `complete` fires on hash and `pushState` changes (S5 steps 5–8), and
     repeated action clicks inject again. The content script guards with a global flag and answers "already injected".
   - Who injects: the worker inside `action.onClicked` and the context-menu handler (gesture time), and on
@@ -206,9 +216,6 @@ when the panel is already open"; `minimum_chrome_version` 138.
   applies to every allowlisted tab in the window. Switching to an allowlisted tab would start a job there. Proposed
   rule: only the active tab's job schedules new chunks; a tab that loses focus finishes its in-flight chunks and stops.
   Switching back resumes, served from the cache. This keeps the per-window concurrency limit meaningful. Not tested.
-- M0-E3: injection triggers are action click / `Alt+T` / context menu (grant), plus `tabs.onUpdated` `complete` (re-inject
-  while the grant or host permission holds). "Cannot inject here" covers `chrome://`, Web Store, a lost grant and a
-  denied permission.
 - The panel needs a "lost access" state with the two actions above. A panel button never triggers injection on its own
   without a grant.
 - DESIGN §8 and ROADMAP §8 item 6 should be updated with the more accurate `activeTab` lifetime (finding table) and the
@@ -217,13 +224,11 @@ when the panel is already open"; `minimum_chrome_version` 138.
 
 ## Limits of this spike
 
-- Re-injection after a **runtime** grant is not directly verified. It was emulated with install-time
-  `host_permissions`, and the runtime-grant run probed a different origin afterwards. Who clicked "Allow" (8–18 s
-  after each prompt): unexplained, answer pending from the user.
+- **Runtime grant.** "Host permission granted" was emulated with install-time `host_permissions`, so re-injection after a
+  **runtime** grant is not directly verified. The runtime-grant run (with the user's manual "Allow") showed the same
+  `permissions.getAll()` result, but its post-grant probe ran on a different origin.
 - `Extensions.triggerAction` stands in for a real toolbar click. A real click, `Alt+T` and the context menu are in the
   manual checklist, which hasn't been run yet.
-- "Host permission granted" was emulated with install-time `host_permissions`. The runtime-grant run showed the same
-  `permissions.getAll()` result, but its post-grant probe ran on a different origin.
 - Global panel only. Tab-specific panels (`sidePanel.setOptions({ tabId, path })`) were not tested. They aren't needed
   under the S1 decision (one panel document per window hosts the per-tab jobs).
 
@@ -260,4 +265,7 @@ Not applied; the user decides.
    - New: "action click and `Alt+T` open the panel for the tab (`action.onClicked` → `sidePanel.open`, with
      `openPanelOnActionClick: false`; decision S5)"
 7. **ROADMAP.md §8 item 6.** Append: "S5 result: the `activeTab` grant survives same-origin navigation and reload, and
-   is lost on cross-origin navigation; `openPanelOnActionClick: true` does not grant `activeTab` at all."
+   is lost on cross-origin navigation. With `openPanelOnActionClick: true`, a toolbar click does not grant `activeTab`."
+   - Add "`Alt+T` behaves the same" only if manual checklist rows 5/6 confirm it. If they show `Alt+T` granting
+     `activeTab` under `openPanelOnActionClick: true`, narrow the sentence to the toolbar click and revisit
+     deviation (a).

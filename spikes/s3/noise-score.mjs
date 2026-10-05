@@ -12,6 +12,18 @@ function count(root, text) {
   for (const e of root.querySelectorAll('*')) if (norm(textOf(e)) === text && !(e.parentElement && e.parentElement !== root && norm(textOf(e.parentElement)) === text)) n++;
   return n;
 }
+function stripItems(root, items) {
+  const texts = new Set(items.map((i) => i.text));
+  for (const e of [...root.querySelectorAll('*')]) if (root.contains(e) && texts.has(norm(textOf(e)))) e.remove();
+}
+// Upper bound (review C2): occurrences of the item as a whole-word, case-sensitive substring of the whole output text.
+// Catches noise that is a bare text node or part of a larger element; may over-count short items that are also words in content.
+const esc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function substrCount(root, items) {
+  const o = norm(textOf(root)); let n = 0;
+  for (const it of items) if (it.kind !== 'hidden' && it.kind !== 'glyph') n += (o.match(new RegExp(`(?<![\\p{L}\\p{N}])${esc(it.text)}(?![\\p{L}\\p{N}])`, 'gu')) ?? []).length;
+  return n;
+}
 function noise(root, items) {
   const by = { visible: 0, hidden: 0, glyph: 0 }, present = [];
   let chars = 0;
@@ -47,10 +59,11 @@ const rows = [];
 for (const slug of Object.keys(M)) {
   const items = N[slug];
   const d0 = load(slug); const truth = d0.querySelector(M[slug].contentSelector).cloneNode(true); truth.querySelectorAll(NOISE).forEach((e) => e.remove());
-  // Truth for recall/pre = the committed truth minus hand-labelled noise, so removing noise is not counted as a loss.
-  stripInContent(truth, { generator: detectGenerator(d0) });
+  // Truth for content/pre = the committed truth minus only the hand-labelled noise.json items (review C1: not minus the
+  // G/S selectors, which would make the "selectors removed no content" check circular).
+  stripItems(truth, items);
   const row = { slug, generator: detectGenerator(d0) };
-  for (const [v, f] of Object.entries(VARIANTS)) { const out = f(load(slug)); row[v] = { ...noise(out, items), recall: recall(out, truth, items), pre: preKept(out, truth), truthPre: pres(truth).length }; }
+  for (const [v, f] of Object.entries(VARIANTS)) { const out = f(load(slug)); row[v] = { ...noise(out, items), substr: substrCount(out, items), recall: recall(out, truth, items), pre: preKept(out, truth), truthPre: pres(truth).length }; }
   rows.push(row);
 }
 fs.writeFileSync('noise-results.json', JSON.stringify(rows, null, 2));
@@ -59,6 +72,9 @@ let md = '# B1 noise evaluation (hand-checked list, `noise.json`)\n\nVisible noi
 md += `| fixture | generator | ${V.map((v) => `${v} visible`).join(' | ')} | W hidden | W glyph | W+G+S hidden |\n|---|---|${V.map(() => '---').join('|')}|---|---|---|\n`;
 for (const r of rows) md += `| ${r.slug} | ${r.generator ?? '–'} | ${V.map((v) => `${r[v].visible}`).join(' | ')} | ${r.W.hidden} | ${r.W.glyph} | ${r['W+G+S'].hidden} |\n`;
 md += `| **sites with 0 visible noise** | | ${V.map((v) => `**${rows.filter((r) => r[v].visible === 0).length}/10**`).join(' | ')} | | | |\n\n`;
+md += `Upper bound (whole-word substring of the output text, visible kinds; may over-count short items that are also ordinary words):\n\n| fixture | ${V.join(' | ')} |\n|---|${V.map(() => '---').join('|')}|\n`;
+for (const r of rows) md += `| ${r.slug} | ${V.map((v) => r[v].substr).join(' | ')} |\n`;
+md += `| **sites with 0** | ${V.map((v) => `**${rows.filter((r) => r[v].substr === 0).length}/10**`).join(' | ')} |\n\n`;
 md += `Noise share of output chars (visible kinds):\n\n| fixture | ${V.join(' | ')} |\n|---|${V.map(() => '---').join('|')}|\n`;
 for (const r of rows) md += `| ${r.slug} | ${V.map((v) => (100 * r[v].pct).toFixed(2) + '%').join(' | ')} |\n`;
 md += `\nContent blocks kept (truth leaf blocks ≥ 15 chars, labelled noise excluded, found in the output text) and \`pre\` kept, to check that the selectors don't remove content:\n\n| fixture | ${V.map((v) => `${v} recall / pre`).join(' | ')} |\n|---|${V.map(() => '---').join('|')}|\n`;

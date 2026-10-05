@@ -27,7 +27,7 @@ Plan §5 default: "Readability first; 'poor result' heuristic (text ratio, lost 
   | `docsrs-tokio` | docs.rs / rustdoc | MIT |
   | `github-readme-bat` | GitHub README | MIT OR Apache-2.0 (README only, see Limits) |
   | `wikipedia-futures-promises` | Wikipedia | CC-BY-SA-4.0 |
-  | `goblog-pipelines` | long-form blog essay, go.dev (replaces Medium) | CC-BY-4.0 text, BSD-3-Clause code |
+  | `goblog-pipelines` | long-form blog essay, go.dev (replaces Medium) | CC-BY-4.0 text, BSD-3-Clause code (verified at go.dev/copyright: "Creative Commons Attribution 4.0", code "BSD license") |
   | `twir-671` | newsletter issue, This Week in Rust (replaces Substack) | CC-BY-SA-4.0 |
   | `globalvoices-bangladesh-protests` | news article, Global Voices on WordPress (replaces The Guardian) | CC-BY-3.0 text |
 
@@ -37,7 +37,9 @@ Plan §5 default: "Readability first; 'poor result' heuristic (text ratio, lost 
   Pages were captured as rendered DOM by headless Chrome 154, with open shadow roots kept as declarative shadow DOM.
   They were then scrubbed (`spikes/s3/scrub.mjs`, at every shadow depth): scripts, iframes, network hints, tracking
   `<meta>` and `data-hydro*`/`data-analytics*`/`data-ophan*`-style attributes are removed. See
-  `fixtures/sites/README.md`.
+  `fixtures/sites/README.md`. In round 2 the scrub also removes hidden form inputs (comment-form nonces), Gravatar
+  `<img>`s and HTML comments other than the attribution header. Global Voices' comment form itself is kept, because
+  its labels are a labelled noise case. Re-scrubbing changed no score.
 
 - **Ground truth for content.** A hand-picked content root per site (`contentSelector` in the manifest), minus
   `nav`/`aside`/`footer`/`button`/hidden non-tab elements. This is close to the walk's own exclusion list, so it is
@@ -93,25 +95,35 @@ Visible noise occurrences (kinds ui, meta, promo) per output:
 | Docusaurus | 0 | 20 | 20 | 0 | 0 | "Version: 3.10.2", fake browser bar "http://localhost:3000" ×13, "Live Editor" ×3, "Result" ×3 |
 | MkDocs Material | 0 | 0 | 0 | 0 | 0 | — (13 ¶ glyphs) |
 | mdBook (Rust Book) | 0 | 0 | 0 | 0 | 0 | — |
-| MDN | 1 | 11 | 11 | 0 | 0 | Baseline badge, "See full compatibility", "Help improve MDN", "View this page on GitHub", "Report a problem…" |
+| MDN | 1 | 13 | 13 | 0 | 0 | Baseline badge and its description, "See full compatibility", "Help improve MDN", last-modified line, "View this page on GitHub", "Report a problem…" |
 | docs.rs | 1 | 5 | 5 | 0 | 0 | rustdoc toolbar "Search", "Settings", "Help", "Source"; "Expand description" |
 | GitHub README | 0 | 0 | 0 | 0 | 0 | — |
 | Wikipedia | 16 | 31 | 12 | 0 | 0 | "[edit]" ×19, "Edit links", "From Wikipedia, the free encyclopedia", "Jump up to:" ×7, category links |
 | Go blog | 0 | 4 | 4 | 1 | 0 | "The Go Blog", next/previous article links, "Blog Index" |
 | TWiR newsletter | 0 | 0 | 0 | 0 | 0 | — |
-| Global Voices news | 0 | 29 | 29 | 0 | 0 | language switcher, 14 category/tag links, "Support our work", "Donate now", two related-story lists with dates, comment form |
+| Global Voices news | 0 | 49 | 49 | 0 | 0 | language switcher, 21 category/tag links, donation widget, two related-story lists (6 cards with bylines and dates), comment form |
 | **Sites with 0 visible noise** | **7/10** | **4/10** | **4/10** | **9/10** | **10/10** | |
 
-- **Size of the noise.** In W it is 0–5.3% of output chars: Global Voices 5.3%, MDN 2.0%, Docusaurus 1.7%, Wikipedia
-  1.1%, all others < 0.3%. In R it is 0–0.5%.
-- **Hidden kind.** Wikipedia has 10 more items (short description, hidden maintenance categories, a citation-error
+- **Size of the noise.** In W it is 0–14.5% of output chars: Global Voices 14.5%, MDN 3.6%, Docusaurus 1.7%,
+  Wikipedia 1.1%, all others < 0.3%. In R it is 0–0.5%. (Round 1 said 5.3% for Global Voices; the tester found
+  related-story cards, tag links and the donation widget missing from the list. They are now labelled.)
+- **Hidden kind.** Wikipedia has 13 more items (short description, hidden maintenance categories, a citation-error
   message) in W. A visibility check in Chrome would drop them; jsdom cannot.
-- **Glyph kind.** Docusaurus has 17 in W, MkDocs 13, docs.rs 18, Go blog 10. The +G anchor rule removes them all.
+- **Glyph kind.** Docusaurus has 17 in W, MkDocs 14, docs.rs 18, Go blog 10, Wikipedia 100 ("↑" footnote
+  back-links). The +G anchor rule removes them all.
 - **The +S selectors were written from these same fixtures.** W+G+S reaching 9/10 shows that a per-generator table
   *can* clean these pages. It is not evidence that it generalizes. On its own, +G changes only Wikipedia (31 → 12) and
   no site's zero-noise count.
-- **Content.** None of the in-content selectors removed content. Content blocks kept and `pre` kept are the same for
-  W, W+G and W+G+S on 10/10.
+- **Content.** None of the in-content selectors removed content. This is measured against the truth minus *only* the
+  labelled `noise.json` items (round 2, C1: round 1 also subtracted the G/S selectors from the truth, which made the
+  check circular). W, W+G and W+G+S keep 100% of content blocks and every `pre` on 10/10. While fixing C1, the first
+  re-run showed apparent losses under +G (Wikipedia 62%). Each one traced back to an unlabelled noise item, which is
+  now labelled ("↑"/"↩" back-links, MDN's baseline description and last-modified line), not to content
+  (`missing-blocks.mjs`, `g-diagnose.mjs`).
+- **Counting method (C2).** Items are counted as elements whose whole text equals the item. Noise that sits as a bare
+  text node or inside a larger element would be missed. Upper bound: a whole-word substring count over the output
+  text gives R 6/10, W 4/10, W+G+S 8/10, R+G+S 9/10 sites with zero visible noise (`noise.md`). The extra hits are
+  Global Voices' tag words ("Bangladesh", "Protest"), which also occur in the article text, and the Go blog.
 
 ### Content and code (`noise.md`, `results.md`)
 
@@ -145,7 +157,8 @@ Each cause was confirmed by removing it and re-running.
 | Docusaurus | `pre` 40/59 | inactive tab panels are `hidden`, and Readability drops hidden subtrees (19 of 26 panels) | — |
 | docs.rs | headings 13/19 | `h2.section-header` matches the *unlikelyCandidates* regex (`header`), so "Re-exports", "Modules", "Macros" and "Attribute Macros" are removed. The `h1` goes to `article.title`. | h2–h4 11 → 15 |
 | Wikipedia | headings 9/19 | each heading sits in `div.mw-heading` together with a `span.mw-editsection` "[edit]" link; that wrapper is dropped, along with its heading | h2/h3 9 → 18 |
-| Go blog | `pre` 9/26 | code comments are `<span class="comment">`; *unlikelyCandidates* matches `comment`, so **comments are deleted from inside `<pre>`**: the text of 54 of the 55 comments is absent from the output. The code is changed silently, and the `pre` count stays 26. | identical `pre` 9 → 25 |
+| Go blog | `pre` 9/26 | code comments are `<span class="comment">`; *unlikelyCandidates* matches `comment`, so **comments are deleted from inside `<pre>`**: all 54 comments are gone (55 `span.comment`, one of which is a highlight
+  marker whose text survives elsewhere). The code is changed silently, and the `pre` count stays 26. | identical `pre` 9 → 25 |
 | MDN, GitBook (first set) | intro paragraph | outside the subtree picked as top candidate | — |
 | mdBook, Go blog, MkDocs, Medium (first set) | the `h1` | moved to `article.title` (metadata, not lost) | — |
 
@@ -186,7 +199,8 @@ inbox". In fact Readability *kept* that promo heading. The heading it dropped wa
 
 - **No semantic container** (`main`/`article` renamed to `div`, `role=main` removed): the policy falls back to
   Readability on 10/10, with the Readability losses above.
-- **Whole page in one `<main>`:** walk recall 99–100% (MDN 99%), precision 75–100%. Global Voices is the worst: its
+- **Whole page in one `<main>`:** the walk is chosen on 9/10. TWiR goes to Readability, because of the link-density
+  guard (0.58). Where chosen, walk recall is 99–100% (MDN 99%) and precision 75–100%. Global Voices is the worst: its
   sidebar and related stories are inside `main` already.
 
 ### Docs-specific blocks inside the content roots (`kinds.md`)
@@ -206,7 +220,7 @@ told to remove.
 The two methods fail differently:
 
 - **The walk keeps everything and adds UI noise.** All content blocks and all code blocks are kept on 10/10. The cost
-  is 0–5% of output chars of in-content UI text: badges, edit and feedback links, tag lists, related stories. That
+  is 0–14.5% of output chars of in-content UI text: badges, edit and feedback links, tag lists, related stories. That
   noise is visible: it gets translated and shown, and it costs tokens. Nothing is lost.
 - **Readability is cleaner and loses content silently.** It has less noise (7/10 clean, ≤ 0.5% of chars). But it
   loses or corrupts content on docs sites with no usable signal:
@@ -232,7 +246,7 @@ reverse: Readability first, walk as the fallback.
   2. **Walk** as in `spikes/s3/walk.mjs`, plus the **generic in-content rules** (+G): visually-hidden helpers, paywall
      boxes, edit-section links, letterless permalink anchors.
   3. **Visibility filter** in the content script: drop elements that fail `checkVisibility()`, except
-     `[role=tabpanel]` and the content of closed `details` (see Consequences). On Wikipedia this would drop the 10
+     `[role=tabpanel]` and the content of closed `details` (see Consequences). On Wikipedia this would drop the 13
      hidden-kind items.
   4. Accept the walk when it has ≥ 500 chars. Keep the link-density guard only as a *tie-breaker*, not a rejection:
      it misfired on TWiR (follow-up below).
@@ -322,12 +336,17 @@ reverse: Readability first, walk as the fallback.
 
 - **jsdom, not Chrome.** CSS-hidden content can't be seen. The visibility-filter step and the "hidden" noise kind are
   argued, not measured.
-- **One page per family.** The noise list is mine, made by reading outputs, so a second labeller might differ on
-  borderline items. Examples: Docusaurus "Live Editor"/"Result", and the Go blog's "The Go Blog".
+- **One page per family.** The noise list is mine, made by reading outputs, and the tester found gaps in round 2 (now
+  fixed). A second labeller might still differ on borderline items. Labelled as noise: Docusaurus "Live
+  Editor"/"Result", the Go blog's "The Go Blog". Treated as content: tab labels (Docusaurus npm/Yarn/pnpm/Bun, Global
+  Voices "Translation"/"Original Quote"), the article date line ("Translation posted …"), and the article byline even
+  where the theme repeats it (Global Voices ×4).
+- **The counter matches whole element text** (C2). See the upper-bound row in `noise.md`.
 - **No fixture exercises a paywall,** a real link farm, a page without semantic containers (only simulated), or a
   closed shadow root.
 - **GitHub page chrome.** `github-readme-bat` includes github.com's own page markup around the README, which the
   README's license doesn't cover. That's an open item in `ATTRIBUTION.md` for the user: keep it, or cut the fixture
   down to the README article.
-- **History rewrite.** The replaced fixtures' blobs may survive as unreachable objects in the local object store until
-  `git gc`. They are in no commit on any branch. `git log --all` on their paths is empty.
+- **History rewrite.** The replaced fixtures are in no commit on any branch, and `git log --all` on their paths is
+  empty, so they can't be pushed. Their blobs are still *reflog-reachable* in the local object store. Removing them
+  needs `git reflog expire --expire=now --all && git gc --prune=now`, which was not run (supervisor's call).

@@ -51,7 +51,7 @@ seconds after the job started, from CDP target discovery.
 
 Findings:
 
-1. **An open Port does not keep the worker alive.** `port-idle` was killed at 30 s in 6 of 7 runs. The panel received
+1. **An open Port does not keep the worker alive.** `port-idle` was killed at 30 s in most runs: 6 of 7 in mine, and 4 of 7 in the tester's re-run (aborted at 29 chunks; r1, r3, r5 survived). The panel received
    `onDisconnect` at the same moment, and the server saw the client abort the stream after 29 chunks.
 2. **Reading a fetch body is not activity.** With no other activity the worker is usually killed at 30 s mid-stream.
    It was killed in 6 of 7 `noport` runs; `port-idle` likewise survived once. I found no cause for either survivor (logs
@@ -136,8 +136,12 @@ mid-page failures. The panel host removes that whole class of problem (finding 6
   (DESIGN §4.3.5) run in the panel. A stream already in flight keeps flowing, but a scheduled retry may be late. M1
   should test translation with the window minimized and keep retry logic tolerant of late timers.
 - Only Chrome 154 was tested; the planned minimum is 138.
-- The two surviving no-keepalive runs (1/7 each) are unexplained. It doesn't change the decision, which doesn't rely on the timer's
-  behavior.
+- Surviving no-keepalive runs are unexplained, and more frequent than my runs suggested. I saw 2 of 14 (`noport` 1/7,
+  `port-idle` 1/7); the tester saw 4 of 14. The worker is killed in most runs, not reliably. That doesn't change the
+  decision, which doesn't rely on the timer either way: a keepalive-free design must assume it can be killed.
+- The `results/r1-*` logs lack the `ttfb` field in `stream-open`. Round 1 was produced by an older `server.mjs` (before
+  the `ttfb` option was added). Rounds 2+ use the committed one. The round-1 results are kept; their stream behavior is
+  the same (`ttfb` = 0).
 
 ## Proposed spec changes
 

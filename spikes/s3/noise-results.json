@@ -9,6 +9,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 0.9135802469135802,
       "pre": 40,
       "truthPre": 59
@@ -25,6 +26,7 @@
       ],
       "chars": 339,
       "pct": 0.0174337876060684,
+      "substr": 20,
       "recall": 1,
       "pre": 59,
       "truthPre": 59
@@ -36,6 +38,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 0.9135802469135802,
       "pre": 40,
       "truthPre": 59
@@ -52,6 +55,7 @@
       ],
       "chars": 339,
       "pct": 0.017464324352171448,
+      "substr": 20,
       "recall": 1,
       "pre": 59,
       "truthPre": 59
@@ -63,6 +67,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 59,
       "truthPre": 59
@@ -74,10 +79,11 @@
     "R": {
       "visible": 0,
       "hidden": 0,
-      "glyph": 12,
+      "glyph": 13,
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 17,
       "truthPre": 17
@@ -85,10 +91,11 @@
     "W": {
       "visible": 0,
       "hidden": 0,
-      "glyph": 13,
+      "glyph": 14,
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 17,
       "truthPre": 17
@@ -100,6 +107,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 17,
       "truthPre": 17
@@ -111,6 +119,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 17,
       "truthPre": 17
@@ -122,6 +131,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 17,
       "truthPre": 17
@@ -139,12 +149,13 @@
       ],
       "chars": 30,
       "pct": 0.0025875452820424355,
+      "substr": 1,
       "recall": 0.925,
       "pre": 12,
       "truthPre": 12
     },
     "W": {
-      "visible": 11,
+      "visible": 13,
       "hidden": 0,
       "glyph": 0,
       "present": [
@@ -158,10 +169,13 @@
         "MDN contributors",
         "Sep 1, 2026",
         "View this page on GitHub",
-        "Report a problem with this content"
+        "Report a problem with this content",
+        "This feature is well established and works across many devices and browser versions. It’s been available across browsers since July 2015.",
+        "This page was last modified on Sep 1, 2026 by MDN contributors ."
       ],
-      "chars": 244,
-      "pct": 0.019552848785960412,
+      "chars": 445,
+      "pct": 0.03565990864652616,
+      "substr": 13,
       "recall": 1,
       "pre": 12,
       "truthPre": 12
@@ -173,12 +187,13 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 0.925,
       "pre": 12,
       "truthPre": 12
     },
     "W+G": {
-      "visible": 11,
+      "visible": 13,
       "hidden": 0,
       "glyph": 0,
       "present": [
@@ -192,10 +207,13 @@
         "MDN contributors",
         "Sep 1, 2026",
         "View this page on GitHub",
-        "Report a problem with this content"
+        "Report a problem with this content",
+        "This feature is well established and works across many devices and browser versions. It’s been available across browsers since July 2015.",
+        "This page was last modified on Sep 1, 2026 by MDN contributors ."
       ],
-      "chars": 244,
-      "pct": 0.01961887915092064,
+      "chars": 445,
+      "pct": 0.03578033287770362,
+      "substr": 13,
       "recall": 1,
       "pre": 12,
       "truthPre": 12
@@ -207,6 +225,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 12,
       "truthPre": 12
@@ -224,6 +243,7 @@
       ],
       "chars": 18,
       "pct": 0.0012600630031501575,
+      "substr": 1,
       "recall": 0.981651376146789,
       "pre": 8,
       "truthPre": 8
@@ -241,6 +261,7 @@
       ],
       "chars": 42,
       "pct": 0.0029164641344351086,
+      "substr": 5,
       "recall": 1,
       "pre": 8,
       "truthPre": 8
@@ -252,6 +273,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 0.981651376146789,
       "pre": 8,
       "truthPre": 8
@@ -269,6 +291,7 @@
       ],
       "chars": 42,
       "pct": 0.002923773059519666,
+      "substr": 5,
       "recall": 1,
       "pre": 8,
       "truthPre": 8
@@ -280,6 +303,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 8,
       "truthPre": 8
@@ -295,6 +319,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 58,
       "truthPre": 58
@@ -306,6 +331,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 58,
       "truthPre": 58
@@ -317,6 +343,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 58,
       "truthPre": 58
@@ -328,6 +355,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 58,
       "truthPre": 58
@@ -339,6 +367,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 58,
       "truthPre": 58
@@ -350,21 +379,22 @@
     "R": {
       "visible": 16,
       "hidden": 0,
-      "glyph": 0,
+      "glyph": 100,
       "present": [
         "[ edit ] ×9",
         "Jump up to: ×7"
       ],
       "chars": 149,
       "pct": 0.004812039788141067,
+      "substr": 16,
       "recall": 0.9914163090128756,
       "pre": 4,
       "truthPre": 4
     },
     "W": {
       "visible": 31,
-      "hidden": 10,
-      "glyph": 0,
+      "hidden": 13,
+      "glyph": 100,
       "present": [
         "[ edit ] ×19",
         "Edit links",
@@ -376,6 +406,7 @@
       ],
       "chars": 343,
       "pct": 0.010717745211386432,
+      "substr": 31,
       "recall": 1,
       "pre": 4,
       "truthPre": 4
@@ -387,13 +418,14 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 0.9957081545064378,
       "pre": 4,
       "truthPre": 4
     },
     "W+G": {
       "visible": 12,
-      "hidden": 10,
+      "hidden": 13,
       "glyph": 0,
       "present": [
         "Edit links",
@@ -405,17 +437,19 @@
       ],
       "chars": 191,
       "pct": 0.006039334724593688,
+      "substr": 12,
       "recall": 1,
       "pre": 4,
       "truthPre": 4
     },
     "W+G+S": {
       "visible": 0,
-      "hidden": 0,
+      "hidden": 1,
       "glyph": 0,
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 4,
       "truthPre": 4
@@ -431,6 +465,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 0.9896907216494846,
       "pre": 15,
       "truthPre": 15
@@ -442,6 +477,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 15,
       "truthPre": 15
@@ -453,6 +489,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 0.9896907216494846,
       "pre": 15,
       "truthPre": 15
@@ -464,6 +501,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 15,
       "truthPre": 15
@@ -475,6 +513,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 15,
       "truthPre": 15
@@ -490,6 +529,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 0.9710144927536232,
       "pre": 9,
       "truthPre": 26
@@ -506,6 +546,7 @@
       ],
       "chars": 57,
       "pct": 0.0029396596183599794,
+      "substr": 4,
       "recall": 1,
       "pre": 26,
       "truthPre": 26
@@ -517,6 +558,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 0.9710144927536232,
       "pre": 9,
       "truthPre": 26
@@ -533,6 +575,7 @@
       ],
       "chars": 57,
       "pct": 0.002942694889003614,
+      "substr": 4,
       "recall": 1,
       "pre": 26,
       "truthPre": 26
@@ -546,6 +589,7 @@
       ],
       "chars": 11,
       "pct": 0.0005702732127119084,
+      "substr": 1,
       "recall": 1,
       "pre": 26,
       "truthPre": 26
@@ -561,6 +605,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 0.9948186528497409,
       "pre": 0,
       "truthPre": 0
@@ -572,6 +617,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 0,
       "truthPre": 0
@@ -583,6 +629,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 0.9948186528497409,
       "pre": 0,
       "truthPre": 0
@@ -594,6 +641,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 0,
       "truthPre": 0
@@ -605,6 +653,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 0,
       "recall": 1,
       "pre": 0,
       "truthPre": 0
@@ -620,12 +669,13 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 7,
       "recall": 1,
       "pre": 0,
       "truthPre": 0
     },
     "W": {
-      "visible": 29,
+      "visible": 49,
       "hidden": 0,
       "glyph": 0,
       "present": [
@@ -656,10 +706,31 @@
         "1 week ago",
         "2 days ago",
         "Cancel this reply",
-        "Start the conversation"
+        "Start the conversation",
+        "Education",
+        "History",
+        "Law",
+        "Politics",
+        "Protest",
+        "South Asia",
+        "Bangladesh",
+        "Beyond protest: Mob violence and the struggle for institutional response in Bangladesh",
+        "How a farmers’ protest in Bucharest was inflated online, then hijacked",
+        "West-to-east energy, east-to-west computing: The Uyghur costs of China’s digital order",
+        "The shock wave of Sister Hong: Catfishing, gender imbalance, and sexual education in China",
+        "Written by Sydney Allen , Kevin Rennie , Sanjib Chaudhary , Rai M Azlan , Daria Dergacheva , Jean Sovon , Nurbek Bekmurzaev",
+        "Written by Civic Media Observatory , Samanta Azpurua",
+        "Written by Maksuda Akter",
+        "Written by Guest Contributor",
+        "Written by Asiye Uyghur",
+        "Written by Jingjing Shueh",
+        "24 July 2025",
+        "Global Voices",
+        "Please consider making a donation to help us continue this work."
       ],
-      "chars": 429,
-      "pct": 0.05275454992621741,
+      "chars": 1179,
+      "pct": 0.14498278406296114,
+      "substr": 60,
       "recall": 1,
       "pre": 0,
       "truthPre": 0
@@ -671,12 +742,13 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 7,
       "recall": 1,
       "pre": 0,
       "truthPre": 0
     },
     "W+G": {
-      "visible": 29,
+      "visible": 49,
       "hidden": 0,
       "glyph": 0,
       "present": [
@@ -707,10 +779,31 @@
         "1 week ago",
         "2 days ago",
         "Cancel this reply",
-        "Start the conversation"
+        "Start the conversation",
+        "Education",
+        "History",
+        "Law",
+        "Politics",
+        "Protest",
+        "South Asia",
+        "Bangladesh",
+        "Beyond protest: Mob violence and the struggle for institutional response in Bangladesh",
+        "How a farmers’ protest in Bucharest was inflated online, then hijacked",
+        "West-to-east energy, east-to-west computing: The Uyghur costs of China’s digital order",
+        "The shock wave of Sister Hong: Catfishing, gender imbalance, and sexual education in China",
+        "Written by Sydney Allen , Kevin Rennie , Sanjib Chaudhary , Rai M Azlan , Daria Dergacheva , Jean Sovon , Nurbek Bekmurzaev",
+        "Written by Civic Media Observatory , Samanta Azpurua",
+        "Written by Maksuda Akter",
+        "Written by Guest Contributor",
+        "Written by Asiye Uyghur",
+        "Written by Jingjing Shueh",
+        "24 July 2025",
+        "Global Voices",
+        "Please consider making a donation to help us continue this work."
       ],
-      "chars": 429,
-      "pct": 0.05275454992621741,
+      "chars": 1179,
+      "pct": 0.14498278406296114,
+      "substr": 60,
       "recall": 1,
       "pre": 0,
       "truthPre": 0
@@ -722,6 +815,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
+      "substr": 8,
       "recall": 1,
       "pre": 0,
       "truthPre": 0

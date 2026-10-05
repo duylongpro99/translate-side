@@ -1,5 +1,5 @@
 {
-  "_doc": "Hand-checked UI noise per fixture, labelled by reading the actual W and R outputs (dump-blocks.mjs), not derived from the walk's rules. text = exact normalized text of an element. kind: ui = page controls, edit/feedback/share links, widget labels; meta = read time, last-updated, version badges, tags, categories; promo = subscribe/paywall/newsletter/most-viewed; hidden = hidden by site CSS in the real page (jsdom can't see it); glyph = permalink symbols with no letters (scored separately). Bylines and publication dates of the article itself and the author's own in-body links are treated as content.",
+  "_doc": "Hand-checked UI noise per fixture, labelled by reading the actual W and R outputs (dump-blocks.mjs), not derived from the walk's rules. text = exact normalized text of an element. kind: ui = page controls, edit/feedback/share links, widget labels; meta = read time, last-updated, version badges, tags, categories; promo = subscribe/paywall/newsletter/most-viewed; hidden = hidden by site CSS in the real page (jsdom can't see it); glyph = permalink symbols with no letters (scored separately). Bylines and publication dates of the article itself and the author's own in-body links are treated as content. Borderline, treated as content: tab labels (Docusaurus npm/Yarn/pnpm/Bun, Global Voices Translation/Original Quote), the article date line (\"Translation posted …\"), and the article byline even where the theme repeats it (Global Voices ×4).",
   "docusaurus-code-blocks": [
     {
       "text": "Version: 3.10.2",
@@ -29,6 +29,11 @@
       "text": "¶",
       "kind": "glyph",
       "note": "a.headerlink permalink"
+    },
+    {
+      "text": "↩",
+      "kind": "glyph",
+      "note": "footnote back-link"
     }
   ],
   "mdn-promise-then": [
@@ -80,6 +85,15 @@
     {
       "text": "Report a problem with this content",
       "kind": "ui"
+    },
+    {
+      "text": "This feature is well established and works across many devices and browser versions. It’s been available across browsers since July 2015.",
+      "kind": "meta",
+      "note": "baseline description, last-modified line"
+    },
+    {
+      "text": "This page was last modified on Sep 1, 2026 by MDN contributors .",
+      "kind": "meta"
     }
   ],
   "docsrs-tokio": [
@@ -186,6 +200,24 @@
       "text": "{{ cite conference }} :",
       "kind": "hidden",
       "note": "citation error message"
+    },
+    {
+      "text": "Retrieved from \" https://en.wikipedia.org/w/index.php?title=Futures_and_promises&oldid=1375119078 \"",
+      "kind": "hidden",
+      "note": "printfooter, CS1 error, hidden category (round 2, tester)"
+    },
+    {
+      "text": "Cite uses deprecated parameter | citeseerx= ( help )",
+      "kind": "hidden"
+    },
+    {
+      "text": "Wikipedia articles needing clarification from March 2016",
+      "kind": "hidden"
+    },
+    {
+      "text": "↑",
+      "kind": "glyph",
+      "note": "footnote back-links"
     }
   ],
   "mdbook-rust-book-ownership": [],
@@ -332,6 +364,92 @@
     {
       "text": "Start the conversation",
       "kind": "ui"
+    },
+    {
+      "text": "Education",
+      "kind": "meta",
+      "note": "more category/tag links (round 2, tester)"
+    },
+    {
+      "text": "History",
+      "kind": "meta"
+    },
+    {
+      "text": "Law",
+      "kind": "meta"
+    },
+    {
+      "text": "Politics",
+      "kind": "meta"
+    },
+    {
+      "text": "Protest",
+      "kind": "meta"
+    },
+    {
+      "text": "South Asia",
+      "kind": "meta"
+    },
+    {
+      "text": "Bangladesh",
+      "kind": "meta"
+    },
+    {
+      "text": "Beyond protest: Mob violence and the struggle for institutional response in Bangladesh",
+      "kind": "promo",
+      "note": "related-story cards with bylines/dates, donation widget (round 2, tester)"
+    },
+    {
+      "text": "How a farmers’ protest in Bucharest was inflated online, then hijacked",
+      "kind": "promo"
+    },
+    {
+      "text": "West-to-east energy, east-to-west computing: The Uyghur costs of China’s digital order",
+      "kind": "promo"
+    },
+    {
+      "text": "The shock wave of Sister Hong: Catfishing, gender imbalance, and sexual education in China",
+      "kind": "promo"
+    },
+    {
+      "text": "Written by Sydney Allen , Kevin Rennie , Sanjib Chaudhary , Rai M Azlan , Daria Dergacheva , Jean Sovon , Nurbek Bekmurzaev",
+      "kind": "promo"
+    },
+    {
+      "text": "Written by Civic Media Observatory , Samanta Azpurua",
+      "kind": "promo"
+    },
+    {
+      "text": "Written by Maksuda Akter",
+      "kind": "promo"
+    },
+    {
+      "text": "Written by Guest Contributor",
+      "kind": "promo"
+    },
+    {
+      "text": "Written by Asiye Uyghur",
+      "kind": "promo"
+    },
+    {
+      "text": "Written by Jingjing Shueh",
+      "kind": "promo"
+    },
+    {
+      "text": "24 July 2025",
+      "kind": "promo"
+    },
+    {
+      "text": "Global Voices",
+      "kind": "promo"
+    },
+    {
+      "text": "Please consider making a donation to help us continue this work.",
+      "kind": "promo"
+    },
+    {
+      "text": "Global Voices stands out as one of the earliest and strongest examples of how media committed to building community and defending human rights can positively in",
+      "kind": "promo"
     }
   ]
 }
