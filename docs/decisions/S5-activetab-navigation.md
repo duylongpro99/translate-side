@@ -1,6 +1,6 @@
 # S5 — `activeTab` and navigation → permission and allowlist design
 
-Status: proposed (awaiting review) · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS) · Spike code: `spikes/s5/`
+Status: proposed (awaiting review; amended after review round 1) · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS) · Spike code: `spikes/s5/`
 
 ## Question
 
@@ -99,8 +99,8 @@ should behave exactly like the toolbar rows above, in both modes. Context-menu c
    `activeTab` and without firing `action.onClicked`, so the extension can never read the page it opened on. Use
    `openPanelOnActionClick: false`. In `action.onClicked` (toolbar or `Alt+T`), call `sidePanel.open({ tabId })` and
    then inject. **This deviates from plan M0-E2 ("action click and `Alt+T` open the panel for the tab
-   (`setPanelBehavior`)")** and answers the reviewer's question: the answer is no. It also avoids the toggle-closed
-   behavior.
+   (`setPanelBehavior`)")** and answers the reviewer's question: the answer is no. The toggle is lost; see
+   deviation (c).
 2. **Allowlist = optional host permission, as the plan default says.** Allowlisting a site calls
    `permissions.request({ origins: [<origin>/*] })` from a click in the panel (a valid gesture). With the permission,
    the worker re-injects on every `tabs.onUpdated` `complete` with no gesture, including cross-origin navigation within
@@ -150,6 +150,31 @@ should behave exactly like the toolbar rows above, in both modes. Context-menu c
 - Proposed change: `setPanelBehavior({ openPanelOnActionClick: false })`. The action handler opens the panel and injects
   (Decision 1). Phase A code is not changed by this spike.
 
+**Deviation (c): the toolbar and `Alt+T` no longer toggle the panel closed.**
+
+- Plan text: ROADMAP M5 says "Keyboard: `Alt+T` toggle". Chrome's built-in `openPanelOnActionClick` behavior is a
+  toggle.
+- Evidence: in `behavior` mode a second click closed the panel (`panel-UNLOAD` 0.4 s later). In `onclicked` mode a
+  second click (`onclicked-optional.jsonl`, step 13) kept it open, because `sidePanel.open()` on an open panel does
+  nothing.
+- Options for the user:
+  1. **Accept open-only** in M0. `Alt+T` and the toolbar always open the panel and inject; the panel has its own close
+     button.
+  2. **Emulate the toggle** (recommended for M5). The worker tracks whether the panel is open in this window (the
+     panel's Port is connected). If it is open, `action.onClicked` calls `chrome.sidePanel.close({ windowId })` instead
+     (Chrome 141+, gated by `typeof chrome.sidePanel.close === 'function'`). On 138–140 there is no toggle and the click
+     re-injects. `sidePanel.close` exists on 154 but **was not exercised** in this spike.
+
+**Not a deviation: same-origin navigation on a site that isn't allowlisted is extract-only.** DESIGN §8: "Never
+auto-translate by default".
+- While the `activeTab` grant lives (same-origin navigation, reload), the worker re-injects and the panel shows the new
+  page's **original** segments. Nothing is sent to a provider.
+- The panel offers "Translate this page". That button works, because the panel can inject and read the page while the
+  grant lives (S5: `panel-click-inject-OK`).
+- After a cross-origin navigation the grant is gone. The panel shows the "lost access" state (Decision 3); a panel
+  button can't help there.
+- Only an allowlisted site auto-translates on navigation, and only while the panel is open.
+
 **Not a deviation, but a new recommendation for the Phase A manifest:** add `http://*/*` to
 `optional_host_permissions` (Decision 6). The plan deferred this question to S5.
 
@@ -158,9 +183,29 @@ when the panel is already open"; `minimum_chrome_version` 138.
 
 ## Consequences
 
-- M0-E2: `setPanelBehavior({ openPanelOnActionClick: false })`; `action.onClicked` → `sidePanel.open({tabId})` →
-  inject. `sidePanel.open` must be called synchronously in the handler, before any `await` that could lose the gesture.
-  The spike calls it first.
+- **M0-E2**, master code this changes (if the user accepts deviation (a)):
+  - `src/shared/panel.ts:14`: `setPanelBehavior({ openPanelOnActionClick: true })` → `false`, plus an
+    `action.onClicked` handler. `src/shared/panel.test.ts:11` asserts the old value.
+  - `src/shared/panel.ts:33`: the context-menu handler follows the same rule, open first, then inject.
+  - In both handlers `sidePanel.open({tabId})` is the first call, with no `await` before it. Denylist and settings reads
+    go after it. The spike calls it first.
+  - `wxt.config.ts:17`: `optional_host_permissions` gains `http://*/*`. `scripts/check-manifest.mjs:16` pins the exact
+    list and must change with it.
+- **M0-E3:**
+  - Injection must be idempotent. `tabs.onUpdated` `complete` fires on hash and `pushState` changes (S5 steps 5–8), and
+    repeated action clicks inject again. The content script guards with a global flag and answers "already injected".
+  - Who injects: the worker inside `action.onClicked` and the context-menu handler (gesture time), and on
+    `tabs.onUpdated`. The panel may also inject on "Translate this page", since the grant belongs to the extension
+    (S1 consequence).
+  - **Access state is per tab.** The global panel spans every tab in the window. On `tabs.onActivated`, a tab without a
+    grant or host permission shows the "lost access" state (S5: the second tab had no grant).
+- **M0-E4:** injection starts while the panel is still loading (in the spike, `panel-LOADED` arrived after
+  `inject-OK`). The protocol needs a panel-ready handshake. The content script waits for, or answers, the panel's
+  connect; it never pushes into a panel that may not exist yet.
+- **Jobs under the global panel (affects S1's per-tab jobs).** "Auto-translate when the panel is already open"
+  applies to every allowlisted tab in the window. Switching to an allowlisted tab would start a job there. Proposed
+  rule: only the active tab's job schedules new chunks; a tab that loses focus finishes its in-flight chunks and stops.
+  Switching back resumes, served from the cache. This keeps the per-window concurrency limit meaningful. Not tested.
 - M0-E3: injection triggers are action click / `Alt+T` / context menu (grant), plus `tabs.onUpdated` `complete` (re-inject
   while the grant or host permission holds). "Cannot inject here" covers `chrome://`, Web Store, a lost grant and a
   denied permission.
@@ -172,9 +217,47 @@ when the panel is already open"; `minimum_chrome_version` 138.
 
 ## Limits of this spike
 
+- Re-injection after a **runtime** grant is not directly verified. It was emulated with install-time
+  `host_permissions`, and the runtime-grant run probed a different origin afterwards. Who clicked "Allow" (8–18 s
+  after each prompt): unexplained, answer pending from the user.
 - `Extensions.triggerAction` stands in for a real toolbar click. A real click, `Alt+T` and the context menu are in the
   manual checklist, which hasn't been run yet.
 - "Host permission granted" was emulated with install-time `host_permissions`. The runtime-grant run showed the same
   `permissions.getAll()` result, but its post-grant probe ran on a different origin.
 - Global panel only. Tab-specific panels (`sidePanel.setOptions({ tabId, path })`) were not tested. They aren't needed
   under the S1 decision (one panel document per window hosts the per-tab jobs).
+
+## Proposed spec changes
+
+Not applied; the user decides.
+
+1. **DESIGN.md §7, line 716.**
+   - Old: "site rules (auto-open / never translate)"
+   - New: "site rules (auto-translate when the panel is open / never translate)"
+2. **DESIGN.md §8, line 727.**
+   - Old: "Never auto-translate by default. A per-site allowlist turns on auto-open."
+   - New: "Never auto-translate by default. Allowlisting a site grants an optional host permission for it, so the
+     extension can re-inject on navigation; on allowlisted sites the open panel translates each new page automatically.
+     The panel cannot be opened without a user gesture (decision S5)."
+3. **DESIGN.md §8, line 731.**
+   - Old: "plus host permissions only for the configured provider endpoints (requested optionally at runtime)."
+   - New: "plus optional host permissions, requested per origin at runtime, only for the configured provider endpoints
+     and for sites the user allowlists. The manifest declares `https://*/*` and `http://*/*` as optional (ROADMAP §8
+     item 19)."
+4. **ROADMAP.md M5, line 285.**
+   - Old: "Navigation within a site keeps translating when the site is allowlisted (optional host permission per S5);
+     otherwise a one-click "Translate this page" in the panel."
+   - New: "Navigation within a site keeps translating when the site is allowlisted (optional host permission per S5).
+     Otherwise, after a same-origin navigation, the panel shows the original text with a one-click "Translate this
+     page" (the `activeTab` grant survives same-origin navigation). After a cross-origin navigation, it asks for
+     `Alt+T`/the toolbar or "Always translate on this site", because a panel click cannot grant `activeTab`."
+5. **ROADMAP.md M5, line 292.**
+   - Old: "Keyboard: `Alt+T` toggle"
+   - New: "Keyboard: `Alt+T` opens the panel; toggles it closed on Chrome 141+ via `sidePanel.close` (decision S5,
+     deviation (c))"
+6. **ROADMAP.md M0-E2.**
+   - Old: "action click and `Alt+T` open the panel for the tab (`setPanelBehavior`)"
+   - New: "action click and `Alt+T` open the panel for the tab (`action.onClicked` → `sidePanel.open`, with
+     `openPanelOnActionClick: false`; decision S5)"
+7. **ROADMAP.md §8 item 6.** Append: "S5 result: the `activeTab` grant survives same-origin navigation and reload, and
+   is lost on cross-origin navigation; `openPanelOnActionClick: true` does not grant `activeTab` at all."

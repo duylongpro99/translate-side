@@ -14,5 +14,25 @@ These paths can't be driven through CDP. A person checks them in about 2 minutes
 | 4 | Press **Alt+Shift+Y** (named command) | `commands.onCommand`, `inject` |
 | 5 | Click **behavior ON**. Close the panel. Navigate to a new site. Press **Alt+T** | panel opens? Then click **probe active tab now**: `inject OK` or `FAIL`? |
 | 6 | Same as 5, but click the toolbar icon instead of Alt+T | same question |
+| 7 | Behavior OFF. With the panel open, press **Alt+T** again | does the panel stay open (expected) or close? |
+| 8 | Behavior ON. With the panel open, press **Alt+T** again | does the panel close (expected toggle)? |
 
-Paste the log text (select all in the panel) into `results/manual.txt`.
+## What to report
+
+1. Copy the panel log (select all in the panel, copy) and save it as `spikes/s5/results/manual.txt`. Or paste it into
+   the conversation, and the implementer commits it.
+2. Add one line per row, in this format:
+   `row N: <what you did> → panel opened? yes/no · inject OK/FAIL · notes`
+   Rows 1, 3, 5 and 6 are the ones the decision depends on.
+3. Note your Chrome version (`chrome://version`) and whether **Alt+T** typed a character (e.g. `†`) instead of firing.
+
+The S5 decision expects these results:
+- row 1: opened, inject OK;
+- row 2: inject FAIL;
+- row 3: opened, inject OK;
+- row 4: inject OK;
+- rows 5 and 6: opened, inject FAIL;
+- row 7: stays open;
+- row 8: closes.
+
+Any other result changes deviation (a) or (c) in `docs/decisions/S5-activetab-navigation.md`.
