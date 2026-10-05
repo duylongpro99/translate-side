@@ -127,7 +127,8 @@ const llmTypesImportFree = {
 };
 
 export default tseslint.config(
-  { ignores: ['.output/', '.wxt/', 'node_modules/', 'coverage/'] },
+  // spikes/ holds throwaway M0 Phase B spike scripts, each with its own package.json (not workspace members).
+  { ignores: ['.output/', '.wxt/', 'node_modules/', 'coverage/', 'spikes/'] },
   js.configs.recommended,
   ...tseslint.configs.strict,
   {
