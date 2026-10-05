@@ -1,6 +1,6 @@
 # S2 — `<seg>` parse robustness → parser grammar and repair policy
 
-Status: proposed (review round 1 addressed) · Date: 2026-10-05 · Spike code: `spikes/s2/`
+Status: **user decisions 2026-10-05 recorded** (deviation (f): option C; spec changes 1–5 approved, applied in the final Phase B step); review rounds 1–2 addressed · Date: 2026-10-05 · Spike code: `spikes/s2/`
 
 Model = gpt-oss:20b (Ollama cloud). The user picked it on 2026-10-05 (decision D5) after `qwen3.5:9b`, the plan's
 model, returned 404 on the cloud (S4 §2).
@@ -37,7 +37,8 @@ The supervisor also asked whether gpt-oss's reasoning ("thinking") output gets i
   four distinct chunks. These chunks are **smaller than DESIGN §5.7 Step 2's 800–1,500 source tokens**. Review round
   1 added a DESIGN-size set, so the record covers both sizes:
 - **DESIGN-size chunks** (`segment.mjs --large` → `chunks-large.json`): **10 chunks, one per fixture, 877–1,490
-  estimated tokens** (median 1,098), **383 segments** (19–69 per chunk), no segment cap. Same segmenter and cleanup.
+  estimated tokens** (median 1,098; the segmenter's estimate, the sum of ⌈chars ÷ 4⌉ per segment. As total
+  `srcChars` ÷ 4, which the formula budget in `run.mjs` uses, they are 864–1,477), **383 segments** (19–69 per chunk), no segment cap. Same segmenter and cleanup.
   The budget rotates over 900/1,100/1,300/1,500 by fixture, so the sizes cover the range. Six real segments contain `<` or `>`, all inside code spans (`Vec<T>`, `<!-- … -->`).
 - **Adversarial chunks.** `adversarial.json` has **5 synthetic chunks, 31 segments**:
   - adv#0: literal `<seg id="2">`, `</seg>` and `<p>` in prose, plus `Result<T, E>` and `=>`;
@@ -157,11 +158,13 @@ segments in vi-esc, against 1 in each raw Vietnamese arm. Entities seem to put t
 | cut-2.0 | 8/49 | 6 | 2 | 0 | 0 |
 
 - **Inside a segment.** The parser reports `cut: {id, text}`, with the partial text already streamed to the panel. Every
-  later id is reported as missing. Three of these cuts (2 in cut-1.0, 1 in cut-2.0, all in MDN chunks) ended inside
-  the segment's own closing tag. The draft parser put the partial tag (`</se`, `</`) into the cut text. Since review
-  round 1, a partial tag at the end of the stream goes to stray (Grammar rule 5). The re-request sets are unchanged.
+  later id is reported as missing.
 - **Inside a tag** (`…</seg>\n<seg id`). v2 closes the previous segment, because at the end of the stream a close
-  followed by a partial open tag is a real close. The partial tag goes to stray, and the rest is missing.
+  followed by a partial open tag is a real close. The partial tag goes to stray, and the rest is missing. Three of the
+  cuts in this column (2 in cut-1.0, 1 in cut-2.0, all in MDN chunks) ended inside the segment's **own** closing tag
+  instead. That segment is still open, so it is reported as `cut`. The draft parser put the partial tag (`</se`, `</`)
+  into the cut text. Since review round 1, a partial tag at the end of the stream goes to stray (Grammar rule 5). The
+  re-request sets are unchanged.
 - **Before any content.** Nothing to parse. All ids are missing.
 
 **Repair (one follow-up call each, only the plan's re-request ids, budget 4096):**
@@ -193,7 +196,8 @@ zero fixes, and ended with `finish_reason: stop`.
   At medium effort, one chunk (twir-671#1) spent the **whole 4,096-token budget on reasoning** and returned no content.
   All 14 of its segments were missing until the repair call.
 - **It can't be switched off** (`effort-probe.mjs` → `results/effort-probe.json`: one real chunk, goblog-pipelines#1,
-  10 segments, one call per setting, `max_tokens` 4096):
+  10 segments, one call per setting, `max_tokens` 4096). Unlike the arms, the probe uses a **short prompt** (only the
+  format rules of `translate@1`) and **non-streaming** calls:
 
   | Setting sent | Reasoning chars | Completion tokens | Result |
   |---|---|---|---|
@@ -280,7 +284,24 @@ Arms large-vi and large-ja, low effort, `max_tokens` set by the proposed formula
 
 ## Decision
 
-### Grammar: v2, "close-by-lookahead" (`spikes/s2/parser.mjs`, default `grammar: 'v2'`)
+### Grammar: option C — v1 by default, v2 (with the nonce) on chunks with literal tags (user decision 2026-10-05)
+
+Before sending, the engine checks each chunk's source for literal tag-shaped text (the `literalTags` regex in
+`parser.mjs`).
+
+- **No hit** (every real chunk in S2; only the synthetic adv#0 has a hit): parse with **v1**. Every CLOSE closes, and an OPEN inside an open
+  segment closes it implicitly (fix: `implicit-close`).
+- **A hit:** parse with **v2**, below, and add the per-chunk nonce ("Literal tags in the source"). The nonce is untested,
+  so M1-E3 settles its exact form.
+
+The two share everything else: the token shapes, the bad-id rule, partial tags to stray, the end-of-stream rules, the
+id rules, the literal-tag mismatch check and the repair plan. The rules below are written for v2. For v1, rule 2 is
+"every CLOSE closes" and rule 3 is "an OPEN closes the open segment".
+
+`parser.mjs` implements both (`grammar: 'v1' | 'v2'`). Its default is `'v2'`, which is how the spike measured them. The
+M1 port switches per chunk.
+
+#### v2, "close-by-lookahead"
 
 ```
 output   := (seg | STRAY)*
@@ -291,7 +312,14 @@ OPEN     := '<seg id="' DIGITS '">'                                         stri
 CLOSE    := '</seg>' | '<' WS? '/' WS? 'seg' WS? '>'                        (non-strict form: fix: close-form)
 text     := any characters; inside an open segment, an OPEN of any kind, and a CLOSE that fails the lookahead, are text
 STRAY    := any characters outside a segment (fences, preambles, notes, partial tags at the end)
+WS       := [ \t\r\n]*
+DIGITS   := [0-9]+
 ```
+
+**Segment text is kept as is.** The parser doesn't trim it: `<seg id="1"> A </seg>` gives `" A "`, and whitespace
+between segments is stray. Only `plan()`'s empty check trims (a whitespace-only segment is empty). The source
+segments are trimmed (`segment.mjs`), so the M1 port should trim each segment's text at `segment.final`, and keep the
+partial text untrimmed while it streams.
 
 Every rule, in the order the parser applies it:
 
@@ -339,13 +367,15 @@ Every rule, in the order the parser applies it:
   non-whitespace character, which is normally the next segment's `<seg id=…>`, a token or two later. For the **last
   segment**, `final` waits for the end of the stream. For a segment with a `close-in-text`, it waits for the next close
   that passes the lookahead, or for the end. The M1 port should state this in the DESIGN Step 3 sentence (spec change 1).
-- **Revisions.** Two cases replace text the panel has already seen, and both use the existing `segment.final.revision`
-  field (DESIGN §4.3.3):
+- **Replacements.** Two cases replace text the panel has already seen:
   - rule 5's "ends at the last close" removes partial text that was already streamed;
   - a whole-chunk re-request replaces segments that were already final.
 
-  The repair result is emitted as `segment.final` with `revision + 1`. The panel must replace the earlier text, and
-  never append to it.
+  Neither may reuse `segment.final.revision` (DESIGN §5.2, DESIGN.md:496 and :505). Revisions mean "a better version
+  from a later stage" (the refine pass is `revision: 2`), so a repair numbered `revision + 1` would collide with it.
+  **Proposed:** add an `attempt` counter to `segment.final`. A repair re-emits the **same** revision with
+  `attempt + 1`, and the panel replaces the text of that revision. (A `replace: true` flag is the smaller alternative,
+  but it can't order two repairs.) M1-E3 decides, and spec change 1 carries the open point.
 
 ### Repair policy (`plan()`)
 
@@ -392,6 +422,8 @@ segments meets the same literal text, so these chunks can end in `segment.failed
     and the parser accepts as tags only OPEN tags that carry the nonce, and CLOSE tags that follow them. Literal tags
     in the text don't carry the nonce, so they stay text.
   - **Isolation.** Send each segment with a hit as a chunk of its own, so a mis-parse costs one segment.
+- **User decision 2026-10-05 (option C): the nonce**, together with v2. Isolation stays the fallback if M1-E3's corpus
+  and replay check shows that models don't copy the nonce reliably.
 - Choose between the two after a corpus and replay check in M1-E3. The nonce is the stronger fix, but it relies on
   the model copying an attribute faithfully. That was not measured here.
 
@@ -418,33 +450,18 @@ non-content: count it in usage, never emit it as `text`. A chunk that ends with 
 Plan default: "Strict `<seg id="N">` with lenient fallback; retry only missing segments; treat `max_tokens` cut as
 "re-request open segment"."
 
-- **(f) The lenient fallback is context-sensitive (v2), not a plain set of looser tag patterns.** The difference from
-  plain lenient parsing (v1) is two rules:
-  - a CLOSE closes only when the lookahead allows it;
-  - an OPEN inside an open segment is text, not an implicit close.
+- **(f) How the lenient fallback treats literal tags.** **User decision 2026-10-05: option C.**
 
-  Evidence: §2. v1 put the wrong translation under a real id in 6 of 8 runs of the literal-tag chunk, and it noticed
-  only because a duplicate happened to follow. v2 got all 8 right. On all 392 real-chunk outputs, v1 and v2 give
-  identical results.
+  | Option | Grammar | For | Against |
+  |---|---|---|---|
+  | A, the plan default | v1 everywhere | one code path; recovers silently from a dropped mid-chunk close or a note between segments | a literal `<seg`/`</seg>` in the source mis-parses silently: wrong text under a real id in 6 of 8 adv#0 runs, caught only because a duplicate happened to follow (§2) |
+  | B | v2 everywhere | parses the seen literal-tag text (8 of 8) | the cost lands on weak models: a dropped mid-chunk close or a note between segments costs a re-request of both segments (rules 3, 4) |
+  | **C, chosen** | v1, plus v2 and the nonce only on chunks whose source has literal tags (detected before sending) | v2's cost falls only on the rare chunks that need it; the **smallest departure** from the plan default | two code paths to test; a literal tag the regex misses (one the model invents) gets v1's silent mis-parse |
 
-  Cost: a model that drops a mid-chunk `</seg>` before the next `<seg>` now produces "missing + merged". Both segments
-  are re-requested, where v1 would have split them silently. That never happened in 3,246 real segments (all six
-  non-cut arms), and the swallowed-open rule catches it in the corpus. Text between segments has the same cost
-  (rule 4).
-
-  **Recommended option (review round 1): pick the grammar per chunk.**
-  - Use v2 only when the pre-send check finds literal tags in the chunk's source (see "Literal tags in the source").
-  - Otherwise use v1's rules: every CLOSE closes, and an OPEN inside a segment closes it implicitly.
-  - Everything else is shared: the bad-id rule, partial tags to stray, the mismatch check, and the repair plan.
-
-  Trade-off:
-  - **For.** On chunks without literal tags, v1 handles the two failures that weaker models are likely to show (a
-    dropped mid-chunk close, a note between segments) without a re-request. v2's cost then falls only on the rare
-    chunks that need it.
-  - **Against.** Two code paths to test instead of one. A literal tag that the regex misses (for example, one the model
-    invents) gets v1's silent mis-parse.
-  - On gpt-oss:20b the choice makes no difference: on all real-chunk outputs, v1 and v2 gave identical results.
-  - Combined with the nonce, v2 may not be needed at all for the literal-tag chunks. Decide in M1-E3.
+  Evidence: §2 and the corpus. On gpt-oss:20b the choice made no difference on real text: v1 and v2 gave identical
+  results on all 392 small-chunk and 20 DESIGN-size outputs. Neither failure that v2 would cost (a dropped mid-chunk
+  close, text between segments) occurred in 3,246 real segments. If the nonce proves reliable in M1-E3, v2 may not be
+  needed on the literal-tag chunks at all.
 - **The rest of the default holds and is made exact:**
   - "retry only missing segments" becomes the re-request set above, which adds cut, empty and suspect-merged segments;
   - an ambiguous structure re-requests the whole chunk;
@@ -504,6 +521,10 @@ Plan default: "Strict `<seg id="N">` with lenient fallback; retry only missing s
 - Three target languages (vi, de, ja), one source language (English), and one style mode. Thai and other scripts with
   higher token costs were not measured.
 - The budget formula was fitted in-sample. The holdout (§8) is 20 chunks of one size class, on the same model.
+- **A model that entity-escapes a literal tag** that the source holds (writes `&lt;seg…` for `<seg…`) would trip
+  the literal-tag mismatch check on a correct-looking segment. The repair would likely repeat it, so the segment would
+  end as `segment.failed`. This was not seen in the runs (no raw arm escaped). M1-E3 could count entity forms as
+  matches.
 - The nonce and isolation options for literal tags, the per-chunk grammar switch, and the context-tail format are
   recommendations. None was run against the model.
 - Two repetitions for Vietnamese raw, one for the other arms. Rates below about 1% (for example the single "last
@@ -521,13 +542,15 @@ Plan default: "Strict `<seg id="N">` with lenient fallback; retry only missing s
 ## Proposed spec changes
 
 1. **DESIGN §5.7 Step 3**, after "If that happens, retry just that segment.", add: "The parser grammar and repair policy
-   are fixed by S2 (`docs/decisions/S2-seg-parser-grammar.md`): a close tag closes only when followed by an open tag or
-   the end of output, and an open tag inside a segment is text. A segment is final when that lookahead decides
-   (normally at the next `<seg`), and the last one at the end of the stream; a repaired segment replaces the shown text
-   as a new revision. Re-request missing, cut-and-later, empty, suspect-merged and literal-tag-mismatch segments in one
+   are fixed by S2 (`docs/decisions/S2-seg-parser-grammar.md`). Tags are parsed leniently (quoting and case drift
+   accepted), and every close tag closes. Chunks whose source holds literal `<seg`/`</seg>` text are detected before
+   sending. They get a per-chunk nonce attribute, and the close-by-lookahead grammar: a close tag closes only when
+   followed by an open tag or the end of output, an open tag inside a segment is text, and a segment is final when
+   that lookahead decides. A repaired segment replaces the shown text
+   in place (same revision, a new attempt; M1-E3 decides between an `attempt` counter and a `replace` flag, because
+   `revision` is taken by refine). Re-request missing, cut-and-later, empty, suspect-merged and literal-tag-mismatch segments in one
    follow-up call; re-request the whole chunk if ids are duplicated, unknown or malformed. Source `<`/`>` are sent
-   unescaped; chunks whose source holds literal `<seg`/`</seg>` text are detected before sending (M1-E3 decides
-   between a nonce attribute and isolation)."
+   unescaped."
 2. **DESIGN §5.7 Model settings**:
    - old: "`max_tokens` around 2.5× the chunk's source tokens. Some target languages (Vietnamese, Thai, Japanese, and
      others) need more tokens than English for the same content."
@@ -544,11 +567,13 @@ Plan default: "Strict `<seg id="N">` with lenient fallback; retry only missing s
      control: "effort" | "budget" | "none";  // how the model's reasoning is set: an effort level
                                              // (OpenAI-style reasoning_effort), a token budget
                                              // (Anthropic-style thinking.budget_tokens), or not at all
-     lowest: string | number;                // the value to send, e.g. "low" or 1024
-     reserveTokens: number;                  // added to maxOutputTokens
+     lowest: string | number | "off";        // the value to send, e.g. "low", or a budget in tokens;
+                                             // "off" where the model can switch thinking off
+     reserveTokens: number;                  // added to maxOutputTokens; 0 when lowest is "off"
    };
    ```
-   The gpt-oss preset is `{ control: "effort", lowest: "low", reserveTokens: 256 }` (S2). Values for other presets come
+   The gpt-oss preset is `{ control: "effort", lowest: "low", reserveTokens: 256 }` (S2). For a model whose thinking
+   can be switched off, the lowest setting is `"off"` and the reserve is 0. Values for other presets come
    from their own measurements.
 
    Also consider, for **DESIGN §4.2.1 `NormalizedEvent`**, two optional additions:
