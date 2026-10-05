@@ -10,7 +10,8 @@ const BOUNDARY_RULES = new Set([
   'no-restricted-globals',
   '@typescript-eslint/triple-slash-reference',
   'no-restricted-syntax',
-  'no-restricted-properties',
+  'no-new-func',
+  'no-eval',
 ]);
 
 async function boundaryErrors(code: string, filePath: string): Promise<string[]> {
@@ -47,12 +48,23 @@ const violations: [string, string, string][] = [
   ['llm barrel (alias)', `import { x } from '@/llm';\nexport const c = x;`, 'no-restricted-imports'],
   ['llm barrel (tilde alias)', `import { x } from '~/llm';\nexport const c = x;`, 'no-restricted-imports'],
   ['llm barrel re-export', `export * from '../../llm';`, 'no-restricted-imports'],
-  // N3: extension/DOM globals reached through the global object.
-  ['globalThis.chrome', `export const id = globalThis.chrome.runtime.id;`, 'no-restricted-properties'],
-  ['(globalThis as any).chrome', `export const id = (globalThis as any).chrome.runtime.id;`, 'no-restricted-syntax'],
-  ['(globalThis as any)["chrome"]', `export const id = (globalThis as any)['chrome'].runtime.id;`, 'no-restricted-syntax'],
-  ['self.browser', `export const id = self.browser.runtime.id;`, 'no-restricted-properties'],
-  ['globalThis["document"]', `export const d = globalThis['document'];`, 'no-restricted-properties'],
+  // N3: extension/DOM globals reached through the global object (now banned outright).
+  ['globalThis.chrome', `export const id = globalThis.chrome.runtime.id;`, 'no-restricted-globals'],
+  ['(globalThis as any).chrome', `export const id = (globalThis as any).chrome.runtime.id;`, 'no-restricted-globals'],
+  ['(globalThis as any)["chrome"]', `export const id = (globalThis as any)['chrome'].runtime.id;`, 'no-restricted-globals'],
+  // Tester round 1: more bypasses.
+  ['typeof import() type', `export type B = typeof import('wxt/browser');`, 'no-restricted-syntax'],
+  ['import() type of llm implementation', `export type C = import('../llm/openai.ts').OpenAIChat;`, 'no-restricted-syntax'],
+  ['require() with a declared require', `declare function require(id: string): unknown;\nexport const m = require('wxt/browser');`, 'no-restricted-syntax'],
+  ['import = require()', `import b = require('wxt/browser');\nexport const m = b;`, 'no-restricted-syntax'],
+  ['double cast of globalThis', `export const c = (globalThis as unknown as { chrome: unknown }).chrome;`, 'no-restricted-globals'],
+  ['computed globalThis access', `const k = 'doc' + 'ument';\nexport const d = (globalThis as Record<string, unknown>)[k];`, 'no-restricted-globals'],
+  ['globalThis destructuring', `const { chrome: c } = globalThis;\nexport const id = c;`, 'no-restricted-globals'],
+  ['globalThis alias', `const g = globalThis;\nexport const d = g.document;`, 'no-restricted-globals'],
+  ['new Function escape', `export const g = new Function('return this')();`, 'no-new-func'],
+  ['eval escape', `export const g = eval('this');`, 'no-eval'],
+  ['self.browser', `export const id = self.browser.runtime.id;`, 'no-restricted-globals'],
+  ['globalThis["document"]', `export const d = globalThis['document'];`, 'no-restricted-globals'],
   ['shell module', `import { setupPanelBehavior } from '../../shared/panel.ts';\nexport const s = setupPanelBehavior;`, 'no-restricted-imports'],
 ];
 

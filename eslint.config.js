@@ -46,6 +46,12 @@ const engineBoundary = {
     ],
     'no-restricted-globals': [
       'error',
+      // The global object itself is banned: it reaches chrome/DOM through casts, computed keys,
+      // destructuring and aliases, which no property list can cover.
+      ...['globalThis', 'self', 'global'].map((name) => ({
+        name,
+        message: 'engine/ must not use the global object; take what it needs through injected ports (DESIGN.md §5.1).',
+      })),
       ...['chrome', 'browser'].map((name) => ({
         name,
         message: 'engine/ must not use extension APIs (DESIGN.md §5.1).',
@@ -59,22 +65,14 @@ const engineBoundary = {
       'error',
       { selector: 'ImportExpression', message: 'engine/ must use static imports so the boundary rule can check them.' },
       { selector: "CallExpression[callee.name='require']", message: 'engine/ must use static imports so the boundary rule can check them.' },
-      {
-        // `(globalThis as any).chrome`: no-restricted-properties doesn't see through the cast.
-        selector:
-          'MemberExpression[object.type=/^(TSAsExpression|TSSatisfiesExpression|TSNonNullExpression|TSTypeAssertion)$/][object.expression.name=/^(globalThis|self|global)$/]',
-        message: 'engine/ must not reach into the global object (DESIGN.md §5.1).',
-      },
+      { selector: 'TSImportEqualsDeclaration', message: 'engine/ must use static imports so the boundary rule can check them.' },
+      // `typeof import('wxt/browser')` and `import('x').T` are type imports the rule above can't see.
+      { selector: 'TSImportType', message: 'engine/ must use static `import type` so the boundary rule can check it.' },
     ],
-    // Reaching the same globals through the global object (not airtight, but closes the easy path).
-    'no-restricted-properties': [
-      'error',
-      ...['globalThis', 'self', 'global'].flatMap((object) =>
-        ['chrome', 'browser', 'window', 'document', 'navigator', 'localStorage', 'sessionStorage', 'indexedDB', 'location'].map(
-          (property) => ({ object, property, message: 'engine/ must not use extension APIs or the DOM (DESIGN.md §5.1).' }),
-        ),
-      ),
-    ],
+    // String-evaluated code can reach anything, including the global object.
+    'no-eval': 'error',
+    'no-implied-eval': 'error',
+    'no-new-func': 'error',
     '@typescript-eslint/triple-slash-reference': ['error', { path: 'never', types: 'never', lib: 'never' }],
   },
 };
