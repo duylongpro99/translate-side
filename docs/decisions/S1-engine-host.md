@@ -1,6 +1,6 @@
 # S1 — MV3 worker suspension during streaming → where the engine runs
 
-Status: proposed (awaiting review) · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS) · Spike code: `spikes/s1/`
+Status: proposed (awaiting review; amended after review round 1) · Depends on: S5 record (commit 921fee0) · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS) · Spike code: `spikes/s1/`
 
 ## Question
 
@@ -60,16 +60,21 @@ Findings:
    instance starts on the next event (here the panel reconnecting). It sees whatever `chrome.storage.session` held
    (`{"state":"running","n":0}`), so resuming is possible, but only by re-requesting, and only if the job state was
    persisted.
-4. **Any extension API call, or Port message in either direction, resets the 30 s timer.** Worker→panel messages,
-   panel→worker pings, `getPlatformInfo()` every 20 s and `storage.session.set` each kept a stream alive for 90 s in
-   every run, and for 400 s in the long runs. The 5-minute limit did not apply to reading a fetch body.
+4. **The two extension API calls tested, and Port messages in either direction, reset the 30 s timer.**
+   - `getPlatformInfo()` every 20 s and `storage.session.set` per chunk each kept a 90 s stream alive in every run.
+   - So did worker→panel messages and panel→worker pings.
+   - Other APIs were not tested. Chrome's documentation says extension API calls in general reset the timer.
+   - In the 400 s runs a heartbeat was always running. They show the 5-minute limit didn't cut a fetch body read **while
+     the timer was being reset**. Nothing was shown about a 400 s read without a heartbeat.
 5. **Keepalive tied to stream chunks fails before the first token.** With 45 s to the first byte (a realistic
    prompt-processing delay for a local 7–9B model on a long chunk), chunk-driven Port messages never fired. The worker
    was killed at 30 s in 2/2 runs. Only a timer-based heartbeat that doesn't depend on the stream (2/2 OK) covers this.
 6. **A fetch in an extension page doesn't depend on the worker.** In `panelhost` the worker went idle and was killed at
    ~30 s while the panel page finished 90/90 chunks, in 3/3 runs.
 
-Related S5 evidence (`spikes/s5/results/`): the default side panel (global `side_panel.default_path`) stays loaded across
+Related S5 evidence (committed in 921fee0; `spikes/s5/results/onclicked-granted.jsonl` and
+`onclicked-optional.jsonl`, the `panelTargetOpen` field and the `panel-LOADED`/`panel-UNLOAD` events). The decision's
+premise that the real side panel container lives long enough rests on this, not on S1: the default side panel (global `side_panel.default_path`) stays loaded across
 same-origin, cross-origin and browser-initiated navigations, reloads, and switching to another tab and back (one
 `panel-LOADED`, no `panel-UNLOAD`, for the whole 68 s scenario). It unloads only when the user closes it.
 
@@ -96,16 +101,71 @@ mid-page failures. The panel host removes that whole class of problem (finding 6
   cache.
 - No resume machinery and no `chrome.storage.session` job state in M1. Re-opening the panel re-extracts and serves
   finished segments from the cache.
+- **M0-E2:** use the global `side_panel.default_path` (what S5 tested: it persists across navigations and tab switches).
+  Do not give the panel a per-tab path with `sidePanel.setOptions({ tabId, path })`. Per-tab panels were not tested,
+  and the review notes they unload on tab switch, which would cancel that tab's translation.
+- **M0-E3:** the panel may call `chrome.scripting.executeScript` itself, because the `activeTab` grant belongs to the
+  extension (S5: `panel-click-inject-OK` while the grant was alive). The worker still performs the gesture-time
+  injection inside `action.onClicked`, and re-injects on `tabs.onUpdated`.
+- **M0-E4:** the Port topology changes. Segments, viewport and hover events go content ⇄ panel directly
+  (`chrome.tabs.connect(tabId)` from the panel), not through the worker. The worker keeps only action, context-menu,
+  injection and tab-lifecycle messages. "Tab-scoped routing in the worker" (ROADMAP M0-E4) becomes tab-scoped routing in
+  the panel. Not tested in S1.
+- **Concurrency is per window.** Each window's panel has its own engine, so a profile's `maxConcurrency` (e.g. the
+  Ollama preset's 1, DESIGN §4.3.6) would multiply by the number of open panels. Proposed rule for M1: take a Web Lock
+  per connection (`navigator.locks.request('conn:<id>:slot<k>')`). Locks are shared by all same-origin extension pages,
+  so the limit holds across windows. Not tested.
+- **Tab moved to another window.** The job belongs to the panel of the window it started in. Proposed rule for M1: on
+  `tabs.onDetached` the old panel cancels that tab's job. On `tabs.onAttached` the new window's panel, if open,
+  re-extracts and gets cache hits for finished segments. Not tested.
 - Provider requests come from the panel page (`chrome-extension://<id>` origin, same host-permission rules as the
   worker). S4 tests CORS from this context.
 - If a future feature has to translate with the panel closed (e.g. a context-menu "translate selection" that shows the
   result elsewhere), the worker host would need a 20 s `getPlatformInfo()` heartbeat started before the request, plus
-  persisted job state. Findings 4–5 are the evidence. Not needed for v1.
+  persisted job state. Findings 4–5 are the evidence, from Chrome 154 only. The timer rules have changed across Chrome
+  versions (e.g. Chrome 110 made API calls reset the timer; 116 extended it for WebSockets). Re-check that recipe on
+  the minimum version (138) before relying on it. Not needed for v1.
 - S1 doesn't constrain `minimum_chrome_version`, because the panel host uses nothing version-specific. Only Chrome 154 was tested.
 
 ## Limits of this spike
 
 - Headless Chrome on one macOS machine; a mock stream, not a real provider. The panel was an extension page opened as a
   tab, not the side panel container. S5 confirms the real side panel's lifetime separately.
+- **Hidden or minimized window (untested risk for the panel host).** Chrome throttles timers in hidden pages: about
+  1/s, and once per minute after 5 minutes hidden, under intensive throttling. The M1 retry/backoff timers
+  (DESIGN §4.3.5) run in the panel. A stream already in flight keeps flowing, but a scheduled retry may be late. M1
+  should test translation with the window minimized and keep retry logic tolerant of late timers.
+- Only Chrome 154 was tested; the planned minimum is 138.
 - The two surviving no-keepalive runs (1/7 each) are unexplained. It doesn't change the decision, which doesn't rely on the timer's
   behavior.
+
+## Proposed spec changes
+
+Not applied; the user decides. Exact edits proposed for `DESIGN.md`:
+
+1. **§4 diagram** (lines 88–101).
+   - Old: the "Service worker (orchestrator)" box holds "job queue/priority, chunker, prompt builder, provider
+     adapters, cache (IndexedDB)", with a long-lived Port to the side panel carrying the "stream of segment
+     translations".
+   - New: the "Side panel" box holds "render, settings, translation engine (§5: chunker, prompts, parsing), provider
+     adapters, cache (IndexedDB), per-tab jobs". The "Service worker (coordinator)" box holds "action/`Alt+T`, context
+     menu, injection, tab lifecycle". The content script talks to the side panel directly.
+2. **§4.1 item 2.**
+   - Old: "**Service worker (orchestrator)**: Holds one job per tab … Caches results (§7). MV3 workers can be suspended.
+     Each job keeps its state in `chrome.storage.session` and can resume. A long-lived Port to the panel keeps the
+     worker alive while a stream is active."
+   - New: "**Service worker (coordinator)**: handles the toolbar action, `Alt+T` and the context menu, injects the
+     content script, and tracks tab lifecycle. It holds no translation state and never awaits a model stream (decision
+     S1: an open Port does not keep a worker alive)."
+3. **§4.1 item 3.**
+   - Old: "**Side panel**: renders segments, settings, and glossary, and sends hover and scroll events back to the
+     content script through the worker."
+   - New: "**Side panel** (engine host): owns one job per tab in its window, runs the translation engine and provider
+     calls, caches results (§7), renders segments, settings and glossary, and exchanges segments, viewport, hover and
+     scroll events with the content script directly (`tabs.connect`)."
+4. **§4.1 item 1** (the first line).
+   - Old: "injected only when you open the panel, using the `activeTab` and `scripting` permissions"
+   - New: the same text, plus "; re-injected on navigation while the `activeTab` grant or a site permission holds
+     (decision S5)".
+
+Who and when: the supervisor puts these to the user together with the S3/S5 spec changes, after Phase B acceptance.
