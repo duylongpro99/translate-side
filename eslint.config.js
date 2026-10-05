@@ -1,49 +1,31 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import boundaryPlugin from './eslint/boundary-plugin.js';
 
-// Engine boundary (DESIGN.md §5.1, plan M0 §6): engine/ may not import chrome, wxt/*, DOM
-// types or llm/ implementations. Imports and globals are checked here; DOM and chrome types
-// are also kept out by src/engine/tsconfig.json. Proven by tests/boundary.
-export const ENGINE_FILES = ['src/engine/**/*.{ts,tsx}'];
+// Engine boundary (DESIGN.md §5.1, plan M0 §6): engine/ may not reach chrome, wxt/*, the DOM
+// or llm/ implementations. Three layers, each proven by tests/boundary:
+//   1. here: an import ALLOWLIST (eslint/boundary-plugin.js) plus bans on every non-import way
+//      to load code or reach the global object;
+//   2. scripts/check-engine-boundary.mjs: TypeScript's resolver over the whole engine program,
+//      and only .ts files (no symlinks) in src/engine/;
+//   3. src/engine/tsconfig.json: no DOM lib and no ambient @types.
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
+// Every script extension, so a .mts/.js file can't sit outside the rules (layer 2 also bans them).
+export const ENGINE_FILES = ['src/engine/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'];
+const ENGINE_TESTS = ['src/engine/**/*.test.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'];
+
+const LOADER = 'engine/ must use static imports, which the allowlist checks (DESIGN.md §5.1).';
+const ESCAPE = 'engine/ must not reach the Function constructor or the global object (DESIGN.md §5.1).';
 
 const engineBoundary = {
   name: 'engine boundary',
   files: ENGINE_FILES,
+  plugins: { boundary: boundaryPlugin },
   rules: {
-    'no-restricted-imports': [
-      'error',
-      {
-        paths: [
-          { name: 'chrome', message: 'engine/ must not use chrome.* (DESIGN.md §5.1).' },
-          { name: 'wxt', message: 'engine/ must not import wxt (DESIGN.md §5.1).' },
-          { name: 'webextension-polyfill', message: 'engine/ must not use extension APIs.' },
-          // In gitignore-style patterns '#' starts a comment, so this alias goes here.
-          { name: '#imports', message: 'engine/ must not use wxt auto-imports (DESIGN.md §5.1).' },
-        ],
-        patterns: [
-          {
-            group: ['wxt/*', '@wxt-dev/*', '@types/chrome', '@types/chrome/*'],
-            message: 'engine/ must not import wxt or extension APIs (DESIGN.md §5.1).',
-          },
-          {
-            group: ['**/llm/*', '**/llm/**', '!**/llm/types', '!**/llm/types.ts'],
-            message: 'engine/ may import only the LLMClient interface (llm/types), not implementations.',
-          },
-          {
-            // Barrels ('../llm', '@/llm') have no segment after llm/, so the group above misses
-            // them. It can't list '**/llm' itself: in gitignore syntax, excluding the directory
-            // would stop '!**/llm/types' from re-including the interface.
-            regex: '(^|/)llm/?$',
-            message: 'engine/ may import only the LLMClient interface (llm/types), not the llm/ barrel.',
-          },
-          {
-            group: ['**/entrypoints/**', '**/shared/**', 'preact', 'preact/*'],
-            message: 'engine/ must not depend on the extension shell or UI.',
-          },
-        ],
-      },
-    ],
+    'boundary/engine-imports': ['error', { root: ROOT, allowedPackages: [] }],
     'no-restricted-globals': [
       'error',
       // The global object itself is banned: it reaches chrome/DOM through casts, computed keys,
@@ -59,15 +41,39 @@ const engineBoundary = {
       ...['window', 'document', 'navigator', 'localStorage', 'sessionStorage', 'indexedDB', 'location', 'HTMLElement', 'Element', 'Node', 'DOMParser', 'MutationObserver', 'IntersectionObserver'].map(
         (name) => ({ name, message: 'engine/ must not touch the DOM (DESIGN.md §5.1).' }),
       ),
+      ...['Function', 'Reflect', 'eval'].map((name) => ({ name, message: ESCAPE })),
+      // Runtime code loading and network: the engine talks to models only through LLMClient.
+      ...['importScripts', 'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'Worker', 'SharedWorker'].map((name) => ({
+        name,
+        message: 'engine/ must not load code or use the network; use the LLMClient port (DESIGN.md §5.1).',
+      })),
     ],
-    // no-restricted-imports only sees static imports, so ban the dynamic forms outright.
     'no-restricted-syntax': [
       'error',
-      { selector: 'ImportExpression', message: 'engine/ must use static imports so the boundary rule can check them.' },
-      { selector: "CallExpression[callee.name='require']", message: 'engine/ must use static imports so the boundary rule can check them.' },
-      { selector: 'TSImportEqualsDeclaration', message: 'engine/ must use static imports so the boundary rule can check them.' },
-      // `typeof import('wxt/browser')` and `import('x').T` are type imports the rule above can't see.
-      { selector: 'TSImportType', message: 'engine/ must use static `import type` so the boundary rule can check it.' },
+      { selector: 'ImportExpression', message: LOADER },
+      { selector: 'TSImportEqualsDeclaration', message: LOADER },
+      // `typeof import('wxt/browser')` and `import('x').T`.
+      { selector: 'TSImportType', message: LOADER },
+      // Any use of the name `require`, declared or not (calls, aliases, require.call, …).
+      { selector: "Identifier[name='require']", message: LOADER },
+      // Ambient declarations: `declare const chrome: any` makes `chrome` a local name, so
+      // no-restricted-globals no longer sees it, yet at runtime it is still the global.
+      // `declare global` / `declare module` / namespaces could add globals the same way.
+      {
+        selector: ':matches(VariableDeclaration, ClassDeclaration, TSEnumDeclaration)[declare=true], TSDeclareFunction, TSModuleDeclaration',
+        message: 'engine/ must not use ambient declarations; they can hide globals from the boundary rule (DESIGN.md §5.1).',
+      },
+      // import.meta.glob / .resolve / .env: Vite and Node load or reveal modules through it.
+      { selector: 'MetaProperty', message: LOADER },
+      // `(() => {}).constructor('return this')()` and friends reach the Function constructor.
+      { selector: "MemberExpression[property.name='constructor']", message: ESCAPE },
+      { selector: "MemberExpression[property.value='constructor']", message: ESCAPE },
+      { selector: "Property[key.name='constructor'][parent.type='ObjectPattern']", message: ESCAPE },
+      { selector: "MemberExpression[property.name='__proto__']", message: ESCAPE },
+      {
+        selector: "MemberExpression[object.name='Object'][property.name=/^(getPrototypeOf|getOwnPropertyDescriptors?|setPrototypeOf)$/]",
+        message: ESCAPE,
+      },
     ],
     // String-evaluated code can reach anything, including the global object.
     'no-eval': 'error',
@@ -75,6 +81,13 @@ const engineBoundary = {
     'no-new-func': 'error',
     '@typescript-eslint/triple-slash-reference': ['error', { path: 'never', types: 'never', lib: 'never' }],
   },
+};
+
+// Engine tests may also import the test runner.
+const engineTestImports = {
+  name: 'engine boundary: test imports',
+  files: ENGINE_TESTS,
+  rules: { 'boundary/engine-imports': ['error', { root: ROOT, allowedPackages: ['vitest'] }] },
 };
 
 // engine/ may import llm/types.ts, so that file imports nothing; otherwise it would be a
@@ -91,7 +104,8 @@ const llmTypesImportFree = {
       { selector: 'ExportAllDeclaration', message: IMPORT_FREE },
       { selector: 'ExportNamedDeclaration[source]', message: IMPORT_FREE },
       { selector: 'TSImportType', message: IMPORT_FREE },
-      { selector: "CallExpression[callee.name='require']", message: IMPORT_FREE },
+      { selector: "Identifier[name='require']", message: IMPORT_FREE },
+      { selector: 'MetaProperty', message: IMPORT_FREE },
     ],
     '@typescript-eslint/triple-slash-reference': ['error', { path: 'never', types: 'never', lib: 'never' }],
   },
@@ -106,7 +120,7 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.browser } },
   },
   {
-    files: ['*.config.{js,ts}', 'scripts/**', 'tests/**'],
+    files: ['*.config.{js,ts}', 'eslint/**', 'scripts/**', 'tests/**'],
     languageOptions: { globals: { ...globals.node } },
   },
   {
@@ -114,12 +128,13 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.webextensions } },
   },
   engineBoundary,
+  engineTestImports,
   {
     // An inline eslint-disable would switch the boundary off, so engine source can't use
     // inline config. Engine tests keep it (they check the globals are absent on purpose).
     name: 'engine boundary: no inline config',
     files: ENGINE_FILES,
-    ignores: ['src/engine/**/*.test.{ts,tsx}'],
+    ignores: ENGINE_TESTS,
     linterOptions: { noInlineConfig: true },
   },
   llmTypesImportFree,

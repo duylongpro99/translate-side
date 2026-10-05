@@ -21,6 +21,8 @@ jobs:
         run: pnpm run lint
       - name: Typecheck (app + engine/ without DOM or chrome types)
         run: pnpm run typecheck
+      - name: Engine boundary (resolver closure, .ts-only engine/)
+        run: pnpm run check:engine
       - name: Unit, snapshot and boundary tests
         run: pnpm run test
       - name: Build
