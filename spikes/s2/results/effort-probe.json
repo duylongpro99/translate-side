@@ -1,0 +1,110 @@
+{
+ "at": "2026-10-05T16:15:40.378Z",
+ "chunk": "goblog-pipelines#1",
+ "segs": 10,
+ "rows": [
+  {
+   "setting": "(not sent)",
+   "sent": {},
+   "status": 200,
+   "finish": "stop",
+   "reasoningChars": 4212,
+   "contentChars": 1969,
+   "strict": true,
+   "missing": 0,
+   "completionTokens": 1617
+  },
+  {
+   "setting": "none",
+   "sent": {
+    "reasoning_effort": "none"
+   },
+   "status": 200,
+   "finish": "stop",
+   "reasoningChars": 4355,
+   "contentChars": 1958,
+   "strict": true,
+   "missing": 0,
+   "completionTokens": 1653
+  },
+  {
+   "setting": "minimal",
+   "sent": {
+    "reasoning_effort": "minimal"
+   },
+   "status": 200,
+   "finish": "stop",
+   "reasoningChars": 19,
+   "contentChars": 2016,
+   "strict": true,
+   "missing": 0,
+   "completionTokens": 601
+  },
+  {
+   "setting": "low",
+   "sent": {
+    "reasoning_effort": "low"
+   },
+   "status": 200,
+   "finish": "stop",
+   "reasoningChars": 19,
+   "contentChars": 1997,
+   "strict": true,
+   "missing": 0,
+   "completionTokens": 596
+  },
+  {
+   "setting": "medium",
+   "sent": {
+    "reasoning_effort": "medium"
+   },
+   "status": 200,
+   "finish": "stop",
+   "reasoningChars": 4150,
+   "contentChars": 1994,
+   "strict": true,
+   "missing": 0,
+   "completionTokens": 1608
+  },
+  {
+   "setting": "high",
+   "sent": {
+    "reasoning_effort": "high"
+   },
+   "status": 200,
+   "finish": "length",
+   "reasoningChars": 15286,
+   "contentChars": 0,
+   "strict": false,
+   "missing": 10,
+   "completionTokens": 4096
+  },
+  {
+   "setting": "think: false",
+   "sent": {
+    "think": false
+   },
+   "status": 200,
+   "finish": "stop",
+   "reasoningChars": 4187,
+   "contentChars": 1971,
+   "strict": true,
+   "missing": 0,
+   "completionTokens": 1616
+  },
+  {
+   "setting": "think: false + low",
+   "sent": {
+    "think": false,
+    "reasoning_effort": "low"
+   },
+   "status": 200,
+   "finish": "stop",
+   "reasoningChars": 19,
+   "contentChars": 2028,
+   "strict": true,
+   "missing": 0,
+   "completionTokens": 603
+  }
+ ]
+}

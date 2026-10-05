@@ -1,6 +1,9 @@
 // Builds the S2 chunk set from the 10 S3 fixtures: a throwaway segmenter (not M0-E6), close enough to §4.1 that the
 // model sees realistic input: block segments, inline markers [link]…[/link], `code`, *em*, **strong**; `pre` skipped.
 // Output: chunks.json = 50 chunks (5 per fixture, spread over the document), ids numbered per chunk from 1.
+// `node segment.mjs --large` instead writes chunks-large.json: chunks at the DESIGN §5.7 size (800–1,500 est. tokens,
+// no segment cap), one per fixture, ids prefixed "L:". The budget rotates over 900/1,100/1,300/1,500 by fixture so the
+// sizes cover the range; the middle chunk of those that reach 800 is taken.
 import fs from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { flattenShadow } from '../s3/analyze-lib.mjs';
@@ -50,21 +53,30 @@ function chunk(segs, budget = 450, maxSegs = 14) {
   return chunks;
 }
 
+const LARGE = process.argv.includes('--large');
 const all = [];
-for (const [slug, m] of Object.entries(manifest)) {
+for (const [fi, [slug, m]] of Object.entries(manifest).entries()) {
   const html = fs.readFileSync(new URL(`${slug}.html`, FIX), 'utf8');
   const doc = new JSDOM(html, { url: m.finalUrl }).window.document;
   flattenShadow(doc);
   const root = doc.querySelector(m.contentSelector);
   stripInContent(root, { generic: true, generator: detectGenerator(doc) });
-  const cs = chunk(segments(root)).filter((c) => c.length >= 3);
-  // 5 chunks spread evenly over the document
-  const pick = [0, 1, 2, 3, 4].map((i) => cs[Math.min(cs.length - 1, Math.round((i * (cs.length - 1)) / 4))]);
-  [...new Set(pick)].forEach((c, i) => all.push({ id: `${slug}#${i}`, slug, title: m.title,
+  const tok = (c) => c.reduce((n, s) => n + estTokens(s.text), 0);
+  let pick;
+  if (LARGE) {
+    const big = chunk(segments(root), [900, 1100, 1300, 1500][fi % 4], Infinity).filter((c) => tok(c) >= 800);
+    pick = big.length ? [big[Math.floor((big.length - 1) / 2)]] : [];
+  } else {
+    const cs = chunk(segments(root)).filter((c) => c.length >= 3);
+    // 5 chunks spread evenly over the document
+    pick = [0, 1, 2, 3, 4].map((i) => cs[Math.min(cs.length - 1, Math.round((i * (cs.length - 1)) / 4))]);
+  }
+  [...new Set(pick)].forEach((c, i) => all.push({ id: `${LARGE ? 'L:' : ''}${slug}#${i}`, slug, title: m.title,
     segs: c.map((s, j) => ({ id: j + 1, kind: s.kind, text: s.text })) }));
 }
-fs.writeFileSync(new URL('chunks.json', import.meta.url), JSON.stringify(all, null, 1));
+fs.writeFileSync(new URL(LARGE ? 'chunks-large.json' : 'chunks.json', import.meta.url), JSON.stringify(all, null, 1));
 const nSeg = all.reduce((n, c) => n + c.segs.length, 0);
 const lt = all.flatMap((c) => c.segs).filter((s) => /[<>]/.test(s.text)).length;
 console.log(`chunks ${all.length}, segments ${nSeg}, segs with < or > ${lt}, est tokens/chunk median`,
-  all.map((c) => c.segs.reduce((n, s) => n + estTokens(s.text), 0)).sort((a, b) => a - b)[25]);
+  all.map((c) => c.segs.reduce((n, s) => n + estTokens(s.text), 0)).sort((a, b) => a - b)[Math.floor(all.length / 2)]);
+if (LARGE) console.log(all.map((c) => `${c.id} ${c.segs.length} segs ${c.segs.reduce((n, s) => n + estTokens(s.text), 0)} tok`).join('\n'));

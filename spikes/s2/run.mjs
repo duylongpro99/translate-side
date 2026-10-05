@@ -1,6 +1,6 @@
 // S2 runner: sends chunks to gpt-oss:20b on Ollama cloud (OpenAI-compatible streaming endpoint, as the openai-chat
 // adapter would), parses with the draft parser while streaming, and writes one JSON line per chunk.
-// Usage: node run.mjs <arm> [--lang vi] [--escape] [--effort low] [--max-tokens 4096 | --cut 0.5] [--set real|adv|all|file --file chunks.json] [--conc 4] [--limit N]
+// Usage: node run.mjs <arm> [--lang vi] [--escape] [--effort low] [--max-tokens 4096 | --cut 0.5 | --budget formula] [--set real|adv|all|file --file chunks.json] [--conc 4] [--limit N]
 // The key is read from the main checkout's .env at runtime (../s4/key.mjs) and never printed.
 import fs from 'node:fs';
 import { ollamaKey, redact } from '../s4/key.mjs';
@@ -17,7 +17,9 @@ const ESC = flag('escape');
 const EFFORT = opt('effort', 'low');
 const CUT = opt('cut', null) && Number(opt('cut'));
 const MAXTOK = Number(opt('max-tokens', 4096));
-const SET = opt('set', 'all');
+// The proposed budget (S2 record §6): 2.0 × est. source tokens + 12 × segments + 256 reasoning reserve (low effort).
+const FORMULA = opt('budget', null) === 'formula';
+const SET = opt('set', 'all'); // 'large' = chunks-large.json (DESIGN-size chunks)
 const CONC = Number(opt('conc', 4));
 const LIMIT = Number(opt('limit', 1e9));
 const MODEL = 'gpt-oss:20b';
@@ -26,7 +28,8 @@ const key = ollamaKey();
 
 const real = JSON.parse(fs.readFileSync(new URL('chunks.json', import.meta.url)));
 const adv = JSON.parse(fs.readFileSync(new URL('adversarial.json', import.meta.url)));
-const chunks = (SET === 'file' ? JSON.parse(fs.readFileSync(opt('file'))) : SET === 'real' ? real : SET === 'adv' ? adv : [...real, ...adv]).slice(0, LIMIT);
+const large = () => JSON.parse(fs.readFileSync(new URL('chunks-large.json', import.meta.url)));
+const chunks = (SET === 'file' ? JSON.parse(fs.readFileSync(opt('file'))) : SET === 'large' ? large() : SET === 'real' ? real : SET === 'adv' ? adv : [...real, ...adv]).slice(0, LIMIT);
 
 // translate@1 draft (DESIGN §5.7), brief reduced to the title, empty glossary.
 const system = (c) => `You are a professional translator and native writer of ${LANGS[LANG]}.
@@ -66,7 +69,7 @@ const user = (c) => c.segs.map((s) => `<seg id="${s.id}">${ESC ? esc(s.text) : s
 async function one(c) {
   const src = Object.fromEntries(c.segs.map((s) => [s.id, s.text]));
   const srcChars = c.segs.reduce((n, s) => n + s.text.length, 0);
-  const max_tokens = CUT ? Math.max(16, Math.round((srcChars / 4) * CUT)) : MAXTOK;
+  const max_tokens = FORMULA ? Math.ceil(2.0 * (srcChars / 4) + 12 * c.segs.length + 256) : CUT ? Math.max(16, Math.round((srcChars / 4) * CUT)) : MAXTOK;
   const body = { model: MODEL, stream: true, stream_options: { include_usage: true }, max_tokens, reasoning_effort: EFFORT, temperature: 0.2,
     messages: [{ role: 'system', content: system(c) }, { role: 'user', content: user(c) }] };
   const attempts = [];
@@ -109,7 +112,7 @@ async function one(c) {
     const untranslated = Object.entries(res.segs).filter(([id, t]) => isUntranslated(src[id], t)).map(([id]) => +id);
     const entitiesOut = (content.match(/&(lt|gt|amp);/g) ?? []).length;
     const entitiesIn = ESC ? c.segs.reduce((n, s) => n + (esc(s.text).match(/&(lt|gt|amp);/g) ?? []).length, 0) : c.segs.reduce((n, s) => n + (s.text.match(/&(lt|gt|amp);/g) ?? []).length, 0);
-    return { arm, chunk: c.id, nSegs: c.segs.length, srcChars, lang: LANG, escape: ESC, effort: EFFORT, max_tokens, attempts, status: 200,
+    return { arm, chunk: c.id, nSegs: c.segs.length, srcChars, lang: LANG, escape: ESC, effort: EFFORT, max_tokens, budget: FORMULA ? 'formula' : CUT ? `cut-${CUT}` : 'fixed', attempts, status: 200,
       finish, usage, ms: Date.now() - t0, tReason, tContent, deltas, reasoningChars: reasoning.length, reasoningHasSeg: /<seg/i.test(reasoning),
       reasoningHead: reasoning.slice(0, 160), contentChars: content.length,
       strict: res.strict, missing: res.missing, cut: res.cut, fixes: res.fixes, plan: pl, markers, untranslated, entitiesIn, entitiesOut,

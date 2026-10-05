@@ -4,13 +4,13 @@
 // Usage: node repair.mjs <arm>
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { reparse } from './reparse.mjs';
+import { reparse, CH } from './reparse.mjs';
 
 const arm = process.argv[2];
 const rows = fs.readFileSync(new URL(`runs/${arm}.jsonl`, import.meta.url), 'utf8').trim().split('\n').map(JSON.parse).filter((r) => r.status === 200);
 // The plan comes from the offline v2 re-parse, not from the parse stored at run time (older arms ran with v1).
 for (const row of rows) row.plan = reparse(row, 'v2').pl;
-const all = Object.fromEntries([...JSON.parse(fs.readFileSync(new URL('chunks.json', import.meta.url))), ...JSON.parse(fs.readFileSync(new URL('adversarial.json', import.meta.url)))].map((c) => [c.id, c]));
+const all = CH;
 const todo = rows.filter((r) => r.plan.rerequest.length);
 // Sub-chunks keep the original ids, so the parser's expected set is exactly the re-request set.
 const sub = todo.map((r) => ({ ...all[r.chunk], id: `${r.chunk}`, segs: all[r.chunk].segs.filter((s) => r.plan.rerequest.includes(s.id)), ambiguous: r.plan.ambiguous }));

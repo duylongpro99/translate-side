@@ -7,4 +7,5 @@ parse fields stored here are informational only.
 
 The `content` fields are machine translations (gpt-oss:20b, Ollama cloud, 2026-10-05) of text from the fixtures in
 `fixtures/sites/`. They are derivative works of those pages and are under the same licenses; see
-`fixtures/sites/ATTRIBUTION.md` for authors, sources and licenses. Chunks `adv#*` are synthetic text written for this spike.
+`fixtures/sites/ATTRIBUTION.md` for authors, sources and licenses. Chunks `adv#*` are synthetic text written for this spike. Arms `large-*`
+use the DESIGN-size chunks in `../chunks-large.json` (ids `L:…`).

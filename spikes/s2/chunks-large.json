@@ -1,0 +1,1987 @@
+[
+ {
+  "id": "L:docusaurus-code-blocks#0",
+  "slug": "docusaurus-code-blocks",
+  "title": "Code blocks | Docusaurus",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "If you also need to style the highlighted code line in some other way, you can target on `theme-code-block-highlighted-line` CSS class."
+   },
+   {
+    "id": 2,
+    "kind": "h3",
+    "text": "Highlighting with metadata string"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "You can also specify highlighted line ranges within the language meta string (leave a space after the language). To highlight multiple lines, separate the line numbers by commas or use the range syntax to select a chunk of lines. This feature uses the `parse-number-range` library and you can find [link]more syntax[/link] on their project details."
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "Prefer highlighting with comments where you can. By inlining highlight in the code, you don't have to manually count the lines if your code block becomes long. If you add/remove lines, you also don't have to offset your line ranges."
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "Below, we will introduce how the magic comment system can be extended to define custom directives and their functionalities. The magic comments would only be parsed if a highlight metastring is not present."
+   },
+   {
+    "id": 6,
+    "kind": "h3",
+    "text": "Custom magic comments"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "`// highlight-next-line` and `// highlight-start` etc. are called \"magic comments\", because they will be parsed and removed, and their purposes are to add metadata to the next line, or the section that the pair of start- and end-comments enclose."
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "You can declare custom magic comments through theme config. For example, you can register another magic comment that adds a `code-block-error-line` class name:"
+   },
+   {
+    "id": 9,
+    "kind": "li",
+    "text": "docusaurus.config.js"
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "src/css/custom.css"
+   },
+   {
+    "id": 11,
+    "kind": "li",
+    "text": "myDoc.md"
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "In JavaScript, trying to access properties on `null` will error."
+   },
+   {
+    "id": 13,
+    "kind": "p",
+    "text": "If you use number ranges in metastring (the `{1,3-4}` syntax), Docusaurus will apply the **first `magicComments` entry**'s class name. This, by default, is `theme-code-block-highlighted-line`, but if you change the `magicComments` config and use a different entry as the first one, the meaning of the metastring range will change as well."
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "You can disable the default line highlighting comments with `magicComments: []`. If there's no magic comment config, but Docusaurus encounters a code block containing a metastring range, it will error because there will be no class name to apply—the highlighting class name, after all, is just a magic comment entry."
+   },
+   {
+    "id": 15,
+    "kind": "p",
+    "text": "Every magic comment entry will contain three keys: `className` (required), `line`, which applies to the directly next line, or `block` (containing `start` and `end`), which applies to the entire block enclosed by the two comments."
+   },
+   {
+    "id": 16,
+    "kind": "p",
+    "text": "Using CSS to target the class can already do a lot, but you can unlock the full potential of this feature through [link]swizzling[/link]."
+   },
+   {
+    "id": 17,
+    "kind": "li",
+    "text": "npm"
+   },
+   {
+    "id": 18,
+    "kind": "li",
+    "text": "Yarn"
+   },
+   {
+    "id": 19,
+    "kind": "li",
+    "text": "pnpm"
+   },
+   {
+    "id": 20,
+    "kind": "li",
+    "text": "Bun"
+   },
+   {
+    "id": 21,
+    "kind": "p",
+    "text": "The `Line` component will receive the list of class names, based on which you can conditionally render different markup."
+   },
+   {
+    "id": 22,
+    "kind": "h2",
+    "text": "Line numbering"
+   },
+   {
+    "id": 23,
+    "kind": "p",
+    "text": "You can enable line numbering for your code block by using `showLineNumbers` key within the language meta string (don't forget to add space directly before the key)."
+   },
+   {
+    "id": 24,
+    "kind": "p",
+    "text": "By default, the counter starts at line number 1. It's possible to pass a custom counter start value to split large code blocks for readability:"
+   },
+   {
+    "id": 25,
+    "kind": "h2",
+    "text": "Interactive code editor"
+   },
+   {
+    "id": 26,
+    "kind": "p",
+    "text": "(Powered by [link]React Live[/link])"
+   },
+   {
+    "id": 27,
+    "kind": "p",
+    "text": "You can create an interactive coding editor with the `@docusaurus/theme-live-codeblock` plugin. First, add the plugin to your package."
+   },
+   {
+    "id": 28,
+    "kind": "li",
+    "text": "npm"
+   },
+   {
+    "id": 29,
+    "kind": "li",
+    "text": "Yarn"
+   },
+   {
+    "id": 30,
+    "kind": "li",
+    "text": "pnpm"
+   },
+   {
+    "id": 31,
+    "kind": "li",
+    "text": "Bun"
+   },
+   {
+    "id": 32,
+    "kind": "p",
+    "text": "You will also need to add the plugin to your `docusaurus.config.js`."
+   },
+   {
+    "id": 33,
+    "kind": "p",
+    "text": "To use the plugin, create a code block with `live` attached to the language meta string."
+   },
+   {
+    "id": 34,
+    "kind": "p",
+    "text": "The code block will be rendered as an interactive editor. Changes to the code will reflect on the result panel live."
+   },
+   {
+    "id": 35,
+    "kind": "h2",
+    "text": "It is 8:56:41 PM."
+   },
+   {
+    "id": 36,
+    "kind": "h3",
+    "text": "Imports"
+   }
+  ]
+ },
+ {
+  "id": "L:mkdocs-material-admonitions#0",
+  "slug": "mkdocs-material-admonitions",
+  "title": "Admonitions - Material for MkDocs",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h1",
+    "text": "Admonitions"
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "Admonitions, also known as *call-outs*, are an excellent choice for including side content without significantly interrupting the document flow. Material for MkDocs provides several different types of admonitions and allows for the inclusion and nesting of arbitrary content."
+   },
+   {
+    "id": 3,
+    "kind": "h2",
+    "text": "Configuration"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "This configuration enables admonitions, allows to make them collapsible and to nest arbitrary content inside admonitions. Add the following lines to `mkdocs.yml`:"
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "See additional configuration options:"
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "[link]Admonition[/link]"
+   },
+   {
+    "id": 7,
+    "kind": "li",
+    "text": "[link]Details[/link]"
+   },
+   {
+    "id": 8,
+    "kind": "li",
+    "text": "[link]SuperFences[/link]"
+   },
+   {
+    "id": 9,
+    "kind": "h3",
+    "text": "Admonition icons"
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "[link]8.3.0[/link]"
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "Each of the supported admonition types has a distinct icon, which can be changed to any icon bundled with the theme, or even a [link]custom icon[/link]. Add the following lines to `mkdocs.yml`:"
+   },
+   {
+    "id": 12,
+    "kind": "summary",
+    "text": "Expand to show alternate icon sets"
+   },
+   {
+    "id": 13,
+    "kind": "h2",
+    "text": "Usage"
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "Admonitions follow a simple syntax: a block starts with `!!!`, followed by a single keyword used as a [link]type qualifier[/link]. The content of the block follows on the next line, indented by four spaces:"
+   },
+   {
+    "id": 15,
+    "kind": "p",
+    "text": "Note"
+   },
+   {
+    "id": 16,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 17,
+    "kind": "h3",
+    "text": "Changing the title"
+   },
+   {
+    "id": 18,
+    "kind": "p",
+    "text": "By default, the title will equal the type qualifier in titlecase. However, it can be changed by adding a quoted string containing valid Markdown (including links, formatting, ...) after the type qualifier:"
+   },
+   {
+    "id": 19,
+    "kind": "p",
+    "text": "Phasellus posuere in sem ut cursus"
+   },
+   {
+    "id": 20,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 21,
+    "kind": "h3",
+    "text": "Nested admonitions"
+   },
+   {
+    "id": 22,
+    "kind": "p",
+    "text": "You can also include nested admonitions in your documentation. To do this, you can use your existing admonitions and indent the desired ones:"
+   },
+   {
+    "id": 23,
+    "kind": "p",
+    "text": "Outer Note"
+   },
+   {
+    "id": 24,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 25,
+    "kind": "p",
+    "text": "Inner Note"
+   },
+   {
+    "id": 26,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 27,
+    "kind": "h3",
+    "text": "Removing the title"
+   },
+   {
+    "id": 28,
+    "kind": "p",
+    "text": "Similar to [link]changing the title[/link], the icon and title can be omitted entirely by adding an empty string directly after the type qualifier. Note that this will not work for [link]collapsible blocks[/link]:"
+   },
+   {
+    "id": 29,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 30,
+    "kind": "h3",
+    "text": "Collapsible blocks"
+   },
+   {
+    "id": 31,
+    "kind": "p",
+    "text": "When [link]Details[/link] is enabled and an admonition block is started with `???` instead of `!!!`, the admonition is rendered as an expandable block with a small toggle on the right side:"
+   },
+   {
+    "id": 32,
+    "kind": "summary",
+    "text": "Note"
+   },
+   {
+    "id": 33,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 34,
+    "kind": "p",
+    "text": "Adding a `+` after the `???` token renders the block expanded:"
+   },
+   {
+    "id": 35,
+    "kind": "summary",
+    "text": "Note"
+   },
+   {
+    "id": 36,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 37,
+    "kind": "h3",
+    "text": "Inline blocks"
+   },
+   {
+    "id": 38,
+    "kind": "p",
+    "text": "Admonitions can also be rendered as inline blocks (e.g., for sidebars), placing them to the right using the `inline` + `end` modifiers, or to the left using only the `inline` modifier:"
+   },
+   {
+    "id": 39,
+    "kind": "p",
+    "text": "Lorem ipsum"
+   },
+   {
+    "id": 40,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 41,
+    "kind": "p",
+    "text": "Use `inline end` to align to the right (left for rtl languages)."
+   },
+   {
+    "id": 42,
+    "kind": "p",
+    "text": "Lorem ipsum"
+   },
+   {
+    "id": 43,
+    "kind": "p",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa."
+   },
+   {
+    "id": 44,
+    "kind": "p",
+    "text": "Use `inline` to align to the left (right for rtl languages)."
+   },
+   {
+    "id": 45,
+    "kind": "p",
+    "text": "**Important**: admonitions that use the `inline` modifiers *must* be declared prior to the content block you want to place them beside. If there's insufficient space to render the admonition next to the block, the admonition will stretch to the full width of the viewport, e.g., on mobile viewports."
+   },
+   {
+    "id": 46,
+    "kind": "h3",
+    "text": "Supported types"
+   }
+  ]
+ },
+ {
+  "id": "L:mdn-promise-then#0",
+  "slug": "mdn-promise-then",
+  "title": "Promise.prototype.then() - JavaScript | MDN",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h1",
+    "text": "Promise.prototype.then()"
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "The **`then()`** method of [link]`Promise`[/link] instances takes up to two arguments: callback functions for the fulfilled and rejected cases of the `Promise`. It stores the callbacks within the promise it is called on and immediately returns another [link]`Promise`[/link] object, allowing you to [link]chain[/link] calls to other promise methods."
+   },
+   {
+    "id": 3,
+    "kind": "h2",
+    "text": "[link]Try it[/link]"
+   },
+   {
+    "id": 4,
+    "kind": "h4",
+    "text": "JavaScript Demo: Promise.prototype.then()"
+   },
+   {
+    "id": 5,
+    "kind": "h2",
+    "text": "[link]Syntax[/link]"
+   },
+   {
+    "id": 6,
+    "kind": "h3",
+    "text": "[link]Parameters[/link]"
+   },
+   {
+    "id": 7,
+    "kind": "dt",
+    "text": "[link]`onFulfilled`[/link]"
+   },
+   {
+    "id": 8,
+    "kind": "p",
+    "text": "A function to asynchronously execute when this promise becomes fulfilled. Its return value becomes the fulfillment value of the promise returned by `then()`. The function is called with the following arguments:"
+   },
+   {
+    "id": 9,
+    "kind": "dt",
+    "text": "[link]`value`[/link]"
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "The value that the promise was fulfilled with."
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "If it is not a function, it is internally replaced with an *identity* function (`(x) => x`) which simply passes the fulfillment value forward."
+   },
+   {
+    "id": 12,
+    "kind": "dt",
+    "text": "[link]`onRejected` Optional[/link]"
+   },
+   {
+    "id": 13,
+    "kind": "p",
+    "text": "A function to asynchronously execute when this promise becomes rejected. Its return value becomes the fulfillment value of the promise returned by `then()`. The function is called with the following arguments:"
+   },
+   {
+    "id": 14,
+    "kind": "dt",
+    "text": "[link]`reason`[/link]"
+   },
+   {
+    "id": 15,
+    "kind": "p",
+    "text": "The value that the promise was rejected with."
+   },
+   {
+    "id": 16,
+    "kind": "p",
+    "text": "If it is not a function, it is internally replaced with a *thrower* function (`(x) => { throw x; }`) which throws the rejection reason it received."
+   },
+   {
+    "id": 17,
+    "kind": "h3",
+    "text": "[link]Return value[/link]"
+   },
+   {
+    "id": 18,
+    "kind": "p",
+    "text": "Returns a new [link]`Promise`[/link] immediately. This returned promise is always pending when returned, regardless of the current promise's status."
+   },
+   {
+    "id": 19,
+    "kind": "p",
+    "text": "One of the `onFulfilled` and `onRejected` handlers will be executed to handle the current promise's fulfillment or rejection. The call always happens asynchronously, even when the current promise is already settled. The behavior of the promise returned by `then()` (referred to as `p` in the following list) depends on the handler's execution result, following a specific set of rules. If the handler function:"
+   },
+   {
+    "id": 20,
+    "kind": "li",
+    "text": "returns a value: `p` gets fulfilled with the returned value as its value."
+   },
+   {
+    "id": 21,
+    "kind": "li",
+    "text": "doesn't return anything: `p` gets fulfilled with `undefined` as its value."
+   },
+   {
+    "id": 22,
+    "kind": "li",
+    "text": "throws an error: `p` gets rejected with the thrown error as its value."
+   },
+   {
+    "id": 23,
+    "kind": "li",
+    "text": "returns an already fulfilled promise: `p` gets fulfilled with that promise's value as its value."
+   },
+   {
+    "id": 24,
+    "kind": "li",
+    "text": "returns an already rejected promise: `p` gets rejected with that promise's value as its value."
+   },
+   {
+    "id": 25,
+    "kind": "li",
+    "text": "returns another pending promise: `p` is pending and becomes fulfilled/rejected with that promise's value as its value immediately after that promise becomes fulfilled/rejected."
+   },
+   {
+    "id": 26,
+    "kind": "h2",
+    "text": "[link]Description[/link]"
+   },
+   {
+    "id": 27,
+    "kind": "p",
+    "text": "The `then()` method schedules callback functions for the eventual completion of a Promise — either fulfillment or rejection. It is the primitive method of promises: the [link]thenable[/link] protocol expects all promise-like objects to expose a `then()` method, and the [link]`catch()`[/link] and [link]`finally()`[/link] methods both work by invoking the object's `then()` method."
+   },
+   {
+    "id": 28,
+    "kind": "p",
+    "text": "For more information about the `onRejected` handler, see the [link]`catch()`[/link] reference."
+   },
+   {
+    "id": 29,
+    "kind": "p",
+    "text": "`then()` returns a new promise object but mutates the promise object it's called on, appending the handlers to an internal list if the promise is pending. Therefore the handler is retained by the original promise for as long as that promise remains pending and reachable. For example, the following example will eventually run out of memory even though the returned promise is not retained:"
+   },
+   {
+    "id": 30,
+    "kind": "p",
+    "text": "If you call the `then()` method twice on the same promise object (instead of chaining), then this promise object will have two pairs of settlement handlers. All handlers attached to the same promise object are always called in the order they were added. Moreover, the two promises returned by each call of `then()` start separate chains and do not wait for each other's settlement."
+   },
+   {
+    "id": 31,
+    "kind": "p",
+    "text": "[link]Thenable[/link] objects that arise along the `then()` chain are always [link]resolved[/link] — the `onFulfilled` handler never receives a thenable object, and any thenable returned by either handler are always resolved before being passed to the next handler. This is because when constructing the new promise, the `resolve` and `reject` functions passed by the `executor` are saved, and when the current promise settles, the respective function will be called with the fulfillment value or rejection reason. The resolving logic comes from the `resolve` function passed by the [link]`Promise()`[/link] constructor."
+   },
+   {
+    "id": 32,
+    "kind": "p",
+    "text": "`then()` supports subclassing, which means it can be called on instances of subclasses of `Promise`, and the result will be a promise of the subclass type. You can customize the type of the return value through the [link]`[Symbol.species]`[/link] property."
+   },
+   {
+    "id": 33,
+    "kind": "h2",
+    "text": "[link]Examples[/link]"
+   },
+   {
+    "id": 34,
+    "kind": "h3",
+    "text": "[link]Using the then() method[/link]"
+   },
+   {
+    "id": 35,
+    "kind": "h3",
+    "text": "[link]Having a non-function as either parameter[/link]"
+   },
+   {
+    "id": 36,
+    "kind": "h3",
+    "text": "[link]Chaining[/link]"
+   },
+   {
+    "id": 37,
+    "kind": "p",
+    "text": "The `then` method returns a new `Promise`, which allows for method chaining."
+   },
+   {
+    "id": 38,
+    "kind": "p",
+    "text": "If the function passed as handler to `then` returns a `Promise`, an equivalent `Promise` will be exposed to the subsequent `then` in the method chain. The below snippet simulates asynchronous code with the `setTimeout` function."
+   }
+  ]
+ },
+ {
+  "id": "L:docsrs-tokio#0",
+  "slug": "docsrs-tokio",
+  "title": "tokio - Rust",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h1",
+    "text": "Crate tokio"
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "A runtime for writing reliable network applications without compromising speed."
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "Tokio is an event-driven, non-blocking I/O platform for writing asynchronous applications with the Rust programming language. At a high level, it provides a few major components:"
+   },
+   {
+    "id": 4,
+    "kind": "li",
+    "text": "Tools for [link]working with asynchronous tasks[/link], including [link]synchronization primitives and channels[/link] and [link]timeouts, sleeps, and intervals[/link]."
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "APIs for [link]performing asynchronous I/O[/link], including [link]TCP and UDP[/link] sockets, [link]filesystem[/link] operations, and [link]process[/link] and [link]signal[/link] management."
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "A [link]runtime[/link] for executing asynchronous code, including a task scheduler, an I/O driver backed by the operating system’s event queue (`epoll`, `kqueue`, `IOCP`, etc…), and a high performance timer."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "Guide level documentation is found on the [link]website[/link]."
+   },
+   {
+    "id": 8,
+    "kind": "h2",
+    "text": "A Tour of Tokio"
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "Tokio consists of a number of modules that provide a range of functionality essential for implementing asynchronous applications in Rust. In this section, we will take a brief tour of Tokio, summarizing the major APIs and their uses."
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "The easiest way to get started is to enable all features. Do this by enabling the `full` feature flag:"
+   },
+   {
+    "id": 11,
+    "kind": "h4",
+    "text": "Authoring applications"
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "Tokio is great for writing applications and most users in this case shouldn’t worry too much about what features they should pick. If you’re unsure, we suggest going with `full` to ensure that you don’t run into any road blocks while you’re building your application."
+   },
+   {
+    "id": 13,
+    "kind": "h5",
+    "text": "Example"
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "This example shows the quickest way to get started with Tokio."
+   },
+   {
+    "id": 15,
+    "kind": "h4",
+    "text": "Authoring libraries"
+   },
+   {
+    "id": 16,
+    "kind": "p",
+    "text": "As a library author your goal should be to provide the lightest weight crate that is based on Tokio. To achieve this you should ensure that you only enable the features you need. This allows users to pick up your crate without having to enable unnecessary features."
+   },
+   {
+    "id": 17,
+    "kind": "h5",
+    "text": "Example"
+   },
+   {
+    "id": 18,
+    "kind": "p",
+    "text": "This example shows how you may want to import features for a library that just needs to `tokio::spawn` and use a `TcpStream`."
+   },
+   {
+    "id": 19,
+    "kind": "h3",
+    "text": "Working With Tasks"
+   },
+   {
+    "id": 20,
+    "kind": "p",
+    "text": "Asynchronous programs in Rust are based around lightweight, non-blocking units of execution called [link]*tasks*[/link]. The [link]`tokio::task`[/link] module provides important tools for working with tasks:"
+   },
+   {
+    "id": 21,
+    "kind": "li",
+    "text": "The [link]`spawn`[/link] function and [link]`JoinHandle`[/link] type, for scheduling a new task on the Tokio runtime and awaiting the output of a spawned task, respectively,"
+   },
+   {
+    "id": 22,
+    "kind": "li",
+    "text": "Functions for [link]running blocking operations[/link] in an asynchronous task context."
+   },
+   {
+    "id": 23,
+    "kind": "p",
+    "text": "The [link]`tokio::task`[/link] module is present only when the “rt” feature flag is enabled."
+   },
+   {
+    "id": 24,
+    "kind": "p",
+    "text": "The [link]`tokio::sync`[/link] module contains synchronization primitives to use when needing to communicate or share data. These include:"
+   },
+   {
+    "id": 25,
+    "kind": "li",
+    "text": "channels ([link]`oneshot`[/link], [link]`mpsc`[/link], [link]`watch`[/link], and [link]`broadcast`[/link]), for sending values between tasks,"
+   },
+   {
+    "id": 26,
+    "kind": "li",
+    "text": "a non-blocking [link]`Mutex`[/link], for controlling access to a shared, mutable value,"
+   },
+   {
+    "id": 27,
+    "kind": "li",
+    "text": "an asynchronous [link]`Barrier`[/link] type, for multiple tasks to synchronize before beginning a computation."
+   },
+   {
+    "id": 28,
+    "kind": "p",
+    "text": "The `tokio::sync` module is present only when the “sync” feature flag is enabled."
+   },
+   {
+    "id": 29,
+    "kind": "p",
+    "text": "The [link]`tokio::time`[/link] module provides utilities for tracking time and scheduling work. This includes functions for setting [link]timeouts[/link] for tasks, [link]sleeping[/link] work to run in the future, or [link]repeating an operation at an interval[/link]."
+   },
+   {
+    "id": 30,
+    "kind": "p",
+    "text": "In order to use `tokio::time`, the “time” feature flag must be enabled."
+   },
+   {
+    "id": 31,
+    "kind": "p",
+    "text": "Finally, Tokio provides a *runtime* for executing asynchronous tasks. Most applications can use the [link]`#[tokio::main]`[/link] macro to run their code on the Tokio runtime. However, this macro provides only basic configuration options. As an alternative, the [link]`tokio::runtime`[/link] module provides more powerful APIs for configuring and managing runtimes. You should use that module if the `#[tokio::main]` macro doesn’t provide the functionality you need."
+   },
+   {
+    "id": 32,
+    "kind": "p",
+    "text": "Using the runtime requires the “rt” or “rt-multi-thread” feature flags, to enable the current-thread [link]single-threaded scheduler[/link] and the [link]multi-thread scheduler[/link], respectively. See the [link]`runtime` module documentation[/link] for details. In addition, the “macros” feature flag enables the `#[tokio::main]` and `#[tokio::test]` attributes."
+   },
+   {
+    "id": 33,
+    "kind": "h3",
+    "text": "CPU-bound tasks and blocking code"
+   },
+   {
+    "id": 34,
+    "kind": "p",
+    "text": "Tokio is able to concurrently run many tasks on a few threads by repeatedly swapping the currently running task on each thread. However, this kind of swapping can only happen at `.await` points, so code that spends a long time without reaching an `.await` will prevent other tasks from running. To combat this, Tokio provides two kinds of threads: Core threads and blocking threads."
+   },
+   {
+    "id": 35,
+    "kind": "p",
+    "text": "The core threads are where all asynchronous code runs, and Tokio will by default spawn one for each CPU core. You can use the environment variable `TOKIO_WORKER_THREADS` to override the default value."
+   },
+   {
+    "id": 36,
+    "kind": "p",
+    "text": "The blocking threads are spawned on demand, can be used to run blocking code that would otherwise block other tasks from running and are kept alive when not used for a certain amount of time which can be configured with [link]`thread_keep_alive`[/link]. Since it is not possible for Tokio to swap out blocking tasks, like it can do with asynchronous code, the upper limit on the number of blocking threads is very large. These limits can be configured on the [link]`Builder`[/link]."
+   },
+   {
+    "id": 37,
+    "kind": "p",
+    "text": "To spawn a blocking task, you should use the [link]`spawn_blocking`[/link] function."
+   }
+  ]
+ },
+ {
+  "id": "L:github-readme-bat#0",
+  "slug": "github-readme-bat",
+  "title": "GitHub - sharkdp/bat: A cat(1) clone with wings. · GitHub",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "You can use the `--style` option to control the appearance of `bat`'s output. You can use `--style=numbers,changes`, for example, to show only Git changes and line numbers but no grid and no file header. Set the `BAT_STYLE` environment variable to make these changes permanent or use `bat`'s [link]configuration file[/link]."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "By default, `bat` enables `changes`, `grid`, `header-filename`, `numbers`, and `snip`."
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "The available pre-defined styles are:"
+   },
+   {
+    "id": 4,
+    "kind": "th",
+    "text": "Style"
+   },
+   {
+    "id": 5,
+    "kind": "th",
+    "text": "Description"
+   },
+   {
+    "id": 6,
+    "kind": "td",
+    "text": "`default`"
+   },
+   {
+    "id": 7,
+    "kind": "td",
+    "text": "Enables the recommended style components listed above."
+   },
+   {
+    "id": 8,
+    "kind": "td",
+    "text": "`full`"
+   },
+   {
+    "id": 9,
+    "kind": "td",
+    "text": "Enables all available components."
+   },
+   {
+    "id": 10,
+    "kind": "td",
+    "text": "`auto`"
+   },
+   {
+    "id": 11,
+    "kind": "td",
+    "text": "Same as `default`, unless the output is piped."
+   },
+   {
+    "id": 12,
+    "kind": "td",
+    "text": "`plain`"
+   },
+   {
+    "id": 13,
+    "kind": "td",
+    "text": "Disables all available components."
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "The available individual components are:"
+   },
+   {
+    "id": 15,
+    "kind": "th",
+    "text": "Component"
+   },
+   {
+    "id": 16,
+    "kind": "th",
+    "text": "Description"
+   },
+   {
+    "id": 17,
+    "kind": "td",
+    "text": "`changes`"
+   },
+   {
+    "id": 18,
+    "kind": "td",
+    "text": "Show Git modification markers."
+   },
+   {
+    "id": 19,
+    "kind": "td",
+    "text": "`header`"
+   },
+   {
+    "id": 20,
+    "kind": "td",
+    "text": "Alias for `header-filename`."
+   },
+   {
+    "id": 21,
+    "kind": "td",
+    "text": "`header-filename`"
+   },
+   {
+    "id": 22,
+    "kind": "td",
+    "text": "Show filenames before the content."
+   },
+   {
+    "id": 23,
+    "kind": "td",
+    "text": "`header-filesize`"
+   },
+   {
+    "id": 24,
+    "kind": "td",
+    "text": "Show file sizes before the content."
+   },
+   {
+    "id": 25,
+    "kind": "td",
+    "text": "`grid`"
+   },
+   {
+    "id": 26,
+    "kind": "td",
+    "text": "Vertical/horizontal lines to separate the side bar and header from the content."
+   },
+   {
+    "id": 27,
+    "kind": "td",
+    "text": "`rule`"
+   },
+   {
+    "id": 28,
+    "kind": "td",
+    "text": "Horizontal lines to delimit files."
+   },
+   {
+    "id": 29,
+    "kind": "td",
+    "text": "`numbers`"
+   },
+   {
+    "id": 30,
+    "kind": "td",
+    "text": "Show line numbers in the side bar."
+   },
+   {
+    "id": 31,
+    "kind": "td",
+    "text": "`snip`"
+   },
+   {
+    "id": 32,
+    "kind": "td",
+    "text": "Draw separation lines between distinct line ranges."
+   },
+   {
+    "id": 33,
+    "kind": "p",
+    "text": "Tip"
+   },
+   {
+    "id": 34,
+    "kind": "p",
+    "text": "If you specify a default style in `bat`'s config file, you can change which components are displayed during a single run of `bat` using the `--style` command-line argument. By prefixing a component with `+` or `-`, it can be added or removed from the current style."
+   },
+   {
+    "id": 35,
+    "kind": "p",
+    "text": "For example, if your config contains `--style=full,-snip`, you can run bat with `--style=-grid,+snip` to remove the grid and add back the `snip` component. Or, if you want to override the styles completely, you use `--style=numbers` to only show the line numbers."
+   },
+   {
+    "id": 36,
+    "kind": "h3",
+    "text": "Decorations"
+   },
+   {
+    "id": 37,
+    "kind": "p",
+    "text": "By default, `bat` only shows decorations (such as line numbers, file headers, grid borders, etc.) when outputting to an interactive terminal. You can control this behavior with the `--decorations` option. Use `--decorations=always` to show decorations even when piping output to another command, or `--decorations=never` to disable them entirely. Possible values are `auto` (default), `never`, and `always`."
+   },
+   {
+    "id": 38,
+    "kind": "p",
+    "text": "There is also the `--force-colorization` option, which is an alias for `--decorations=always --color=always`. This is useful if you want to keep colorization and decorations when piping `bat`'s output to another program."
+   },
+   {
+    "id": 39,
+    "kind": "h3",
+    "text": "Adding new syntaxes / language definitions"
+   },
+   {
+    "id": 40,
+    "kind": "p",
+    "text": "Should you find that a particular syntax is not available within `bat`, you can follow these instructions to easily add new syntaxes to your current `bat` installation."
+   },
+   {
+    "id": 41,
+    "kind": "p",
+    "text": "`bat` uses the excellent [link]`syntect`[/link] library for syntax highlighting. `syntect` can read any [link]Sublime Text `.sublime-syntax` file[/link] and theme."
+   },
+   {
+    "id": 42,
+    "kind": "p",
+    "text": "A good resource for finding Sublime Syntax packages is [link]Package Control[/link]. Once you found a syntax:"
+   },
+   {
+    "id": 43,
+    "kind": "p",
+    "text": "Create a folder with syntax definition files:"
+   },
+   {
+    "id": 44,
+    "kind": "p",
+    "text": "Now use the following command to parse these files into a binary cache:"
+   },
+   {
+    "id": 45,
+    "kind": "p",
+    "text": "Finally, use `bat --list-languages` to check if the new languages are available."
+   },
+   {
+    "id": 46,
+    "kind": "p",
+    "text": "If you ever want to go back to the default settings, call:"
+   },
+   {
+    "id": 47,
+    "kind": "p",
+    "text": "If you think that a specific syntax should be included in `bat` by default, please consider opening a \"syntax request\" ticket after reading the policies and instructions [link]here[/link]: [link]Open Syntax Request[/link]."
+   },
+   {
+    "id": 48,
+    "kind": "h3",
+    "text": "Adding new themes"
+   },
+   {
+    "id": 49,
+    "kind": "p",
+    "text": "This works very similar to how we add new syntax definitions."
+   },
+   {
+    "id": 50,
+    "kind": "p",
+    "text": "Note"
+   },
+   {
+    "id": 51,
+    "kind": "p",
+    "text": "Custom themes must be stored in [link]`.tmTheme` files[/link]. Newer `.sublime-color-scheme` files are currently not supported."
+   }
+  ]
+ },
+ {
+  "id": "L:wikipedia-futures-promises#0",
+  "slug": "wikipedia-futures-promises",
+  "title": "Futures and promises - Wikipedia",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "To implement implicit lazy thread-specific futures (as provided by Alice ML, for example) in terms in non-thread-specific futures, needs a mechanism to determine when the future's value is first needed (for example, the `WaitNeeded` construct in Oz[link][13][/link]). If all values are objects, then the ability to implement transparent forwarding objects is sufficient, since the first message sent to the forwarder indicates that the future's value is needed."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "Non-thread-specific futures can be implemented in thread-specific futures, assuming that the system supports message passing, by having the resolving thread send a message to the future's own thread. However, this can be viewed as unneeded complexity. In programming languages based on threads, the most expressive approach seems to be to provide a mix of non-thread-specific futures, read-only views, and either a *WaitNeeded* construct, or support for transparent forwarding."
+   },
+   {
+    "id": 3,
+    "kind": "h2",
+    "text": "Evaluation strategy"
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "The [link]evaluation strategy[/link] of futures, which may be termed *[link]call by future[/link]*, is non-deterministic: the value of a future will be evaluated at some time between when the future is created and when its value is used, but the precise time is not determined beforehand and can change from run to run. The computation can start as soon as the future is created ([link]eager evaluation[/link]) or only when the value is actually needed ([link]lazy evaluation[/link]), and may be suspended part-way through, or executed in one run. Once the value of a future is assigned, it is not recomputed on future accesses; this is like the [link]memoization[/link] used in [link]call by need[/link]."
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "A **lazy future** is a future that deterministically has lazy evaluation semantics: the computation of the future's value starts when the value is first needed, as in call by need. Lazy futures are of use in languages which evaluation strategy is by default not lazy. For example, in [link]C++11[/link] such lazy futures can be created by passing the `std::launch::deferred` launch policy to `std::async()`, along with the function to compute the value."
+   },
+   {
+    "id": 6,
+    "kind": "h2",
+    "text": "Semantics of futures in the actor model"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "In the actor model, an expression of the form `future <Expression>` is defined by how it responds to an `Eval` message with environment *E* and customer *C* as follows: The future expression responds to the `Eval` message by sending the customer *C* a newly created actor *F* (the proxy for the response of evaluating `<Expression>`) as a return value *concurrently* with sending `<Expression>` an `Eval` message with environment *E* and customer *C*. The default behavior of *F* is as follows:"
+   },
+   {
+    "id": 8,
+    "kind": "li",
+    "text": "When *F* receives a request *R*, then it checks to see if it has already received a response (that can either be a return value or a thrown exception) from evaluating `<Expression>` proceeding as follows:"
+   },
+   {
+    "id": 9,
+    "kind": "li",
+    "text": "If it already has a response *V*, then"
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "If *V* is a return value, then it is sent the request *R*."
+   },
+   {
+    "id": 11,
+    "kind": "li",
+    "text": "If *V* is an exception, then it is thrown to the customer of the request *R*."
+   },
+   {
+    "id": 12,
+    "kind": "li",
+    "text": "If it does not already have a response, then *R* is stored in the queue of requests inside the *F*."
+   },
+   {
+    "id": 13,
+    "kind": "li",
+    "text": "When *F* receives the response *V* from evaluating `<Expression>`, then *V* is stored in *F* and"
+   },
+   {
+    "id": 14,
+    "kind": "li",
+    "text": "If *V* is a return value, then all of the queued requests are sent to *V*."
+   },
+   {
+    "id": 15,
+    "kind": "li",
+    "text": "If *V* is an exception, then it is thrown to the customer of each of the queued requests."
+   },
+   {
+    "id": 16,
+    "kind": "p",
+    "text": "However, some futures can deal with requests in special ways to provide greater parallelism. For example, the expression `1 + future factorial(n)` can create a new future that will behave like the number `1+factorial(n)`. This trick does not always work. For example, the following conditional expression:"
+   },
+   {
+    "id": 17,
+    "kind": "dd",
+    "text": "`if m>future factorial(n) then print(\"bigger\") else print(\"smaller\")`"
+   },
+   {
+    "id": 18,
+    "kind": "p",
+    "text": "suspends until the future for `factorial(n)` has responded to the request asking if `m` is greater than itself."
+   },
+   {
+    "id": 19,
+    "kind": "h2",
+    "text": "History"
+   }
+  ]
+ },
+ {
+  "id": "L:mdbook-rust-book-ownership#0",
+  "slug": "mdbook-rust-book-ownership",
+  "title": "What is Ownership? - The Rust Programming Language",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "li",
+    "text": "Each value in Rust has an *owner*."
+   },
+   {
+    "id": 2,
+    "kind": "li",
+    "text": "There can only be one owner at a time."
+   },
+   {
+    "id": 3,
+    "kind": "li",
+    "text": "When the owner goes out of scope, the value will be dropped."
+   },
+   {
+    "id": 4,
+    "kind": "h3",
+    "text": "[link]Variable Scope[/link]"
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "Now that we’re past basic Rust syntax, we won’t include all the `fn main() {` code in the examples, so if you’re following along, make sure to put the following examples inside a `main` function manually. As a result, our examples will be a bit more concise, letting us focus on the actual details rather than boilerplate code."
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "As a first example of ownership, we’ll look at the scope of some variables. A *scope* is the range within a program for which an item is valid. Take the following variable:"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "The variable `s` refers to a string literal, where the value of the string is hardcoded into the text of our program. The variable is valid from the point at which it’s declared until the end of the current scope. Listing 4-1 shows a program with comments annotating where the variable `s` would be valid."
+   },
+   {
+    "id": 8,
+    "kind": "figcaption",
+    "text": "[link]Listing 4-1[/link]: A variable and the scope in which it is valid"
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "In other words, there are two important points in time here:"
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "When `s` comes *into* scope, it is valid."
+   },
+   {
+    "id": 11,
+    "kind": "li",
+    "text": "It remains valid until it goes *out of* scope."
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "At this point, the relationship between scopes and when variables are valid is similar to that in other programming languages. Now we’ll build on top of this understanding by introducing the `String` type."
+   },
+   {
+    "id": 13,
+    "kind": "h3",
+    "text": "[link]The `String` Type[/link]"
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "To illustrate the rules of ownership, we need a data type that is more complex than those we covered in the [link]“Data Types”[/link] section of Chapter 3. The types covered previously are of a known size, can be stored on the stack and popped off the stack when their scope is over, and can be quickly and trivially copied to make a new, independent instance if another part of code needs to use the same value in a different scope. But we want to look at data that is stored on the heap and explore how Rust knows when to clean up that data, and the `String` type is a great example."
+   },
+   {
+    "id": 15,
+    "kind": "p",
+    "text": "We’ll concentrate on the parts of `String` that relate to ownership. These aspects also apply to other complex data types, whether they are provided by the standard library or created by you. We’ll discuss non-ownership aspects of `String` in [link]Chapter 8[/link]."
+   },
+   {
+    "id": 16,
+    "kind": "p",
+    "text": "We’ve already seen string literals, where a string value is hardcoded into our program. String literals are convenient, but they aren’t suitable for every situation in which we may want to use text. One reason is that they’re immutable. Another is that not every string value can be known when we write our code: For example, what if we want to take user input and store it? It is for these situations that Rust has the `String` type. This type manages data allocated on the heap and as such is able to store an amount of text that is unknown to us at compile time. You can create a `String` from a string literal using the `from` function, like so:"
+   },
+   {
+    "id": 17,
+    "kind": "p",
+    "text": "The double colon `::` operator allows us to namespace this particular `from` function under the `String` type rather than using some sort of name like `string_from`. We’ll discuss this syntax more in the [link]“Methods”[/link] section of Chapter 5, and when we talk about namespacing with modules in [link]“Paths for Referring to an Item in the Module Tree”[/link] in Chapter 7."
+   },
+   {
+    "id": 18,
+    "kind": "p",
+    "text": "This kind of string *can* be mutated:"
+   },
+   {
+    "id": 19,
+    "kind": "p",
+    "text": "So, what’s the difference here? Why can `String` be mutated but literals cannot? The difference is in how these two types deal with memory."
+   },
+   {
+    "id": 20,
+    "kind": "h3",
+    "text": "[link]Memory and Allocation[/link]"
+   },
+   {
+    "id": 21,
+    "kind": "p",
+    "text": "In the case of a string literal, we know the contents at compile time, so the text is hardcoded directly into the final executable. This is why string literals are fast and efficient. But these properties only come from the string literal’s immutability. Unfortunately, we can’t put a blob of memory into the binary for each piece of text whose size is unknown at compile time and whose size might change while running the program."
+   },
+   {
+    "id": 22,
+    "kind": "p",
+    "text": "With the `String` type, in order to support a mutable, growable piece of text, we need to allocate an amount of memory on the heap, unknown at compile time, to hold the contents. This means:"
+   },
+   {
+    "id": 23,
+    "kind": "li",
+    "text": "The memory must be requested from the memory allocator at runtime."
+   },
+   {
+    "id": 24,
+    "kind": "li",
+    "text": "We need a way of returning this memory to the allocator when we’re done with our `String`."
+   },
+   {
+    "id": 25,
+    "kind": "p",
+    "text": "That first part is done by us: When we call `String::from`, its implementation requests the memory it needs. This is pretty much universal in programming languages."
+   },
+   {
+    "id": 26,
+    "kind": "p",
+    "text": "However, the second part is different. In languages with a *garbage collector (GC)*, the GC keeps track of and cleans up memory that isn’t being used anymore, and we don’t need to think about it. In most languages without a GC, it’s our responsibility to identify when memory is no longer being used and to call code to explicitly free it, just as we did to request it. Doing this correctly has historically been a difficult programming problem. If we forget, we’ll waste memory. If we do it too early, we’ll have an invalid variable. If we do it twice, that’s a bug too. We need to pair exactly one `allocate` with exactly one `free`."
+   }
+  ]
+ },
+ {
+  "id": "L:goblog-pipelines#0",
+  "slug": "goblog-pipelines",
+  "title": "Go Concurrency Patterns: Pipelines and cancellation - The Go Programming Language",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "h1",
+    "text": "[link]The Go Blog[/link]"
+   },
+   {
+    "id": 2,
+    "kind": "h1",
+    "text": "Go Concurrency Patterns: Pipelines and cancellation"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "Sameer Ajmani 13 March 2014"
+   },
+   {
+    "id": 4,
+    "kind": "h2",
+    "text": "Introduction"
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "Go’s concurrency primitives make it easy to construct streaming data pipelines that make efficient use of I/O and multiple CPUs. This article presents examples of such pipelines, highlights subtleties that arise when operations fail, and introduces techniques for dealing with failures cleanly."
+   },
+   {
+    "id": 6,
+    "kind": "h2",
+    "text": "What is a pipeline?"
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "There’s no formal definition of a pipeline in Go; it’s just one of many kinds of concurrent programs. Informally, a pipeline is a series of *stages* connected by channels, where each stage is a group of goroutines running the same function. In each stage, the goroutines"
+   },
+   {
+    "id": 8,
+    "kind": "li",
+    "text": "receive values from *upstream* via *inbound* channels"
+   },
+   {
+    "id": 9,
+    "kind": "li",
+    "text": "perform some function on that data, usually producing new values"
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "send values *downstream* via *outbound* channels"
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "Each stage has any number of inbound and outbound channels, except the first and last stages, which have only outbound or inbound channels, respectively. The first stage is sometimes called the *source* or *producer*; the last stage, the *sink* or *consumer*."
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "We’ll begin with a simple example pipeline to explain the ideas and techniques. Later, we’ll present a more realistic example."
+   },
+   {
+    "id": 13,
+    "kind": "h2",
+    "text": "Squaring numbers"
+   },
+   {
+    "id": 14,
+    "kind": "p",
+    "text": "Consider a pipeline with three stages."
+   },
+   {
+    "id": 15,
+    "kind": "p",
+    "text": "The first stage, `gen`, is a function that converts a list of integers to a channel that emits the integers in the list. The `gen` function starts a goroutine that sends the integers on the channel and closes the channel when all the values have been sent:"
+   },
+   {
+    "id": 16,
+    "kind": "p",
+    "text": "The second stage, `sq`, receives integers from a channel and returns a channel that emits the square of each received integer. After the inbound channel is closed and this stage has sent all the values downstream, it closes the outbound channel:"
+   },
+   {
+    "id": 17,
+    "kind": "p",
+    "text": "The `main` function sets up the pipeline and runs the final stage: it receives values from the second stage and prints each one, until the channel is closed:"
+   },
+   {
+    "id": 18,
+    "kind": "p",
+    "text": "Since `sq` has the same type for its inbound and outbound channels, we can compose it any number of times. We can also rewrite `main` as a range loop, like the other stages:"
+   },
+   {
+    "id": 19,
+    "kind": "h2",
+    "text": "Fan-out, fan-in"
+   },
+   {
+    "id": 20,
+    "kind": "p",
+    "text": "Multiple functions can read from the same channel until that channel is closed; this is called *fan-out*. This provides a way to distribute work amongst a group of workers to parallelize CPU use and I/O."
+   },
+   {
+    "id": 21,
+    "kind": "p",
+    "text": "A function can read from multiple inputs and proceed until all are closed by multiplexing the input channels onto a single channel that’s closed when all the inputs are closed. This is called *fan-in*."
+   },
+   {
+    "id": 22,
+    "kind": "p",
+    "text": "We can change our pipeline to run two instances of `sq`, each reading from the same input channel. We introduce a new function, *merge*, to fan in the results:"
+   },
+   {
+    "id": 23,
+    "kind": "p",
+    "text": "The `merge` function converts a list of channels to a single channel by starting a goroutine for each inbound channel that copies the values to the sole outbound channel. Once all the `output` goroutines have been started, `merge` starts one more goroutine to close the outbound channel after all sends on that channel are done."
+   },
+   {
+    "id": 24,
+    "kind": "p",
+    "text": "Sends on a closed channel panic, so it’s important to ensure all sends are done before calling close. The [link]`sync.WaitGroup`[/link] type provides a simple way to arrange this synchronization:"
+   },
+   {
+    "id": 25,
+    "kind": "h2",
+    "text": "Stopping short"
+   },
+   {
+    "id": 26,
+    "kind": "p",
+    "text": "There is a pattern to our pipeline functions:"
+   },
+   {
+    "id": 27,
+    "kind": "li",
+    "text": "stages close their outbound channels when all the send operations are done."
+   },
+   {
+    "id": 28,
+    "kind": "li",
+    "text": "stages keep receiving values from inbound channels until those channels are closed."
+   },
+   {
+    "id": 29,
+    "kind": "p",
+    "text": "This pattern allows each receiving stage to be written as a `range` loop and ensures that all goroutines exit once all values have been successfully sent downstream."
+   },
+   {
+    "id": 30,
+    "kind": "p",
+    "text": "But in real pipelines, stages don’t always receive all the inbound values. Sometimes this is by design: the receiver may only need a subset of values to make progress. More often, a stage exits early because an inbound value represents an error in an earlier stage. In either case the receiver should not have to wait for the remaining values to arrive, and we want earlier stages to stop producing values that later stages don’t need."
+   },
+   {
+    "id": 31,
+    "kind": "p",
+    "text": "In our example pipeline, if a stage fails to consume all the inbound values, the goroutines attempting to send those values will block indefinitely:"
+   },
+   {
+    "id": 32,
+    "kind": "p",
+    "text": "This is a resource leak: goroutines consume memory and runtime resources, and heap references in goroutine stacks keep data from being garbage collected. Goroutines are not garbage collected; they must exit on their own."
+   },
+   {
+    "id": 33,
+    "kind": "p",
+    "text": "We need to arrange for the upstream stages of our pipeline to exit even when the downstream stages fail to receive all the inbound values. One way to do this is to change the outbound channels to have a buffer. A buffer can hold a fixed number of values; send operations complete immediately if there’s room in the buffer:"
+   },
+   {
+    "id": 34,
+    "kind": "p",
+    "text": "When the number of values to be sent is known at channel creation time, a buffer can simplify the code. For example, we can rewrite `gen` to copy the list of integers into a buffered channel and avoid creating a new goroutine:"
+   },
+   {
+    "id": 35,
+    "kind": "p",
+    "text": "Returning to the blocked goroutines in our pipeline, we might consider adding a buffer to the outbound channel returned by `merge`:"
+   },
+   {
+    "id": 36,
+    "kind": "p",
+    "text": "While this fixes the blocked goroutine in this program, this is bad code. The choice of buffer size of 1 here depends on knowing the number of values `merge` will receive and the number of values downstream stages will consume. This is fragile: if we pass an additional value to `gen`, or if the downstream stage reads any fewer values, we will again have blocked goroutines."
+   },
+   {
+    "id": 37,
+    "kind": "p",
+    "text": "Instead, we need to provide a way for downstream stages to indicate to the senders that they will stop accepting input."
+   },
+   {
+    "id": 38,
+    "kind": "h2",
+    "text": "Explicit cancellation"
+   },
+   {
+    "id": 39,
+    "kind": "p",
+    "text": "When `main` decides to exit without receiving all the values from `out`, it must tell the goroutines in the upstream stages to abandon the values they’re trying to send. It does so by sending values on a channel called `done`. It sends two values since there are potentially two blocked senders:"
+   }
+  ]
+ },
+ {
+  "id": "L:twir-671#0",
+  "slug": "twir-671",
+  "title": "This Week in Rust 671 · This Week in Rust",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "li",
+    "text": "[link]fix intra doc link resolution when a doc comment is composed of both inner and outer doc comment[/link]"
+   },
+   {
+    "id": 2,
+    "kind": "li",
+    "text": "[link]fix invalid jump to def link when `#[rustc_allow_incoherent_impl]` is involved[/link]"
+   },
+   {
+    "id": 3,
+    "kind": "li",
+    "text": "[link]fix quadratic naming of duplicate sidebar links[/link]"
+   },
+   {
+    "id": 4,
+    "kind": "h4",
+    "text": "[link]Clippy[/link]"
+   },
+   {
+    "id": 5,
+    "kind": "li",
+    "text": "[link]`while_let_loop`: detect the pattern when the loop has a label[/link]"
+   },
+   {
+    "id": 6,
+    "kind": "li",
+    "text": "[link]add new `try_from_instead_of_from_str` lint[/link]"
+   },
+   {
+    "id": 7,
+    "kind": "li",
+    "text": "[link]don't suggest `Box::leak` in `nonnull_unchecked_on_box_ptr`[/link]"
+   },
+   {
+    "id": 8,
+    "kind": "li",
+    "text": "[link]fix `collapsible_match` consuming/mutation checking[/link]"
+   },
+   {
+    "id": 9,
+    "kind": "li",
+    "text": "[link]fix `match_str_case` matching str inside or patterns[/link]"
+   },
+   {
+    "id": 10,
+    "kind": "li",
+    "text": "[link]improve doc attr span tracking for proc-macro[/link]"
+   },
+   {
+    "id": 11,
+    "kind": "h4",
+    "text": "[link]Rust-Analyzer[/link]"
+   },
+   {
+    "id": 12,
+    "kind": "li",
+    "text": "[link]don't fail extension activation when the server fails to start[/link]"
+   },
+   {
+    "id": 13,
+    "kind": "li",
+    "text": "[link]add `type_match` relevance for type-alias[/link]"
+   },
+   {
+    "id": 14,
+    "kind": "li",
+    "text": "[link]coercion safe fn to unsafe fn[/link]"
+   },
+   {
+    "id": 15,
+    "kind": "li",
+    "text": "[link]complete 'false' in cfg attribute[/link]"
+   },
+   {
+    "id": 16,
+    "kind": "li",
+    "text": "[link]complete attr value inside string without quotes[/link]"
+   },
+   {
+    "id": 17,
+    "kind": "li",
+    "text": "[link]const eval cast of single-variant `enum`[/link]"
+   },
+   {
+    "id": 18,
+    "kind": "li",
+    "text": "[link]deduplicate 'derive' and 'test' attribute macro[/link]"
+   },
+   {
+    "id": 19,
+    "kind": "li",
+    "text": "[link]do not type match unknown type[/link]"
+   },
+   {
+    "id": 20,
+    "kind": "li",
+    "text": "[link]don't clear semantic tokens cache on refresh[/link]"
+   },
+   {
+    "id": 21,
+    "kind": "li",
+    "text": "[link]hover show impl header when impl with trait[/link]"
+   },
+   {
+    "id": 22,
+    "kind": "li",
+    "text": "[link]panic in async closures with higher-ranked trait bounds[/link]"
+   },
+   {
+    "id": 23,
+    "kind": "li",
+    "text": "[link]return UB instead of panicking when reading the discriminant of an uninhabited `enum`[/link]"
+   },
+   {
+    "id": 24,
+    "kind": "h3",
+    "text": "[link]Rust Compiler Performance Triage[/link]"
+   },
+   {
+    "id": 25,
+    "kind": "p",
+    "text": "This week was fairly positive. We had no pure regressions, and most of the results came from a few architectural improvements with mixed or mostly positive impact. Some improvements also come from addressing previously triaged regression caused by missing no_alias annotation for references in closures."
+   },
+   {
+    "id": 26,
+    "kind": "p",
+    "text": "The biggest improvement this week is in rustdoc, from tackling quadratic behaviour when generating sidebar links. This was reported by a user, but the effect didn't show up in our benchmarks, so we added a special stress test for it."
+   },
+   {
+    "id": 27,
+    "kind": "p",
+    "text": "Triage done by **@panstromek**. Revision range: [link]3670d253..c1070d69[/link]"
+   },
+   {
+    "id": 28,
+    "kind": "p",
+    "text": "**Summary**:"
+   },
+   {
+    "id": 29,
+    "kind": "th",
+    "text": "(instructions:u)"
+   },
+   {
+    "id": 30,
+    "kind": "th",
+    "text": "mean"
+   },
+   {
+    "id": 31,
+    "kind": "th",
+    "text": "range"
+   },
+   {
+    "id": 32,
+    "kind": "th",
+    "text": "count"
+   },
+   {
+    "id": 33,
+    "kind": "td",
+    "text": "Regressions ❌ (primary)"
+   },
+   {
+    "id": 34,
+    "kind": "td",
+    "text": "0.6%"
+   },
+   {
+    "id": 35,
+    "kind": "td",
+    "text": "[0.2%, 0.8%]"
+   },
+   {
+    "id": 36,
+    "kind": "td",
+    "text": "Regressions ❌ (secondary)"
+   },
+   {
+    "id": 37,
+    "kind": "td",
+    "text": "1.4%"
+   },
+   {
+    "id": 38,
+    "kind": "td",
+    "text": "[0.1%, 5.8%]"
+   },
+   {
+    "id": 39,
+    "kind": "td",
+    "text": "30"
+   },
+   {
+    "id": 40,
+    "kind": "td",
+    "text": "Improvements ✅ (primary)"
+   },
+   {
+    "id": 41,
+    "kind": "td",
+    "text": "-0.6%"
+   },
+   {
+    "id": 42,
+    "kind": "td",
+    "text": "[-1.7%, -0.2%]"
+   },
+   {
+    "id": 43,
+    "kind": "td",
+    "text": "192"
+   },
+   {
+    "id": 44,
+    "kind": "td",
+    "text": "Improvements ✅ (secondary)"
+   },
+   {
+    "id": 45,
+    "kind": "td",
+    "text": "-1.5%"
+   },
+   {
+    "id": 46,
+    "kind": "td",
+    "text": "[-82.5%, -0.1%]"
+   },
+   {
+    "id": 47,
+    "kind": "td",
+    "text": "101"
+   },
+   {
+    "id": 48,
+    "kind": "td",
+    "text": "All ❌✅ (primary)"
+   },
+   {
+    "id": 49,
+    "kind": "td",
+    "text": "-0.6%"
+   },
+   {
+    "id": 50,
+    "kind": "td",
+    "text": "[-1.7%, 0.8%]"
+   },
+   {
+    "id": 51,
+    "kind": "td",
+    "text": "200"
+   },
+   {
+    "id": 52,
+    "kind": "p",
+    "text": "0 Regressions, 2 Improvements, 6 Mixed; 3 of them in rollups 26 artifact comparisons made in total"
+   },
+   {
+    "id": 53,
+    "kind": "p",
+    "text": "[link]Full report here[/link]"
+   },
+   {
+    "id": 54,
+    "kind": "h3",
+    "text": "[link]Approved RFCs[/link]"
+   },
+   {
+    "id": 55,
+    "kind": "p",
+    "text": "Changes to Rust follow the Rust [link]RFC (request for comments) process[/link]. These are the RFCs that were approved for implementation this week:"
+   },
+   {
+    "id": 56,
+    "kind": "li",
+    "text": "*No RFCs were approved this week.*"
+   },
+   {
+    "id": 57,
+    "kind": "h3",
+    "text": "[link]Final Comment Period[/link]"
+   },
+   {
+    "id": 58,
+    "kind": "p",
+    "text": "Every week, [link]the team[/link] announces the 'final comment period' for RFCs and key PRs which are reaching a decision. Express your opinions now."
+   },
+   {
+    "id": 59,
+    "kind": "h4",
+    "text": "[link]Tracking Issues & PRs[/link]"
+   },
+   {
+    "id": 60,
+    "kind": "h5",
+    "text": "[link]Rust[/link]"
+   },
+   {
+    "id": 61,
+    "kind": "li",
+    "text": "[link]Stop using dlltool for generating import libraries on MinGW[/link]"
+   },
+   {
+    "id": 62,
+    "kind": "li",
+    "text": "[link]Stabilize `ptr::try_cast_aligned`[/link]"
+   },
+   {
+    "id": 63,
+    "kind": "li",
+    "text": "[disposition: close] [link]1.99 beta crater regression: overflow evaluating the requirement[/link]"
+   },
+   {
+    "id": 64,
+    "kind": "li",
+    "text": "[link]implement FCW for `rustc_allowed_through_unstable_modules` items[/link]"
+   },
+   {
+    "id": 65,
+    "kind": "li",
+    "text": "[link]fix `VisibleForLeakCheck` in `RegionOutlives` fast path[/link]"
+   },
+   {
+    "id": 66,
+    "kind": "li",
+    "text": "[link]Stabilize `debug_closure_helpers`[/link]"
+   },
+   {
+    "id": 67,
+    "kind": "li",
+    "text": "[link] Support type-relative assoc item paths in generic param defaults & const param types[/link]"
+   },
+   {
+    "id": 68,
+    "kind": "li",
+    "text": "[link]FCW for `#[panic_handler]` on `unsafe fn`.[/link]"
+   },
+   {
+    "id": 69,
+    "kind": "li",
+    "text": "[link]Stabilize `optimize` attribute[/link]"
+   }
+  ]
+ },
+ {
+  "id": "L:globalvoices-bangladesh-protests#0",
+  "slug": "globalvoices-bangladesh-protests",
+  "title": "Bangladesh: Protests can change governments, but can they strengthen democracy? · Global Voices",
+  "segs": [
+   {
+    "id": 1,
+    "kind": "p",
+    "text": "People cheering in front of the Prime Minister's Office after Sheikh Hasina's resignation. [link]Image[/link] via Wikipedia by Md Joni Hossain. CC [link]BY-SA 4.0[/link]."
+   },
+   {
+    "id": 2,
+    "kind": "p",
+    "text": "*This post is part of Global Voices’ September 2026 Spotlight series, “**[link]Protest in Democracy[/link]**.” With this Spotlight, we seek to explore the many forms of protest, the tactics states use to delegitimize and suppress them, and the complex relationship between protest and democracy. You can support this coverage by donating **[link]here[/link]**.*"
+   },
+   {
+    "id": 3,
+    "kind": "p",
+    "text": "On August 5, 2024, thousands of people filled the streets of Dhaka, Bangladesh, as the government that had ruled the country for over 15 years [link]collapsed[/link] amid [link]mass protests[/link] against authoritarianism and demands for accountability."
+   },
+   {
+    "id": 4,
+    "kind": "p",
+    "text": "Weeks earlier, nobody could have imagined it. The day it happened, crowds filled the streets celebrating a government’s fall, celebrating a demand for accountability finally met."
+   },
+   {
+    "id": 5,
+    "kind": "p",
+    "text": "Two years on, a different question follows that victory. Did the country only change a government, or could it also change the system that drove people to the streets in the first place?"
+   },
+   {
+    "id": 6,
+    "kind": "p",
+    "text": "The [link]July uprising[/link] started over [link]quota reform[/link] in government jobs, then grew into wider political and social anger. The Office of the United Nations High Commissioner for Human Rights (OHCHR) [link]counted[/link] roughly 1,400 deaths between July 1 and August 15, 2024. On August 5, [link]Sheikh Hasina[/link] [link]resigned[/link] as prime minister and fled the country."
+   },
+   {
+    "id": 7,
+    "kind": "p",
+    "text": "The government fell, and that was the visible outcome. But people who marched in July [link]wanted more[/link]: reformed institutions, accountability, power structures rebuilt from the ground up."
+   },
+   {
+    "id": 8,
+    "kind": "h3",
+    "text": "What the July revolutions promised"
+   },
+   {
+    "id": 9,
+    "kind": "p",
+    "text": "[link]Hasnat Abdullah[/link], one of the key student leaders of the movement, told BDNews24.com, an online news portal, that some of the structural changes discussed during the uprising have never materialized."
+   },
+   {
+    "id": 10,
+    "kind": "p",
+    "text": "In [link]his words[/link]:"
+   },
+   {
+    "id": 11,
+    "kind": "p",
+    "text": "People expected reforms across the judiciary, executive and every institution of the state. Instead, the same old structure that repeatedly allows authoritarianism to return has survived."
+   },
+   {
+    "id": 12,
+    "kind": "p",
+    "text": "Other observers push back on that assessment. Political analyst Kazi Mohammad Mahbubur Rahman put [link]it this way[/link] while talking to BDNews24.com:"
+   },
+   {
+    "id": 13,
+    "kind": "li",
+    "text": "[link]Translation[/link]"
+   },
+   {
+    "id": 14,
+    "kind": "li",
+    "text": "[link]Original Quote[/link]"
+   },
+   {
+    "id": 15,
+    "kind": "p",
+    "text": "The July uprising won Bangladesh freedom from ‘authoritarian rule,’ and ‘after years without one,’ people got to vote again in an election that brought a government to power democratically."
+   },
+   {
+    "id": 16,
+    "kind": "p",
+    "text": "The election gives a message of democracy. But whether that democracy holds, depends on the works still ahead: keeping the process effective, keeping it active."
+   },
+   {
+    "id": 17,
+    "kind": "p",
+    "text": "Building a full democratic system takes time, he said. So the question after July isn’t only who holds power. It’s how much the rules of holding it have actually changed."
+   },
+   {
+    "id": 18,
+    "kind": "h3",
+    "text": "Reform, measured two years after"
+   },
+   {
+    "id": 19,
+    "kind": "p",
+    "text": "Surveys measure the gap between what people expected and what they got."
+   },
+   {
+    "id": 20,
+    "kind": "p",
+    "text": "[link]BRAC Institute of Governance and Development[/link] (BIGD)’s three-phase Pulse Surveys, run through 2024 and 2025, track a steady drop in optimism. In August 2024, 71 percent of respondents believed the country’s political direction was on the right track. By July 2025, that number had fallen to 42 percent. Meanwhile, 57 percent ranked police and judicial reform among the most urgent priorities; 38 percent pointed to electoral and constitutional reform instead."
+   },
+   {
+    "id": 21,
+    "kind": "p",
+    "text": "Institutions mattered to these citizens as much as elections did, as much as the change in government itself. Whether those reforms hold is still an open question."
+   },
+   {
+    "id": 22,
+    "kind": "p",
+    "text": "Al Jazeera [link]reported[/link] in April 2026 that at least 23 of the 133 ordinances issued under the [link]interim government[/link] (August 2024 to February 2026) had been revoked or left to expire, covering human rights, judicial oversight, anti-corruption efforts, and police reform. Opposition parties and some analysts called it backtracking. The government calls it something else: a review process, [link]laws pulled back[/link] for amendment and re-introduction, not reforms canceled."
+   }
+  ]
+ }
+]

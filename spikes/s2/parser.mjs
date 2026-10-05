@@ -1,25 +1,30 @@
-// Draft <seg> streaming parser for S2: strict grammar first, lenient fallback, repair plan.
-//
-// Strict grammar (what the prompt asks for):
-//   output := WS (seg WS)*
-//   seg    := '<seg id="' DIGITS '">' text '</seg>'
-//   text   := any chars not containing '<seg' or '</seg' (case-sensitive)
-//   WS     := [ \t\r\n]*
-// Lenient tokens (accepted, but each use is counted as a "fix"):
-//   open   := '<' WS? 'seg' (WS attrs)? '>' with id="N" | id='N' | id=N, any case   (fix: open-form)
-//   close  := '<' WS? '/' WS? 'seg' WS? '>', any case                               (fix: close-form)
-//   a new open while a segment is open closes it                                     (fix: implicit-close)
-//   text outside segments is dropped (fences, preambles, notes)                      (fix: stray)
-//   duplicate id: the first one wins; unknown id: dropped                            (fix: dup / unknown)
-//   out-of-order ids are accepted                                                    (fix: reorder)
-//   stream end inside a segment: "cut" when stopReason is max_tokens, else "unclosed-end"
-// Repair plan (returned by plan()): request again only ids that are missing, cut, empty or suspect-merged.
+// Draft <seg> streaming parser for S2. The full grammar, with every rule, is in docs/decisions/S2-seg-parser-grammar.md
+// ("Grammar"). Summary:
+//   Tokens: OPEN strict '<seg id="N">'; OPEN lenient '<' WS? 'seg' (WS attrs)? '>' with id="N" | id='N' | id=N, any
+//   case (fix: open-form); a tag-shaped OPEN without a digit id (fix: bad-id). CLOSE '</seg>' or
+//   '<' WS? '/' WS? 'seg' WS? '>' (fix: close-form). Every other '<' is text.
+//   v2 (default) = close-by-lookahead: inside an open segment, a CLOSE closes only if what follows (after whitespace) is
+//   an OPEN of any kind, another CLOSE, the end of output, or at the very end a partial tag; otherwise it is text
+//   (fix: close-in-text). An OPEN inside an open segment is text (fix: open-in-text).
+//   v1 = plain lenient: every CLOSE closes, an OPEN inside a segment closes it (fix: implicit-close).
+//   Both: text outside segments is stray (fix: stray); a partial tag left at the end of the stream is stray, never
+//   segment text; dup id: first wins (fix: dup); unknown id dropped (fix: unknown); out of order accepted
+//   (fix: reorder); end inside a segment: "cut" if stopReason is max_tokens, else accepted (fix: unclosed-end), except
+//   that a v2 segment with a close-in-text and no later close ends at that close and the rest is stray (the
+//   close-in-text fix is then withdrawn: the close was real, as after a final "</seg>" followed by a code fence).
+//   `strict` = no fixes, nothing missing, no cut. It is a statement about the tags only: an empty segment can be strict.
+// Repair plan (plan()): re-request missing, cut-and-later, empty, suspect-merged, truncated and literal-tag-mismatch
+// ids; the whole chunk when the structure is ambiguous (dup, orphan-close, unknown, bad-id).
 export const OPEN_STRICT = /^<seg id="(\d+)">/;
-const OPEN_LENIENT = /^<\s*seg\b([^<>]*)>/i;
+const OPEN_LENIENT = /^<\s*seg(\s[^<>]*)?>/i; // tag-shaped open; the id is checked separately ("<segment>" is text)
 const CLOSE_STRICT = '</seg>';
 const CLOSE_LENIENT = /^<\s*\/\s*seg\s*>/i;
 const ID_ATTR = /\bid\s*=\s*(?:"(\d+)"|'(\d+)'|(\d+))/i;
 const MAX_TAG = 40; // longest lenient tag we wait for before treating '<' as text
+const PARTIAL = /^<\s*\/?\s*(s|se|seg(\s[^<>]*)?)?$/i; // could still become a tag
+const idOf = (attrs) => { const m = ID_ATTR.exec(attrs ?? ''); return m ? +m.slice(1).find(Boolean) : null; };
+// Literal tag-shaped text, counted per segment in source and output (plan(): a mismatch means the tags were misread).
+export const literalTags = (s) => (s.match(/<\s*\/?\s*seg(\s[^<>]*)?>/gi) ?? []).length;
 
 export class SegParser {
   constructor(expectedIds, { onPartial, onFinal, grammar = 'v2' } = {}) {
@@ -50,6 +55,7 @@ export class SegParser {
     return this.result(stopReason);
   }
   #final(id, text) {
+    if (id === null) return; // bad-id segment: already flagged, its text is dropped
     if (!this.expected.has(id)) { this.fix('unknown', { id }); return; }
     if (this.done.has(id)) { this.fix('dup', { id }); return; }
     if (id < this.lastId) this.fix('reorder', { id });
@@ -84,16 +90,19 @@ export class SegParser {
         if (!strict) this.fix('close-form', { detail: tag });
         this.#close(); this.buf = b.slice(tag.length); continue;
       }
-      const open = (m = OPEN_STRICT.exec(b)) ? [m[0], +m[1], true] : (m = OPEN_LENIENT.exec(b)) && ID_ATTR.exec(m[1]) ? [m[0], +ID_ATTR.exec(m[1]).slice(1).find(Boolean), false] : null;
+      const open = (m = OPEN_STRICT.exec(b)) ? [m[0], +m[1], true] : (m = OPEN_LENIENT.exec(b)) ? [m[0], idOf(m[1]), false] : null;
       if (open) {
         const [tag, id, strict] = open;
         // v2: an open tag inside an open segment is content; a missing close then shows up as missing + merged.
         if (this.v2 && this.open) { this.fix('open-in-text', { id: this.open.id }); this.#text(tag); this.buf = b.slice(tag.length); continue; }
-        if (!strict) this.fix('open-form', { detail: tag });
+        if (id === null) this.fix('bad-id', { detail: tag }); else if (!strict) this.fix('open-form', { detail: tag });
         this.#open(id); this.buf = b.slice(tag.length); continue;
       }
       // could still become a tag: wait for more input
-      if (!final && b.length < MAX_TAG && !b.includes('>') && /^<\s*\/?\s*(s|se|seg(\b[^<>]*)?)?$/i.test(b)) return;
+      if (b.length < MAX_TAG && !b.includes('>') && PARTIAL.test(b)) {
+        if (!final) return;
+        this.stray += b; this.buf = ''; return; // a tag cut by the end of the stream (e.g. "</se"): never segment text
+      }
       // literal '<'
       this.#text('<'); this.buf = b.slice(1);
     }
@@ -103,9 +112,11 @@ export class SegParser {
     const r = rest.replace(/^\s+/, '');
     if (!r) return final ? 'close' : 'wait';
     if (r[0] !== '<') return 'text';
-    if (OPEN_STRICT.test(r) || ((m) => m && ID_ATTR.test(m[1]))(OPEN_LENIENT.exec(r))) return 'close';
+    // Any tag-shaped OPEN counts, also with an unknown, duplicate or bad id: those are flagged later and make the chunk
+    // ambiguous (whole-chunk re-request), which is safer than merging them into this segment as text.
+    if (OPEN_STRICT.test(r) || OPEN_LENIENT.test(r)) return 'close';
     if (r.startsWith(CLOSE_STRICT) || CLOSE_LENIENT.test(r)) return 'close'; // "</seg></seg>": first closes, second is orphan
-    const prefix = r.length < MAX_TAG && !r.includes('>') && /^<\s*\/?\s*(s|se|seg(\b[^<>]*)?)?$/i.test(r);
+    const prefix = r.length < MAX_TAG && !r.includes('>') && PARTIAL.test(r);
     if (prefix) return final ? 'close' : 'wait'; // at the end (e.g. a max_tokens cut inside the next tag) it was a real close
     return 'text';
   }
@@ -146,10 +157,13 @@ export function plan(res, src, { mergeFactor = 1.6 } = {}) {
   const truncated = res.fixes.flatMap((f, i) => (f.kind === 'implicit-close' && res.fixes[i + 1]?.kind === 'unknown' ? [f.id] : []));
   // dup / orphan-close / unknown mean the tag structure itself is in doubt (seen when the source holds a literal
   // "<seg" or "</seg>"): which text belongs to which id can't be trusted, so the whole chunk is requested again.
-  const ambiguous = res.fixes.some((f) => ['dup', 'orphan-close', 'unknown'].includes(f.kind));
+  const ambiguous = res.fixes.some((f) => ['dup', 'orphan-close', 'unknown', 'bad-id'].includes(f.kind));
+  // A segment whose literal tag count differs from its source's was cut or extended at a literal tag (e.g. a retracted
+  // close in the last segment, when the model also dropped the final </seg>).
+  const tagMismatch = present.filter((id) => literalTags(src[id]) !== literalTags(res.segs[id]));
   const ids = Object.keys(src).map(Number);
-  const rerequest = ambiguous ? ids : [...new Set([...res.missing, ...(res.cut ? [res.cut.id] : []), ...merged, ...empty, ...truncated])].sort((a, b) => a - b);
-  return { rerequest, ambiguous, merged, empty, truncated, cut: res.cut?.id ?? null };
+  const rerequest = ambiguous ? ids : [...new Set([...res.missing, ...(res.cut ? [res.cut.id] : []), ...merged, ...empty, ...truncated, ...tagMismatch])].sort((a, b) => a - b);
+  return { rerequest, ambiguous, merged, empty, truncated, tagMismatch, cut: res.cut?.id ?? null };
 }
 
 // Source escaping for the "escaped" arm: only & < > (what a model must round-trip). Output is unescaped the same way.

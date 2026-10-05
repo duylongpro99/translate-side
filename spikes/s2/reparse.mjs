@@ -2,7 +2,8 @@
 import fs from 'node:fs';
 import { SegParser, plan, unesc } from './parser.mjs';
 import { markerCheck, isUntranslated } from './checks.mjs';
-export const CH = Object.fromEntries([...JSON.parse(fs.readFileSync(new URL('chunks.json', import.meta.url))), ...JSON.parse(fs.readFileSync(new URL('adversarial.json', import.meta.url)))].map((c) => [c.id, c]));
+const J = (f) => JSON.parse(fs.readFileSync(new URL(f, import.meta.url)));
+export const CH = Object.fromEntries([...J('chunks.json'), ...J('adversarial.json'), ...J('chunks-large.json')].map((c) => [c.id, c]));
 export function reparse(r, grammar) {
   const c = r.subSegs ? { segs: r.subSegs } : CH[r.chunk];
   const src = Object.fromEntries(c.segs.map((s) => [s.id, s.text]));
