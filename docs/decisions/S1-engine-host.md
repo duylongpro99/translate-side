@@ -1,6 +1,6 @@
 # S1 — MV3 worker suspension during streaming → where the engine runs
 
-Status: proposed (awaiting review; amended after review round 1) · Depends on: S5 record (commit 921fee0) · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS) · Spike code: `spikes/s1/`
+Status: **decision approved by the user 2026-10-05** (engine host = side panel page; DESIGN §4/§4.1 edits approved, applied in the final Phase B step); record amended after review rounds 1–2 · Depends on: S5 record (commit 921fee0) · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS) · Spike code: `spikes/s1/`
 
 ## Question
 
@@ -51,7 +51,7 @@ seconds after the job started, from CDP target discovery.
 
 Findings:
 
-1. **An open Port does not keep the worker alive.** `port-idle` was killed at 30 s in most runs: 6 of 7 in mine, and 4 of 7 in the tester's re-run (aborted at 29 chunks; r1, r3, r5 survived). The panel received
+1. **An open Port does not keep the worker alive.** `port-idle` was killed at 30 s in most runs: 6 of 7 in mine, and 4 of 7 in the tester's re-run (**tester-reported**: those logs are not committed; aborted at 29 chunks; r1, r3, r5 survived). The panel received
    `onDisconnect` at the same moment, and the server saw the client abort the stream after 29 chunks.
 2. **Reading a fetch body is not activity.** With no other activity the worker is usually killed at 30 s mid-stream.
    It was killed in 6 of 7 `noport` runs; `port-idle` likewise survived once. I found no cause for either survivor (logs
@@ -79,6 +79,9 @@ same-origin, cross-origin and browser-initiated navigations, reloads, and switch
 `panel-LOADED`, no `panel-UNLOAD`, for the whole 68 s scenario). It unloads only when the user closes it.
 
 ## Decision
+
+**User decision 2026-10-05: approved.** The DESIGN §4/§4.1 edits in "Proposed spec changes" are approved too. They
+are applied in the final Phase B step, not in this record's commits.
 
 **The engine runs in the side panel page.** This is the plan §5 default, unchanged. The worker only coordinates tabs,
 injection and the context menu, and never awaits a model stream.
@@ -137,7 +140,7 @@ mid-page failures. The panel host removes that whole class of problem (finding 6
   should test translation with the window minimized and keep retry logic tolerant of late timers.
 - Only Chrome 154 was tested; the planned minimum is 138.
 - Surviving no-keepalive runs are unexplained, and more frequent than my runs suggested. I saw 2 of 14 (`noport` 1/7,
-  `port-idle` 1/7); the tester saw 4 of 14. The worker is killed in most runs, not reliably. That doesn't change the
+  `port-idle` 1/7); the tester saw 4 of 14 (tester-reported, logs not committed). The worker is killed in most runs, not reliably. That doesn't change the
   decision, which doesn't rely on the timer either way: a keepalive-free design must assume it can be killed.
 - The `results/r1-*` logs lack the `ttfb` field in `stream-open`. Round 1 was produced by an older `server.mjs` (before
   the `ttfb` option was added). Rounds 2+ use the committed one. The round-1 results are kept; their stream behavior is
