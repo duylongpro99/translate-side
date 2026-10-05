@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Same steps as `pnpm check` locally, split for readable CI logs.
+      - name: Lint (includes the engine/ boundary rule)
+        run: pnpm run lint
+      - name: Typecheck (app + engine/ without DOM or chrome types)
+        run: pnpm run typecheck
+      - name: Unit, snapshot and boundary tests
+        run: pnpm run test
+      - name: Build
+        run: pnpm run build

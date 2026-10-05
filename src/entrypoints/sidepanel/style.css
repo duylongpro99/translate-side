@@ -1,0 +1,29 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+}
+body {
+  margin: 0;
+}
+.panel {
+  padding: 12px 16px;
+}
+.panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panel__header h1 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+.panel__gear {
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.panel__empty {
+  opacity: 0.7;
+}

@@ -1,0 +1,23 @@
+{
+  // Boundary rule, type layer (DESIGN.md §5.1): engine/ is plain TypeScript.
+  // No DOM lib and no ambient @types (chrome, node), so DOM or chrome.* usage fails typecheck.
+  // The import layer is enforced by ESLint (eslint.config.js, "engine boundary").
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "types": [],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["./**/*.ts"],
+  "exclude": ["./**/*.test.ts"]
+}

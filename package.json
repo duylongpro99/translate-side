@@ -1,0 +1,44 @@
+{
+  "name": "translate-side",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Translate the current page in Chrome's side panel.",
+  "packageManager": "pnpm@10.6.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "prepare": "wxt prepare",
+    "postinstall": "wxt prepare",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p src/engine/tsconfig.json",
+    "lint": "eslint --max-warnings=0 .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@eslint/js": "^10.0.1",
+    "@preact/preset-vite": "^2.10.6",
+    "@types/chrome": "^0.3.4",
+    "@types/node": "^24",
+    "eslint": "^10",
+    "globals": "^17.13.0",
+    "jsdom": "^30.1.2",
+    "preact": "^11.0.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0",
+    "vite": "^7",
+    "vitest": "5",
+    "wxt": "0.21.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
