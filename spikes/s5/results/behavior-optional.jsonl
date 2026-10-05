@@ -1,0 +1,55 @@
+{"t":"0.0","src":"server","ev":"listening","port":8901}
+{"t":"1.8","src":"sw","ev":"sw-config","mode":"behavior","hasClose":"function","hasGetLayout":"function","perms":{"origins":[],"permissions":["activeTab","storage","scripting","sidePanel"]}}
+{"t":"2.1","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":null}
+{"t":"2.1","src":"sw","ev":"inject-FAIL","why":"onUpdated complete (no gesture)","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"5.1","src":"driver","ev":"STEP 1: A loaded, no grant: worker probe","panelTargetOpen":false}
+{"t":"5.2","src":"sw","ev":"inject-FAIL","why":"driver-probe:1-A-nogrant","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"6.7","src":"driver","ev":"STEP 2: worker sidePanel.open with no gesture","panelTargetOpen":false}
+{"t":"6.7","src":"sw","ev":"sidePanel.open-FAIL","why":"no gesture (driver eval)","err":"`sidePanel.open()` may only be called in response to a user gesture."}
+{"t":"8.2","src":"driver","ev":"STEP 3: triggerAction on A (toolbar click)","panelTargetOpen":false}
+{"t":"8.2","src":"driver","r":{"id":9,"result":{}}}
+{"t":"8.2","src":"panel","ev":"panel-LOADED","href":"chrome-extension://meghjollljmbpehlhknfgkhaoamkfpch/panel.html"}
+{"t":"10.7","src":"driver","ev":"STEP 4: worker probe after grant","panelTargetOpen":true}
+{"t":"10.7","src":"sw","ev":"inject-FAIL","why":"driver-probe:4-A-granted","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"12.2","src":"driver","ev":"STEP 5: click #hash link (same document)","panelTargetOpen":true}
+{"t":"12.2","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":null}
+{"t":"12.2","src":"sw","ev":"inject-FAIL","why":"onUpdated complete (no gesture)","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"13.2","src":"panel","ev":"panel-alive","upSec":5}
+{"t":"13.7","src":"driver","ev":"STEP 6: worker probe after hash nav","panelTargetOpen":true}
+{"t":"13.7","src":"sw","ev":"inject-FAIL","why":"driver-probe:6-A-hash","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"15.2","src":"driver","ev":"STEP 7: click pushState link","panelTargetOpen":true}
+{"t":"15.2","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":null}
+{"t":"15.2","src":"sw","ev":"inject-FAIL","why":"onUpdated complete (no gesture)","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"16.7","src":"driver","ev":"STEP 8: worker probe after pushState","panelTargetOpen":true}
+{"t":"16.7","src":"sw","ev":"inject-FAIL","why":"driver-probe:8-A-push","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"18.2","src":"panel","ev":"panel-alive","upSec":10}
+{"t":"18.2","src":"driver","ev":"STEP 9: click link to B (same origin, full nav)","panelTargetOpen":true}
+{"t":"18.2","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":null}
+{"t":"18.2","src":"sw","ev":"inject-FAIL","why":"onUpdated complete (no gesture)","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"20.7","src":"driver","ev":"STEP 10: worker probe on B","panelTargetOpen":true}
+{"t":"20.7","src":"sw","ev":"inject-FAIL","why":"driver-probe:10-B","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"22.2","src":"driver","ev":"STEP 11: panel click: inject","panelTargetOpen":true}
+{"t":"22.2","src":"panel","ev":"panel-click-inject-FAIL","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host.","activation":true}
+{"t":"23.2","src":"panel","ev":"panel-alive","upSec":15}
+{"t":"23.7","src":"driver","ev":"STEP 12: panel click: sidePanel.open","panelTargetOpen":true}
+{"t":"23.7","src":"panel","ev":"panel-click-sidePanel.open-OK"}
+{"t":"25.2","src":"driver","ev":"STEP 13: triggerAction on B","panelTargetOpen":true}
+{"t":"25.3","src":"driver","r":{"id":30,"result":{}}}
+{"t":"25.6","src":"panel","ev":"panel-UNLOAD"}
+{"t":"27.8","src":"driver","ev":"STEP 14: click link to C (cross origin)","panelTargetOpen":false}
+{"t":"27.8","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":null}
+{"t":"27.8","src":"sw","ev":"inject-FAIL","why":"onUpdated complete (no gesture)","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"30.3","src":"driver","ev":"STEP 15: worker probe on C","panelTargetOpen":false}
+{"t":"30.3","src":"sw","ev":"inject-FAIL","why":"driver-probe:15-C","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"31.8","src":"driver","ev":"STEP 16: panel click: request site permission","panelTargetOpen":false}
+{"t":"31.8","src":"driver","ev":"no panel target to click"}
+{"t":"35.8","src":"driver","ev":"STEP 17: browser-initiated nav (omnibox-like) to A","panelTargetOpen":false}
+{"t":"35.8","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":null}
+{"t":"35.8","src":"sw","ev":"inject-FAIL","why":"onUpdated complete (no gesture)","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"38.3","src":"driver","ev":"STEP 18: worker probe on A after omnibox nav","panelTargetOpen":false}
+{"t":"38.3","src":"sw","ev":"inject-FAIL","why":"driver-probe:18-A2","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"39.8","src":"driver","ev":"STEP 19: reload A","panelTargetOpen":false}
+{"t":"39.8","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":null}
+{"t":"39.8","src":"sw","ev":"inject-FAIL","why":"onUpdated complete (no gesture)","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"42.3","src":"driver","ev":"STEP 20: end","panelTargetOpen":false}
+{"t":["browser_ui chrome://omnibox-popup.top-chrome/","browser_ui chrome://omnibox-popup.top-chrome/omnibox_popup_aim.html","page about:blank","service_worker chrome-extension://meghjollljmbpehlhknfgkhaoamkfpch/sw.js","page http://127.0.0.1:8901/a.html"],"src":"driver","ev":"targets-at-end"}

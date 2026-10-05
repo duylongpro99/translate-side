@@ -1,0 +1,180 @@
+# S5 — `activeTab` and navigation → permission and allowlist design
+
+Status: proposed (awaiting review) · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS) · Spike code: `spikes/s5/`
+
+## Question
+
+ROADMAP §2 S5 asks: after the panel opens on page A, what happens on a same-site and a cross-site navigation? Does the
+panel stay? Can the content script be re-injected without a gesture? Does a click inside the panel count as a gesture?
+Is "auto-open on allowlisted sites" possible? Which `minimum_chrome_version`?
+
+Added by the supervisor from the Phase A review:
+1. Does opening the panel through the toolbar action / `_execute_action` (`Alt+T`) with
+   `setPanelBehavior({ openPanelOnActionClick: true })` grant `activeTab` for later injection? Do the `Alt+T` command
+   and the context-menu → `sidePanel.open()` path grant it?
+2. Should `optional_host_permissions` include `http://*/*` (LAN gateways, ROADMAP §8 item 19)?
+
+## Method
+
+- `spikes/s5/site/` holds three local pages on two origins: `http://127.0.0.1:<port>/a.html` and `/b.html`, and
+  `http://localhost:<port>/c.html` (a different origin and site). `server.mjs` serves them and collects logs.
+- `spikes/s5/ext/` is an MV3 extension with `sidePanel`, `storage`, `activeTab`, `scripting`,
+  `optional_host_permissions` for both origins, a `side_panel.default_path`, and `_execute_action` = `Alt+T`. The worker
+  logs every `action.onClicked` and `tabs.onUpdated`. It tries `scripting.executeScript` at each step ("probe") and
+  tries `sidePanel.open()` with no gesture. The panel has buttons that inject, call `sidePanel.open()` and call
+  `permissions.request()`.
+- `spikes/s5/drive.mjs` runs an isolated **headful** Chrome (temporary profile). It clicks the toolbar action with CDP
+  `Extensions.triggerAction`. It clicks links and panel buttons with real `Input.dispatchMouseEvent` events, which give
+  the page user activation. It navigates "omnibox-style" with `Page.navigate`. Worker probes with no gesture run
+  through `Runtime.evaluate` on the worker.
+- Variants: `mode` = `behavior` (`openPanelOnActionClick: true`) or `onclicked` (`false`; `action.onClicked` calls
+  `sidePanel.open({tabId})` and injects). `variant` = `optional` (site origins only optional), or `granted` (site origins
+  as install-time host permissions, standing in for "the user granted the optional permission when allowlisting").
+- Re-run: `cd spikes/s5 && node server.mjs 8901 results/x.jsonl & node drive.mjs onclicked 8901 optional`.
+
+## Evidence
+
+Logs: `spikes/s5/results/{behavior-optional,onclicked-optional,onclicked-granted,permtest,permtest-undeclared}.jsonl`.
+
+### Who can inject, and when (worker `executeScript` probe, no gesture)
+
+| Step | `behavior` + optional | `onclicked` + optional | `onclicked` + host permission |
+|---|---|---|---|
+| A loaded, nothing clicked | FAIL | FAIL | OK |
+| Toolbar action clicked on A | panel opens; **inject FAIL**; `onClicked` not fired | panel opens; inject OK | OK |
+| Hash link on A (`#sec`) | FAIL | OK | OK |
+| `history.pushState` on A | FAIL | OK | OK |
+| Link click A → B (same origin, full navigation) | FAIL | **OK** | OK |
+| Reload B | – | OK | OK |
+| Omnibox-style navigation B → A (same origin) | – | OK | OK |
+| Second tab opened (B) | – | FAIL (no grant for that tab) | OK |
+| Back on the first tab | – | OK | OK |
+| Link click → C (cross origin) | FAIL | **FAIL** (grant revoked) | OK |
+| `history.back()` C → A | – | FAIL | OK |
+
+In the `onclicked` + optional run, `tabs.onUpdated` exposed `tab.url` exactly while the grant was alive (`urlVisible`
+is null once it is revoked). That gives the worker a cheap "do I still have access?" signal.
+
+### Gestures
+
+| Call | Result |
+|---|---|
+| `sidePanel.open()` from the worker with no gesture | FAIL: "`sidePanel.open()` may only be called in response to a user gesture." |
+| `sidePanel.open({tabId})` inside `action.onClicked` | OK |
+| `sidePanel.open()` from a click inside the panel | OK (panel click = user activation) |
+| `scripting.executeScript` from a click inside the panel, no `activeTab` grant | FAIL (`navigator.userActivation.isActive` was `true`): **a panel click is a gesture but not an `activeTab` grant** |
+| `permissions.request({origins:["http://localhost/*"]})` from a panel click | the prompt appears (still pending after 3 s and 12 s), then resolved `true`; `permissions.getAll()` shows the new origin |
+| `permissions.request` for an origin not in the manifest (`http://192.168.1.50/*`) | FAIL: "Only permissions specified in the manifest may be requested." |
+
+Note: the permission prompt resolved `true` 8–18 s after it appeared, in 3 of 3 runs. The driver never clicks it, and the
+test window was visible on the desktop. **Unexplained** (the user has been asked whether someone clicked "Allow"). The
+conclusion holds either way: the prompt appears from a panel click, and once it resolves `true` the grant is real
+(`permissions.getAll()`).
+
+### Panel lifetime
+
+With the global panel (`side_panel.default_path`), the panel loaded once and stayed loaded through every step:
+same-origin and cross-origin navigation, reload, omnibox navigation, and opening, switching to and closing a second
+tab. That's one `panel-LOADED` and no `panel-UNLOAD` across the 68 s scenario. In `behavior` mode a second toolbar
+click **toggles the panel closed** (`panel-UNLOAD` 0.4 s after the click).
+
+### API availability on 154
+
+`chrome.sidePanel.close` and `chrome.sidePanel.getLayout` are both `function`.
+
+### Manual check still open: `Alt+T` and the context menu
+
+CDP can neither press browser-level shortcuts nor click context-menu items, so these two paths weren't automated.
+`spikes/s5/manual-ext/README.md` is a 2-minute checklist with a logging extension. It covers `Alt+T` with
+`openPanelOnActionClick` off and on, the context menu → `sidePanel.open` + inject, and a named command.
+
+Expected result: `_execute_action` is documented as equivalent to clicking the action, and `Extensions.triggerAction`
+followed the normal action path here (it fired `onClicked` and granted `activeTab` in `onclicked` mode). So `Alt+T`
+should behave exactly like the toolbar rows above, in both modes. Context-menu clicks and named commands are documented
+`activeTab` grants. **Unverified until someone runs the checklist.**
+
+## Decision
+
+1. **Do not use `setPanelBehavior({ openPanelOnActionClick: true })`.** It opens the panel without granting
+   `activeTab` and without firing `action.onClicked`, so the extension can never read the page it opened on. Use
+   `openPanelOnActionClick: false`. In `action.onClicked` (toolbar or `Alt+T`), call `sidePanel.open({ tabId })` and
+   then inject. **This deviates from plan M0-E2 ("action click and `Alt+T` open the panel for the tab
+   (`setPanelBehavior`)")** and answers the reviewer's question: the answer is no. It also avoids the toggle-closed
+   behavior.
+2. **Allowlist = optional host permission, as the plan default says.** Allowlisting a site calls
+   `permissions.request({ origins: [<origin>/*] })` from a click in the panel (a valid gesture). With the permission,
+   the worker re-injects on every `tabs.onUpdated` `complete` with no gesture, including cross-origin navigation within
+   allowlisted origins, back/forward and other tabs.
+3. **Without the site permission:**
+   - `activeTab` lasts longer than ROADMAP §8 item 6 assumed. It survives same-document navigation, same-origin link
+     navigation, reload and same-origin omnibox navigation. It is lost on cross-origin navigation and never covers
+     other tabs.
+   - So the worker re-injects on `tabs.onUpdated` while the grant lives. It treats `tab.url` being hidden, or an
+     inject failure, as "grant lost".
+   - When the grant is lost, the panel shows "Translate this page". A panel button can't re-grant `activeTab`, so that
+     state tells the user to press `Alt+T` or the toolbar icon. It also offers "Always translate on this site", which
+     requests the optional host permission.
+4. **"Auto-open" becomes "auto-translate when the panel is already open"**, as in the plan default (§8 item 6).
+   `sidePanel.open()` without a gesture fails. The panel itself persists across navigations, so the
+   auto-translate-when-open flow needs no open call.
+5. **`minimum_chrome_version`: 138, as in the plan default.** Nothing in S5 needs a newer version. Per-tab
+   `sidePanel.close` (141) is gated by `typeof chrome.sidePanel.close === 'function'`. Only 154 was tested; 138 itself
+   was not.
+6. **`optional_host_permissions`: add `http://*/*`** (supervisor question 2). Chrome refuses
+   `permissions.request` for any origin not covered by the manifest (evidence above). Without `http://*/*` the extension
+   could never be granted:
+   - a LAN gateway, e.g. `http://192.168.1.50:11434` (ROADMAP §8 item 19);
+   - an allowlisted plain-HTTP site under decision 2.
+
+   Optional host permissions show no install-time warning. At runtime we only ever request the exact origin the user
+   picked. Proposed manifest:
+   `["https://*/*", "http://*/*"]` (`http://*/*` already covers `http://localhost/*` and `http://127.0.0.1/*`; keeping
+   them listed is harmless). Store-listing justification: "Optional, requested per origin at runtime, only for a
+   provider endpoint or a site the user explicitly allowlists for automatic translation."
+
+## Deviation from plan default
+
+**Deviation (a): how the action opens the panel (affects M0-E2 and M0-E3).**
+
+- Plan text: M0-E2 says "action click and `Alt+T` open the panel for the tab (`setPanelBehavior`)". M0-E3 says "inject
+  the content script with `chrome.scripting` under `activeTab`". The two can't both hold.
+- Evidence (`results/behavior-optional.jsonl`): with `openPanelOnActionClick: true`, the toolbar action opened the panel
+  but:
+  - `executeScript` failed with "Cannot access contents of the page…";
+  - `action.onClicked` never fired;
+  - a panel-button inject also failed;
+  - a second click closed the panel.
+
+  With `openPanelOnActionClick: false` and `action.onClicked` → `sidePanel.open({tabId})` + inject
+  (`results/onclicked-optional.jsonl`), the panel opened and injection worked.
+- Proposed change: `setPanelBehavior({ openPanelOnActionClick: false })`. The action handler opens the panel and injects
+  (Decision 1). Phase A code is not changed by this spike.
+
+**Not a deviation, but a new recommendation for the Phase A manifest:** add `http://*/*` to
+`optional_host_permissions` (Decision 6). The plan deferred this question to S5.
+
+The other S5-related plan defaults hold: optional host permission for allowlisted sites; "auto-open" → "auto-translate
+when the panel is already open"; `minimum_chrome_version` 138.
+
+## Consequences
+
+- M0-E2: `setPanelBehavior({ openPanelOnActionClick: false })`; `action.onClicked` → `sidePanel.open({tabId})` →
+  inject. `sidePanel.open` must be called synchronously in the handler, before any `await` that could lose the gesture.
+  The spike calls it first.
+- M0-E3: injection triggers are action click / `Alt+T` / context menu (grant), plus `tabs.onUpdated` `complete` (re-inject
+  while the grant or host permission holds). "Cannot inject here" covers `chrome://`, Web Store, a lost grant and a
+  denied permission.
+- The panel needs a "lost access" state with the two actions above. A panel button never triggers injection on its own
+  without a grant.
+- DESIGN §8 and ROADMAP §8 item 6 should be updated with the more accurate `activeTab` lifetime (finding table) and the
+  `openPanelOnActionClick` pitfall.
+- Phase A manifest: add `http://*/*` to `optional_host_permissions`.
+
+## Limits of this spike
+
+- `Extensions.triggerAction` stands in for a real toolbar click. A real click, `Alt+T` and the context menu are in the
+  manual checklist, which hasn't been run yet.
+- "Host permission granted" was emulated with install-time `host_permissions`. The runtime-grant run showed the same
+  `permissions.getAll()` result, but its post-grant probe ran on a different origin.
+- Global panel only. Tab-specific panels (`sidePanel.setOptions({ tabId, path })`) were not tested. They aren't needed
+  under the S1 decision (one panel document per window hosts the per-tab jobs).

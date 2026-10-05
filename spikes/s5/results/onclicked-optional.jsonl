@@ -1,0 +1,94 @@
+{"t":"0.0","src":"server","ev":"listening","port":8901}
+{"t":"1.6","src":"sw","ev":"sw-config","mode":"onclicked","hasClose":"function","hasGetLayout":"function","perms":{"origins":[],"permissions":["activeTab","storage","scripting","sidePanel"]}}
+{"t":"2.0","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":null}
+{"t":"2.0","src":"sw","ev":"inject-FAIL","why":"onUpdated complete (no gesture)","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"5.0","src":"driver","ev":"STEP 1: A loaded, no grant: worker probe","panelTargetOpen":false}
+{"t":"5.0","src":"sw","ev":"inject-FAIL","why":"driver-probe:1-A-nogrant","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"6.5","src":"driver","ev":"STEP 2: worker sidePanel.open with no gesture","panelTargetOpen":false}
+{"t":"6.5","src":"sw","ev":"sidePanel.open-FAIL","why":"no gesture (driver eval)","err":"`sidePanel.open()` may only be called in response to a user gesture."}
+{"t":"8.0","src":"driver","ev":"STEP 3: triggerAction on A (toolbar click)","panelTargetOpen":false}
+{"t":"8.0","src":"sw","ev":"action.onClicked","url":"http://127.0.0.1:8901/a.html"}
+{"t":"8.0","src":"driver","r":{"id":9,"result":{}}}
+{"t":"8.1","src":"sw","ev":"sidePanel.open-OK","why":"action click gesture"}
+{"t":"8.1","src":"sw","ev":"inject-OK","why":"after action click","url":"http://127.0.0.1:8901/a.html"}
+{"t":"8.1","src":"panel","ev":"panel-LOADED","href":"chrome-extension://dnknkimacdlljajklebgcjhfhccfphnm/panel.html"}
+{"t":"8.1","src":"panel","ev":"panel-visibility","state":"visible"}
+{"t":"10.6","src":"driver","ev":"STEP 4: worker probe after grant","panelTargetOpen":true}
+{"t":"10.6","src":"sw","ev":"inject-OK","why":"driver-probe:4-A-granted","url":"http://127.0.0.1:8901/a.html"}
+{"t":"12.1","src":"driver","ev":"STEP 5: click #hash link (same document)","panelTargetOpen":true}
+{"t":"12.1","src":"sw","ev":"tabs.onUpdated","info":{"status":"loading","url":"http://127.0.0.1:8901/a.html#sec"},"urlVisible":"http://127.0.0.1:8901/a.html#sec"}
+{"t":"12.1","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":"http://127.0.0.1:8901/a.html#sec"}
+{"t":"12.1","src":"sw","ev":"inject-OK","why":"onUpdated complete (no gesture)","url":"http://127.0.0.1:8901/a.html#sec"}
+{"t":"13.1","src":"panel","ev":"panel-alive","upSec":5}
+{"t":"13.6","src":"driver","ev":"STEP 6: worker probe after hash nav","panelTargetOpen":true}
+{"t":"13.6","src":"sw","ev":"inject-OK","why":"driver-probe:6-A-hash","url":"http://127.0.0.1:8901/a.html#sec"}
+{"t":"15.1","src":"driver","ev":"STEP 7: click pushState link","panelTargetOpen":true}
+{"t":"15.1","src":"sw","ev":"tabs.onUpdated","info":{"status":"loading","url":"http://127.0.0.1:8901/a-pushed.html"},"urlVisible":"http://127.0.0.1:8901/a-pushed.html"}
+{"t":"15.1","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":"http://127.0.0.1:8901/a-pushed.html"}
+{"t":"15.1","src":"sw","ev":"inject-OK","why":"onUpdated complete (no gesture)","url":"http://127.0.0.1:8901/a-pushed.html"}
+{"t":"16.6","src":"driver","ev":"STEP 8: worker probe after pushState","panelTargetOpen":true}
+{"t":"16.6","src":"sw","ev":"inject-OK","why":"driver-probe:8-A-push","url":"http://127.0.0.1:8901/a-pushed.html"}
+{"t":"18.1","src":"panel","ev":"panel-alive","upSec":10}
+{"t":"18.1","src":"driver","ev":"STEP 9: click link to B (same origin, full nav)","panelTargetOpen":true}
+{"t":"18.1","src":"sw","ev":"tabs.onUpdated","info":{"status":"loading","url":"http://127.0.0.1:8901/b.html"},"urlVisible":"http://127.0.0.1:8901/b.html"}
+{"t":"18.1","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":"http://127.0.0.1:8901/b.html"}
+{"t":"18.1","src":"sw","ev":"inject-OK","why":"onUpdated complete (no gesture)","url":"http://127.0.0.1:8901/b.html"}
+{"t":"20.6","src":"driver","ev":"STEP 10: worker probe on B","panelTargetOpen":true}
+{"t":"20.6","src":"sw","ev":"inject-OK","why":"driver-probe:10-B","url":"http://127.0.0.1:8901/b.html"}
+{"t":"22.1","src":"driver","ev":"STEP 11: panel click: inject","panelTargetOpen":true}
+{"t":"22.1","src":"panel","ev":"panel-click-inject-OK","url":"http://127.0.0.1:8901/b.html"}
+{"t":"23.1","src":"panel","ev":"panel-alive","upSec":15}
+{"t":"23.6","src":"driver","ev":"STEP 12: panel click: sidePanel.open","panelTargetOpen":true}
+{"t":"23.6","src":"panel","ev":"panel-click-sidePanel.open-OK"}
+{"t":"25.1","src":"driver","ev":"STEP 13: triggerAction on B","panelTargetOpen":true}
+{"t":"25.1","src":"sw","ev":"action.onClicked","url":"http://127.0.0.1:8901/b.html"}
+{"t":"25.1","src":"sw","ev":"sidePanel.open-OK","why":"action click gesture"}
+{"t":"25.1","src":"sw","ev":"inject-OK","why":"after action click","url":"http://127.0.0.1:8901/b.html"}
+{"t":"25.1","src":"driver","r":{"id":30,"result":{}}}
+{"t":"27.6","src":"driver","ev":"STEP 14: reload B (granted)","panelTargetOpen":true}
+{"t":"27.7","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":"http://127.0.0.1:8901/b.html"}
+{"t":"27.7","src":"sw","ev":"inject-OK","why":"onUpdated complete (no gesture)","url":"http://127.0.0.1:8901/b.html"}
+{"t":"28.1","src":"panel","ev":"panel-alive","upSec":20}
+{"t":"30.1","src":"driver","ev":"STEP 15: worker probe after reload","panelTargetOpen":true}
+{"t":"30.2","src":"sw","ev":"inject-OK","why":"driver-probe:15-B-reload","url":"http://127.0.0.1:8901/b.html"}
+{"t":"31.7","src":"driver","ev":"STEP 16: browser-initiated nav to A (same origin)","panelTargetOpen":true}
+{"t":"31.7","src":"sw","ev":"tabs.onUpdated","info":{"status":"loading","url":"http://127.0.0.1:8901/a.html"},"urlVisible":"http://127.0.0.1:8901/a.html"}
+{"t":"31.7","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":"http://127.0.0.1:8901/a.html"}
+{"t":"31.7","src":"sw","ev":"inject-OK","why":"onUpdated complete (no gesture)","url":"http://127.0.0.1:8901/a.html"}
+{"t":"33.1","src":"panel","ev":"panel-alive","upSec":25}
+{"t":"34.2","src":"driver","ev":"STEP 17: worker probe on A after same-origin omnibox nav","panelTargetOpen":true}
+{"t":"34.2","src":"sw","ev":"inject-OK","why":"driver-probe:17-A-omni","url":"http://127.0.0.1:8901/a.html"}
+{"t":"35.7","src":"driver","ev":"STEP 18: open 2nd tab (switch tabs)","panelTargetOpen":true}
+{"t":"35.7","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":null}
+{"t":"35.7","src":"sw","ev":"inject-FAIL","why":"onUpdated complete (no gesture)","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"38.1","src":"panel","ev":"panel-alive","upSec":30}
+{"t":"38.2","src":"driver","ev":"STEP 19: worker probe on tab 2","panelTargetOpen":true}
+{"t":"38.2","src":"sw","ev":"inject-FAIL","why":"driver-probe:19-tab2","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"39.7","src":"driver","ev":"STEP 20: close 2nd tab (back to tab 1)","panelTargetOpen":true}
+{"t":"42.2","src":"driver","ev":"STEP 21: worker probe back on tab 1","panelTargetOpen":true}
+{"t":"42.2","src":"sw","ev":"inject-OK","why":"driver-probe:21-tab1-back","url":"http://127.0.0.1:8901/a.html"}
+{"t":"43.1","src":"panel","ev":"panel-alive","upSec":35}
+{"t":"43.7","src":"driver","ev":"STEP 22: click link to C (cross origin)","panelTargetOpen":true}
+{"t":"43.8","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":null}
+{"t":"43.8","src":"sw","ev":"inject-FAIL","why":"onUpdated complete (no gesture)","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"46.2","src":"driver","ev":"STEP 23: worker probe on C","panelTargetOpen":true}
+{"t":"46.2","src":"sw","ev":"inject-FAIL","why":"driver-probe:23-C","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"47.7","src":"driver","ev":"STEP 24: panel click: request site permission (C origin)","panelTargetOpen":true}
+{"t":"47.7","src":"panel","ev":"perm-request-start","activation":true,"tabUrl":"(hidden)"}
+{"t":"48.1","src":"panel","ev":"panel-alive","upSec":40}
+{"t":"50.8","src":"panel","ev":"perm-request-PENDING-after-3s (prompt shown?)"}
+{"t":"53.1","src":"panel","ev":"panel-alive","upSec":45}
+{"t":"58.1","src":"panel","ev":"panel-alive","upSec":50}
+{"t":"59.8","src":"panel","ev":"perm-request-still-pending-after-12s"}
+{"t":"62.8","src":"driver","ev":"STEP 25: worker probe on C after permission request","panelTargetOpen":true}
+{"t":"62.8","src":"sw","ev":"inject-FAIL","why":"driver-probe:25-C-after-perm","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"63.1","src":"panel","ev":"panel-alive","upSec":55}
+{"t":"64.3","src":"driver","ev":"STEP 26: click back to A via history","panelTargetOpen":true}
+{"t":"64.3","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":null}
+{"t":"64.3","src":"sw","ev":"inject-FAIL","why":"onUpdated complete (no gesture)","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"66.0","src":"panel","ev":"perm-request-result","ok":true}
+{"t":"66.8","src":"driver","ev":"STEP 27: worker probe after back","panelTargetOpen":true}
+{"t":"66.8","src":"sw","ev":"inject-FAIL","why":"driver-probe:27-back","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"68.1","src":"panel","ev":"panel-alive","upSec":60}
+{"t":"68.3","src":"driver","ev":"STEP 28: end","panelTargetOpen":true}
+{"t":["browser_ui chrome://omnibox-popup.top-chrome/","page about:blank","browser_ui chrome://omnibox-popup.top-chrome/omnibox_popup_aim.html","service_worker chrome-extension://dnknkimacdlljajklebgcjhfhccfphnm/sw.js","page http://127.0.0.1:8901/a.html","page chrome-extension://dnknkimacdlljajklebgcjhfhccfphnm/panel.html"],"src":"driver","ev":"targets-at-end"}

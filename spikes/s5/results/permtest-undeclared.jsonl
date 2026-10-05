@@ -1,0 +1,16 @@
+{"t":"0.0","src":"server","ev":"listening","port":8901}
+{"t":"1.8","src":"sw","ev":"sw-config","mode":"onclicked","hasClose":"function","hasGetLayout":"function","perms":{"origins":[],"permissions":["activeTab","storage","scripting","sidePanel"]}}
+{"t":"2.2","src":"sw","ev":"tabs.onUpdated","info":{"status":"complete"},"urlVisible":null}
+{"t":"2.2","src":"sw","ev":"inject-FAIL","why":"onUpdated complete (no gesture)","err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"5.2","src":"driver","ev":"STEP 1: triggerAction on A","panelTargetOpen":false}
+{"t":"5.2","src":"sw","ev":"action.onClicked","url":"http://127.0.0.1:8901/a.html"}
+{"t":"5.2","src":"driver","r":{"id":7,"result":{}}}
+{"t":"5.3","src":"sw","ev":"sidePanel.open-OK","why":"action click gesture"}
+{"t":"5.3","src":"sw","ev":"inject-OK","why":"after action click","url":"http://127.0.0.1:8901/a.html"}
+{"t":"5.3","src":"panel","ev":"panel-LOADED","href":"chrome-extension://mpmndpdmfdniandpbmhbielfmcejeokh/panel.html"}
+{"t":"5.3","src":"panel","ev":"panel-visibility","state":"visible"}
+{"t":"7.7","src":"driver","ev":"STEP 2: panel click: request undeclared LAN origin","panelTargetOpen":true}
+{"t":"7.7","src":"panel","ev":"undeclared-perm-ERR","err":"Only permissions specified in the manifest may be requested."}
+{"t":"10.3","src":"panel","ev":"panel-alive","upSec":5}
+{"t":"10.8","src":"driver","ev":"STEP 3: end","panelTargetOpen":true}
+{"t":["page about:blank","browser_ui chrome://omnibox-popup.top-chrome/","browser_ui chrome://omnibox-popup.top-chrome/omnibox_popup_aim.html","background_page chrome-extension://nkeimhogjdpnpccoofpliimaahmaaome/background.html","service_worker chrome-extension://fignfifoniblkonapihmkfakmlgkbkcf/service_worker.js","service_worker chrome-extension://mpmndpdmfdniandpbmhbielfmcejeokh/sw.js","page http://127.0.0.1:8901/a.html","background_page chrome-extension://nmmhkkegccagdldgiimedpiccmgmieda/_generated_background_page.html","service_worker chrome-extension://ghbmnnjooekpmoecnnnilnnbdlolhkhi/service_worker_bin_prod.js","page chrome-extension://mpmndpdmfdniandpbmhbielfmcejeokh/panel.html"],"src":"driver","ev":"targets-at-end"}
