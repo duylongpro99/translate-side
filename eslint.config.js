@@ -114,5 +114,13 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.webextensions } },
   },
   engineBoundary,
+  {
+    // An inline eslint-disable would switch the boundary off, so engine source can't use
+    // inline config. Engine tests keep it (they check the globals are absent on purpose).
+    name: 'engine boundary: no inline config',
+    files: ENGINE_FILES,
+    ignores: ['src/engine/**/*.test.{ts,tsx}'],
+    linterOptions: { noInlineConfig: true },
+  },
   llmTypesImportFree,
 );

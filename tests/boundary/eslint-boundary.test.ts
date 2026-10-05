@@ -118,3 +118,21 @@ describe('llm/types.ts stays import-free', () => {
     expect(result?.messages).toEqual([]);
   });
 });
+
+// N-new1: an inline eslint-disable must not switch the boundary off in engine source.
+// Engine test files keep inline config (src/engine/index.test.ts uses it on purpose).
+describe('inline config cannot disable the engine boundary', () => {
+  const forbidden = `import { browser } from 'wxt/browser';\nexport const b = browser;`;
+  it.each([
+    ['eslint-disable-next-line', `// eslint-disable-next-line no-restricted-imports\n${forbidden}`],
+    ['file-wide eslint-disable', `/* eslint-disable */\n${forbidden}`],
+    ['eslint rule override', `/* eslint no-restricted-imports: "off" */\n${forbidden}`],
+  ])('ignores %s in engine source', async (_name, code) => {
+    expect(await boundaryErrors(code, ENGINE_FILE)).toContain('no-restricted-imports');
+  });
+
+  it('still honours inline disables in engine test files', async () => {
+    const code = `// eslint-disable-next-line no-restricted-imports\n${forbidden}`;
+    expect(await boundaryErrors(code, 'src/engine/strategies/probe.test.ts')).toEqual([]);
+  });
+});
