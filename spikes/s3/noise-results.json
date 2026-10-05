@@ -675,11 +675,12 @@
       "truthPre": 0
     },
     "W": {
-      "visible": 49,
+      "visible": 50,
       "hidden": 0,
       "glyph": 0,
       "present": [
         "Read this post in",
+        "বাংলা",
         "Categories",
         "Regions",
         "Topics",
@@ -728,9 +729,9 @@
         "Global Voices",
         "Please consider making a donation to help us continue this work."
       ],
-      "chars": 1179,
-      "pct": 0.14498278406296114,
-      "substr": 60,
+      "chars": 1184,
+      "pct": 0.1455976389572061,
+      "substr": 63,
       "recall": 1,
       "pre": 0,
       "truthPre": 0
@@ -748,11 +749,12 @@
       "truthPre": 0
     },
     "W+G": {
-      "visible": 49,
+      "visible": 50,
       "hidden": 0,
       "glyph": 0,
       "present": [
         "Read this post in",
+        "বাংলা",
         "Categories",
         "Regions",
         "Topics",
@@ -801,9 +803,9 @@
         "Global Voices",
         "Please consider making a donation to help us continue this work."
       ],
-      "chars": 1179,
-      "pct": 0.14498278406296114,
-      "substr": 60,
+      "chars": 1184,
+      "pct": 0.1455976389572061,
+      "substr": 63,
       "recall": 1,
       "pre": 0,
       "truthPre": 0
@@ -815,7 +817,7 @@
       "present": [],
       "chars": 0,
       "pct": 0,
-      "substr": 8,
+      "substr": 10,
       "recall": 1,
       "pre": 0,
       "truthPre": 0

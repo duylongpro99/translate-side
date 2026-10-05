@@ -43,8 +43,7 @@ The page chrome around the content (site header, navigation, theme markup) belon
 - Source: https://github.com/sharkdp/bat (captured 2026-10-05T13:57:26.106Z)
 - Authors: David Peter and bat contributors
 - License: README: MIT OR Apache-2.0 (https://github.com/sharkdp/bat (LICENSE-MIT, LICENSE-APACHE))
-- Changes: as above.
-- **Open item:** The surrounding github.com page markup (header, repo UI) is GitHub's, not covered by bat's license. Decide whether to keep, or cut the fixture down to the README article.
+- Changes: as above. Cut to the README article (`article.markdown-body`) only, by user decision 2026-10-05 (`spikes/s3/cut-github.mjs`): the surrounding github.com page markup, which is GitHub's and not covered by bat's license, is not included.
 
 ## wikipedia-futures-promises
 

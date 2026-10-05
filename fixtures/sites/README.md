@@ -11,7 +11,7 @@ are under permissive or CC licenses: see `ATTRIBUTION.md` (authors, history link
 | `mdbook-rust-book-ownership` | mdBook (GitBook-style docs) | MIT OR Apache-2.0 |
 | `mdn-promise-then` | MDN reference | CC-BY-SA-2.5 (prose), CC0/MIT (code) |
 | `docsrs-tokio` | docs.rs / rustdoc | MIT |
-| `github-readme-bat` | GitHub README | MIT OR Apache-2.0 (README; see the open item in `ATTRIBUTION.md`) |
+| `github-readme-bat` | GitHub README | MIT OR Apache-2.0 (README article only; the github.com page markup was cut out, see `ATTRIBUTION.md`) |
 | `wikipedia-futures-promises` | Wikipedia | CC-BY-SA-4.0 |
 | `goblog-pipelines` | Long-form blog essay (go.dev blog) | CC-BY-4.0 (text), BSD-3-Clause (code) |
 | `twir-671` | Newsletter issue (This Week in Rust) | CC-BY-SA-4.0 |

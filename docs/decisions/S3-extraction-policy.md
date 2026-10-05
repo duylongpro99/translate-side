@@ -1,6 +1,6 @@
 # S3 — Extraction quality on docs sites → extraction policy and fallback thresholds
 
-Status: proposed (review round 1 addressed) · Date: 2026-10-05 · `@mozilla/readability` 0.6 + jsdom · Spike code:
+Status: **user decisions 2026-10-05 recorded** (deviation (b) approved; criterion #1 with G+S; GitHub fixture cut to the README); review rounds 1–2 addressed · Date: 2026-10-05 · `@mozilla/readability` 0.6 + jsdom · Spike code:
 `spikes/s3/` · Fixtures: `fixtures/sites/`
 
 ## Question
@@ -25,11 +25,18 @@ Plan §5 default: "Readability first; 'poor result' heuristic (text ratio, lost 
   | `mdbook-rust-book-ownership` | mdBook, GitBook-style docs (replaces GitBook) | MIT OR Apache-2.0 |
   | `mdn-promise-then` | MDN | CC-BY-SA-2.5 prose, CC0/MIT code |
   | `docsrs-tokio` | docs.rs / rustdoc | MIT |
-  | `github-readme-bat` | GitHub README | MIT OR Apache-2.0 (README only, see Limits) |
+  | `github-readme-bat` | GitHub README | MIT OR Apache-2.0 (the README article only: cut by user decision, see below) |
   | `wikipedia-futures-promises` | Wikipedia | CC-BY-SA-4.0 |
   | `goblog-pipelines` | long-form blog essay, go.dev (replaces Medium) | CC-BY-4.0 text, BSD-3-Clause code (verified at go.dev/copyright: "Creative Commons Attribution 4.0", code "BSD license") |
   | `twir-671` | newsletter issue, This Week in Rust (replaces Substack) | CC-BY-SA-4.0 |
   | `globalvoices-bangladesh-protests` | news article, Global Voices on WordPress (replaces The Guardian) | CC-BY-3.0 text |
+
+  **GitHub fixture cut (user decision 2026-10-05).** `github-readme-bat` now holds only the README article
+  (`article.markdown-body`), with the doctype, `<base>`, charset, viewport and title (`spikes/s3/cut-github.mjs`).
+  The github.com page markup around it is GitHub's, not covered by bat's license, so it is gone. The 30 open shadow
+  roots were all in that page markup, so the fixture now has none. Every S3 number was re-scored after the cut. Three
+  changed, all on GitHub: walk / body text 0.84 → 1.00; whole-page-in-`main` control precision 92% → 100%, link
+  density 0.11 → 0.04 (`policy.md`, `thresholds.mjs`). The S2 chunk files did not change.
 
   Authors, history links and changes are in `fixtures/sites/ATTRIBUTION.md`. There is also a `license` field per
   fixture in `manifest.json`.
@@ -101,10 +108,10 @@ Visible noise occurrences (kinds ui, meta, promo) per output:
 | Wikipedia | 16 | 31 | 12 | 0 | 0 | "[edit]" ×19, "Edit links", "From Wikipedia, the free encyclopedia", "Jump up to:" ×7, category links |
 | Go blog | 0 | 4 | 4 | 1 | 0 | "The Go Blog", next/previous article links, "Blog Index" |
 | TWiR newsletter | 0 | 0 | 0 | 0 | 0 | — |
-| Global Voices news | 0 | 49 | 49 | 0 | 0 | language switcher, 21 category/tag links, donation widget, two related-story lists (6 cards with bylines and dates), comment form |
+| Global Voices news | 0 | 50 | 50 | 0 | 0 | language switcher ("Read this post in", "বাংলা"), 21 category/tag links, donation widget, two related-story lists (6 cards with bylines and dates), comment form |
 | **Sites with 0 visible noise** | **7/10** | **4/10** | **4/10** | **9/10** | **10/10** | |
 
-- **Size of the noise.** In W it is 0–14.5% of output chars: Global Voices 14.5%, MDN 3.6%, Docusaurus 1.7%,
+- **Size of the noise.** In W it is 0–14.6% of output chars: Global Voices 14.6%, MDN 3.6%, Docusaurus 1.7%,
   Wikipedia 1.1%, all others < 0.3%. In R it is 0–0.5%. (Round 1 said 5.3% for Global Voices; the tester found
   related-story cards, tag links and the donation widget missing from the list. They are now labelled.)
 - **Hidden kind.** Wikipedia has 13 more items (short description, hidden maintenance categories, a citation-error
@@ -116,14 +123,28 @@ Visible noise occurrences (kinds ui, meta, promo) per output:
   no site's zero-noise count.
 - **Content.** None of the in-content selectors removed content. This is measured against the truth minus *only* the
   labelled `noise.json` items (round 2, C1: round 1 also subtracted the G/S selectors from the truth, which made the
-  check circular). W, W+G and W+G+S keep 100% of content blocks and every `pre` on 10/10. While fixing C1, the first
+  check circular). W, W+G and W+G+S keep 100% of content blocks and every `pre` on 10/10, **with two caveats**
+  (review round 2):
+  - **D1.** The truth is also stripped by the walk's own exclusion list (`noise-score.mjs:61` removes `walk.mjs`
+    `NOISE`), so W's recall can't see what that list drops. One real case: Global Voices'
+    `blockquote#original-tab-0`, a jQuery UI tab panel (`role=tabpanel`, `aria-hidden="true"`, `display: none`) with
+    the 317-char Bangla original of a quote. The walk drops it through `[aria-hidden=true]`. Only `[hidden]` has the
+    `:not([role=tabpanel])` exception. Readability loses it too. So "100% of content" holds only for content the
+    walk's exclusion list doesn't touch.
+  - **Global Voices' recall check is trivial.** It strips 0 items from its truth, because all its labelled noise sits
+    outside the `contentSelector`, so its 100% says nothing. While fixing C1, the first
   re-run showed apparent losses under +G (Wikipedia 62%). Each one traced back to an unlabelled noise item, which is
   now labelled ("↑"/"↩" back-links, MDN's baseline description and last-modified line), not to content
-  (`missing-blocks.mjs`, `g-diagnose.mjs`).
+  (`missing-blocks.mjs`, `g-diagnose.mjs`). Review round 2 (D2) found that `g-diagnose.mjs`'s filter was a no-op
+  (`base.contains ? true : true`). It now keeps only hits whose text the walk would keep. Re-run on all 10 fixtures,
+  it reports only fragments of labelled noise (Wikipedia's `[`, `]`, `edit` pieces of "[edit]") and MDN's
+  visually-hidden compatibility-table labels ("desktop", "mobile", "Legend"). That is UI text, not content.
 - **Counting method (C2).** Items are counted as elements whose whole text equals the item. Noise that sits as a bare
   text node or inside a larger element would be missed. Upper bound: a whole-word substring count over the output
   text gives R 6/10, W 4/10, W+G+S 8/10, R+G+S 9/10 sites with zero visible noise (`noise.md`). The extra hits are
-  Global Voices' tag words ("Bangladesh", "Protest"), which also occur in the article text, and the Go blog.
+  Global Voices' tag words ("Bangladesh", "Protest"), which also occur in the article text. Global Voices is the only
+  site where the two counts differ. (Round 2 said "and the Go blog", which was wrong: its counts are the same under
+  both methods.)
 
 ### Content and code (`noise.md`, `results.md`)
 
@@ -187,7 +208,7 @@ inbox". In fact Readability *kept* that promo heading. The heading it dropped wa
 |---|---|
 | Walk text (chars) | 8,132–32,003 |
 | Walk link density | 0.02–0.19, except **TWiR 0.58** |
-| Walk / body text | 0.74–0.99 |
+| Walk / body text | 0.74–1.00 (GitHub 1.00, since the fixture is now just the article) |
 
 - **The link-density guard (≤ 0.35) fired once, on a legitimate page.** TWiR is lists of links, and the walk extracts
   it perfectly (100% content, 0 noise). The policy then fell back to Readability, which was also good there (99%,
@@ -219,8 +240,9 @@ told to remove.
 
 The two methods fail differently:
 
-- **The walk keeps everything and adds UI noise.** All content blocks and all code blocks are kept on 10/10. The cost
-  is 0–14.5% of output chars of in-content UI text: badges, edit and feedback links, tag lists, related stories. That
+- **The walk keeps everything and adds UI noise.** All content blocks and all code blocks are kept on 10/10, except
+  content its exclusion list drops, such as the `aria-hidden` tab panel on Global Voices (D1 above). The cost
+  is 0–14.6% of output chars of in-content UI text: badges, edit and feedback links, tag lists, related stories. That
   noise is visible: it gets translated and shown, and it costs tokens. Nothing is lost.
 - **Readability is cleaner and loses content silently.** It has less noise (7/10 clean, ≤ 0.5% of chars). But it
   loses or corrupts content on docs sites with no usable signal:
@@ -261,7 +283,19 @@ reverse: Readability first, walk as the fallback.
   < 0.8 × walk headings, which falls back on 3 of the new set). Even then the Go blog's code corruption passes
   undetected.
 
-## Decision (pending the deviation above)
+## Decision
+
+**User decisions 2026-10-05:**
+
+- **Deviation (b): approved.** The order is walk first, then Readability as the fallback, then a selection hint.
+- **Criterion #1:** M0-E5 ships the generic + per-site (**G+S**) cleanup selectors. Criterion #1 is judged against the
+  hand-labelled noise list (`noise.json`). +S is the chosen M0-E5 policy. The caveat stays: the +S selectors were
+  written from these same fixtures, so they may overfit.
+- **GitHub fixture:** cut to the README article and re-scored (Method).
+- **Repo LICENSE:** MIT, with `fixtures/` excluded, since `fixtures/sites/ATTRIBUTION.md` covers them. It is added in
+  the final Phase B step.
+- **Spec changes:** all approved. They are applied in the final Phase B step.
+
 
 - **Extraction policy:** the walk-first policy above.
 - **Thresholds:** walk ≥ 500 chars; Readability ≥ 500 chars. Link density is not a rejection threshold.
@@ -279,10 +313,13 @@ reverse: Readability first, walk as the fallback.
 - **M0-E5, shadow DOM.** Shadow-root composition must run before extraction (`flattenShadow` is the reference).
   Closed shadow roots stay invisible; no fixture needed them.
 - **M0-E6, `domPath` must encode shadow-host boundaries** (N3). A segment inside a shadow root (MDN's 13 code
-  examples, GitHub's 30 roots) can't be found again from a light-DOM path. The path needs a "host → shadowRoot" step
+  examples; GitHub's 30 roots were in the page markup that has now been cut) can't be found again from a light-DOM path. The path needs a "host → shadowRoot" step
   each time it crosses one.
 - **M0-E5/M0-E6, hidden tab panels** (N3). On Docusaurus 19 of 26 panels (19 of 59 `pre`) are extracted and segmented
-  but never visible until the reader switches tabs. Proposal: segment them, as their ids must be stable, but don't
+  but never visible until the reader switches tabs. **The rule must cover every way a panel is hidden** (D1): the
+  `hidden` attribute (Docusaurus), `aria-hidden="true"` plus `display: none` (jQuery UI, the Global Voices quote tabs),
+  and CSS. The walk's exclusion list therefore becomes `[aria-hidden=true]:not([role=tabpanel])`, as `[hidden]`
+  already is. Proposal: segment them, as their ids must be stable, but don't
   translate them in the first pass. Translate a panel when it becomes visible (`role=tabpanel` loses `hidden`, watched
   with a MutationObserver), as a high-priority job. This keeps token cost proportional to what is read.
 - **M0-E5, CSS-hidden content** (N3). Use `checkVisibility()` in the live page. It must treat hidden tab panels and
@@ -311,7 +348,7 @@ reverse: Readability first, walk as the fallback.
      chrome, generic in-content UI (visually-hidden helpers, edit links, permalink glyphs) and elements that fail
      `checkVisibility()`. Inactive tab panels and closed `details` are kept and translated when shown. If the walk finds
      no container or too little text, it falls back to Readability on the composed copy, then to selection mode."
-   - Only if deviation (b) is accepted.
+   - Deviation (b) was approved on 2026-10-05.
 2. **DESIGN §2 table, "Content extraction" row.**
    - Old: "Use it for articles, with a DOM-walk fallback for docs sites and SPAs."
    - New: "DOM walk first, so docs-site structure and code survive; Readability as the fallback for pages without
@@ -344,9 +381,8 @@ reverse: Readability first, walk as the fallback.
 - **The counter matches whole element text** (C2). See the upper-bound row in `noise.md`.
 - **No fixture exercises a paywall,** a real link farm, a page without semantic containers (only simulated), or a
   closed shadow root.
-- **GitHub page chrome.** `github-readme-bat` includes github.com's own page markup around the README, which the
-  README's license doesn't cover. That's an open item in `ATTRIBUTION.md` for the user: keep it, or cut the fixture
-  down to the README article.
+- **GitHub page chrome is gone.** Since the cut (user decision), `github-readme-bat` no longer tests noise or
+  shadow DOM outside the README. Its whole-page and walk / body numbers are trivially clean.
 - **History rewrite.** The replaced fixtures are in no commit on any branch, and `git log --all` on their paths is
   empty, so they can't be pushed. Their blobs are still *reflog-reachable* in the local object store. Removing them
   needs `git reflog expire --expire=now --all && git gc --prune=now`, which was not run (supervisor's call).

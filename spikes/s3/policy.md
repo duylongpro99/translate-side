@@ -14,7 +14,7 @@
 | docsrs-tokio | wholepage | walk | 100% | 100% | 0 | 8/8 | 0.07 |
 | github-readme-bat | as-is | walk | 100% | 100% | 0 | 58/58 | 0.04 |
 | github-readme-bat | nosemantic | readability | 100% | 100% | 0 | 58/58 | - |
-| github-readme-bat | wholepage | walk | 100% | 92% | 0 | 58/58 | 0.11 |
+| github-readme-bat | wholepage | walk | 100% | 100% | 0 | 58/58 | 0.04 |
 | wikipedia-futures-promises | as-is | walk | 100% | 99% | 0 | 4/4 | 0.19 |
 | wikipedia-futures-promises | nosemantic | readability | 98% | 99% | 0 | 4/4 | - |
 | wikipedia-futures-promises | wholepage | walk | 100% | 99% | 0 | 4/4 | 0.19 |

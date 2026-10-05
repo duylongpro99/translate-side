@@ -84,15 +84,15 @@
     "finalUrl": "https://github.com/sharkdp/bat",
     "title": "GitHub - sharkdp/bat: A cat(1) clone with wings. · GitHub",
     "capturedAt": "2026-10-05T13:57:26.106Z",
-    "bytes": 509767,
-    "openShadowRoots": 30,
+    "bytes": 214927,
+    "openShadowRoots": 0,
     "contentFound": true,
     "scrubbed": true,
     "license": "README: MIT OR Apache-2.0",
     "attribution": {
       "authors": "David Peter and bat contributors",
       "licenseSource": "https://github.com/sharkdp/bat (LICENSE-MIT, LICENSE-APACHE)",
-      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged. Cut to the README article (`article.markdown-body`) only, by user decision 2026-10-05 (`spikes/s3/cut-github.mjs`): the surrounding github.com page markup, which is GitHub's and not covered by bat's license, is not included."
     }
   },
   "wikipedia-futures-promises": {

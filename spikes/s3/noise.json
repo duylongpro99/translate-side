@@ -254,6 +254,11 @@
       "note": "language switcher"
     },
     {
+      "text": "বাংলা",
+      "kind": "ui",
+      "note": "language-switcher link next to \"Read this post in\" (borderline: it names the original language; tester round 2)"
+    },
+    {
       "text": "Categories",
       "kind": "meta",
       "note": "post category/tag lists"

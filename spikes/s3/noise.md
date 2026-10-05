@@ -13,7 +13,7 @@ Visible noise occurrences per output (kinds ui/meta/promo). Hidden = items hidde
 | mdbook-rust-book-ownership | – | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | goblog-pipelines | GoDev | 0 | 4 | 0 | 4 | 1 | 0 | 10 | 0 |
 | twir-671 | – | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| globalvoices-bangladesh-protests | WordPress | 0 | 49 | 0 | 49 | 0 | 0 | 0 | 0 |
+| globalvoices-bangladesh-protests | WordPress | 0 | 50 | 0 | 50 | 0 | 0 | 0 | 0 |
 | **sites with 0 visible noise** | | **7/10** | **4/10** | **10/10** | **4/10** | **9/10** | | | |
 
 Upper bound (whole-word substring of the output text, visible kinds; may over-count short items that are also ordinary words):
@@ -29,7 +29,7 @@ Upper bound (whole-word substring of the output text, visible kinds; may over-co
 | mdbook-rust-book-ownership | 0 | 0 | 0 | 0 | 0 |
 | goblog-pipelines | 0 | 4 | 0 | 4 | 1 |
 | twir-671 | 0 | 0 | 0 | 0 | 0 |
-| globalvoices-bangladesh-protests | 7 | 60 | 7 | 60 | 8 |
+| globalvoices-bangladesh-protests | 7 | 63 | 7 | 63 | 10 |
 | **sites with 0** | **6/10** | **4/10** | **9/10** | **4/10** | **8/10** |
 
 Noise share of output chars (visible kinds):
@@ -45,7 +45,7 @@ Noise share of output chars (visible kinds):
 | mdbook-rust-book-ownership | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% |
 | goblog-pipelines | 0.00% | 0.29% | 0.00% | 0.29% | 0.06% |
 | twir-671 | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% |
-| globalvoices-bangladesh-protests | 0.00% | 14.50% | 0.00% | 14.50% | 0.00% |
+| globalvoices-bangladesh-protests | 0.00% | 14.56% | 0.00% | 14.56% | 0.00% |
 
 Content blocks kept (truth leaf blocks ≥ 15 chars, labelled noise excluded, found in the output text) and `pre` kept, to check that the selectors don't remove content:
 
@@ -120,7 +120,7 @@ Items left per output:
   - W+G+S: —
 - **globalvoices-bangladesh-protests**
   - R: —
-  - W: Read this post in; Categories; Regions; Topics; Breaking News; Censorship; Citizen Media; Digital Activism; Elections; Freedom of Speech; Governance; Human Rights; Media & Journalism; Youth; Protest in democracy; Support our work; Donate now; Recent South Asia Stories; The sound of resistance; Equating protest with terrorism: A narrative against dissent; More »; Top World Stories; 4 days ago ×2; 6 days ago; 1 week ago; 2 days ago; Cancel this reply; Start the conversation; Education; History; Law; Politics; Protest; South Asia; Bangladesh; Beyond protest: Mob violence and the struggle for institutional response in Bangladesh; How a farmers’ protest in Bucharest was inflated online, then hijacked; West-to-east energy, east-to-west computing: The Uyghur costs of China’s digital order; The shock wave of Sister Hong: Catfishing, gender imbalance, and sexual education in China; Written by Sydney Allen , Kevin Rennie , Sanjib Chaudhary , Rai M Azlan , Daria Dergacheva , Jean Sovon , Nurbek Bekmurzaev; Written by Civic Media Observatory , Samanta Azpurua; Written by Maksuda Akter; Written by Guest Contributor; Written by Asiye Uyghur; Written by Jingjing Shueh; 24 July 2025; Global Voices; Please consider making a donation to help us continue this work.
+  - W: Read this post in; বাংলা; Categories; Regions; Topics; Breaking News; Censorship; Citizen Media; Digital Activism; Elections; Freedom of Speech; Governance; Human Rights; Media & Journalism; Youth; Protest in democracy; Support our work; Donate now; Recent South Asia Stories; The sound of resistance; Equating protest with terrorism: A narrative against dissent; More »; Top World Stories; 4 days ago ×2; 6 days ago; 1 week ago; 2 days ago; Cancel this reply; Start the conversation; Education; History; Law; Politics; Protest; South Asia; Bangladesh; Beyond protest: Mob violence and the struggle for institutional response in Bangladesh; How a farmers’ protest in Bucharest was inflated online, then hijacked; West-to-east energy, east-to-west computing: The Uyghur costs of China’s digital order; The shock wave of Sister Hong: Catfishing, gender imbalance, and sexual education in China; Written by Sydney Allen , Kevin Rennie , Sanjib Chaudhary , Rai M Azlan , Daria Dergacheva , Jean Sovon , Nurbek Bekmurzaev; Written by Civic Media Observatory , Samanta Azpurua; Written by Maksuda Akter; Written by Guest Contributor; Written by Asiye Uyghur; Written by Jingjing Shueh; 24 July 2025; Global Voices; Please consider making a donation to help us continue this work.
   - R+G+S: —
-  - W+G: Read this post in; Categories; Regions; Topics; Breaking News; Censorship; Citizen Media; Digital Activism; Elections; Freedom of Speech; Governance; Human Rights; Media & Journalism; Youth; Protest in democracy; Support our work; Donate now; Recent South Asia Stories; The sound of resistance; Equating protest with terrorism: A narrative against dissent; More »; Top World Stories; 4 days ago ×2; 6 days ago; 1 week ago; 2 days ago; Cancel this reply; Start the conversation; Education; History; Law; Politics; Protest; South Asia; Bangladesh; Beyond protest: Mob violence and the struggle for institutional response in Bangladesh; How a farmers’ protest in Bucharest was inflated online, then hijacked; West-to-east energy, east-to-west computing: The Uyghur costs of China’s digital order; The shock wave of Sister Hong: Catfishing, gender imbalance, and sexual education in China; Written by Sydney Allen , Kevin Rennie , Sanjib Chaudhary , Rai M Azlan , Daria Dergacheva , Jean Sovon , Nurbek Bekmurzaev; Written by Civic Media Observatory , Samanta Azpurua; Written by Maksuda Akter; Written by Guest Contributor; Written by Asiye Uyghur; Written by Jingjing Shueh; 24 July 2025; Global Voices; Please consider making a donation to help us continue this work.
+  - W+G: Read this post in; বাংলা; Categories; Regions; Topics; Breaking News; Censorship; Citizen Media; Digital Activism; Elections; Freedom of Speech; Governance; Human Rights; Media & Journalism; Youth; Protest in democracy; Support our work; Donate now; Recent South Asia Stories; The sound of resistance; Equating protest with terrorism: A narrative against dissent; More »; Top World Stories; 4 days ago ×2; 6 days ago; 1 week ago; 2 days ago; Cancel this reply; Start the conversation; Education; History; Law; Politics; Protest; South Asia; Bangladesh; Beyond protest: Mob violence and the struggle for institutional response in Bangladesh; How a farmers’ protest in Bucharest was inflated online, then hijacked; West-to-east energy, east-to-west computing: The Uyghur costs of China’s digital order; The shock wave of Sister Hong: Catfishing, gender imbalance, and sexual education in China; Written by Sydney Allen , Kevin Rennie , Sanjib Chaudhary , Rai M Azlan , Daria Dergacheva , Jean Sovon , Nurbek Bekmurzaev; Written by Civic Media Observatory , Samanta Azpurua; Written by Maksuda Akter; Written by Guest Contributor; Written by Asiye Uyghur; Written by Jingjing Shueh; 24 July 2025; Global Voices; Please consider making a donation to help us continue this work.
   - W+G+S: —
