@@ -10,7 +10,7 @@
 // §5.7 for the segments of THAT call: the whole chunk on attempt 1, only the re-requested segments
 // on the repair (a smaller budget, so a repair can't be cut by the first pass's size).
 
-import type { LLMError } from '../../llm/types.ts';
+import type { LLMClient, LLMError, NormalizedRequest } from '../../llm/types.ts';
 import { maxOutputTokens } from '../budget.ts';
 import { chunkLimits, chunkSegments, type Chunk } from '../chunker.ts';
 import { formatWire, toWire, type WireChunk } from '../parsing/wire.ts';
@@ -78,6 +78,19 @@ export function callBudget(wire: WireChunk, reasoningReserveTokens: number): num
   return maxOutputTokens({ sourceTokens, segments: wire.segments.length, reasoningReserveTokens });
 }
 
+/** The request one translate call sends (the strategy and the harness's nonce probe share it, so they cannot drift). */
+export function translateRequest(client: Pick<LLMClient, 'model' | 'reasoningReserveTokens'>, system: string, wire: WireChunk, signal: AbortSignal): NormalizedRequest {
+  return {
+    model: client.model,
+    system,
+    messages: [{ role: 'user', content: formatWire(wire) }],
+    maxOutputTokens: callBudget(wire, client.reasoningReserveTokens),
+    temperature: TRANSLATE_TEMPERATURE,
+    cacheHint: 'system',
+    signal,
+  };
+}
+
 const chunkStage = defineStage<TranslationJob, ChunkWork[]>({
   id: 'chunk',
   scope: 'document',
@@ -106,16 +119,7 @@ const translateStage = defineStage<ChunkWork, ChunkOutcome>({
     const client = ctx.llm('translate');
     const prompt = ctx.prompts.get(TRANSLATE_PROMPT_ID);
     const system = renderSystemPrompt((vars) => prompt.render(vars), { sourceLang: work.doc.sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
-    const call: ChunkCall = (wire) =>
-      client.stream({
-        model: client.model,
-        system,
-        messages: [{ role: 'user', content: formatWire(wire) }],
-        maxOutputTokens: callBudget(wire, client.reasoningReserveTokens),
-        temperature: TRANSLATE_TEMPERATURE,
-        cacheHint: 'system',
-        signal: ctx.signal,
-      });
+    const call: ChunkCall = (wire) => client.stream(translateRequest(client, system, wire, ctx.signal));
     const gen = translateChunk(toWire(work.chunk.segments), call, {
       producedBy: { strategy: SINGLE_PASS_ID, stage: 'translate', model: client.model },
       revision: REVISION,

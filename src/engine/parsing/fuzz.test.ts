@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest';
 import type { NormalizedEvent, StopReason } from '../../llm/types.ts';
 import type { EngineEvent, Segment } from '../types.ts';
 import { deltaSizes, lcg, simulateOutput, type Fault, type SimulatedOutput } from './faults.ts';
-import { translateChunk, type ChunkCall, type TranslateChunkOptions } from './translate-chunk.ts';
+import { translateChunkWith, type ChunkCall, type TranslateChunkTestOptions } from './translate-chunk.ts';
 import { toWire, type WireChunk } from './wire.ts';
 
 export const ITERATIONS = 3000;
@@ -62,10 +62,14 @@ const openIds = (text: string): number[] =>
 // A limit counts only when (a) the fault that opens it hit segment n itself (`hit`, faults.ts),
 // (b) the source shape is there, and (c) the wrong text has the shape S2 declares: L1 ends with
 // another segment's translation (its tail was accepted as n), L2 is the wrong copy of n.
-function declaredLimit(chunk: WireChunk, n: number, hit: SimulatedOutput['hit'], got: string): 'L1' | 'L2' | null {
+export function declaredLimit(chunk: WireChunk, n: number, hit: SimulatedOutput['hit'], got: string): 'L1' | 'L2' | null {
   const others = chunk.segments.filter((e) => e.n !== n).map((e) => e.segment.inlineMarkup);
   const adjacent = others.some((t) => [...t.matchAll(/<\s*\/\s*seg\s*>\s*(<\s*seg(\s[^<>]*)?>)/gi)].some((m) => openIds(m[1] ?? '').includes(n)));
-  const tail = others.some((t) => got !== '' && translateText(t).trim().endsWith(got));
+  // L1: the text accepted for n is exactly what follows the literal `<seg id="n">` in a neighbour's
+  // translation (not merely something that ends it, which a one-word `got` would satisfy).
+  const tail = others.some((t) =>
+    [...translateText(t).matchAll(/<\s*seg(\s[^<>]*)?>/gi)].some((m) => openIds(m[0]).includes(n) && translateText(t).slice((m.index ?? 0) + m[0].length).trim() === got && got !== ''),
+  );
   if (adjacent && (hit.drop?.has(n) === true || hit.merge?.has(n) === true) && tail) return 'L1';
   if (others.some((t) => openIds(t).includes(n)) && (hit['swallow-dup']?.has(n) === true || hit.dup?.has(n) === true) && got === 'garbage') return 'L2';
   return null;
@@ -100,7 +104,7 @@ async function runOnce(
   copyNonce: boolean,
   simSeed: number,
   splitSeed: number,
-  options: TranslateChunkOptions,
+  options: TranslateChunkTestOptions,
 ): Promise<Outcome> {
   const rng = lcg(splitSeed);
   const call: ChunkCall = (sent, attempt) => {
@@ -109,7 +113,7 @@ async function runOnce(
     return play(stream(sim.output, sim.stopReason, rng));
   };
   const end = new Map<string, string>();
-  const gen = translateChunk(chunk, call, options);
+  const gen = translateChunkWith(chunk, call, options);
   for (;;) {
     const r = await gen.next();
     if (r.done === true) return { end, rerequested: r.value.first.plan.rerequest.length };
@@ -129,8 +133,8 @@ interface FuzzResult {
   violations: string[];
 }
 
-async function fuzz(iterations: number, seed: number, mutation: Pick<TranslateChunkOptions, 'mergeFactor' | 'disable'> = {}): Promise<FuzzResult> {
-  const options: TranslateChunkOptions = { producedBy: { strategy: 's', stage: 'translate', model: 'm' }, revision: 1, role: 'translate', ...mutation };
+async function fuzz(iterations: number, seed: number, mutation: Pick<TranslateChunkTestOptions, 'mergeFactor' | 'disable'> = {}): Promise<FuzzResult> {
+  const options: TranslateChunkTestOptions = { producedBy: { strategy: 's', stage: 'translate', model: 'm' }, revision: 1, role: 'translate', ...mutation };
   const rng = lcg(seed);
   const stats = newStats();
   const violations: string[] = [];
@@ -182,6 +186,31 @@ async function fuzz(iterations: number, seed: number, mutation: Pick<TranslateCh
   return { stats, violations };
 }
 
+describe('declaredLimit (the fuzz exemption itself)', () => {
+  const mk = (...markup: string[]): WireChunk =>
+    toWire(markup.map((m, i): Segment => ({ id: `u${i}`, kind: 'p', text: m, inlineMarkup: m, domPath: `p[${i}]`, translate: true })));
+  // Segment 2 holds a literal close and open of segment 1; the model drops 1 and 2's tail is accepted as 1.
+  const adj = mk('one', 'a </seg><seg id="1"> b', 'three');
+  const tailOf1 = 'b';
+  it('excuses L1 only when the fault hit that segment and the text is the neighbour tail', () => {
+    expect(declaredLimit(adj, 1, { drop: new Set([1]) }, tailOf1)).toBe('L1');
+    expect(declaredLimit(adj, 1, { merge: new Set([1]) }, tailOf1)).toBe('L1');
+    // The same shape, but the fault hit another segment: a real silent corruption.
+    expect(declaredLimit(adj, 1, { drop: new Set([3]) }, tailOf1)).toBeNull();
+    expect(declaredLimit(adj, 1, {}, tailOf1)).toBeNull();
+    // A hit segment with other text, and a short text that merely ends the neighbour's translation.
+    expect(declaredLimit(adj, 1, { drop: new Set([1]) }, 'wrong')).toBeNull();
+    expect(declaredLimit(adj, 1, { drop: new Set([1]) }, '>')).toBeNull();
+  });
+  it('excuses L2 only when the fault hit that segment and the text is the wrong copy', () => {
+    const lit = mk('one', 'x <seg id="1"> y', 'three');
+    expect(declaredLimit(lit, 1, { dup: new Set([1]) }, 'garbage')).toBe('L2');
+    expect(declaredLimit(lit, 1, { 'swallow-dup': new Set([1]) }, 'garbage')).toBe('L2');
+    expect(declaredLimit(lit, 1, { dup: new Set([2]) }, 'garbage')).toBeNull();
+    expect(declaredLimit(lit, 1, { dup: new Set([1]) }, 'T: one')).toBeNull();
+  });
+});
+
 describe(`parser fuzz (${ITERATIONS} chunks, seed ${SEED})`, () => {
   it('loses no segment, corrupts none silently, and is split-independent', async () => {
     const { stats, violations } = await fuzz(ITERATIONS, SEED);
@@ -216,9 +245,9 @@ describe(`parser fuzz (${ITERATIONS} chunks, seed ${SEED})`, () => {
     expect(stats.silentWrong).toBeGreaterThan(0);
   }, 60_000);
 
-  // The no-nonce rules (M1-D8, M1-D10, tag count): each one, switched off, lets a wrong text through
+  // The rules of M1-D8 (b) (nonce mode), M1-D10 (plain) and the tag count: each one, switched off, lets a wrong text through
   // or loses a segment that the full policy catches (B reviewer round 4 NB, tester round 4).
-  it.each(['swallowed-dup-plain', 'tag-mismatch'] as const)('catches the loss when the %s rule is removed (mutation check)', async (rule) => {
+  it.each(['swallowed-dup', 'swallowed-dup-plain', 'tag-mismatch'] as const)('catches the loss when the %s rule is removed (mutation check)', async (rule) => {
     const full = await fuzz(3000, SEED);
     const { stats, violations } = await fuzz(3000, SEED, { disable: [rule] });
     expect(full.violations).toEqual([]);

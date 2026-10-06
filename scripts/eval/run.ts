@@ -9,7 +9,7 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
 import type { LLMClient, ResolvedConnection, StopReason } from '@/llm/types';
-import { chunkLimits, chunkSegments, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, toWire, callBudget, renderSystemPrompt, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, type EngineEvent, type Segment, type TranslationJob } from '@/engine/index';
+import { chunkLimits, chunkSegments, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, toWire, renderSystemPrompt, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, type EngineEvent, type Segment, type TranslationJob } from '@/engine/index';
 import { costUsd, priceFor } from './pricing.ts';
 import { EVAL_SLUGS } from './docs.ts';
 
@@ -220,7 +220,7 @@ async function probeNonce(slug: string): Promise<NonceProbe> {
     const v2 = { ...wire, grammar: 'v2' as const, nonce: nonceFor(wire.segments.map((e) => e.segment.inlineMarkup)) };
     let text = '';
     const rec = recording(baseClient, calls, () => current);
-    for await (const e of rec.stream({ model: rec.model, system, messages: [{ role: 'user', content: formatWire(v2) }], maxOutputTokens: callBudget(wire, rec.reasoningReserveTokens), temperature: 0.2, cacheHint: 'system', signal: new AbortController().signal })) {
+    for await (const e of rec.stream(translateRequest(rec, system, v2, new AbortController().signal))) {
       if (e.type === 'text') text += e.delta;
     }
     probe.chunks++;
@@ -236,7 +236,7 @@ const results: DocResult[] = [];
 for (const slug of slugs) {
   const r = await runDoc(slug);
   results.push(r);
-  console.log(`${slug.padEnd(34)} final ${r.final}/${r.translatable} lost ${r.lost} repaired ${r.repaired} calls ${r.calls} in ${r.input} out ${r.output} ${(r.wallMs / 1000).toFixed(1)}s ${r.costUsd === null ? 'cost n/a' : `$${r.costUsd.toFixed(5)}`}`);
+  console.log(`${slug.padEnd(34)} final ${r.final}/${r.translatable} lost ${r.lost} repaired ${r.repaired} calls ${r.calls} in ${r.input} out ${r.output} ${(r.wallMs / 1000).toFixed(1)}s ${r.costUsd === null ? 'cost n/a' : `$${r.costUsd.toFixed(5)}`}${price && !price.verified ? ' (UNVERIFIED price)' : ''}`);
 }
 const probes: NonceProbe[] = [];
 if (opt['probe-nonce']) {
@@ -325,5 +325,5 @@ const md = [
   '',
 ].join('\n');
 fs.writeFileSync(path.join(outDir, 'summary.md'), md);
-console.log(`\nresults: ${path.relative(ROOT, outDir)}  total lost ${total.lost}/${total.translatable}  cost ${money(total.costUsd)}`);
+console.log(`\nresults: ${path.relative(ROOT, outDir)}  total lost ${total.lost}/${total.translatable}  cost ${money(total.costUsd)}${price && !price.verified ? ' (UNVERIFIED price)' : ''}`);
 process.exitCode = total.lost === 0 ? 0 : 1;

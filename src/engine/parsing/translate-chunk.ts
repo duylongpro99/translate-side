@@ -28,7 +28,11 @@ export interface TranslateChunkOptions {
   revision: number;
   role: ModelRole;
   mergeFactor?: number;
-  /** Test seam (repair.ts): rules to switch off in a mutation check. */
+}
+
+/** Not exported from engine/index.ts: the test seam of the fuzz mutation checks (repair.ts). */
+export interface TranslateChunkTestOptions extends TranslateChunkOptions {
+  /** Rules to switch off. */
   disable?: readonly RepairRule[];
 }
 
@@ -57,7 +61,7 @@ async function* runCall(
   chunk: WireChunk,
   attempt: number,
   call: ChunkCall,
-  options: TranslateChunkOptions,
+  options: TranslateChunkTestOptions,
   emitFinals: boolean,
   /** Ids already shown as final: their text is not replaced by a partial preview. */
   shown: ReadonlySet<number> = new Set(),
@@ -116,7 +120,11 @@ function final(id: string, text: string, attempt: number, options: TranslateChun
   };
 }
 
-export async function* translateChunk(chunk: WireChunk, call: ChunkCall, options: TranslateChunkOptions): AsyncGenerator<EngineEvent, ChunkReport> {
+export function translateChunk(chunk: WireChunk, call: ChunkCall, options: TranslateChunkOptions): AsyncGenerator<EngineEvent, ChunkReport> {
+  return translateChunkWith(chunk, call, options);
+}
+
+export async function* translateChunkWith(chunk: WireChunk, call: ChunkCall, options: TranslateChunkTestOptions): AsyncGenerator<EngineEvent, ChunkReport> {
   const first = yield* runCall(chunk, 1, call, options, true);
   const report: ChunkReport = { first: strip(first), failed: [] };
   const fail = function* (entries: readonly WireSegment[], error: LLMError): Generator<EngineEvent> {

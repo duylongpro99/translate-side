@@ -23,6 +23,7 @@ export {
   callBudget,
   renderSystemPrompt,
   singlePass,
+  translateRequest,
   translatable,
   type CheckSummary,
   type ChunkOutcome,
