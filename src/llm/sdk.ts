@@ -22,15 +22,20 @@ export interface AdapterOptions {
   fetch?: typeof globalThis.fetch;
 }
 
-/** A quirk the adapter can flip when a 400 names the parameter (§4.2.4). Returns false if it is already flipped. */
+/**
+ * A quirk the adapter can flip when a 400 names the parameter (§4.2.4). `apply` returns false
+ * when the request did not use that parameter or the quirk is already flipped: a generic 400 that
+ * happens to contain the word (Gemini's "Invalid JSON payload received. Unknown name …") must not
+ * flip a quirk and resend an identical request (review N2).
+ */
 export interface QuirkFlip {
   test: RegExp;
-  apply: (quirks: Quirks) => boolean;
+  apply: (quirks: Quirks, req: NormalizedRequest) => boolean;
 }
 
 export const FLIP_TEMPERATURE: QuirkFlip = {
   test: /temperature/i,
-  apply: (q) => q.supportsTemperature !== false && ((q.supportsTemperature = false), true),
+  apply: (q, req) => req.temperature !== undefined && q.supportsTemperature !== false && ((q.supportsTemperature = false), true),
 };
 
 /** Rows 0a and 0b, plus a key-style auth with no key (the SDK would throw before any request). */
@@ -69,10 +74,10 @@ export async function classifySdkError(err: unknown, conn: ResolvedConnection, i
   return classifyFetchError({ error: err, aborted: false, hasHostPermission, baseUrl: conn.baseUrl }) ?? { kind: 'unknown', message: String(err), raw: err };
 }
 
-/** The flip that applies to a 400, applied to `quirks`; null if none does or it is already flipped. */
-export function flipQuirk(error: LLMError, quirks: Quirks, flips: readonly QuirkFlip[]): QuirkFlip | null {
+/** The flip that applies to a 400, applied to `quirks`; null if none does, the request did not use the parameter, or it is already flipped. */
+export function flipQuirk(error: LLMError, quirks: Quirks, req: NormalizedRequest, flips: readonly QuirkFlip[]): QuirkFlip | null {
   if (!isQuirkFlipCandidate(error)) return null;
-  for (const flip of flips) if (flip.test.test(error.message) && flip.apply(quirks)) return flip;
+  for (const flip of flips) if (flip.test.test(error.message) && flip.apply(quirks, req)) return flip;
   return null;
 }
 
@@ -130,7 +135,7 @@ export async function* streamAttempts(
       const error = await classifySdkError(err, conn, options.isApiError);
       // §4.2.4: flip the named quirk and resend once. Never after text (it can't be taken back),
       // never twice, and only on a status-400 bad_request (never a 429, 5xx or network error).
-      if (!sawText && !flipped && flipQuirk(error, conn.quirks, options.flips) !== null) {
+      if (!sawText && !flipped && flipQuirk(error, conn.quirks, req, options.flips) !== null) {
         flipped = true;
         continue;
       }

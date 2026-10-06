@@ -183,6 +183,15 @@ describe.each(harnesses)('$name adapter (shared contract)', (h) => {
     expect(g.requests).toHaveLength(1);
   });
 
+  it('N2: a 400 naming a parameter the request did not send does not flip or resend', async () => {
+    const f = mockFetch([{ status: 400, body: '{"error":{"message":"temperature is not supported with this model","type":"invalid_request_error"}}' }]);
+    const conn = h.conn();
+    const events = await collect(h.adapter(f.fetch).stream(conn, request(h.model, { temperature: undefined })));
+    expect(f.requests).toHaveLength(1);
+    expect(events).toMatchObject([{ type: 'error', error: { kind: 'bad_request', status: 400 } }]);
+    expect(conn.quirks).toEqual({});
+  });
+
   it('probe: ok with models on 200; a bad key is auth; a bad URL fails before any request', async () => {
     const list = h.name === 'anthropic-messages' ? { data: [{ type: 'model', id: 'claude-haiku-4-5', display_name: 'Claude Haiku 4.5', created_at: '2025-10-01T00:00:00Z', max_input_tokens: 200000 }], has_more: false, first_id: null, last_id: null } : { object: 'list', data: [{ id: 'gemini-2.5-flash-lite', object: 'model', created: 0, owned_by: 'google' }] };
     const f = mockFetch([{ status: 200, body: JSON.stringify(list) }]);
@@ -398,6 +407,55 @@ describe('openai-chat adapter (wire details)', () => {
     expect(f.requests[1]?.body).toMatchObject({ max_completion_tokens: 64 });
     expect((f.requests[1]?.body as Record<string, unknown>).max_tokens).toBeUndefined();
     expect(c.quirks.maxTokensParam).toBe('max_completion_tokens');
+  });
+
+  it('N2: Gemini\'s generic 400 "Invalid JSON payload … Unknown name" without jsonMode neither flips nor resends', async () => {
+    const gemini: ScriptedResponse = { status: 400, body: '[{"error":{"code":400,"message":"Invalid JSON payload received. Unknown name \\"foo\\" at \'generation_config\': Cannot find field.","status":"INVALID_ARGUMENT"}}]' };
+    const f = mockFetch([gemini]);
+    const c = conn();
+    const events = await collect(createOpenAIAdapter({ fetch: f.fetch }).stream(c, request('m')));
+    expect(f.requests).toHaveLength(1);
+    expect(events).toMatchObject([{ type: 'error', error: { kind: 'bad_request', status: 400, message: expect.stringContaining('Unknown name') } }]);
+    expect(c.quirks).toEqual({});
+    // The same message on a request WITH jsonMode: still no flip, "json" alone is not the parameter name.
+    const g = mockFetch([gemini]);
+    const d = conn();
+    await collect(createOpenAIAdapter({ fetch: g.fetch }).stream(d, request('m', { jsonMode: true })));
+    expect(g.requests).toHaveLength(1);
+    expect(d.quirks).toEqual({});
+  });
+
+  it('N2: a genuine response_format rejection on a jsonMode request flips supportsJsonMode once and resends without it', async () => {
+    const bad: ScriptedResponse = { status: 400, body: '{"error":{"message":"Unrecognized request argument supplied: response_format","type":"invalid_request_error"}}' };
+    const f = mockFetch([bad, { status: 200, body: openaiStream({ text: ['{}'] }) }]);
+    const c = conn();
+    const events = await collect(createOpenAIAdapter({ fetch: f.fetch }).stream(c, request('m', { jsonMode: true })));
+    expect(text(events)).toBe('{}');
+    expect(f.requests).toHaveLength(2);
+    expect(f.requests[0]?.body).toMatchObject({ response_format: { type: 'json_object' } });
+    expect((f.requests[1]?.body as Record<string, unknown>).response_format).toBeUndefined();
+    expect(c.quirks.supportsJsonMode).toBe(false);
+    // Without jsonMode the same 400 is just an error: nothing to flip.
+    const g = mockFetch([bad]);
+    const d = conn();
+    await collect(createOpenAIAdapter({ fetch: g.fetch }).stream(d, request('m')));
+    expect(g.requests).toHaveLength(1);
+    expect(d.quirks).toEqual({});
+  });
+
+  it('N2: a 400 about the system role flips only when a system block was sent', async () => {
+    const bad: ScriptedResponse = { status: 400, body: '{"error":{"message":"Developer instruction is not enabled for this model (system role)","type":"invalid_request_error"}}' };
+    const f = mockFetch([bad]);
+    const c = conn();
+    await collect(createOpenAIAdapter({ fetch: f.fetch }).stream(c, request('m', { system: '' })));
+    expect(f.requests).toHaveLength(1);
+    expect(c.quirks).toEqual({});
+    const g = mockFetch([bad, { status: 200, body: openaiStream({ text: ['ok'] }) }]);
+    const d = conn();
+    await collect(createOpenAIAdapter({ fetch: g.fetch }).stream(d, request('m', { system: 'be brief' })));
+    expect(g.requests).toHaveLength(2);
+    expect((g.requests[1]?.body as { messages: { role: string }[] }).messages.map((m) => m.role)).toEqual(['user']);
+    expect(d.quirks.supportsSystemRole).toBe(false);
   });
 
   it('N3: usage maps prompt_tokens and prompt_tokens_details.cached_tokens; absent details → no cachedInput', async () => {

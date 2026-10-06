@@ -17,10 +17,11 @@ export const GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com
 
 const isApiError = (e: unknown): e is SdkApiError => e instanceof APIError;
 
-/** §4.2.4 flips this adapter knows. */
+/** §4.2.4 flips this adapter knows. Each applies only if the request used the parameter (toOpenAIParams). */
 const FLIPS: readonly QuirkFlip[] = [
   FLIP_TEMPERATURE,
   {
+    // Always sent, under one name or the other.
     test: /max_completion_tokens|max_tokens/i,
     apply: (q) => {
       q.maxTokensParam = (q.maxTokensParam ?? 'max_tokens') === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
@@ -29,15 +30,16 @@ const FLIPS: readonly QuirkFlip[] = [
   },
   { test: /stream_options|include_usage/i, apply: (q) => q.supportsStreamUsage !== false && ((q.supportsStreamUsage = false), true) },
   {
-    test: /reasoning/i,
+    test: /reasoning_effort|reasoning/i,
     apply: (q) => {
-      if (q.reasoning === undefined || q.reasoning.control === 'none') return false;
+      // `reasoning_effort` goes out only under the `effort` control.
+      if (q.reasoning === undefined || q.reasoning.control !== 'effort') return false;
       q.reasoning = { ...q.reasoning, control: 'none' };
       return true;
     },
   },
-  { test: /response_format|json/i, apply: (q) => q.supportsJsonMode !== false && ((q.supportsJsonMode = false), true) },
-  { test: /\bsystem\b|developer/i, apply: (q) => q.supportsSystemRole !== false && ((q.supportsSystemRole = false), true) },
+  { test: /response_format/i, apply: (q, req) => req.jsonMode === true && q.supportsJsonMode !== false && ((q.supportsJsonMode = false), true) },
+  { test: /\bsystem\b|developer/i, apply: (q, req) => req.system !== '' && q.supportsSystemRole !== false && ((q.supportsSystemRole = false), true) },
 ];
 
 function clientFor(conn: ResolvedConnection, options: AdapterOptions): OpenAI {

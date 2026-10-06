@@ -14,11 +14,12 @@ const isApiError = (e: unknown): e is SdkApiError => e instanceof APIError;
 /** §4.2.4 flips this adapter knows: `temperature` (thinking models), `cache_control` (a gateway that rejects it), `thinking`. */
 const FLIPS: readonly QuirkFlip[] = [
   FLIP_TEMPERATURE,
-  { test: /cache_control/i, apply: (q) => q.supportsCacheControl !== false && ((q.supportsCacheControl = false), true) },
+  { test: /cache_control/i, apply: (q, req) => req.cacheHint === 'system' && req.system !== '' && q.supportsCacheControl !== false && ((q.supportsCacheControl = false), true) },
   {
+    // `thinking` goes out only under the `budget` control.
     test: /thinking|budget_tokens/i,
     apply: (q) => {
-      if (q.reasoning === undefined || q.reasoning.control === 'none') return false;
+      if (q.reasoning === undefined || q.reasoning.control !== 'budget') return false;
       q.reasoning = { ...q.reasoning, control: 'none' };
       return true;
     },
