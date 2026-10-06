@@ -164,15 +164,26 @@ export function openaiStream(s: OpenAIScript): string {
   return sse(events);
 }
 
-export function connection(over: Partial<ResolvedConnection> = {}): ResolvedConnection {
-  return {
-    id: 'c1',
-    protocol: 'openai-chat',
-    baseUrl: 'https://api.example.com/v1',
-    auth: { style: 'bearer' },
-    apiKey: 'sk-test',
-    quirks: {},
-    hasHostPermission: async () => true,
-    ...over,
-  };
+/** Like Partial, but an explicit `undefined` removes the key (tests write `apiKey: undefined`). */
+export type Overrides<T> = { [K in keyof T]?: T[K] | undefined };
+
+export function withOverrides<T extends object>(base: T, over: Overrides<T>): T {
+  const kept = Object.fromEntries(Object.entries(over).filter(([, v]) => v !== undefined));
+  const dropped = new Set(Object.keys(over).filter((k) => (over as Record<string, unknown>)[k] === undefined));
+  return { ...Object.fromEntries(Object.entries(base).filter(([k]) => !dropped.has(k))), ...kept } as T;
+}
+
+export function connection(over: Overrides<ResolvedConnection> = {}): ResolvedConnection {
+  return withOverrides<ResolvedConnection>(
+    {
+      id: 'c1',
+      protocol: 'openai-chat',
+      baseUrl: 'https://api.example.com/v1',
+      auth: { style: 'bearer' },
+      apiKey: 'sk-test',
+      quirks: {},
+      hasHostPermission: async () => true,
+    },
+    over,
+  );
 }

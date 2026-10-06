@@ -4,23 +4,25 @@ import { fakeSleep } from '../engine/testing.ts';
 import { createAnthropicAdapter } from './anthropic.ts';
 import { bindClient, createAdapter, createClient } from './client.ts';
 import { createOpenAIAdapter } from './openai.ts';
-import { anthropicStream, connection, mockFetch, openaiStream, sse, type ScriptedResponse } from './testing.ts';
+import { anthropicStream, connection, mockFetch, openaiStream, sse, withOverrides, type Overrides, type ScriptedResponse } from './testing.ts';
 import type { LLMClient, NormalizedEvent, NormalizedRequest, ProtocolAdapter, ResolvedConnection } from './types.ts';
 
 const ANTHROPIC = 'https://api.anthropic.com';
 const OPENAI = 'https://api.example.com/v1';
 
-function request(model: string, over: Partial<NormalizedRequest> = {}): NormalizedRequest {
-  return {
-    model,
-    system: 'You translate.',
-    messages: [{ role: 'user', content: '<seg id="1">Hello</seg>' }],
-    maxOutputTokens: 64,
-    temperature: 0.2,
-    cacheHint: 'system',
-    signal: new AbortController().signal,
-    ...over,
-  };
+function request(model: string, over: Overrides<NormalizedRequest> = {}): NormalizedRequest {
+  return withOverrides<NormalizedRequest>(
+    {
+      model,
+      system: 'You translate.',
+      messages: [{ role: 'user', content: '<seg id="1">Hello</seg>' }],
+      maxOutputTokens: 64,
+      temperature: 0.2,
+      cacheHint: 'system',
+      signal: new AbortController().signal,
+    },
+    over,
+  );
 }
 
 async function collect(stream: AsyncIterable<NormalizedEvent>): Promise<NormalizedEvent[]> {
@@ -35,7 +37,7 @@ const types = (events: NormalizedEvent[]): string[] => events.map((e) => e.type)
 interface Harness {
   name: string;
   adapter: (fetch: typeof globalThis.fetch) => ProtocolAdapter;
-  conn: (over?: Partial<ResolvedConnection>) => ResolvedConnection;
+  conn: (over?: Overrides<ResolvedConnection>) => ResolvedConnection;
   ok: (text: string[]) => ScriptedResponse;
   model: string;
 }
@@ -206,7 +208,7 @@ describe.each(harnesses)('$name adapter (shared contract)', (h) => {
 });
 
 describe('anthropic-messages adapter (wire details)', () => {
-  const conn = (over: Partial<ResolvedConnection> = {}): ResolvedConnection => connection({ protocol: 'anthropic-messages', baseUrl: ANTHROPIC, auth: { style: 'x-api-key' }, ...over });
+  const conn = (over: Overrides<ResolvedConnection> = {}): ResolvedConnection => connection({ protocol: 'anthropic-messages', baseUrl: ANTHROPIC, auth: { style: 'x-api-key' }, ...over });
 
   it('sends x-api-key, max_tokens, stream, temperature and cache_control on the system block to {base}/v1/messages', async () => {
     const f = mockFetch([{ status: 200, body: anthropicStream({ text: ['x'] }) }]);
@@ -326,7 +328,7 @@ describe('anthropic-messages adapter (wire details)', () => {
 });
 
 describe('openai-chat adapter (wire details)', () => {
-  const conn = (over: Partial<ResolvedConnection> = {}): ResolvedConnection => connection({ protocol: 'openai-chat', baseUrl: OPENAI, auth: { style: 'bearer' }, ...over });
+  const conn = (over: Overrides<ResolvedConnection> = {}): ResolvedConnection => connection({ protocol: 'openai-chat', baseUrl: OPENAI, auth: { style: 'bearer' }, ...over });
 
   it('sends Bearer auth, system as the first message, max_tokens, stream and stream_options.include_usage to {base}/chat/completions', async () => {
     const f = mockFetch([{ status: 200, body: openaiStream({ text: ['x'] }) }]);
