@@ -1,17 +1,27 @@
 import { browser } from 'wxt/browser';
-import { createContextMenu, listenForContextMenuClicks, setupPanelBehavior } from '@/shared/panel';
+import {
+  createContextMenu,
+  listenForActionClicks,
+  listenForContextMenuClicks,
+  listenForTabLifecycle,
+  setupPanelBehavior,
+} from '@/shared/panel';
 
+// The worker is a coordinator only (decision S1): action, context menu, injection and tab
+// lifecycle. It holds no translation state; segments go content ⇄ panel directly.
 export default defineBackground(() => {
   // Listeners are registered synchronously at top level: MV3 workers restart often, and
   // onInstalled does not fire again on restart.
+  listenForActionClicks(browser);
   listenForContextMenuClicks(browser);
+  listenForTabLifecycle(browser);
   browser.runtime.onInstalled.addListener(() => {
     createContextMenu(browser).catch((err: unknown) => {
       console.error('[translate-side] context menu setup failed', err);
     });
   });
 
-  // Toolbar icon and Alt+T (_execute_action) both open the side panel.
+  // Toolbar icon and Alt+T (_execute_action) fire action.onClicked, which opens the panel.
   setupPanelBehavior(browser).catch((err: unknown) => {
     console.error('[translate-side] setPanelBehavior failed', err);
   });

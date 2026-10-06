@@ -14,7 +14,7 @@ describe('manifest', () => {
   it('has no install-time host permissions or blanket content scripts', () => {
     expect(manifest.host_permissions).toBeUndefined();
     expect(manifest.content_scripts).toBeUndefined();
-    expect(manifest.optional_host_permissions).toEqual(['https://*/*', 'http://localhost/*', 'http://127.0.0.1/*']);
+    expect(manifest.optional_host_permissions).toEqual(['https://*/*', 'http://*/*', 'http://localhost/*', 'http://127.0.0.1/*']);
   });
 
   it('binds Alt+T to the action, which opens the side panel', () => {
