@@ -779,6 +779,8 @@ viewport comes first, you can start reading almost immediately.
   they go on a user-editable denylist in settings (M4+; decision D23).
   Editable regions (`contenteditable`, `role="textbox"`) are never read either, neither their
   default nor their typed text; code editors are shown as do-not-translate code (decision D24).
+  Editor surfaces may hold typed text, so they stay excluded from any later "translate code
+  comments" option (§4.1): their content is shown, never sent.
 - **Prompt injection**: page content is untrusted. It's wrapped in `<seg>` tags, the system
   prompt says it's data, and the output is only ever **rendered as text** (sanitized, no HTML
   injection). The model has no tools, so the worst a hostile page can do is cause a bad

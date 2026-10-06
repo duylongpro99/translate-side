@@ -70,6 +70,8 @@ function runReadability(doc: Document, body: Element): Element | null {
 export function extractPage(doc: Document): ExtractResult {
   const url = doc.URL;
   if (!classifyUrl(url).ok) return { ok: false, reason: 'denylisted', url };
+  // D24: a page that is one editable region (an editor app, designMode) is never read.
+  if (isEditableDocument(doc)) return { ok: false, reason: 'no-content', url };
   const composed = composeDocument(doc);
   const main = findMainContent(doc, composed);
   if (!main) return { ok: false, reason: 'no-content', url };
@@ -100,4 +102,12 @@ function livePath(el: Element, composed: Composed): string {
   const base = anc ? livePath(anc, composed) : '';
   const siblings = el.parentElement ? [...el.parentElement.children].filter((c) => c.localName === el.localName) : [el];
   return `${base}/~${el.localName}[${siblings.indexOf(el) + 1}]`;
+}
+
+function isEditableDocument(doc: Document): boolean {
+  const editable = (el: Element | null) => {
+    const ce = el?.getAttribute('contenteditable');
+    return ce !== null && ce !== undefined && ce.toLowerCase() !== 'false';
+  };
+  return doc.designMode === 'on' || editable(doc.documentElement) || editable(doc.body);
 }

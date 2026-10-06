@@ -53,7 +53,7 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
     // and table cells: a cell like `{/* … */}` keeps its row aligned, and isn't translated.
     if (!wordy && kind !== 'code' && kind !== 'table-cell') return;
     if (text.trim() === '') return;
-    const translate = kind !== 'code' && wordy && !optedOut(el);
+    const translate = kind !== 'code' && wordy && !optedOut(el, root);
     const seg: Segment = { id: hashId(`${domPath}\n${text}`), kind, text, inlineMarkup, domPath, translate, ...extra };
     if (opts.isHidden?.(el)) seg.hidden = true;
     out.push(seg);
@@ -141,10 +141,12 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
 /**
  * The page asks for no translation: the nearest `translate` attribute says "no", or the block
  * sits in a `.notranslate` region (the class Google Translate honours). It keeps its kind.
+ * Only marks inside the content root count: many apps put translate="no" on html or body to keep
+ * the browser's translator out of their DOM, and the user asked for this page explicitly.
  */
-function optedOut(el: Element): boolean {
+function optedOut(el: Element, root: Element): boolean {
   const marked = el.closest('[translate], .notranslate');
-  if (!marked) return false;
+  if (!marked || marked === root || !root.contains(marked)) return false;
   if (marked.classList.contains('notranslate')) return true;
   return marked.getAttribute('translate')?.toLowerCase() === 'no';
 }

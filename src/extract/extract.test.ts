@@ -128,6 +128,25 @@ describe('extraction policy (decision S3)', () => {
     expect(result.segments.find((s) => s.kind === 'code')).toMatchObject({ text: 'let x = 2;', translate: false });
   });
 
+  it('translates pages that opt out on html or body (app guards), honouring opt-outs inside the content', () => {
+    for (const [htmlAttr, bodyAttr] of [['translate="no"', ''], ['', 'translate="no"'], ['', 'class="notranslate"']]) {
+      const doc = loadHtml(`<!doctype html><html ${htmlAttr}><body ${bodyAttr}><main><p>${LONG}</p><p translate="no">Brand</p></main></body></html>`, 'https://example.com/');
+      const result = extractPage(doc);
+      if (!result.ok) throw new Error('expected content');
+      expect(result.segments.map((s) => s.translate)).toEqual([true, false]);
+    }
+  });
+
+  it('never reads a page that is all editable: contenteditable html/body or designMode (D24)', () => {
+    for (const attrs of [['contenteditable', ''], ['', 'contenteditable="true"']]) {
+      const doc = loadHtml(`<!doctype html><html ${attrs[0]}><body ${attrs[1]}><main><p>${LONG}</p></main></body></html>`, 'https://example.com/');
+      expect(extractPage(doc)).toEqual({ ok: false, reason: 'no-content', url: 'https://example.com/' });
+    }
+    const { doc } = extract(`<main><p>${LONG}</p></main>`);
+    doc.designMode = 'on';
+    expect(extractPage(doc)).toMatchObject({ ok: false, reason: 'no-content' });
+  });
+
   it('reports title, url and lang', () => {
     expect(extract(`<main><p>${LONG}</p></main>`).result).toMatchObject({ title: 'T', url: 'https://example.com/docs/page', lang: 'en' });
   });

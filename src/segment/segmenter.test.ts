@@ -118,6 +118,22 @@ describe('code blocks', () => {
     ]);
   });
 
+  it('ignores opt-outs on the content root and its ancestors (page-wide translate="no" guards)', () => {
+    const root = document.createElement('div');
+    root.className = 'notranslate';
+    root.innerHTML = '<p>Body text</p><p translate="no">Brand</p>';
+    document.body.replaceChildren(root);
+    document.body.setAttribute('translate', 'no');
+    try {
+      expect(segment(root, { pathOf: domPathOf }).map((x) => [x.text, x.translate])).toEqual([
+        ['Body text', true],
+        ['Brand', false],
+      ]);
+    } finally {
+      document.body.removeAttribute('translate');
+    }
+  });
+
   it('marks everything else translatable', () => {
     expect(seg('<p>x</p><li>y</li>').every((s) => s.translate)).toBe(true);
   });
