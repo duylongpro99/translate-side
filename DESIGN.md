@@ -714,7 +714,7 @@ viewport comes first, you can start reading almost immediately.
   nothing. LRU eviction around 50 MB.
 - **Brief cache**: by `url + contentHash`.
 - **Settings** (`chrome.storage.sync`): target language, provider, model, style, personal
-  glossary, site rules (auto-open / never translate).
+  glossary, site rules (auto-translate when the panel is open / never translate).
 - **API keys** (`chrome.storage.local` only, never sync). Show a clear note that keys are stored
   locally.
 
@@ -724,14 +724,19 @@ viewport comes first, you can start reading almost immediately.
 
 - Page text is sent to the chosen provider. Show this once on first run, and offer local options
   (Ollama, Chrome built-in) for sensitive content.
-- Never auto-translate by default. A per-site allowlist turns on auto-open. A built-in denylist
+- Never auto-translate by default. Allowlisting a site grants an optional host permission for it,
+  so the extension can re-inject on navigation; on allowlisted sites the open panel translates
+  each new page automatically. The panel cannot be opened without a user gesture (decision S5).
+  A built-in denylist
   (banking, mail, `chrome://`, password fields) is never sent.
 - **Prompt injection**: page content is untrusted. It's wrapped in `<seg>` tags, the system
   prompt says it's data, and the output is only ever **rendered as text** (sanitized, no HTML
   injection). The model has no tools, so the worst a hostile page can do is cause a bad
   translation.
 - Minimal permissions: `sidePanel`, `storage`, `activeTab`, `scripting`, `contextMenus`, plus
-  host permissions only for the configured provider endpoints (requested optionally at runtime).
+  optional host permissions, requested per origin at runtime, only for the configured provider
+  endpoints and for sites the user allowlists. The manifest declares `https://*/*` and
+  `http://*/*` as optional (ROADMAP §8 item 19).
 
 ---
 

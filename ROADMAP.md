@@ -92,7 +92,7 @@ Modules: `entrypoints/{background,content,sidepanel,options}`, `shared/messaging
 
 **Tasks.**
 - M0-E1 Project setup: WXT, TS strict, UI framework choice, Vitest, ESLint + boundary rule, CI (lint, typecheck, unit).
-- M0-E2 Manifest and entrypoints: action click and `Alt+T` open the panel for the tab (`setPanelBehavior`), context menu entry stub, options page stub.
+- M0-E2 Manifest and entrypoints: action click and `Alt+T` open the panel for the tab (`action.onClicked` → `sidePanel.open`, with `openPanelOnActionClick: false`; decision S5), context menu entry stub, options page stub.
 - M0-E3 Injection: on panel open, inject the content script with `chrome.scripting` under `activeTab`; handle "already injected" and "cannot inject here" (`chrome://`, Web Store).
 - M0-E4 Messaging: typed Port protocol, request/response helpers, tab-scoped routing in the worker.
 - M0-E5 Extraction: Readability on a cloned DOM; poor-result heuristic; `main`/`article`/`[role=main]` walk fallback; denylisted origins never extracted.
@@ -282,14 +282,14 @@ huge docs, tables, navigation within a site.
 **Deliverables.**
 - Hover link both ways; bidirectional scroll sync with loop guard.
 - SPA handling: MutationObserver + URL-change detection → re-extract; unchanged segments from cache; stable segment ids across re-extraction.
-- Navigation within a site keeps translating when the site is allowlisted (optional host permission per S5); otherwise a one-click "Translate this page" in the panel.
+- Navigation within a site keeps translating when the site is allowlisted (optional host permission per S5). Otherwise, after a same-origin navigation, the panel shows the original text with a one-click "Translate this page" (the `activeTab` grant survives same-origin navigation). After a cross-origin navigation, it asks for `Alt+T`/the toolbar or "Always translate on this site", because a panel click cannot grant `activeTab`.
 - Long documents: lazy mode above a segment-count threshold (viewport + ~2 screens ahead), with "Translate the rest" button.
 - Tables: cell segments, rows kept in one chunk; captions and alt text behind a setting; code comments translation deferred to M8.
 - Site rules UI: auto-translate allowlist, never-translate list, local-only, per-site model (storage from M4-E8).
 - Chrome built-in: `chrome-builtin` adapter for Nano via `LanguageModel` (experimental, behind a flag) and a separate **MT port** for `Translator` used by the `basic` strategy (see §8 item 3); "basic translation" label; used as last fallback or by choice.
 - "Explain this" per-block action (`explain@1` prompt via `translateSnippet`, output shown as a note).
 - Import/export settings JSON (keys excluded unless confirmed).
-- Keyboard: `Alt+T` toggle, panel-local shortcuts; basic a11y (focus order, ARIA on segments).
+- Keyboard: `Alt+T` opens the panel; toggles it closed on Chrome 141+ via `sidePanel.close` (decision S5, deviation (c)), panel-local shortcuts; basic a11y (focus order, ARIA on segments).
 
 **Exit criteria.**
 - Demo: browse three pages of a Docusaurus site with the panel open; each page translates without re-clicking (allowlisted); cached sidebar text costs nothing (visible in usage meter).
