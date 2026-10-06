@@ -15,7 +15,7 @@ export { STYLE_LABELS, TRANSLATE_PROMPT_ID, languageLabel, translateV1 } from '.
 export { ANALYZE_EXCERPT_TOKENS, ANALYZE_OUTLINE_MAX, ANALYZE_PROMPT_ID, analyzeExcerpt, analyzeInput, analyzeV1, neutralizeDelimiters } from './prompts/analyze.ts';
 export { ANALYZE_MAX_OUTPUT_TOKENS, ANALYZE_TEMPERATURE, analyzeRequest, analyzeStage, briefCacheKey } from './stages/analyze.ts';
 export { BRIEF_FIELD_MAX, BRIEF_GLOSSARY_MAX, normalizeBrief, parseBrief } from './parsing/brief.ts';
-export { CONTEXTUAL_CACHE_KEY, CONTEXTUAL_ID, CONTEXTUAL_STAGES, CONTEXTUAL_VERSION, contextual } from './strategies/contextual.ts';
+export { BRIEF_FREE_CHUNKS, CONTEXTUAL_CACHE_KEY, CONTEXTUAL_ID, CONTEXTUAL_VERSION, contextual, contextualStages } from './strategies/contextual.ts';
 export {
   BUDGET_MESSAGE,
   SINGLE_PASS_CACHE_KEY,

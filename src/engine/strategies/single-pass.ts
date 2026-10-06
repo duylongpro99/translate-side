@@ -45,6 +45,20 @@ export interface ChunkOutcome {
   final: string[];
   failed: string[];
   report?: ChunkReport;
+  /**
+   * Contextual only: whether the brief was in working memory when this chunk's prompt was built.
+   * The first chunk does not wait for the brief (plan M2-D6), so it is false there unless the job
+   * brought its brief; Phase C's `translate@2` renders the brief for exactly the chunks marked true.
+   */
+  briefed?: boolean;
+}
+
+/** How a translate stage waits for the document brief (contextual, plan M2-D6). */
+export interface BriefWait {
+  /** Settles when the analyze stage is over, brief or no brief. Never rejects. */
+  settled: Promise<void>;
+  /** Chunks with an index below this go ahead without waiting (the first chunk). */
+  freeChunks: number;
 }
 
 export interface CheckSummary {
@@ -100,12 +114,34 @@ export const chunkStage = defineStage<TranslationJob, ChunkWork[]>({
   },
 });
 
+/** Resolves when `promise` settles; rejects with the abort reason if `signal` aborts first. */
+function untilSettledOrAborted(promise: Promise<void>, signal: AbortSignal): Promise<void> {
+  signal.throwIfAborted();
+  return new Promise<void>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      () => {
+        signal.removeEventListener('abort', onAbort);
+        resolve();
+      },
+      () => {
+        signal.removeEventListener('abort', onAbort);
+        resolve();
+      },
+    );
+  });
+}
+
 /**
  * The translate stage, its finals marked as `strategyId`'s (strategies that extend this one,
  * like `contextual`, reuse it). The source language is the job's, or, when the shell could not
  * tell it, the one the brief read (plan M2 §5: the last link of the detection chain).
+ *
+ * With `brief` (contextual), a chunk from index `brief.freeChunks` on waits until the analyze
+ * stage is over before it builds its prompt; the outcome records whether the brief was there.
  */
-export function createTranslateStage(strategyId: string): AnyStage {
+export function createTranslateStage(strategyId: string, brief?: BriefWait): AnyStage {
   return defineStage<ChunkWork, ChunkOutcome>({
     id: 'translate',
     scope: 'chunk',
@@ -113,6 +149,10 @@ export function createTranslateStage(strategyId: string): AnyStage {
     promptId: TRANSLATE_PROMPT_ID,
     async *run(work, ctx) {
       const outcome: ChunkOutcome = { index: work.chunk.index, ids: work.chunk.segments.map((s) => s.id), final: [], failed: [] };
+      if (brief !== undefined) {
+        if (work.chunk.index >= brief.freeChunks) await untilSettledOrAborted(brief.settled, ctx.signal);
+        outcome.briefed = ctx.memory.brief !== undefined;
+      }
       if (ctx.budget.exhausted()) {
         const error: LLMError = { kind: 'unknown', message: BUDGET_MESSAGE };
         for (const id of outcome.ids) {

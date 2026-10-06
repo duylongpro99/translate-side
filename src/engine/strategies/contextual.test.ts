@@ -6,8 +6,12 @@ import { createDefaultPromptRegistry } from '../prompts/index.ts';
 import { ANALYZE_MAX_OUTPUT_TOKENS, briefCacheKey } from '../stages/analyze.ts';
 import { fakeClient, fakeSleep, failed, success, translatorClient, type FakeClient } from '../testing.ts';
 import { estimateTokens } from '../tokens.ts';
-import type { EngineEvent, Segment, TranslationJob } from '../types.ts';
-import { CONTEXTUAL_ID, contextual } from './contextual.ts';
+import type { EngineEvent, Segment, StageContext, TranslationJob } from '../types.ts';
+import { createBudget } from '../budget.ts';
+import { createWorkingMemory } from '../memory.ts';
+import { runStages } from '../runner.ts';
+import type { ChunkOutcome } from './single-pass.ts';
+import { BRIEF_FREE_CHUNKS, CONTEXTUAL_ID, contextual, contextualStages } from './contextual.ts';
 import { singlePass } from './single-pass.ts';
 
 const seg = (id: string, text: string, over: Partial<Segment> = {}): Segment => ({ id, kind: 'p', text, inlineMarkup: text, domPath: `p[${id}]`, translate: true, ...over });
@@ -21,6 +25,45 @@ function job(over: Partial<TranslationJob['doc']> = {}, strategy = CONTEXTUAL_ID
     options: { style: 'natural', glossary: [], maxConcurrency: 2, chunkTokens: 1200, ...(budget ? { budget } : {}) },
   };
 }
+
+/** A document of LONG_CHUNKS chunks (one ~430-token paragraph each at chunkTokens 500). */
+const LONG_CHUNKS = 4;
+const longSegments = Array.from({ length: LONG_CHUNKS }, (_, i) => seg(`p${i}`, `P${i} ${'word '.repeat(300).trim()}`));
+function longJob(over: Partial<TranslationJob['doc']> = {}): TranslationJob {
+  const j = job({ segments: longSegments, outline: [], ...over });
+  return { ...j, options: { ...j.options, chunkTokens: 500 } };
+}
+
+/** An analyze client that answers only when `release` is called (or fails on `release(null)`); it honours abort. */
+function heldAnalyze() {
+  let release!: (answer: string | null) => void;
+  const answer = new Promise<string | null>((resolve) => (release = resolve));
+  const state = { started: 0, ended: false };
+  const client: LLMClient = {
+    model: 'brief-model',
+    reasoningReserveTokens: 0,
+    async *stream(req) {
+      state.started++;
+      const text = await new Promise<string | null>((resolve, reject) => {
+        req.signal.addEventListener('abort', () => reject(req.signal.reason), { once: true });
+        void answer.then(resolve);
+      });
+      state.ended = true;
+      if (text === null) {
+        yield { type: 'error', error: { kind: 'bad_request', status: 400, message: 'no brief' } };
+        return;
+      }
+      yield { type: 'text', delta: text };
+      yield { type: 'usage', input: 10, output: 5 };
+      yield { type: 'done', stopReason: 'end' };
+    },
+  };
+  return { client, release, state };
+}
+
+const ticks = async (n = 20) => {
+  for (let i = 0; i < n; i++) await new Promise((r) => setTimeout(r, 0));
+};
 
 const BRIEF = { language: 'en', genre: 'technical blog post', audience: 'Rust developers', purpose: 'explain lazy futures', tone: 'conversational', glossary: [{ term: 'future', rendering: 'future', note: 'keep English' }] };
 
@@ -47,18 +90,20 @@ const finals = (events: EngineEvent[]) => events.flatMap((e) => (e.type === 'seg
 const noFailures = (events: EngineEvent[]) => expect(events.filter((e) => e.type === 'segment.failed')).toEqual([]);
 
 describe('contextual: analyze → chunk → translate → check', () => {
-  it('emits the brief as an artifact before any segment, then translates every segment as contextual', async () => {
+  it('emits the brief as an artifact, then translates every segment as contextual', async () => {
     const analyze = fakeClient([success(JSON.stringify(BRIEF))], { model: 'brief-model' });
     const events = await run(analyze);
     expect(artifacts(events)).toEqual([{ type: 'artifact', kind: 'brief', data: BRIEF }]);
-    const firstSeg = events.findIndex((e) => e.type.startsWith('segment.'));
-    expect(events.findIndex((e) => e.type === 'artifact')).toBeLessThan(firstSeg);
-    expect(events.filter((e) => e.type === 'stage' && e.status === 'start').map((e) => e.type === 'stage' && [e.stage, e.info])).toEqual([
+    // The analyze stage runs beside the translation stages (M2-D6): their frames interleave.
+    const starts = events.flatMap((e) => (e.type === 'stage' && e.status === 'start' ? [[e.stage, e.info]] : []));
+    expect(starts).toHaveLength(4);
+    expect(starts).toEqual(expect.arrayContaining([
       ['analyze', { promptId: ANALYZE_PROMPT_ID }],
       ['chunk', undefined],
       ['translate', { promptId: 'translate@1' }],
       ['check', undefined],
-    ]);
+    ]));
+    expect(starts.filter(([s]) => s !== 'analyze').map(([s]) => s)).toEqual(['chunk', 'translate', 'check']);
     expect(finals(events).map((e) => [e.id, e.text, e.producedBy.strategy])).toEqual([
       ['h', 'vi:Futures are lazy', 'contextual'],
       ['a', 'vi:One sentence.', 'contextual'],
@@ -151,16 +196,20 @@ describe('contextual: analyze → chunk → translate → check', () => {
     expect(translate.requests).toHaveLength(0);
   });
 
-  it('takes the source language from the brief only when the job has none', async () => {
+  it('takes the source language from the brief only when the job has none (chunks after the first)', async () => {
     const unknown = translatorClient();
-    await run(fakeClient([success(JSON.stringify({ ...BRIEF, language: 'de' }))]), unknown, job({ sourceLang: '' }));
-    expect(unknown.requests[0]?.system).toContain('from German into Vietnamese');
+    await run(fakeClient([success(JSON.stringify({ ...BRIEF, language: 'de' }))]), unknown, longJob({ sourceLang: '' }));
+    const systems = unknown.requests.map((r) => r.system);
+    expect(systems).toHaveLength(LONG_CHUNKS);
+    // The first chunk went out before the brief: it could not know the language yet.
+    expect(systems.filter((t) => t.includes('from the source language into Vietnamese'))).toHaveLength(1);
+    expect(systems.filter((t) => t.includes('from German into Vietnamese'))).toHaveLength(LONG_CHUNKS - 1);
     const known = translatorClient();
-    await run(fakeClient([success(JSON.stringify({ ...BRIEF, language: 'de' }))]), known, job({ sourceLang: 'en' }));
-    expect(known.requests[0]?.system).toContain('from English into Vietnamese');
+    await run(fakeClient([success(JSON.stringify({ ...BRIEF, language: 'de' }))]), known, longJob({ sourceLang: 'en' }));
+    expect(known.requests.every((r) => r.system.includes('from English into Vietnamese'))).toBe(true);
     const none = translatorClient();
-    await run(fakeClient([success('not json')]), none, job({ sourceLang: '' }));
-    expect(none.requests[0]?.system).toContain('from the source language into Vietnamese');
+    await run(fakeClient([success('not json')]), none, longJob({ sourceLang: '' }));
+    expect(none.requests.every((r) => r.system.includes('from the source language into Vietnamese'))).toBe(true);
   });
 
   it('leaves single-pass as it was: no brief call, single-pass finals', async () => {
@@ -169,6 +218,93 @@ describe('contextual: analyze → chunk → translate → check', () => {
     expect(analyze.requests).toHaveLength(0);
     expect(artifacts(events)).toEqual([]);
     expect(new Set(finals(events).map((e) => e.producedBy.strategy))).toEqual(new Set(['single-pass']));
+  });
+});
+
+describe('contextual: the brief runs beside the first chunk (plan §8, M2-D6)', () => {
+  function start(analyze: LLMClient, translate: FakeClient, ac = new AbortController()) {
+    const engine = createEngine({ llm: (r) => (r === 'analyze' ? analyze : translate), now: () => 0, sleep: fakeSleep(), strategies: [contextual], prompts: createDefaultPromptRegistry(), random: () => 0 });
+    const events: EngineEvent[] = [];
+    const done = (async () => {
+      for await (const e of engine.translate(longJob(), ac.signal)) events.push(e);
+    })();
+    return { events, done, ac };
+  }
+
+  it('chunk 1 is translated before the brief call answers; later chunks wait for the brief', async () => {
+    const held = heldAnalyze();
+    const translate = translatorClient();
+    const { events, done } = start(held.client, translate);
+    await ticks();
+    expect(held.state.started).toBe(1);
+    expect(held.state.ended).toBe(false);
+    // Only the first chunk went out, and its segment is final, while the brief is pending.
+    expect(translate.requests).toHaveLength(1);
+    expect(finals(events).map((e) => e.id)).toEqual(['p0']);
+    expect(artifacts(events)).toEqual([]);
+
+    held.release(JSON.stringify(BRIEF));
+    await done;
+    expect(translate.requests).toHaveLength(LONG_CHUNKS);
+    const artifactAt = events.findIndex((e) => e.type === 'artifact');
+    expect(artifactAt).toBeGreaterThan(events.findIndex((e) => e.type === 'segment.final'));
+    expect(events.findIndex((e) => e.type === 'segment.final' && e.id === 'p1')).toBeGreaterThan(artifactAt);
+    expect(finals(events).map((e) => e.id).sort()).toEqual(['p0', 'p1', 'p2', 'p3']);
+    expect(events.at(-1)).toEqual({ type: 'done' });
+  });
+
+  it('a failed brief releases the waiting chunks: no brief, nothing failed', async () => {
+    const held = heldAnalyze();
+    const translate = translatorClient();
+    const { events, done } = start(held.client, translate);
+    await ticks();
+    expect(translate.requests).toHaveLength(1);
+    held.release(null);
+    await done;
+    expect(artifacts(events)).toEqual([]);
+    noFailures(events);
+    expect(finals(events)).toHaveLength(LONG_CHUNKS);
+    expect(events.at(-1)).toEqual({ type: 'done' });
+  });
+
+  it('an abort while later chunks wait for the brief stops the job', async () => {
+    const held = heldAnalyze();
+    const translate = translatorClient();
+    const { done, ac } = start(held.client, translate);
+    await ticks();
+    expect(translate.requests).toHaveLength(1);
+    ac.abort(new DOMException('cancelled', 'AbortError'));
+    await expect(done).rejects.toThrow('cancelled');
+    expect(translate.requests).toHaveLength(1);
+  });
+
+  it('records which chunks had the brief: not the first, every later one; all when the job brought it', async () => {
+    const outcomes = async (seed?: typeof BRIEF) => {
+      const ctx: StageContext = {
+        llm: () => translatorClient(),
+        memory: { ...createWorkingMemory(), ...(seed ? { brief: seed } : {}) },
+        context: [],
+        prompts: createDefaultPromptRegistry(),
+        budget: createBudget({}, () => 0),
+        signal: new AbortController().signal,
+      };
+      let settle!: () => void;
+      const settled = new Promise<void>((r) => (settle = r));
+      const stages = contextualStages({ settled, freeChunks: BRIEF_FREE_CHUNKS }).slice(0, 2);
+      const gen = runStages(stages, longJob(), ctx, { concurrency: 2 });
+      const pending = (async () => {
+        for (;;) {
+          const r = await gen.next();
+          if (r.done) return r.value as ChunkOutcome[];
+        }
+      })();
+      await ticks();
+      ctx.memory.brief ??= BRIEF;
+      settle();
+      return (await pending).map((o) => o.briefed);
+    };
+    expect(await outcomes()).toEqual([false, true, true, true]);
+    expect(await outcomes(BRIEF)).toEqual([true, true, true, true]);
   });
 });
 
