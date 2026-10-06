@@ -48,7 +48,7 @@ be trusted.
 | Who chunks and builds prompts | ROADMAP §8 item 1 | The **engine** owns chunking, prompt building and chunk ordering. The shell owns job lifecycle and passes `maxConcurrency` and `chunkTokens` in the job options. |
 | Retry owner | S7, §8 item 15 | SDK `maxRetries: 0`; the pipeline owns backoff, retry and (later) fallback. |
 | Token estimate | M1-E2 | chars / 3.5 for Latin scripts; tune with harness data. |
-| `maxOutputTokens` | S2 | ~2.5× source tokens, with a per-target-language multiplier. |
+| `maxOutputTokens` | S2 | 2.0 × est. source tokens + 12 × segments + `reasoning.reserveTokens`, no per-language multiplier (DESIGN §5.7). |
 | Prompt caching on Haiku | S6, §8 item 4 | Keep `cache_control` on the system block (it helps larger models). Don't pad the prefix. Accept no caching on Haiku. |
 | `EngineEvent.usage` shape | §8 item 13 | Include `cachedInput` from the start. |
 

@@ -528,7 +528,7 @@ type EngineEvent =
       notes?: string[] }                                                 // e.g. idiom explained
   | { type: "segment.failed"; id: string; error: LLMError }
   | { type: "artifact"; kind: "brief" | "glossary"; data: unknown }      // shown in UI, cached
-  | { type: "usage"; role: string; model: string; input: number; output: number }
+  | { type: "usage"; role: string; model: string; input: number; output: number; cachedInput?: number }
   | { type: "done" };
 ```
 
