@@ -22,7 +22,10 @@ export type PanelView =
   | { kind: 'loading' }
   /** Chrome or the denylist forbids reading the page. */
   | { kind: 'blocked'; reason: AccessReason | 'denylisted'; detail?: string }
-  /** The activeTab grant ended (cross-origin navigation); a new gesture is needed (S5). */
+  /**
+   * The activeTab grant ended (cross-origin navigation); a new gesture is needed (S5). Without a
+   * grant Chrome hides the tab's URL, so a move to a browser page or the Web Store looks the same.
+   */
   | { kind: 'lost' }
   /** Neither the walk nor Readability found the text: the selection hint (S3). */
   | { kind: 'empty'; url: string }
@@ -35,15 +38,26 @@ interface TabSession {
   port?: PortLike;
   /** `at` of the access record this session last acted on. */
   accessAt?: number;
+  /** From the content script's hello: the document the live connection talks to. */
+  docId?: string;
   /** Bumped on every (re)connect, so a stale async step can tell it lost the race. */
   generation: number;
+  /** Between tabs.onUpdated 'loading' and 'complete'. */
+  pageLoading?: boolean;
+  /** The view a page load replaced with "loading", restored if the document survives (same-document navigation). */
+  beforeLoad?: PanelView;
+  /** Waiting for the worker's re-injection: the "lost" timer starts once the page has loaded. */
+  awaiting?: { generation: number; accessAt: number | undefined };
+  lostTimer?: ReturnType<typeof setTimeout>;
 }
 
 export interface ControllerOptions {
   /** How long to show "loading" before "idle" when a tab has no access record yet. */
   idleGraceMs?: number;
   requestTimeoutMs?: number;
-  /** After the page side disconnects, how long to wait for the worker's re-injection before "lost". */
+  /** The hello is answered at once by a live content script; a slow one means a stale or broken copy. */
+  helloTimeoutMs?: number;
+  /** After the page has loaded, how long to wait for the worker's re-injection before "lost". */
   lostAfterMs?: number;
 }
 
@@ -75,6 +89,12 @@ export class PanelController {
     this.api.tabs.onActivated.addListener(({ tabId, windowId }) => {
       if (windowId !== this.windowId) return;
       this.setActive(tabId);
+    });
+    this.api.tabs.onUpdated.addListener((tabId, info) => {
+      const s = this.sessions.get(tabId);
+      if (!s) return;
+      if (info.status === 'loading') this.pageLoading(tabId, s);
+      else if (info.status === 'complete') this.pageComplete(tabId, s);
     });
     this.api.tabs.onRemoved.addListener((tabId) => this.drop(tabId));
     this.api.tabs.onDetached.addListener((tabId, info) => {
@@ -155,8 +175,14 @@ export class PanelController {
         return;
       case 'ready':
         // A live connection to the same document stays as it is (hash/pushState changes and
-        // repeat clicks re-inject as "already injected"). SPA re-extraction is M5.
-        if (s.client && !s.client.closed && s.view.kind !== 'error') return;
+        // repeat clicks re-inject as "already injected"). SPA re-extraction is M5. A new gesture
+        // on a page that came out empty or failed reads it again on the same connection.
+        if (s.client && !s.client.closed) {
+          if (!changed || (s.view.kind !== 'empty' && s.view.kind !== 'error')) return;
+          if (s.docId === undefined) void this.connect(tabId);
+          else void this.extract(tabId, s, s.client, s.generation);
+          return;
+        }
         if (!changed && s.view.kind !== 'loading' && s.view.kind !== 'idle') return;
         void this.connect(tabId);
         return;
@@ -167,6 +193,8 @@ export class PanelController {
     const s = this.session(tabId);
     this.disconnect(tabId);
     const generation = ++s.generation;
+    delete s.awaiting;
+    clearTimeout(s.lostTimer);
     this.setView(tabId, { kind: 'loading' });
     let port: PortLike;
     try {
@@ -179,32 +207,77 @@ export class PanelController {
     s.port = port;
     s.client = client;
     port.onDisconnect.addListener(() => {
-      if (s.generation === generation && s.view.kind === 'ready') this.awaitReinjection(tabId, s, generation);
+      if (s.generation === generation && (s.view.kind === 'ready' || s.pageLoading)) this.awaitReinjection(tabId, s, generation);
     });
     try {
-      const hello = await client.request('hello', { v: PROTOCOL_VERSION });
+      const hello = await client.request('hello', { v: PROTOCOL_VERSION }, { timeoutMs: this.opts.helloTimeoutMs ?? 5000 });
+      if (s.generation !== generation) return;
+      s.docId = hello.docId;
+    } catch (err) {
+      this.fail(tabId, s, generation, err);
+      return;
+    }
+    await this.extract(tabId, s, client, generation);
+  }
+
+  private async extract(tabId: number, s: TabSession, client: Client<ContentApi>, generation: number): Promise<void> {
+    this.setView(tabId, { kind: 'loading' });
+    try {
       const result = await client.request('extract', {});
       if (s.generation !== generation) return;
-      if (result.ok) this.setView(tabId, { kind: 'ready', result, docId: hello.docId });
+      if (result.ok) this.setView(tabId, { kind: 'ready', result, docId: s.docId ?? '' });
       else if (result.reason === 'denylisted') this.setView(tabId, { kind: 'blocked', reason: 'denylisted' });
       else this.setView(tabId, { kind: 'empty', url: result.url });
     } catch (err) {
-      if (s.generation !== generation) return;
-      if (err instanceof ProtocolError && err.code === 'disconnected') this.awaitReinjection(tabId, s, generation);
-      else this.setView(tabId, { kind: 'error', message: messageOf(err) });
+      this.fail(tabId, s, generation, err);
     }
+  }
+
+  private fail(tabId: number, s: TabSession, generation: number, err: unknown): void {
+    if (s.generation !== generation) return;
+    if (err instanceof ProtocolError && err.code === 'disconnected') this.awaitReinjection(tabId, s, generation);
+    else this.setView(tabId, { kind: 'error', message: messageOf(err) });
+  }
+
+  /** A navigation started: the panel shows "loading" until the page settles. */
+  private pageLoading(tabId: number, s: TabSession): void {
+    s.pageLoading = true;
+    if (s.view.kind === 'ready' || s.view.kind === 'empty') {
+      s.beforeLoad = s.view;
+      this.setView(tabId, { kind: 'loading' });
+    }
+  }
+
+  private pageComplete(tabId: number, s: TabSession): void {
+    s.pageLoading = false;
+    const before = s.beforeLoad;
+    delete s.beforeLoad;
+    if (s.awaiting) this.startLostTimer(tabId, s);
+    // Same-document navigation: the connection survived, so the page is what it was.
+    else if (before && s.view.kind === 'loading' && s.client && !s.client.closed) this.setView(tabId, before);
   }
 
   /**
    * The page side went away: a navigation or reload (the worker re-injects on load complete and
    * updates the access record, which brings us back through refresh()), or no content script at
-   * all. If no new record arrives in time, the grant did not follow the page (S5).
+   * all. If no new record arrives within lostAfterMs of the page loading, the grant did not
+   * follow the page (S5). A slow page keeps "loading" for as long as it loads.
    */
   private awaitReinjection(tabId: number, s: TabSession, generation: number): void {
-    const accessAt = s.accessAt;
+    s.awaiting = { generation, accessAt: s.accessAt };
+    delete s.beforeLoad;
     this.setView(tabId, { kind: 'loading' });
-    setTimeout(() => {
-      if (s.generation === generation && s.accessAt === accessAt && s.view.kind === 'loading') this.setView(tabId, { kind: 'lost' });
+    if (!s.pageLoading) this.startLostTimer(tabId, s);
+  }
+
+  private startLostTimer(tabId: number, s: TabSession): void {
+    const awaiting = s.awaiting;
+    if (!awaiting) return;
+    clearTimeout(s.lostTimer);
+    s.lostTimer = setTimeout(() => {
+      if (s.awaiting !== awaiting) return;
+      delete s.awaiting;
+      if (s.generation === awaiting.generation && s.accessAt === awaiting.accessAt && s.view.kind === 'loading') this.setView(tabId, { kind: 'lost' });
     }, this.opts.lostAfterMs ?? 4000);
   }
 
@@ -212,6 +285,7 @@ export class PanelController {
     const s = this.sessions.get(tabId);
     if (!s?.port) return;
     s.generation++;
+    delete s.docId;
     try {
       s.port.disconnect();
     } catch {
@@ -223,6 +297,7 @@ export class PanelController {
 
   private drop(tabId: number): void {
     this.disconnect(tabId);
+    clearTimeout(this.sessions.get(tabId)?.lostTimer);
     this.sessions.delete(tabId);
     if (tabId === this.activeTabId) {
       this.activeTabId = undefined;

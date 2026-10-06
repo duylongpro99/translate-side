@@ -32,6 +32,7 @@ export function StateMessage({ view, onRetry }: { view: Exclude<PanelView, { kin
         <div class="state" data-state="lost" role="alert">
           <p class="state__title">Translate this page</p>
           <p>This page is new to Translate Side. Press Alt+T or click the toolbar icon to read it.</p>
+          <p class="state__hint">Browser pages and the Chrome Web Store can't be read; Chrome doesn't let extensions see them.</p>
         </div>
       );
     case 'empty':

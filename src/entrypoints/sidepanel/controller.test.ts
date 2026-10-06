@@ -10,6 +10,8 @@ type Api = ConstructorParameters<typeof PanelController>[0];
 interface Page {
   docId: string;
   result: ExtractResult;
+  /** A stale or broken content script that never answers hello. */
+  mute?: boolean;
 }
 
 function fakeWorld() {
@@ -52,7 +54,7 @@ function fakeWorld() {
     }
     contentEnds[tabId] = pageEnd;
     serve<ContentApi>(pageEnd, {
-      hello: () => ({ v: PROTOCOL_VERSION, docId: page.docId, url: 'https://example.com/' }),
+      hello: () => (page.mute ? new Promise<never>(() => undefined) : { v: PROTOCOL_VERSION, docId: page.docId, url: 'https://example.com/' }),
       extract: () => page.result,
     });
     return panelEnd;
@@ -65,6 +67,7 @@ function fakeWorld() {
       query: () => Promise.resolve([{ id: 10 }]),
       connect,
       onActivated: on('activated'),
+      onUpdated: on('updated'),
       onRemoved: on('removed'),
       onDetached: on('detached'),
     },
@@ -253,5 +256,78 @@ describe('PanelController', () => {
     await wait();
     w.fire('removed', 10);
     expect(c.view.kind).toBe('idle');
+  });
+
+  it('keeps "loading" while a slow page loads, and only then gives the worker lostAfterMs', async () => {
+    const w = fakeWorld();
+    w.pages[10] = { docId: 'd1', result: ok(1) };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    const { c } = await started(w);
+    await wait();
+    w.fire('updated', 10, { status: 'loading' });
+    expect(c.view.kind).toBe('loading');
+    w.pages[10] = { docId: 'd2', result: ok(2) };
+    w.contentEnds[10]?.disconnect();
+    await wait(80); // longer than lostAfterMs (30): no "lost" while the page is loading
+    expect(c.view.kind).toBe('loading');
+    w.fire('updated', 10, { status: 'complete' });
+    w.setAccess(10, { status: 'ready' });
+    await wait(80);
+    expect(c.view).toMatchObject({ kind: 'ready', docId: 'd2' });
+  });
+
+  it('shows "lost" lostAfterMs after a slow page completes without re-injection', async () => {
+    const w = fakeWorld();
+    w.pages[10] = { docId: 'd1', result: ok(1) };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    const { c } = await started(w);
+    await wait();
+    w.fire('updated', 10, { status: 'loading' });
+    delete w.pages[10];
+    w.contentEnds[10]?.disconnect();
+    await wait(80);
+    expect(c.view.kind).toBe('loading');
+    w.fire('updated', 10, { status: 'complete' });
+    await wait(10);
+    expect(c.view.kind).toBe('loading');
+    await wait(60);
+    expect(c.view.kind).toBe('lost');
+  });
+
+  it('restores the view after a same-document navigation keeps the connection', async () => {
+    const w = fakeWorld();
+    w.pages[10] = { docId: 'd1', result: ok(1) };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    const { c } = await started(w);
+    await wait();
+    w.fire('updated', 10, { status: 'loading' });
+    w.fire('updated', 10, { status: 'complete' });
+    expect(c.view).toMatchObject({ kind: 'ready', docId: 'd1' });
+    expect(w.connects).toEqual([10]);
+  });
+
+  it('shows an error when the content script does not answer hello in time', async () => {
+    const w = fakeWorld();
+    w.pages[10] = { docId: 'd1', result: ok(1), mute: true };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    const { c } = await started(w, { helloTimeoutMs: 30, requestTimeoutMs: 10_000 });
+    await wait(60);
+    expect(c.view).toMatchObject({ kind: 'error', message: expect.stringContaining('hello') });
+  });
+
+  it('re-extracts an empty page on the same connection when a new gesture re-injects', async () => {
+    const w = fakeWorld();
+    w.pages[10] = { docId: 'd1', result: { ok: false, reason: 'no-content', url: 'https://example.com/' } };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    const { c } = await started(w);
+    await wait();
+    expect(c.view.kind).toBe('empty');
+    // The page filled in (client-side rendering); the user clicks again.
+    const page = w.pages[10];
+    if (page) page.result = ok(4);
+    w.setAccess(10, { status: 'ready', detail: 'already injected' });
+    await wait();
+    expect(c.view).toMatchObject({ kind: 'ready', docId: 'd1' });
+    expect(w.connects).toEqual([10]);
   });
 });
