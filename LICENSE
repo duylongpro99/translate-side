@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 the Translate Side authors
+Copyright (c) 2026 Translate Peer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,10 @@ SOFTWARE.
 
 ---
 
-This license does not cover the files under fixtures/. Those are third-party web
-pages kept as test fixtures under their own licenses; see
-fixtures/sites/ATTRIBUTION.md for each one's source, authors and license.
+This license does not cover the files under fixtures/, nor fixture-derived text
+and translations under spikes/ (e.g. spikes/s2/chunks*.json, spikes/s2/runs/,
+spikes/s2/results.md, spikes/s3 data files such as noise.json, noise.md,
+results-*.json and why-headings-fix.txt). The fixtures are third-party web pages
+kept as test fixtures under their own licenses, and that text and its
+translations stay under those licenses; see fixtures/sites/ATTRIBUTION.md for
+each one's source, authors and license.
