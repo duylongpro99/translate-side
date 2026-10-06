@@ -1,0 +1,1003 @@
+{
+ "slug": "mkdocs-material-admonitions",
+ "via": "walk",
+ "url": "https://squidfunk.github.io/mkdocs-material/reference/admonitions/",
+ "title": "Admonitions - Material for MkDocs",
+ "lang": "en",
+ "generator": "MkDocs Material",
+ "segments": [
+  {
+   "id": "0o5i6w5hkqi",
+   "kind": "heading",
+   "text": "Admonitions",
+   "inlineMarkup": "Admonitions",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h1[1]",
+   "translate": true,
+   "level": 1
+  },
+  {
+   "id": "14c0knlqwac",
+   "kind": "p",
+   "text": "Admonitions, also known as call-outs, are an excellent choice for including side content without significantly interrupting the document flow. Material for MkDocs provides several different types of admonitions and allows for the inclusion and nesting of arbitrary content.",
+   "inlineMarkup": "Admonitions, also known as *call-outs*, are an excellent choice for including side content without significantly interrupting the document flow. Material for MkDocs provides several different types of admonitions and allows for the inclusion and nesting of arbitrary content.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0i1c47cosdu",
+   "kind": "heading",
+   "text": "Configuration",
+   "inlineMarkup": "Configuration",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h2[1]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "10wc36vvmnu",
+   "kind": "p",
+   "text": "This configuration enables admonitions, allows to make them collapsible and to nest arbitrary content inside admonitions. Add the following lines to mkdocs.yml:",
+   "inlineMarkup": "This configuration enables admonitions, allows to make them collapsible and to nest arbitrary content inside admonitions. Add the following lines to `mkdocs.yml`:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "1s24o09vtx9",
+   "kind": "code",
+   "text": "markdown_extensions:\n  - admonition\n  - pymdownx.details\n  - pymdownx.superfences",
+   "inlineMarkup": "markdown_extensions:\n  - admonition\n  - pymdownx.details\n  - pymdownx.superfences",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "13zqzjzhec9",
+   "kind": "p",
+   "text": "See additional configuration options:",
+   "inlineMarkup": "See additional configuration options:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[3]",
+   "translate": true
+  },
+  {
+   "id": "06ybo2bsq13",
+   "kind": "li",
+   "text": "Admonition",
+   "inlineMarkup": "[link]Admonition[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/ul[1]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "076wzoedxcp",
+   "kind": "li",
+   "text": "Details",
+   "inlineMarkup": "[link]Details[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/ul[1]/li[2]",
+   "translate": true
+  },
+  {
+   "id": "1qadsdrfms8",
+   "kind": "li",
+   "text": "SuperFences",
+   "inlineMarkup": "[link]SuperFences[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/ul[1]/li[3]",
+   "translate": true
+  },
+  {
+   "id": "09vbwx38s8m",
+   "kind": "heading",
+   "text": "Admonition icons",
+   "inlineMarkup": "Admonition icons",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[1]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "0zxhvf7zs35",
+   "kind": "p",
+   "text": "Each of the supported admonition types has a distinct icon, which can be changed to any icon bundled with the theme, or even a custom icon. Add the following lines to mkdocs.yml:",
+   "inlineMarkup": "Each of the supported admonition types has a distinct icon, which can be changed to any icon bundled with the theme, or even a [link]custom icon[/link]. Add the following lines to `mkdocs.yml`:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[5]",
+   "translate": true
+  },
+  {
+   "id": "02vtfzgaw8l",
+   "kind": "code",
+   "text": "theme:\n  icon:\n    admonition:\n      <type>: <icon>",
+   "inlineMarkup": "theme:\n  icon:\n    admonition:\n      <type>: <icon>",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[2]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "130ickkenai",
+   "kind": "p",
+   "text": "Expand to show alternate icon sets",
+   "inlineMarkup": "Expand to show alternate icon sets",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/details[1]/summary[1]",
+   "translate": true
+  },
+  {
+   "id": "0jjlwgbam8m",
+   "kind": "p",
+   "text": "Octicons FontAwesome",
+   "inlineMarkup": "[link]Octicons[/link] [link]FontAwesome[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/details[1]/div[1]/div[1]",
+   "translate": true,
+   "hidden": true
+  },
+  {
+   "id": "0l713epqccz",
+   "kind": "code",
+   "text": "theme:\n  icon:\n    admonition:\n      note: octicons/tag-16\n      abstract: octicons/checklist-16\n      info: octicons/info-16\n      tip: octicons/squirrel-16\n      success: octicons/check-16\n      question: octicons/question-16\n      warning: octicons/alert-16\n      failure: octicons/x-circle-16\n      danger: octicons/zap-16\n      bug: octicons/bug-16\n      example: octicons/beaker-16\n      quote: octicons/quote-16",
+   "inlineMarkup": "theme:\n  icon:\n    admonition:\n      note: octicons/tag-16\n      abstract: octicons/checklist-16\n      info: octicons/info-16\n      tip: octicons/squirrel-16\n      success: octicons/check-16\n      question: octicons/question-16\n      warning: octicons/alert-16\n      failure: octicons/x-circle-16\n      danger: octicons/zap-16\n      bug: octicons/bug-16\n      example: octicons/beaker-16\n      quote: octicons/quote-16",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/details[1]/div[1]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "hidden": true
+  },
+  {
+   "id": "00ky6vhuklt",
+   "kind": "code",
+   "text": "theme:\n  icon:\n    admonition:\n      note: fontawesome/solid/note-sticky\n      abstract: fontawesome/solid/book\n      info: fontawesome/solid/circle-info\n      tip: fontawesome/solid/bullhorn\n      success: fontawesome/solid/check\n      question: fontawesome/solid/circle-question\n      warning: fontawesome/solid/triangle-exclamation\n      failure: fontawesome/solid/bomb\n      danger: fontawesome/solid/skull\n      bug: fontawesome/solid/robot\n      example: fontawesome/solid/flask\n      quote: fontawesome/solid/quote-left",
+   "inlineMarkup": "theme:\n  icon:\n    admonition:\n      note: fontawesome/solid/note-sticky\n      abstract: fontawesome/solid/book\n      info: fontawesome/solid/circle-info\n      tip: fontawesome/solid/bullhorn\n      success: fontawesome/solid/check\n      question: fontawesome/solid/circle-question\n      warning: fontawesome/solid/triangle-exclamation\n      failure: fontawesome/solid/bomb\n      danger: fontawesome/solid/skull\n      bug: fontawesome/solid/robot\n      example: fontawesome/solid/flask\n      quote: fontawesome/solid/quote-left",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/details[1]/div[1]/div[2]/div[2]/div[1]/pre[1]",
+   "translate": false,
+   "hidden": true
+  },
+  {
+   "id": "1a524zggt8l",
+   "kind": "heading",
+   "text": "Usage",
+   "inlineMarkup": "Usage",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h2[2]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "1a44lk3hdw2",
+   "kind": "p",
+   "text": "Admonitions follow a simple syntax: a block starts with !!!, followed by a single keyword used as a type qualifier. The content of the block follows on the next line, indented by four spaces:",
+   "inlineMarkup": "Admonitions follow a simple syntax: a block starts with `!!!`, followed by a single keyword used as a [link]type qualifier[/link]. The content of the block follows on the next line, indented by four spaces:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[6]",
+   "translate": true
+  },
+  {
+   "id": "0zne4yhbvyo",
+   "kind": "p",
+   "text": "Admonition",
+   "inlineMarkup": "Admonition",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[3]#run[1]",
+   "translate": true
+  },
+  {
+   "id": "025akq6zosw",
+   "kind": "code",
+   "text": "!!! note\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n    nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n    massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "!!! note\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n    nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n    massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[3]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1oblmswlb4s",
+   "kind": "p",
+   "text": "Note",
+   "inlineMarkup": "Note",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[4]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0ua0q3h4y1v",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[4]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "0m9vcwgchql",
+   "kind": "heading",
+   "text": "Changing the title",
+   "inlineMarkup": "Changing the title",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[2]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "10l2uowzi7i",
+   "kind": "p",
+   "text": "By default, the title will equal the type qualifier in titlecase. However, it can be changed by adding a quoted string containing valid Markdown (including links, formatting, ...) after the type qualifier:",
+   "inlineMarkup": "By default, the title will equal the type qualifier in titlecase. However, it can be changed by adding a quoted string containing valid Markdown (including links, formatting, ...) after the type qualifier:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[7]",
+   "translate": true
+  },
+  {
+   "id": "0jnbyowajtr",
+   "kind": "p",
+   "text": "Admonition with custom title",
+   "inlineMarkup": "Admonition with custom title",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[5]#run[1]",
+   "translate": true
+  },
+  {
+   "id": "15usujyp3ss",
+   "kind": "code",
+   "text": "!!! note \"Phasellus posuere in sem ut cursus\"\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n    nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n    massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "!!! note \"Phasellus posuere in sem ut cursus\"\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n    nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n    massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[5]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "2d0uwcjjvec",
+   "kind": "p",
+   "text": "Phasellus posuere in sem ut cursus",
+   "inlineMarkup": "Phasellus posuere in sem ut cursus",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[6]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "1gegmma0zdt",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[6]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "255vh9ojy5b",
+   "kind": "heading",
+   "text": "Nested admonitions",
+   "inlineMarkup": "Nested admonitions",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[3]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "0m92o8i23rr",
+   "kind": "p",
+   "text": "You can also include nested admonitions in your documentation. To do this, you can use your existing admonitions and indent the desired ones:",
+   "inlineMarkup": "You can also include nested admonitions in your documentation. To do this, you can use your existing admonitions and indent the desired ones:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[8]",
+   "translate": true
+  },
+  {
+   "id": "19fpr6xbjui",
+   "kind": "p",
+   "text": "Nested Admonition",
+   "inlineMarkup": "Nested Admonition",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[7]#run[1]",
+   "translate": true
+  },
+  {
+   "id": "1zy7dfyqq3i",
+   "kind": "code",
+   "text": "!!! note \"Outer Note\"\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n    nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n    massa, nec semper lorem quam in massa.\n\n    !!! note \"Inner Note\"\n\n        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n        nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n        massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "!!! note \"Outer Note\"\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n    nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n    massa, nec semper lorem quam in massa.\n\n    !!! note \"Inner Note\"\n\n        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n        nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n        massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[7]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1yxsvr5s6f6",
+   "kind": "p",
+   "text": "Outer Note",
+   "inlineMarkup": "Outer Note",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[8]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "1ct7o7p2s3v",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[8]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "1114mzr8h7x",
+   "kind": "p",
+   "text": "Inner Note",
+   "inlineMarkup": "Inner Note",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[8]/div[1]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0yb49ahc0je",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[8]/div[1]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "281aphaoqdy",
+   "kind": "heading",
+   "text": "Removing the title",
+   "inlineMarkup": "Removing the title",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[4]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "2d070jqvj4u",
+   "kind": "p",
+   "text": "Similar to changing the title, the icon and title can be omitted entirely by adding an empty string directly after the type qualifier. Note that this will not work for collapsible blocks:",
+   "inlineMarkup": "Similar to [link]changing the title[/link], the icon and title can be omitted entirely by adding an empty string directly after the type qualifier. Note that this will not work for [link]collapsible blocks[/link]:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[9]",
+   "translate": true
+  },
+  {
+   "id": "0jaq2sacjkb",
+   "kind": "p",
+   "text": "Admonition without title",
+   "inlineMarkup": "Admonition without title",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[9]#run[1]",
+   "translate": true
+  },
+  {
+   "id": "0hvsijlmnxt",
+   "kind": "code",
+   "text": "!!! note \"\"\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n    nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n    massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "!!! note \"\"\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n    nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n    massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[9]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0h7nv28z1n1",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[10]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0e81g8f2sc5",
+   "kind": "heading",
+   "text": "Collapsible blocks",
+   "inlineMarkup": "Collapsible blocks",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[5]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "1yklw9e5ctk",
+   "kind": "p",
+   "text": "When Details is enabled and an admonition block is started with ??? instead of !!!, the admonition is rendered as an expandable block with a small toggle on the right side:",
+   "inlineMarkup": "When [link]Details[/link] is enabled and an admonition block is started with `???` instead of `!!!`, the admonition is rendered as an expandable block with a small toggle on the right side:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[10]",
+   "translate": true
+  },
+  {
+   "id": "02a9q26zq3u",
+   "kind": "p",
+   "text": "Admonition, collapsible",
+   "inlineMarkup": "Admonition, collapsible",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[11]#run[1]",
+   "translate": true
+  },
+  {
+   "id": "2fhw9xlbmls",
+   "kind": "code",
+   "text": "??? note\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n    nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n    massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "??? note\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n    nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n    massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[11]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1zjmcn2866j",
+   "kind": "p",
+   "text": "Note",
+   "inlineMarkup": "Note",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[12]/details[1]/summary[1]",
+   "translate": true
+  },
+  {
+   "id": "2gd1uptz402",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[12]/details[1]/p[1]",
+   "translate": true,
+   "hidden": true
+  },
+  {
+   "id": "0nm0a4q88r4",
+   "kind": "p",
+   "text": "Adding a + after the ??? token renders the block expanded:",
+   "inlineMarkup": "Adding a `+` after the `???` token renders the block expanded:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[11]",
+   "translate": true
+  },
+  {
+   "id": "1wacip777zd",
+   "kind": "p",
+   "text": "Admonition, collapsible and initially expanded",
+   "inlineMarkup": "Admonition, collapsible and initially expanded",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[13]#run[1]",
+   "translate": true
+  },
+  {
+   "id": "08qyr048x89",
+   "kind": "code",
+   "text": "???+ note\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n    nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n    massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "???+ note\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod\n    nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor\n    massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[13]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "11rsr66dd7m",
+   "kind": "p",
+   "text": "Note",
+   "inlineMarkup": "Note",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[14]/details[1]/summary[1]",
+   "translate": true
+  },
+  {
+   "id": "05277c9e5pe",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[14]/details[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "11v8fu1yku9",
+   "kind": "heading",
+   "text": "Inline blocks",
+   "inlineMarkup": "Inline blocks",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[6]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "1j5l1snmpy7",
+   "kind": "p",
+   "text": "Admonitions can also be rendered as inline blocks (e.g., for sidebars), placing them to the right using the inline + end modifiers, or to the left using only the inline modifier:",
+   "inlineMarkup": "Admonitions can also be rendered as inline blocks (e.g., for sidebars), placing them to the right using the `inline` + `end` modifiers, or to the left using only the `inline` modifier:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[12]",
+   "translate": true
+  },
+  {
+   "id": "0mxfjsz4uxj",
+   "kind": "p",
+   "text": "inline end inline",
+   "inlineMarkup": "[link]inline end[/link] [link]inline[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "1537vkpwehk",
+   "kind": "p",
+   "text": "Lorem ipsum",
+   "inlineMarkup": "Lorem ipsum",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[1]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "1ojn6jkckgn",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[1]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "0hwhgh6x218",
+   "kind": "code",
+   "text": "!!! info inline end \"Lorem ipsum\"\n\n    Lorem ipsum dolor sit amet, consectetur\n    adipiscing elit. Nulla et euismod nulla.\n    Curabitur feugiat, tortor non consequat\n    finibus, justo purus auctor massa, nec\n    semper lorem quam in massa.",
+   "inlineMarkup": "!!! info inline end \"Lorem ipsum\"\n\n    Lorem ipsum dolor sit amet, consectetur\n    adipiscing elit. Nulla et euismod nulla.\n    Curabitur feugiat, tortor non consequat\n    finibus, justo purus auctor massa, nec\n    semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[1]/div[2]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "24pfp9hgby3",
+   "kind": "p",
+   "text": "Use inline end to align to the right (left for rtl languages).",
+   "inlineMarkup": "Use `inline end` to align to the right (left for rtl languages).",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0rhjx8g3fty",
+   "kind": "p",
+   "text": "Lorem ipsum",
+   "inlineMarkup": "Lorem ipsum",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[2]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "1ha6ja9gq9m",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[2]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "1x29ps1i8lr",
+   "kind": "code",
+   "text": "!!! info inline \"Lorem ipsum\"\n\n    Lorem ipsum dolor sit amet, consectetur\n    adipiscing elit. Nulla et euismod nulla.\n    Curabitur feugiat, tortor non consequat\n    finibus, justo purus auctor massa, nec\n    semper lorem quam in massa.",
+   "inlineMarkup": "!!! info inline \"Lorem ipsum\"\n\n    Lorem ipsum dolor sit amet, consectetur\n    adipiscing elit. Nulla et euismod nulla.\n    Curabitur feugiat, tortor non consequat\n    finibus, justo purus auctor massa, nec\n    semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[2]/div[2]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0k70cea8yzz",
+   "kind": "p",
+   "text": "Use inline to align to the left (right for rtl languages).",
+   "inlineMarkup": "Use `inline` to align to the left (right for rtl languages).",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[2]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "1i0yds577c1",
+   "kind": "p",
+   "text": "Important: admonitions that use the inline modifiers must be declared prior to the content block you want to place them beside. If there's insufficient space to render the admonition next to the block, the admonition will stretch to the full width of the viewport, e.g., on mobile viewports.",
+   "inlineMarkup": "*Important*: admonitions that use the `inline` modifiers *must* be declared prior to the content block you want to place them beside. If there's insufficient space to render the admonition next to the block, the admonition will stretch to the full width of the viewport, e.g., on mobile viewports.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[13]",
+   "translate": true
+  },
+  {
+   "id": "14tt9bjekv1",
+   "kind": "heading",
+   "text": "Supported types",
+   "inlineMarkup": "Supported types",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[7]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "1q5kl9v9i7z",
+   "kind": "p",
+   "text": "Following is a list of type qualifiers provided by Material for MkDocs, whereas the default type, and thus fallback for unknown type qualifiers, is note1:",
+   "inlineMarkup": "Following is a list of type qualifiers provided by Material for MkDocs, whereas the default type, and thus fallback for unknown type qualifiers, is `note`[link]1[/link]:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[14]",
+   "translate": true
+  },
+  {
+   "id": "12y84h5aft9",
+   "kind": "p",
+   "text": "note",
+   "inlineMarkup": "[link]`note`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[1]",
+   "translate": true
+  },
+  {
+   "id": "1vedgdbqwnr",
+   "kind": "p",
+   "text": "Note",
+   "inlineMarkup": "Note",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[1]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0llibacpsq1",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[1]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "1f9pdo7pp4t",
+   "kind": "p",
+   "text": "abstract",
+   "inlineMarkup": "[link]`abstract`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[2]",
+   "translate": true
+  },
+  {
+   "id": "1hfejt6xb3s",
+   "kind": "p",
+   "text": "Abstract",
+   "inlineMarkup": "Abstract",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[2]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "1fn3aw3on8z",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[2]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "12j8ia7k4h6",
+   "kind": "p",
+   "text": "info",
+   "inlineMarkup": "[link]`info`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[3]",
+   "translate": true
+  },
+  {
+   "id": "1ir7ig2t5cb",
+   "kind": "p",
+   "text": "Info",
+   "inlineMarkup": "Info",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[3]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "293enm1bacr",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[3]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "2g3el9fx7qy",
+   "kind": "p",
+   "text": "tip",
+   "inlineMarkup": "[link]`tip`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[4]",
+   "translate": true
+  },
+  {
+   "id": "1hlw6k63wg1",
+   "kind": "p",
+   "text": "Tip",
+   "inlineMarkup": "Tip",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[4]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "2dg5x7uq6j2",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[4]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "0fhs276m6jd",
+   "kind": "p",
+   "text": "success",
+   "inlineMarkup": "[link]`success`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[5]",
+   "translate": true
+  },
+  {
+   "id": "0r5glcsz231",
+   "kind": "p",
+   "text": "Success",
+   "inlineMarkup": "Success",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[5]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0alnkzs9z1q",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[5]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "0i8cq5inshf",
+   "kind": "p",
+   "text": "question",
+   "inlineMarkup": "[link]`question`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[6]",
+   "translate": true
+  },
+  {
+   "id": "272m6qmp1ov",
+   "kind": "p",
+   "text": "Question",
+   "inlineMarkup": "Question",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[6]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0mt8dyr7bl7",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[6]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "047eehekdnc",
+   "kind": "p",
+   "text": "warning",
+   "inlineMarkup": "[link]`warning`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[7]",
+   "translate": true
+  },
+  {
+   "id": "0ec8mhn5ldh",
+   "kind": "p",
+   "text": "Warning",
+   "inlineMarkup": "Warning",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[7]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "1s6bf53g6pf",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[7]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "0825hk2yqo2",
+   "kind": "p",
+   "text": "failure",
+   "inlineMarkup": "[link]`failure`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[8]",
+   "translate": true
+  },
+  {
+   "id": "25nb0ol3z6s",
+   "kind": "p",
+   "text": "Failure",
+   "inlineMarkup": "Failure",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[8]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0xjac616ybc",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[8]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "28mvx0sh7ov",
+   "kind": "p",
+   "text": "danger",
+   "inlineMarkup": "[link]`danger`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[9]",
+   "translate": true
+  },
+  {
+   "id": "2adlynuvvc7",
+   "kind": "p",
+   "text": "Danger",
+   "inlineMarkup": "Danger",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[9]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "056mhottqm3",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[9]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "225q5klmxiv",
+   "kind": "p",
+   "text": "bug",
+   "inlineMarkup": "[link]`bug`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[10]",
+   "translate": true
+  },
+  {
+   "id": "1ky7e6oasdw",
+   "kind": "p",
+   "text": "Bug",
+   "inlineMarkup": "Bug",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[10]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0s61139avmh",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[10]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "0ujy1jwo0qm",
+   "kind": "p",
+   "text": "example",
+   "inlineMarkup": "[link]`example`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[11]",
+   "translate": true
+  },
+  {
+   "id": "1mae5fv9h3m",
+   "kind": "p",
+   "text": "Example",
+   "inlineMarkup": "Example",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[11]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0eqdny04fzf",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[11]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "0lidse8q3rt",
+   "kind": "p",
+   "text": "quote",
+   "inlineMarkup": "[link]`quote`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[12]",
+   "translate": true
+  },
+  {
+   "id": "2ge3u4vmt6h",
+   "kind": "p",
+   "text": "Quote",
+   "inlineMarkup": "Quote",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[12]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0qauswjqno5",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[12]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "0i2nk5d8m43",
+   "kind": "heading",
+   "text": "Customization",
+   "inlineMarkup": "Customization",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h2[3]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "17o1qc01rk2",
+   "kind": "heading",
+   "text": "Classic admonitions",
+   "inlineMarkup": "Classic admonitions",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[8]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "0h1jbg3x8eq",
+   "kind": "p",
+   "text": "Prior to version 8.5.6, admonitions had a slightly different appearance:",
+   "inlineMarkup": "Prior to version [link]8.5.6[/link], admonitions had a slightly different appearance:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[15]",
+   "translate": true
+  },
+  {
+   "id": "0kk7tymy6kg",
+   "kind": "p",
+   "text": "Note",
+   "inlineMarkup": "Note",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[16]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "20be7q0wi6q",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[16]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "22zbv878146",
+   "kind": "p",
+   "text": "If you want to restore this appearance, add the following CSS to an additional style sheet:",
+   "inlineMarkup": "If you want to restore this appearance, add the following CSS to an [link]additional style sheet[/link]:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[16]",
+   "translate": true
+  },
+  {
+   "id": "1m5uwndq3i1",
+   "kind": "p",
+   "text": "docs/stylesheets/extra.css mkdocs.yml",
+   "inlineMarkup": "[link]`docs/stylesheets/extra.css`[/link] [link]`mkdocs.yml`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[17]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "0w01ie0fjrj",
+   "kind": "code",
+   "text": ".md-typeset .admonition,\n.md-typeset details {\n  border-width: 0;\n  border-left-width: 4px;\n}",
+   "inlineMarkup": ".md-typeset .admonition,\n.md-typeset details {\n  border-width: 0;\n  border-left-width: 4px;\n}",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[17]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1fge9p1g7t2",
+   "kind": "code",
+   "text": "extra_css:\n  - stylesheets/extra.css",
+   "inlineMarkup": "extra_css:\n  - stylesheets/extra.css",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[17]/div[2]/div[2]/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "2g9m2kig1he",
+   "kind": "heading",
+   "text": "Custom admonitions",
+   "inlineMarkup": "Custom admonitions",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[9]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "027834a05ge",
+   "kind": "p",
+   "text": "If you want to add a custom admonition type, all you need is a color and an *.svg icon. Copy the icon's code from the .icons folder and add the following CSS to an additional style sheet:",
+   "inlineMarkup": "If you want to add a custom admonition type, all you need is a color and an `*.svg` icon. Copy the icon's code from the [link]`.icons`[/link] folder and add the following CSS to an [link]additional style sheet[/link]:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[17]",
+   "translate": true
+  },
+  {
+   "id": "1n7hbi4wacx",
+   "kind": "p",
+   "text": "docs/stylesheets/extra.css mkdocs.yml",
+   "inlineMarkup": "[link]`docs/stylesheets/extra.css`[/link] [link]`mkdocs.yml`[/link]",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[18]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "0c257t4lhl8",
+   "kind": "code",
+   "text": ":root {\n  --md-admonition-icon--pied-piper: url('data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 576 512\"><path d=\"M244 246c-3.2-2-6.3-2.9-10.1-2.9-6.6 0-12.6 3.2-19.3 3.7l1.7 4.9zm135.9 197.9c-19 0-64.1 9.5-79.9 19.8l6.9 45.1c35.7 6.1 70.1 3.6 106-9.8-4.8-10-23.5-55.1-33-55.1zM340.8 177c6.6 2.8 11.5 9.2 22.7 22.1 2-1.4 7.5-5.2 7.5-8.6 0-4.9-11.8-13.2-13.2-23 11.2-5.7 25.2-6 37.6-8.9 68.1-16.4 116.3-52.9 146.8-116.7C548.3 29.3 554 16.1 554.6 2l-2 2.6c-28.4 50-33 63.2-81.3 100-31.9 24.4-69.2 40.2-106.6 54.6l-6.3-.3v-21.8c-19.6 1.6-19.7-14.6-31.6-23-18.7 20.6-31.6 40.8-58.9 51.1-12.7 4.8-19.6 10-25.9 21.8 34.9-16.4 91.2-13.5 98.8-10zM555.5 0l-.6 1.1-.3.9.6-.6zm-59.2 382.1c-33.9-56.9-75.3-118.4-150-115.5l-.3-6c-1.1-13.5 32.8 3.2 35.1-31l-14.4 7.2c-19.8-45.7-8.6-54.3-65.5-54.3-14.7 0-26.7 1.7-41.4 4.6 2.9 18.6 2.2 36.7-10.9 50.3l19.5 5.5c-1.7 3.2-2.9 6.3-2.9 9.8 0 21 42.8 2.9 42.8 33.6 0 18.4-36.8 60.1-54.9 60.1-8 0-53.7-50-53.4-60.1l.3-4.6 52.3-11.5c13-2.6 12.3-22.7-2.9-22.7-3.7 0-43.1 9.2-49.4 10.6-2-5.2-7.5-14.1-13.8-14.1-3.2 0-6.3 3.2-9.5 4-9.2 2.6-31 2.9-21.5 20.1L15.9 298.5c-5.5 1.1-8.9 6.3-8.9 11.8 0 6 5.5 10.9 11.5 10.9 8 0 131.3-28.4 147.4-32.2 2.6 3.2 4.6 6.3 7.8 8.6 20.1 14.4 59.8 85.9 76.4 85.9 24.1 0 58-22.4 71.3-41.9 3.2-4.3 6.9-7.5 12.4-6.9.6 13.8-31.6 34.2-33 43.7-1.4 10.2-1 35.2-.3 41.1 26.7 8.1 52-3.6 77.9-2.9 4.3-21 10.6-41.9 9.8-63.5l-.3-9.5c-1.4-34.2-10.9-38.5-34.8-58.6-1.1-1.1-2.6-2.6-3.7-4 2.2-1.4 1.1-1 4.6-1.7 88.5 0 56.3 183.6 111.5 229.9 33.1-15 72.5-27.9 103.5-47.2-29-25.6-52.6-45.7-72.7-79.9zm-196.2 46.1v27.2l11.8-3.4-2.9-23.8zm-68.7-150.4l24.1 61.2 21-13.8-31.3-50.9zm84.4 154.9l2 12.4c9-1.5 58.4-6.6 58.4-14.1 0-1.4-.6-3.2-.9-4.6-26.8 0-36.9 3.8-59.5 6.3z\"/></svg>')\n}\n.md-typeset .admonition.pied-piper,\n.md-typeset details.pied-piper {\n  border-color: rgb(43, 155, 70);\n}\n.md-typeset .pied-piper > .admonition-title,\n.md-typeset .pied-piper > summary {\n  background-color: rgba(43, 155, 70, 0.1);\n}\n.md-typeset .pied-piper > .admonition-title::before,\n.md-typeset .pied-piper > summary::before {\n  background-color: rgb(43, 155, 70);\n  -webkit-mask-image: var(--md-admonition-icon--pied-piper);\n          mask-image: var(--md-admonition-icon--pied-piper);\n}",
+   "inlineMarkup": ":root {\n  --md-admonition-icon--pied-piper: url('data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 576 512\"><path d=\"M244 246c-3.2-2-6.3-2.9-10.1-2.9-6.6 0-12.6 3.2-19.3 3.7l1.7 4.9zm135.9 197.9c-19 0-64.1 9.5-79.9 19.8l6.9 45.1c35.7 6.1 70.1 3.6 106-9.8-4.8-10-23.5-55.1-33-55.1zM340.8 177c6.6 2.8 11.5 9.2 22.7 22.1 2-1.4 7.5-5.2 7.5-8.6 0-4.9-11.8-13.2-13.2-23 11.2-5.7 25.2-6 37.6-8.9 68.1-16.4 116.3-52.9 146.8-116.7C548.3 29.3 554 16.1 554.6 2l-2 2.6c-28.4 50-33 63.2-81.3 100-31.9 24.4-69.2 40.2-106.6 54.6l-6.3-.3v-21.8c-19.6 1.6-19.7-14.6-31.6-23-18.7 20.6-31.6 40.8-58.9 51.1-12.7 4.8-19.6 10-25.9 21.8 34.9-16.4 91.2-13.5 98.8-10zM555.5 0l-.6 1.1-.3.9.6-.6zm-59.2 382.1c-33.9-56.9-75.3-118.4-150-115.5l-.3-6c-1.1-13.5 32.8 3.2 35.1-31l-14.4 7.2c-19.8-45.7-8.6-54.3-65.5-54.3-14.7 0-26.7 1.7-41.4 4.6 2.9 18.6 2.2 36.7-10.9 50.3l19.5 5.5c-1.7 3.2-2.9 6.3-2.9 9.8 0 21 42.8 2.9 42.8 33.6 0 18.4-36.8 60.1-54.9 60.1-8 0-53.7-50-53.4-60.1l.3-4.6 52.3-11.5c13-2.6 12.3-22.7-2.9-22.7-3.7 0-43.1 9.2-49.4 10.6-2-5.2-7.5-14.1-13.8-14.1-3.2 0-6.3 3.2-9.5 4-9.2 2.6-31 2.9-21.5 20.1L15.9 298.5c-5.5 1.1-8.9 6.3-8.9 11.8 0 6 5.5 10.9 11.5 10.9 8 0 131.3-28.4 147.4-32.2 2.6 3.2 4.6 6.3 7.8 8.6 20.1 14.4 59.8 85.9 76.4 85.9 24.1 0 58-22.4 71.3-41.9 3.2-4.3 6.9-7.5 12.4-6.9.6 13.8-31.6 34.2-33 43.7-1.4 10.2-1 35.2-.3 41.1 26.7 8.1 52-3.6 77.9-2.9 4.3-21 10.6-41.9 9.8-63.5l-.3-9.5c-1.4-34.2-10.9-38.5-34.8-58.6-1.1-1.1-2.6-2.6-3.7-4 2.2-1.4 1.1-1 4.6-1.7 88.5 0 56.3 183.6 111.5 229.9 33.1-15 72.5-27.9 103.5-47.2-29-25.6-52.6-45.7-72.7-79.9zm-196.2 46.1v27.2l11.8-3.4-2.9-23.8zm-68.7-150.4l24.1 61.2 21-13.8-31.3-50.9zm84.4 154.9l2 12.4c9-1.5 58.4-6.6 58.4-14.1 0-1.4-.6-3.2-.9-4.6-26.8 0-36.9 3.8-59.5 6.3z\"/></svg>')\n}\n.md-typeset .admonition.pied-piper,\n.md-typeset details.pied-piper {\n  border-color: rgb(43, 155, 70);\n}\n.md-typeset .pied-piper > .admonition-title,\n.md-typeset .pied-piper > summary {\n  background-color: rgba(43, 155, 70, 0.1);\n}\n.md-typeset .pied-piper > .admonition-title::before,\n.md-typeset .pied-piper > summary::before {\n  background-color: rgb(43, 155, 70);\n  -webkit-mask-image: var(--md-admonition-icon--pied-piper);\n          mask-image: var(--md-admonition-icon--pied-piper);\n}",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[18]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0ebqw873bxk",
+   "kind": "code",
+   "text": "extra_css:\n  - stylesheets/extra.css",
+   "inlineMarkup": "extra_css:\n  - stylesheets/extra.css",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[18]/div[2]/div[2]/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0to8w7jwl7d",
+   "kind": "p",
+   "text": "After applying the customization, you can use the custom admonition type:",
+   "inlineMarkup": "After applying the customization, you can use the custom admonition type:",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[18]",
+   "translate": true
+  },
+  {
+   "id": "0xllupxwi72",
+   "kind": "p",
+   "text": "Admonition with custom type",
+   "inlineMarkup": "Admonition with custom type",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[19]#run[1]",
+   "translate": true
+  },
+  {
+   "id": "1eqzb82md66",
+   "kind": "code",
+   "text": "!!! pied-piper \"Pied Piper\"\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et\n    euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo\n    purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "!!! pied-piper \"Pied Piper\"\n\n    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et\n    euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo\n    purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[19]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "265ie637fph",
+   "kind": "p",
+   "text": "Pied Piper",
+   "inlineMarkup": "Pied Piper",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[20]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0uwx1ickmjx",
+   "kind": "p",
+   "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "inlineMarkup": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[20]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "1kn7v3t3njb",
+   "kind": "li",
+   "text": "Previously, some of the supported types defined more than one qualifier. For example, authors could use summary or tldr as alternative qualifiers to render an abstract admonition. As this increased the size of the CSS that is shipped with Material for MkDocs, the additional type qualifiers are now all deprecated and will be removed in the next major version. This will also be mentioned in the upgrade guide.",
+   "inlineMarkup": "Previously, some of the supported types defined more than one qualifier. For example, authors could use `summary` or `tldr` as alternative qualifiers to render an [link]`abstract`[/link] admonition. As this increased the size of the CSS that is shipped with Material for MkDocs, the additional type qualifiers are now all deprecated and will be removed in the next major version. This will also be mentioned in the upgrade guide.",
+   "domPath": "/html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[21]/ol[1]/li[1]/p[1]",
+   "translate": true
+  }
+ ]
+}

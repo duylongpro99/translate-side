@@ -1,0 +1,815 @@
+{
+ "slug": "goblog-pipelines",
+ "via": "walk",
+ "url": "https://go.dev/blog/pipelines",
+ "title": "Go Concurrency Patterns: Pipelines and cancellation - The Go Programming Language",
+ "lang": "en",
+ "generator": "Blog essay (go.dev blog)",
+ "segments": [
+  {
+   "id": "0vr8cmzw970",
+   "kind": "heading",
+   "text": "The Go Blog",
+   "inlineMarkup": "[link]The Go Blog[/link]",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/h1[1]",
+   "translate": true,
+   "level": 1
+  },
+  {
+   "id": "0v600omdrnn",
+   "kind": "heading",
+   "text": "Go Concurrency Patterns: Pipelines and cancellation",
+   "inlineMarkup": "Go Concurrency Patterns: Pipelines and cancellation",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/h1[2]",
+   "translate": true,
+   "level": 1
+  },
+  {
+   "id": "1ga31x80ztk",
+   "kind": "p",
+   "text": "Sameer Ajmani\n13 March 2014",
+   "inlineMarkup": "Sameer Ajmani\n13 March 2014",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "09dplt0au3b",
+   "kind": "heading",
+   "text": "Introduction",
+   "inlineMarkup": "Introduction",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h2[1]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "0okaiw4766h",
+   "kind": "p",
+   "text": "Go’s concurrency primitives make it easy to construct streaming data pipelines that make efficient use of I/O and multiple CPUs. This article presents examples of such pipelines, highlights subtleties that arise when operations fail, and introduces techniques for dealing with failures cleanly.",
+   "inlineMarkup": "Go’s concurrency primitives make it easy to construct streaming data pipelines that make efficient use of I/O and multiple CPUs. This article presents examples of such pipelines, highlights subtleties that arise when operations fail, and introduces techniques for dealing with failures cleanly.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "1yxweo9kjw1",
+   "kind": "heading",
+   "text": "What is a pipeline?",
+   "inlineMarkup": "What is a pipeline?",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h2[2]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "1k1r6e24ebi",
+   "kind": "p",
+   "text": "There’s no formal definition of a pipeline in Go; it’s just one of many kinds of concurrent programs. Informally, a pipeline is a series of stages connected by channels, where each stage is a group of goroutines running the same function. In each stage, the goroutines",
+   "inlineMarkup": "There’s no formal definition of a pipeline in Go; it’s just one of many kinds of concurrent programs. Informally, a pipeline is a series of *stages* connected by channels, where each stage is a group of goroutines running the same function. In each stage, the goroutines",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "08z0qciysqx",
+   "kind": "li",
+   "text": "receive values from upstream via inbound channels",
+   "inlineMarkup": "receive values from *upstream* via *inbound* channels",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/ul[1]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "19ortcuqubd",
+   "kind": "li",
+   "text": "perform some function on that data, usually producing new values",
+   "inlineMarkup": "perform some function on that data, usually producing new values",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/ul[1]/li[2]",
+   "translate": true
+  },
+  {
+   "id": "133s2udzlfb",
+   "kind": "li",
+   "text": "send values downstream via outbound channels",
+   "inlineMarkup": "send values *downstream* via *outbound* channels",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/ul[1]/li[3]",
+   "translate": true
+  },
+  {
+   "id": "20poojqu9dl",
+   "kind": "p",
+   "text": "Each stage has any number of inbound and outbound channels, except the first and last stages, which have only outbound or inbound channels, respectively. The first stage is sometimes called the source or producer; the last stage, the sink or consumer.",
+   "inlineMarkup": "Each stage has any number of inbound and outbound channels, except the first and last stages, which have only outbound or inbound channels, respectively. The first stage is sometimes called the *source* or *producer*; the last stage, the *sink* or *consumer*.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[3]",
+   "translate": true
+  },
+  {
+   "id": "1hprol9mwzz",
+   "kind": "p",
+   "text": "We’ll begin with a simple example pipeline to explain the ideas and techniques. Later, we’ll present a more realistic example.",
+   "inlineMarkup": "We’ll begin with a simple example pipeline to explain the ideas and techniques. Later, we’ll present a more realistic example.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[4]",
+   "translate": true
+  },
+  {
+   "id": "01mkg3cqxcb",
+   "kind": "heading",
+   "text": "Squaring numbers",
+   "inlineMarkup": "Squaring numbers",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h2[3]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "0gi8kh8jkx7",
+   "kind": "p",
+   "text": "Consider a pipeline with three stages.",
+   "inlineMarkup": "Consider a pipeline with three stages.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[5]",
+   "translate": true
+  },
+  {
+   "id": "00eab839nda",
+   "kind": "p",
+   "text": "The first stage, gen, is a function that converts a list of integers to a channel that emits the integers in the list. The gen function starts a goroutine that sends the integers on the channel and closes the channel when all the values have been sent:",
+   "inlineMarkup": "The first stage, `gen`, is a function that converts a list of integers to a channel that emits the integers in the list. The `gen` function starts a goroutine that sends the integers on the channel and closes the channel when all the values have been sent:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[6]",
+   "translate": true
+  },
+  {
+   "id": "25qowepmotx",
+   "kind": "code",
+   "text": "func gen(nums ...int) <-chan int {\n    out := make(chan int)\n    go func() {\n        for _, n := range nums {\n            out <- n\n        }\n        close(out)\n    }()\n    return out\n}",
+   "inlineMarkup": "func gen(nums ...int) <-chan int {\n    out := make(chan int)\n    go func() {\n        for _, n := range nums {\n            out <- n\n        }\n        close(out)\n    }()\n    return out\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0g4gg07s2td",
+   "kind": "p",
+   "text": "The second stage, sq, receives integers from a channel and returns a channel that emits the square of each received integer. After the inbound channel is closed and this stage has sent all the values downstream, it closes the outbound channel:",
+   "inlineMarkup": "The second stage, `sq`, receives integers from a channel and returns a channel that emits the square of each received integer. After the inbound channel is closed and this stage has sent all the values downstream, it closes the outbound channel:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[7]",
+   "translate": true
+  },
+  {
+   "id": "21xhxggajq5",
+   "kind": "code",
+   "text": "func sq(in <-chan int) <-chan int {\n    out := make(chan int)\n    go func() {\n        for n := range in {\n            out <- n * n\n        }\n        close(out)\n    }()\n    return out\n}",
+   "inlineMarkup": "func sq(in <-chan int) <-chan int {\n    out := make(chan int)\n    go func() {\n        for n := range in {\n            out <- n * n\n        }\n        close(out)\n    }()\n    return out\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1g41adek6ez",
+   "kind": "p",
+   "text": "The main function sets up the pipeline and runs the final stage: it receives values from the second stage and prints each one, until the channel is closed:",
+   "inlineMarkup": "The `main` function sets up the pipeline and runs the final stage: it receives values from the second stage and prints each one, until the channel is closed:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[8]",
+   "translate": true
+  },
+  {
+   "id": "042fftem0y9",
+   "kind": "code",
+   "text": "func main() {\n    // Set up the pipeline.\n    c := gen(2, 3)\n    out := sq(c)\n\n    // Consume the output.\n    fmt.Println(<-out) // 4\n    fmt.Println(<-out) // 9\n}",
+   "inlineMarkup": "func main() {\n    // Set up the pipeline.\n    c := gen(2, 3)\n    out := sq(c)\n\n    // Consume the output.\n    fmt.Println(<-out) // 4\n    fmt.Println(<-out) // 9\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1d4ikmedom9",
+   "kind": "p",
+   "text": "Since sq has the same type for its inbound and outbound channels, we can compose it any number of times. We can also rewrite main as a range loop, like the other stages:",
+   "inlineMarkup": "Since `sq` has the same type for its inbound and outbound channels, we can compose it any number of times. We can also rewrite `main` as a range loop, like the other stages:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[9]",
+   "translate": true
+  },
+  {
+   "id": "0gulrt86q8r",
+   "kind": "code",
+   "text": "func main() {\n    // Set up the pipeline and consume the output.\n    for n := range sq(sq(gen(2, 3))) {\n        fmt.Println(n) // 16 then 81\n    }\n}",
+   "inlineMarkup": "func main() {\n    // Set up the pipeline and consume the output.\n    for n := range sq(sq(gen(2, 3))) {\n        fmt.Println(n) // 16 then 81\n    }\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[4]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0zqfak70pm2",
+   "kind": "heading",
+   "text": "Fan-out, fan-in",
+   "inlineMarkup": "Fan-out, fan-in",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h2[4]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "0h3oldopijl",
+   "kind": "p",
+   "text": "Multiple functions can read from the same channel until that channel is closed; this is called fan-out. This provides a way to distribute work amongst a group of workers to parallelize CPU use and I/O.",
+   "inlineMarkup": "Multiple functions can read from the same channel until that channel is closed; this is called *fan-out*. This provides a way to distribute work amongst a group of workers to parallelize CPU use and I/O.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[10]",
+   "translate": true
+  },
+  {
+   "id": "161bwxhe2hc",
+   "kind": "p",
+   "text": "A function can read from multiple inputs and proceed until all are closed by multiplexing the input channels onto a single channel that’s closed when all the inputs are closed. This is called fan-in.",
+   "inlineMarkup": "A function can read from multiple inputs and proceed until all are closed by multiplexing the input channels onto a single channel that’s closed when all the inputs are closed. This is called *fan-in*.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[11]",
+   "translate": true
+  },
+  {
+   "id": "08k5s2b1ow4",
+   "kind": "p",
+   "text": "We can change our pipeline to run two instances of sq, each reading from the same input channel. We introduce a new function, merge, to fan in the results:",
+   "inlineMarkup": "We can change our pipeline to run two instances of `sq`, each reading from the same input channel. We introduce a new function, *merge*, to fan in the results:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[12]",
+   "translate": true
+  },
+  {
+   "id": "0q5mrjg0ody",
+   "kind": "code",
+   "text": "func main() {\n    in := gen(2, 3)\n\n    // Distribute the sq work across two goroutines that both read from in.\n    c1 := sq(in)\n    c2 := sq(in)\n\n    // Consume the merged output from c1 and c2.\n    for n := range merge(c1, c2) {\n        fmt.Println(n) // 4 then 9, or 9 then 4\n    }\n}",
+   "inlineMarkup": "func main() {\n    in := gen(2, 3)\n\n    // Distribute the sq work across two goroutines that both read from in.\n    c1 := sq(in)\n    c2 := sq(in)\n\n    // Consume the merged output from c1 and c2.\n    for n := range merge(c1, c2) {\n        fmt.Println(n) // 4 then 9, or 9 then 4\n    }\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[5]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0z8qs48uy44",
+   "kind": "p",
+   "text": "The merge function converts a list of channels to a single channel by starting a goroutine for each inbound channel that copies the values to the sole outbound channel. Once all the output goroutines have been started, merge starts one more goroutine to close the outbound channel after all sends on that channel are done.",
+   "inlineMarkup": "The `merge` function converts a list of channels to a single channel by starting a goroutine for each inbound channel that copies the values to the sole outbound channel. Once all the `output` goroutines have been started, `merge` starts one more goroutine to close the outbound channel after all sends on that channel are done.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[13]",
+   "translate": true
+  },
+  {
+   "id": "2bu9o5ko8eu",
+   "kind": "p",
+   "text": "Sends on a closed channel panic, so it’s important to ensure all sends are done before calling close. The sync.WaitGroup type provides a simple way to arrange this synchronization:",
+   "inlineMarkup": "Sends on a closed channel panic, so it’s important to ensure all sends are done before calling close. The [link]`sync.WaitGroup`[/link] type provides a simple way to arrange this synchronization:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[14]",
+   "translate": true
+  },
+  {
+   "id": "1vrm18cnbk4",
+   "kind": "code",
+   "text": "func merge(cs ...<-chan int) <-chan int {\n    var wg sync.WaitGroup\n    out := make(chan int)\n\n    // Start an output goroutine for each input channel in cs.  output\n    // copies values from c to out until c is closed, then calls wg.Done.\n    output := func(c <-chan int) {\n        for n := range c {\n            out <- n\n        }\n        wg.Done()\n    }\n    wg.Add(len(cs))\n    for _, c := range cs {\n        go output(c)\n    }\n\n    // Start a goroutine to close out once all the output goroutines are\n    // done.  This must start after the wg.Add call.\n    go func() {\n        wg.Wait()\n        close(out)\n    }()\n    return out\n}",
+   "inlineMarkup": "func merge(cs ...<-chan int) <-chan int {\n    var wg sync.WaitGroup\n    out := make(chan int)\n\n    // Start an output goroutine for each input channel in cs.  output\n    // copies values from c to out until c is closed, then calls wg.Done.\n    output := func(c <-chan int) {\n        for n := range c {\n            out <- n\n        }\n        wg.Done()\n    }\n    wg.Add(len(cs))\n    for _, c := range cs {\n        go output(c)\n    }\n\n    // Start a goroutine to close out once all the output goroutines are\n    // done.  This must start after the wg.Add call.\n    go func() {\n        wg.Wait()\n        close(out)\n    }()\n    return out\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[6]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "00u9o69w4wi",
+   "kind": "heading",
+   "text": "Stopping short",
+   "inlineMarkup": "Stopping short",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h2[5]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "0i2zpv150iq",
+   "kind": "p",
+   "text": "There is a pattern to our pipeline functions:",
+   "inlineMarkup": "There is a pattern to our pipeline functions:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[15]",
+   "translate": true
+  },
+  {
+   "id": "25tutjfqymz",
+   "kind": "li",
+   "text": "stages close their outbound channels when all the send operations are done.",
+   "inlineMarkup": "stages close their outbound channels when all the send operations are done.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/ul[2]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "1m8fbccee2t",
+   "kind": "li",
+   "text": "stages keep receiving values from inbound channels until those channels are closed.",
+   "inlineMarkup": "stages keep receiving values from inbound channels until those channels are closed.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/ul[2]/li[2]",
+   "translate": true
+  },
+  {
+   "id": "1o9m4nuhfbi",
+   "kind": "p",
+   "text": "This pattern allows each receiving stage to be written as a range loop and ensures that all goroutines exit once all values have been successfully sent downstream.",
+   "inlineMarkup": "This pattern allows each receiving stage to be written as a `range` loop and ensures that all goroutines exit once all values have been successfully sent downstream.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[16]",
+   "translate": true
+  },
+  {
+   "id": "10adw6wd7z8",
+   "kind": "p",
+   "text": "But in real pipelines, stages don’t always receive all the inbound values. Sometimes this is by design: the receiver may only need a subset of values to make progress. More often, a stage exits early because an inbound value represents an error in an earlier stage. In either case the receiver should not have to wait for the remaining values to arrive, and we want earlier stages to stop producing values that later stages don’t need.",
+   "inlineMarkup": "But in real pipelines, stages don’t always receive all the inbound values. Sometimes this is by design: the receiver may only need a subset of values to make progress. More often, a stage exits early because an inbound value represents an error in an earlier stage. In either case the receiver should not have to wait for the remaining values to arrive, and we want earlier stages to stop producing values that later stages don’t need.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[17]",
+   "translate": true
+  },
+  {
+   "id": "1e607vhuqn5",
+   "kind": "p",
+   "text": "In our example pipeline, if a stage fails to consume all the inbound values, the goroutines attempting to send those values will block indefinitely:",
+   "inlineMarkup": "In our example pipeline, if a stage fails to consume all the inbound values, the goroutines attempting to send those values will block indefinitely:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[18]",
+   "translate": true
+  },
+  {
+   "id": "0cloc98klgk",
+   "kind": "code",
+   "text": "    // Consume the first value from the output.\n    out := merge(c1, c2)\n    fmt.Println(<-out) // 4 or 9\n    return\n    // Since we didn't receive the second value from out,\n    // one of the output goroutines is hung attempting to send it.\n}",
+   "inlineMarkup": "    // Consume the first value from the output.\n    out := merge(c1, c2)\n    fmt.Println(<-out) // 4 or 9\n    return\n    // Since we didn't receive the second value from out,\n    // one of the output goroutines is hung attempting to send it.\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[7]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "16sibea6rww",
+   "kind": "p",
+   "text": "This is a resource leak: goroutines consume memory and runtime resources, and heap references in goroutine stacks keep data from being garbage collected. Goroutines are not garbage collected; they must exit on their own.",
+   "inlineMarkup": "This is a resource leak: goroutines consume memory and runtime resources, and heap references in goroutine stacks keep data from being garbage collected. Goroutines are not garbage collected; they must exit on their own.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[19]",
+   "translate": true
+  },
+  {
+   "id": "13unbojo3lv",
+   "kind": "p",
+   "text": "We need to arrange for the upstream stages of our pipeline to exit even when the downstream stages fail to receive all the inbound values. One way to do this is to change the outbound channels to have a buffer. A buffer can hold a fixed number of values; send operations complete immediately if there’s room in the buffer:",
+   "inlineMarkup": "We need to arrange for the upstream stages of our pipeline to exit even when the downstream stages fail to receive all the inbound values. One way to do this is to change the outbound channels to have a buffer. A buffer can hold a fixed number of values; send operations complete immediately if there’s room in the buffer:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[20]",
+   "translate": true
+  },
+  {
+   "id": "0x0mp720jgu",
+   "kind": "code",
+   "text": "c := make(chan int, 2) // buffer size 2\nc <- 1  // succeeds immediately\nc <- 2  // succeeds immediately\nc <- 3  // blocks until another goroutine does <-c and receives 1",
+   "inlineMarkup": "c := make(chan int, 2) // buffer size 2\nc <- 1  // succeeds immediately\nc <- 2  // succeeds immediately\nc <- 3  // blocks until another goroutine does <-c and receives 1",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "go"
+  },
+  {
+   "id": "1h5h8qucck2",
+   "kind": "p",
+   "text": "When the number of values to be sent is known at channel creation time, a buffer can simplify the code. For example, we can rewrite gen to copy the list of integers into a buffered channel and avoid creating a new goroutine:",
+   "inlineMarkup": "When the number of values to be sent is known at channel creation time, a buffer can simplify the code. For example, we can rewrite `gen` to copy the list of integers into a buffered channel and avoid creating a new goroutine:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[21]",
+   "translate": true
+  },
+  {
+   "id": "0301bi9gsok",
+   "kind": "code",
+   "text": "func gen(nums ...int) <-chan int {\n    out := make(chan int, len(nums))\n    for _, n := range nums {\n        out <- n\n    }\n    close(out)\n    return out\n}",
+   "inlineMarkup": "func gen(nums ...int) <-chan int {\n    out := make(chan int, len(nums))\n    for _, n := range nums {\n        out <- n\n    }\n    close(out)\n    return out\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[8]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "04ticg0cnlk",
+   "kind": "p",
+   "text": "Returning to the blocked goroutines in our pipeline, we might consider adding a buffer to the outbound channel returned by merge:",
+   "inlineMarkup": "Returning to the blocked goroutines in our pipeline, we might consider adding a buffer to the outbound channel returned by `merge`:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[22]",
+   "translate": true
+  },
+  {
+   "id": "1j93xwxx5fr",
+   "kind": "code",
+   "text": "func merge(cs ...<-chan int) <-chan int {\n    var wg sync.WaitGroup\n    out := make(chan int, 1) // enough space for the unread inputs\n    // ... the rest is unchanged ...",
+   "inlineMarkup": "func merge(cs ...<-chan int) <-chan int {\n    var wg sync.WaitGroup\n    out := make(chan int, 1) // enough space for the unread inputs\n    // ... the rest is unchanged ...",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[9]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "14a0pnknmky",
+   "kind": "p",
+   "text": "While this fixes the blocked goroutine in this program, this is bad code. The choice of buffer size of 1 here depends on knowing the number of values merge will receive and the number of values downstream stages will consume. This is fragile: if we pass an additional value to gen, or if the downstream stage reads any fewer values, we will again have blocked goroutines.",
+   "inlineMarkup": "While this fixes the blocked goroutine in this program, this is bad code. The choice of buffer size of 1 here depends on knowing the number of values `merge` will receive and the number of values downstream stages will consume. This is fragile: if we pass an additional value to `gen`, or if the downstream stage reads any fewer values, we will again have blocked goroutines.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[23]",
+   "translate": true
+  },
+  {
+   "id": "0fn4h2mxxug",
+   "kind": "p",
+   "text": "Instead, we need to provide a way for downstream stages to indicate to the senders that they will stop accepting input.",
+   "inlineMarkup": "Instead, we need to provide a way for downstream stages to indicate to the senders that they will stop accepting input.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[24]",
+   "translate": true
+  },
+  {
+   "id": "0b3dvvd32rh",
+   "kind": "heading",
+   "text": "Explicit cancellation",
+   "inlineMarkup": "Explicit cancellation",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h2[6]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "1h0oazie9rq",
+   "kind": "p",
+   "text": "When main decides to exit without receiving all the values from out, it must tell the goroutines in the upstream stages to abandon the values they’re trying to send. It does so by sending values on a channel called done. It sends two values since there are potentially two blocked senders:",
+   "inlineMarkup": "When `main` decides to exit without receiving all the values from `out`, it must tell the goroutines in the upstream stages to abandon the values they’re trying to send. It does so by sending values on a channel called `done`. It sends two values since there are potentially two blocked senders:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[25]",
+   "translate": true
+  },
+  {
+   "id": "0hh3lan4qg3",
+   "kind": "code",
+   "text": "func main() {\n    in := gen(2, 3, 5)\n\n    // Distribute the sq work across two goroutines that both read from in.\n    c1 := sq(in)\n    c2 := sq(in)\n\n    // Consume the first value from output.\n    done := make(chan struct{}, 2)\n    out := merge(done, c1, c2)\n    fmt.Println(<-out) // 4, 9, or 25\n\n    // Tell the remaining senders we're leaving.\n    done <- struct{}{}\n    done <- struct{}{}\n}",
+   "inlineMarkup": "func main() {\n    in := gen(2, 3, 5)\n\n    // Distribute the sq work across two goroutines that both read from in.\n    c1 := sq(in)\n    c2 := sq(in)\n\n    // Consume the first value from output.\n    done := make(chan struct{}, 2)\n    out := merge(done, c1, c2)\n    fmt.Println(<-out) // 4, 9, or 25\n\n    // Tell the remaining senders we're leaving.\n    done <- struct{}{}\n    done <- struct{}{}\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[10]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1oehqql6o5y",
+   "kind": "p",
+   "text": "The sending goroutines replace their send operation with a select statement that proceeds either when the send on out happens or when they receive a value from done. The value type of done is the empty struct because the value doesn’t matter: it is the receive event that indicates the send on out should be abandoned. The output goroutines continue looping on their inbound channel, c, so the upstream stages are not blocked. (We’ll discuss in a moment how to allow this loop to return early.)",
+   "inlineMarkup": "The sending goroutines replace their send operation with a `select` statement that proceeds either when the send on `out` happens or when they receive a value from `done`. The value type of `done` is the empty struct because the value doesn’t matter: it is the receive event that indicates the send on `out` should be abandoned. The `output` goroutines continue looping on their inbound channel, `c`, so the upstream stages are not blocked. (We’ll discuss in a moment how to allow this loop to return early.)",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[26]",
+   "translate": true
+  },
+  {
+   "id": "1ndngyc84jv",
+   "kind": "code",
+   "text": "func merge(done <-chan struct{}, cs ...<-chan int) <-chan int {\n    var wg sync.WaitGroup\n    out := make(chan int)\n\n    // Start an output goroutine for each input channel in cs.  output\n    // copies values from c to out until c is closed or it receives a value\n    // from done, then output calls wg.Done.\n    output := func(c <-chan int) {\n    loop:\n        for n := range c {\n            select {\n            case out <- n:\n            case <-done:\n                break loop\n            }\n        }\n        wg.Done()\n    }\n    // ... the rest is unchanged ...",
+   "inlineMarkup": "func merge(done <-chan struct{}, cs ...<-chan int) <-chan int {\n    var wg sync.WaitGroup\n    out := make(chan int)\n\n    // Start an output goroutine for each input channel in cs.  output\n    // copies values from c to out until c is closed or it receives a value\n    // from done, then output calls wg.Done.\n    output := func(c <-chan int) {\n    loop:\n        for n := range c {\n            select {\n            case out <- n:\n            case <-done:\n                break loop\n            }\n        }\n        wg.Done()\n    }\n    // ... the rest is unchanged ...",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[11]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1bmsg8jolka",
+   "kind": "p",
+   "text": "This approach has a problem: each downstream receiver needs to know the number of potentially blocked upstream senders and arrange to signal those senders on early return. Keeping track of these counts is tedious and error-prone.",
+   "inlineMarkup": "This approach has a problem: *each* downstream receiver needs to know the number of potentially blocked upstream senders and arrange to signal those senders on early return. Keeping track of these counts is tedious and error-prone.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[27]",
+   "translate": true
+  },
+  {
+   "id": "0e8lqcmks1a",
+   "kind": "p",
+   "text": "We need a way to tell an unknown and unbounded number of goroutines to stop sending their values downstream. In Go, we can do this by closing a channel, because a receive operation on a closed channel can always proceed immediately, yielding the element type’s zero value.",
+   "inlineMarkup": "We need a way to tell an unknown and unbounded number of goroutines to stop sending their values downstream. In Go, we can do this by closing a channel, because [link]a receive operation on a closed channel can always proceed immediately, yielding the element type’s zero value.[/link]",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[28]",
+   "translate": true
+  },
+  {
+   "id": "1w1aedmw04g",
+   "kind": "p",
+   "text": "This means that main can unblock all the senders simply by closing the done channel. This close is effectively a broadcast signal to the senders. We extend each of our pipeline functions to accept done as a parameter and arrange for the close to happen via a defer statement, so that all return paths from main will signal the pipeline stages to exit.",
+   "inlineMarkup": "This means that `main` can unblock all the senders simply by closing the `done` channel. This close is effectively a broadcast signal to the senders. We extend *each* of our pipeline functions to accept `done` as a parameter and arrange for the close to happen via a `defer` statement, so that all return paths from `main` will signal the pipeline stages to exit.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[29]",
+   "translate": true
+  },
+  {
+   "id": "0l3fd9hiv28",
+   "kind": "code",
+   "text": "func main() {\n    // Set up a done channel that's shared by the whole pipeline,\n    // and close that channel when this pipeline exits, as a signal\n    // for all the goroutines we started to exit.\n    done := make(chan struct{})\n    defer close(done)          \n\n    in := gen(done, 2, 3)\n\n    // Distribute the sq work across two goroutines that both read from in.\n    c1 := sq(done, in)\n    c2 := sq(done, in)\n\n    // Consume the first value from output.\n    out := merge(done, c1, c2)\n    fmt.Println(<-out) // 4 or 9\n\n    // done will be closed by the deferred call.      \n}",
+   "inlineMarkup": "func main() {\n    // Set up a done channel that's shared by the whole pipeline,\n    // and close that channel when this pipeline exits, as a signal\n    // for all the goroutines we started to exit.\n    done := make(chan struct{})\n    defer close(done)          \n\n    in := gen(done, 2, 3)\n\n    // Distribute the sq work across two goroutines that both read from in.\n    c1 := sq(done, in)\n    c2 := sq(done, in)\n\n    // Consume the first value from output.\n    out := merge(done, c1, c2)\n    fmt.Println(<-out) // 4 or 9\n\n    // done will be closed by the deferred call.      \n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[12]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "29kcqxuv2pi",
+   "kind": "p",
+   "text": "Each of our pipeline stages is now free to return as soon as done is closed. The output routine in merge can return without draining its inbound channel, since it knows the upstream sender, sq, will stop attempting to send when done is closed. output ensures wg.Done is called on all return paths via a defer statement:",
+   "inlineMarkup": "Each of our pipeline stages is now free to return as soon as `done` is closed. The `output` routine in `merge` can return without draining its inbound channel, since it knows the upstream sender, `sq`, will stop attempting to send when `done` is closed. `output` ensures `wg.Done` is called on all return paths via a `defer` statement:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[30]",
+   "translate": true
+  },
+  {
+   "id": "1zkoetrfn2y",
+   "kind": "code",
+   "text": "func merge(done <-chan struct{}, cs ...<-chan int) <-chan int {\n    var wg sync.WaitGroup\n    out := make(chan int)\n\n    // Start an output goroutine for each input channel in cs.  output\n    // copies values from c to out until c or done is closed, then calls\n    // wg.Done.\n    output := func(c <-chan int) {\n        defer wg.Done()\n        for n := range c {\n            select {\n            case out <- n:\n            case <-done:\n                return\n            }\n        }\n    }\n    // ... the rest is unchanged ...",
+   "inlineMarkup": "func merge(done <-chan struct{}, cs ...<-chan int) <-chan int {\n    var wg sync.WaitGroup\n    out := make(chan int)\n\n    // Start an output goroutine for each input channel in cs.  output\n    // copies values from c to out until c or done is closed, then calls\n    // wg.Done.\n    output := func(c <-chan int) {\n        defer wg.Done()\n        for n := range c {\n            select {\n            case out <- n:\n            case <-done:\n                return\n            }\n        }\n    }\n    // ... the rest is unchanged ...",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[13]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0sm8lhzelzk",
+   "kind": "p",
+   "text": "Similarly, sq can return as soon as done is closed. sq ensures its out channel is closed on all return paths via a defer statement:",
+   "inlineMarkup": "Similarly, `sq` can return as soon as `done` is closed. `sq` ensures its `out` channel is closed on all return paths via a `defer` statement:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[31]",
+   "translate": true
+  },
+  {
+   "id": "0dyp6sl3jk6",
+   "kind": "code",
+   "text": "func sq(done <-chan struct{}, in <-chan int) <-chan int {\n    out := make(chan int)\n    go func() {\n        defer close(out)\n        for n := range in {\n            select {\n            case out <- n * n:\n            case <-done:\n                return\n            }\n        }\n    }()\n    return out\n}",
+   "inlineMarkup": "func sq(done <-chan struct{}, in <-chan int) <-chan int {\n    out := make(chan int)\n    go func() {\n        defer close(out)\n        for n := range in {\n            select {\n            case out <- n * n:\n            case <-done:\n                return\n            }\n        }\n    }()\n    return out\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[14]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "21yciapjkq3",
+   "kind": "p",
+   "text": "Here are the guidelines for pipeline construction:",
+   "inlineMarkup": "Here are the guidelines for pipeline construction:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[32]",
+   "translate": true
+  },
+  {
+   "id": "1g5ocylf9wc",
+   "kind": "li",
+   "text": "stages close their outbound channels when all the send operations are done.",
+   "inlineMarkup": "stages close their outbound channels when all the send operations are done.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/ul[3]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "1r4bb1hin20",
+   "kind": "li",
+   "text": "stages keep receiving values from inbound channels until those channels are closed or the senders are unblocked.",
+   "inlineMarkup": "stages keep receiving values from inbound channels until those channels are closed or the senders are unblocked.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/ul[3]/li[2]",
+   "translate": true
+  },
+  {
+   "id": "0h4kddbrson",
+   "kind": "p",
+   "text": "Pipelines unblock senders either by ensuring there’s enough buffer for all the values that are sent or by explicitly signalling senders when the receiver may abandon the channel.",
+   "inlineMarkup": "Pipelines unblock senders either by ensuring there’s enough buffer for all the values that are sent or by explicitly signalling senders when the receiver may abandon the channel.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[33]",
+   "translate": true
+  },
+  {
+   "id": "14yk7xmvwmr",
+   "kind": "heading",
+   "text": "Digesting a tree",
+   "inlineMarkup": "Digesting a tree",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h2[7]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "29op71auqkq",
+   "kind": "p",
+   "text": "Let’s consider a more realistic pipeline.",
+   "inlineMarkup": "Let’s consider a more realistic pipeline.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[34]",
+   "translate": true
+  },
+  {
+   "id": "0laohorahpj",
+   "kind": "p",
+   "text": "MD5 is a message-digest algorithm that’s useful as a file checksum. The command line utility md5sum prints digest values for a list of files.",
+   "inlineMarkup": "MD5 is a message-digest algorithm that’s useful as a file checksum. The command line utility `md5sum` prints digest values for a list of files.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[35]",
+   "translate": true
+  },
+  {
+   "id": "1m3mz31811x",
+   "kind": "code",
+   "text": "% md5sum *.go\nd47c2bbc28298ca9befdfbc5d3aa4e65  bounded.go\nee869afd31f83cbb2d10ee81b2b831dc  parallel.go\nb88175e65fdcbc01ac08aaf1fd9b5e96  serial.go",
+   "inlineMarkup": "% md5sum *.go\nd47c2bbc28298ca9befdfbc5d3aa4e65  bounded.go\nee869afd31f83cbb2d10ee81b2b831dc  parallel.go\nb88175e65fdcbc01ac08aaf1fd9b5e96  serial.go",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/pre[2]",
+   "translate": false
+  },
+  {
+   "id": "1rtfzc8orhb",
+   "kind": "p",
+   "text": "Our example program is like md5sum but instead takes a single directory as an argument and prints the digest values for each regular file under that directory, sorted by path name.",
+   "inlineMarkup": "Our example program is like `md5sum` but instead takes a single directory as an argument and prints the digest values for each regular file under that directory, sorted by path name.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[36]",
+   "translate": true
+  },
+  {
+   "id": "2edaww0091x",
+   "kind": "code",
+   "text": "% go run serial.go .\nd47c2bbc28298ca9befdfbc5d3aa4e65  bounded.go\nee869afd31f83cbb2d10ee81b2b831dc  parallel.go\nb88175e65fdcbc01ac08aaf1fd9b5e96  serial.go",
+   "inlineMarkup": "% go run serial.go .\nd47c2bbc28298ca9befdfbc5d3aa4e65  bounded.go\nee869afd31f83cbb2d10ee81b2b831dc  parallel.go\nb88175e65fdcbc01ac08aaf1fd9b5e96  serial.go",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/pre[3]",
+   "translate": false
+  },
+  {
+   "id": "0rzvdb311tg",
+   "kind": "p",
+   "text": "The main function of our program invokes a helper function MD5All, which returns a map from path name to digest value, then sorts and prints the results:",
+   "inlineMarkup": "The main function of our program invokes a helper function `MD5All`, which returns a map from path name to digest value, then sorts and prints the results:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[37]",
+   "translate": true
+  },
+  {
+   "id": "1c5gkxe1mdb",
+   "kind": "code",
+   "text": "func main() {\n    // Calculate the MD5 sum of all files under the specified directory,\n    // then print the results sorted by path name.\n    m, err := MD5All(os.Args[1])\n    if err != nil {\n        fmt.Println(err)\n        return\n    }\n    var paths []string\n    for path := range m {\n        paths = append(paths, path)\n    }\n    sort.Strings(paths)\n    for _, path := range paths {\n        fmt.Printf(\"%x  %s\\n\", m[path], path)\n    }\n}",
+   "inlineMarkup": "func main() {\n    // Calculate the MD5 sum of all files under the specified directory,\n    // then print the results sorted by path name.\n    m, err := MD5All(os.Args[1])\n    if err != nil {\n        fmt.Println(err)\n        return\n    }\n    var paths []string\n    for path := range m {\n        paths = append(paths, path)\n    }\n    sort.Strings(paths)\n    for _, path := range paths {\n        fmt.Printf(\"%x  %s\\n\", m[path], path)\n    }\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[15]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0hm7alediau",
+   "kind": "p",
+   "text": "The MD5All function is the focus of our discussion. In serial.go, the implementation uses no concurrency and simply reads and sums each file as it walks the tree.",
+   "inlineMarkup": "The `MD5All` function is the focus of our discussion. In [link]serial.go[/link], the implementation uses no concurrency and simply reads and sums each file as it walks the tree.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[38]",
+   "translate": true
+  },
+  {
+   "id": "07q6ps2as8e",
+   "kind": "code",
+   "text": "// MD5All reads all the files in the file tree rooted at root and returns a map\n// from file path to the MD5 sum of the file's contents.  If the directory walk\n// fails or any read operation fails, MD5All returns an error.\nfunc MD5All(root string) (map[string][md5.Size]byte, error) {\n    m := make(map[string][md5.Size]byte)\n    err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {\n        if err != nil {\n            return err\n        }\n        if !info.Mode().IsRegular() {\n            return nil\n        }\n        data, err := ioutil.ReadFile(path)\n        if err != nil {\n            return err\n        }\n        m[path] = md5.Sum(data)\n        return nil\n    })\n    if err != nil {\n        return nil, err\n    }\n    return m, nil\n}",
+   "inlineMarkup": "// MD5All reads all the files in the file tree rooted at root and returns a map\n// from file path to the MD5 sum of the file's contents.  If the directory walk\n// fails or any read operation fails, MD5All returns an error.\nfunc MD5All(root string) (map[string][md5.Size]byte, error) {\n    m := make(map[string][md5.Size]byte)\n    err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {\n        if err != nil {\n            return err\n        }\n        if !info.Mode().IsRegular() {\n            return nil\n        }\n        data, err := ioutil.ReadFile(path)\n        if err != nil {\n            return err\n        }\n        m[path] = md5.Sum(data)\n        return nil\n    })\n    if err != nil {\n        return nil, err\n    }\n    return m, nil\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[16]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1aylnz93x4w",
+   "kind": "heading",
+   "text": "Parallel digestion",
+   "inlineMarkup": "Parallel digestion",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h2[8]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "0bz8mqeqcw7",
+   "kind": "p",
+   "text": "In parallel.go, we split MD5All into a two-stage pipeline. The first stage, sumFiles, walks the tree, digests each file in a new goroutine, and sends the results on a channel with value type result:",
+   "inlineMarkup": "In [link]parallel.go[/link], we split `MD5All` into a two-stage pipeline. The first stage, `sumFiles`, walks the tree, digests each file in a new goroutine, and sends the results on a channel with value type `result`:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[39]",
+   "translate": true
+  },
+  {
+   "id": "23r8a69fqfw",
+   "kind": "code",
+   "text": "type result struct {\n    path string\n    sum  [md5.Size]byte\n    err  error\n}",
+   "inlineMarkup": "type result struct {\n    path string\n    sum  [md5.Size]byte\n    err  error\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[17]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1fy3dj5l7mr",
+   "kind": "p",
+   "text": "sumFiles returns two channels: one for the results and another for the error returned by filepath.Walk. The walk function starts a new goroutine to process each regular file, then checks done. If done is closed, the walk stops immediately:",
+   "inlineMarkup": "`sumFiles` returns two channels: one for the `results` and another for the error returned by `filepath.Walk`. The walk function starts a new goroutine to process each regular file, then checks `done`. If `done` is closed, the walk stops immediately:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[40]",
+   "translate": true
+  },
+  {
+   "id": "1p0oxxmtg3k",
+   "kind": "code",
+   "text": "func sumFiles(done <-chan struct{}, root string) (<-chan result, <-chan error) {\n    // For each regular file, start a goroutine that sums the file and sends\n    // the result on c.  Send the result of the walk on errc.\n    c := make(chan result)\n    errc := make(chan error, 1)\n    go func() {\n        var wg sync.WaitGroup\n        err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {\n            if err != nil {\n                return err\n            }\n            if !info.Mode().IsRegular() {\n                return nil\n            }\n            wg.Add(1)\n            go func() {\n                data, err := ioutil.ReadFile(path)\n                select {\n                case c <- result{path, md5.Sum(data), err}:\n                case <-done:\n                }\n                wg.Done()\n            }()\n            // Abort the walk if done is closed.\n            select {\n            case <-done:\n                return errors.New(\"walk canceled\")\n            default:\n                return nil\n            }\n        })\n        // Walk has returned, so all calls to wg.Add are done.  Start a\n        // goroutine to close c once all the sends are done.\n        go func() {\n            wg.Wait()\n            close(c)\n        }()\n        // No select needed here, since errc is buffered.\n        errc <- err\n    }()\n    return c, errc\n}",
+   "inlineMarkup": "func sumFiles(done <-chan struct{}, root string) (<-chan result, <-chan error) {\n    // For each regular file, start a goroutine that sums the file and sends\n    // the result on c.  Send the result of the walk on errc.\n    c := make(chan result)\n    errc := make(chan error, 1)\n    go func() {\n        var wg sync.WaitGroup\n        err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {\n            if err != nil {\n                return err\n            }\n            if !info.Mode().IsRegular() {\n                return nil\n            }\n            wg.Add(1)\n            go func() {\n                data, err := ioutil.ReadFile(path)\n                select {\n                case c <- result{path, md5.Sum(data), err}:\n                case <-done:\n                }\n                wg.Done()\n            }()\n            // Abort the walk if done is closed.\n            select {\n            case <-done:\n                return errors.New(\"walk canceled\")\n            default:\n                return nil\n            }\n        })\n        // Walk has returned, so all calls to wg.Add are done.  Start a\n        // goroutine to close c once all the sends are done.\n        go func() {\n            wg.Wait()\n            close(c)\n        }()\n        // No select needed here, since errc is buffered.\n        errc <- err\n    }()\n    return c, errc\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[18]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1rz9ko1wm62",
+   "kind": "p",
+   "text": "MD5All receives the digest values from c. MD5All returns early on error, closing done via a defer:",
+   "inlineMarkup": "`MD5All` receives the digest values from `c`. `MD5All` returns early on error, closing `done` via a `defer`:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[41]",
+   "translate": true
+  },
+  {
+   "id": "20mwfchlsu4",
+   "kind": "code",
+   "text": "func MD5All(root string) (map[string][md5.Size]byte, error) {\n    // MD5All closes the done channel when it returns; it may do so before\n    // receiving all the values from c and errc.\n    done := make(chan struct{})\n    defer close(done)          \n\n    c, errc := sumFiles(done, root)\n\n    m := make(map[string][md5.Size]byte)\n    for r := range c {\n        if r.err != nil {\n            return nil, r.err\n        }\n        m[r.path] = r.sum\n    }\n    if err := <-errc; err != nil {\n        return nil, err\n    }\n    return m, nil\n}",
+   "inlineMarkup": "func MD5All(root string) (map[string][md5.Size]byte, error) {\n    // MD5All closes the done channel when it returns; it may do so before\n    // receiving all the values from c and errc.\n    done := make(chan struct{})\n    defer close(done)          \n\n    c, errc := sumFiles(done, root)\n\n    m := make(map[string][md5.Size]byte)\n    for r := range c {\n        if r.err != nil {\n            return nil, r.err\n        }\n        m[r.path] = r.sum\n    }\n    if err := <-errc; err != nil {\n        return nil, err\n    }\n    return m, nil\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[19]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "29756h7rkns",
+   "kind": "heading",
+   "text": "Bounded parallelism",
+   "inlineMarkup": "Bounded parallelism",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h2[9]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "252m385z7m7",
+   "kind": "p",
+   "text": "The MD5All implementation in parallel.go starts a new goroutine for each file. In a directory with many large files, this may allocate more memory than is available on the machine.",
+   "inlineMarkup": "The `MD5All` implementation in [link]parallel.go[/link] starts a new goroutine for each file. In a directory with many large files, this may allocate more memory than is available on the machine.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[42]",
+   "translate": true
+  },
+  {
+   "id": "0yqzidatpyr",
+   "kind": "p",
+   "text": "We can limit these allocations by bounding the number of files read in parallel. In bounded.go, we do this by creating a fixed number of goroutines for reading files. Our pipeline now has three stages: walk the tree, read and digest the files, and collect the digests.",
+   "inlineMarkup": "We can limit these allocations by bounding the number of files read in parallel. In [link]bounded.go[/link], we do this by creating a fixed number of goroutines for reading files. Our pipeline now has three stages: walk the tree, read and digest the files, and collect the digests.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[43]",
+   "translate": true
+  },
+  {
+   "id": "002fb5fb2ux",
+   "kind": "p",
+   "text": "The first stage, walkFiles, emits the paths of regular files in the tree:",
+   "inlineMarkup": "The first stage, `walkFiles`, emits the paths of regular files in the tree:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[44]",
+   "translate": true
+  },
+  {
+   "id": "0d2r0q7bj4b",
+   "kind": "code",
+   "text": "func walkFiles(done <-chan struct{}, root string) (<-chan string, <-chan error) {\n    paths := make(chan string)\n    errc := make(chan error, 1)\n    go func() {\n        // Close the paths channel after Walk returns.\n        defer close(paths)\n        // No select needed for this send, since errc is buffered.\n        errc <- filepath.Walk(root, func(path string, info os.FileInfo, err error) error {\n            if err != nil {\n                return err\n            }\n            if !info.Mode().IsRegular() {\n                return nil\n            }\n            select {\n            case paths <- path:\n            case <-done:\n                return errors.New(\"walk canceled\")\n            }\n            return nil\n        })\n    }()\n    return paths, errc\n}",
+   "inlineMarkup": "func walkFiles(done <-chan struct{}, root string) (<-chan string, <-chan error) {\n    paths := make(chan string)\n    errc := make(chan error, 1)\n    go func() {\n        // Close the paths channel after Walk returns.\n        defer close(paths)\n        // No select needed for this send, since errc is buffered.\n        errc <- filepath.Walk(root, func(path string, info os.FileInfo, err error) error {\n            if err != nil {\n                return err\n            }\n            if !info.Mode().IsRegular() {\n                return nil\n            }\n            select {\n            case paths <- path:\n            case <-done:\n                return errors.New(\"walk canceled\")\n            }\n            return nil\n        })\n    }()\n    return paths, errc\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[20]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1fjstv08xj7",
+   "kind": "p",
+   "text": "The middle stage starts a fixed number of digester goroutines that receive file names from paths and send results on channel c:",
+   "inlineMarkup": "The middle stage starts a fixed number of `digester` goroutines that receive file names from `paths` and send `results` on channel `c`:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[45]",
+   "translate": true
+  },
+  {
+   "id": "2eih2h6s2ik",
+   "kind": "code",
+   "text": "func digester(done <-chan struct{}, paths <-chan string, c chan<- result) {\n    for path := range paths {\n        data, err := ioutil.ReadFile(path)\n        select {\n        case c <- result{path, md5.Sum(data), err}:\n        case <-done:\n            return\n        }\n    }\n}",
+   "inlineMarkup": "func digester(done <-chan struct{}, paths <-chan string, c chan<- result) {\n    for path := range paths {\n        data, err := ioutil.ReadFile(path)\n        select {\n        case c <- result{path, md5.Sum(data), err}:\n        case <-done:\n            return\n        }\n    }\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[21]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "268udjrzxij",
+   "kind": "p",
+   "text": "Unlike our previous examples, digester does not close its output channel, as multiple goroutines are sending on a shared channel. Instead, code in MD5All arranges for the channel to be closed when all the digesters are done:",
+   "inlineMarkup": "Unlike our previous examples, `digester` does not close its output channel, as multiple goroutines are sending on a shared channel. Instead, code in `MD5All` arranges for the channel to be closed when all the `digesters` are done:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[46]",
+   "translate": true
+  },
+  {
+   "id": "063l83xct6l",
+   "kind": "code",
+   "text": "    // Start a fixed number of goroutines to read and digest files.\n    c := make(chan result)\n    var wg sync.WaitGroup\n    const numDigesters = 20\n    wg.Add(numDigesters)\n    for i := 0; i < numDigesters; i++ {\n        go func() {\n            digester(done, paths, c)\n            wg.Done()\n        }()\n    }\n    go func() {\n        wg.Wait()\n        close(c)\n    }()",
+   "inlineMarkup": "    // Start a fixed number of goroutines to read and digest files.\n    c := make(chan result)\n    var wg sync.WaitGroup\n    const numDigesters = 20\n    wg.Add(numDigesters)\n    for i := 0; i < numDigesters; i++ {\n        go func() {\n            digester(done, paths, c)\n            wg.Done()\n        }()\n    }\n    go func() {\n        wg.Wait()\n        close(c)\n    }()",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[22]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "00a4ulyblv8",
+   "kind": "p",
+   "text": "We could instead have each digester create and return its own output channel, but then we would need additional goroutines to fan-in the results.",
+   "inlineMarkup": "We could instead have each digester create and return its own output channel, but then we would need additional goroutines to fan-in the results.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[47]",
+   "translate": true
+  },
+  {
+   "id": "2chi5wqtsq0",
+   "kind": "p",
+   "text": "The final stage receives all the results from c then checks the error from errc. This check cannot happen any earlier, since before this point, walkFiles may block sending values downstream:",
+   "inlineMarkup": "The final stage receives all the `results` from `c` then checks the error from `errc`. This check cannot happen any earlier, since before this point, `walkFiles` may block sending values downstream:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[48]",
+   "translate": true
+  },
+  {
+   "id": "1gy1gx5xsis",
+   "kind": "code",
+   "text": "    m := make(map[string][md5.Size]byte)\n    for r := range c {\n        if r.err != nil {\n            return nil, r.err\n        }\n        m[r.path] = r.sum\n    }\n    // Check whether the Walk failed.\n    if err := <-errc; err != nil {\n        return nil, err\n    }\n    return m, nil\n}",
+   "inlineMarkup": "    m := make(map[string][md5.Size]byte)\n    for r := range c {\n        if r.err != nil {\n            return nil, r.err\n        }\n        m[r.path] = r.sum\n    }\n    // Check whether the Walk failed.\n    if err := <-errc; err != nil {\n        return nil, err\n    }\n    return m, nil\n}",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[23]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0btqz84e193",
+   "kind": "heading",
+   "text": "Conclusion",
+   "inlineMarkup": "Conclusion",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h2[10]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "0vogh6mgodg",
+   "kind": "p",
+   "text": "This article has presented techniques for constructing streaming data pipelines in Go. Dealing with failures in such pipelines is tricky, since each stage in the pipeline may block attempting to send values downstream, and the downstream stages may no longer care about the incoming data. We showed how closing a channel can broadcast a “done” signal to all the goroutines started by a pipeline and defined guidelines for constructing pipelines correctly.",
+   "inlineMarkup": "This article has presented techniques for constructing streaming data pipelines in Go. Dealing with failures in such pipelines is tricky, since each stage in the pipeline may block attempting to send values downstream, and the downstream stages may no longer care about the incoming data. We showed how closing a channel can broadcast a “done” signal to all the goroutines started by a pipeline and defined guidelines for constructing pipelines correctly.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[49]",
+   "translate": true
+  },
+  {
+   "id": "02g7nnppwob",
+   "kind": "p",
+   "text": "Further reading:",
+   "inlineMarkup": "Further reading:",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[50]",
+   "translate": true
+  },
+  {
+   "id": "0w4lq2eo6gg",
+   "kind": "li",
+   "text": "Go Concurrency Patterns (video) presents the basics of Go’s concurrency primitives and several ways to apply them.",
+   "inlineMarkup": "[link]Go Concurrency Patterns[/link] ([link]video[/link]) presents the basics of Go’s concurrency primitives and several ways to apply them.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/ul[4]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "0hfxzomw3gk",
+   "kind": "li",
+   "text": "Advanced Go Concurrency Patterns (video) covers more complex uses of Go’s primitives, especially select.",
+   "inlineMarkup": "[link]Advanced Go Concurrency Patterns[/link] ([link]video[/link]) covers more complex uses of Go’s primitives, especially `select`.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/ul[4]/li[2]",
+   "translate": true
+  },
+  {
+   "id": "0b1qlpa5mob",
+   "kind": "li",
+   "text": "Douglas McIlroy’s paper Squinting at Power Series shows how Go-like concurrency provides elegant support for complex calculations.",
+   "inlineMarkup": "Douglas McIlroy’s paper [link]Squinting at Power Series[/link] shows how Go-like concurrency provides elegant support for complex calculations.",
+   "domPath": "/html[1]/body[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/ul[4]/li[3]",
+   "translate": true
+  }
+ ]
+}

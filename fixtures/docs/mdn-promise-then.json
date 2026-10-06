@@ -1,0 +1,700 @@
+{
+ "slug": "mdn-promise-then",
+ "via": "walk",
+ "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then",
+ "title": "Promise.prototype.then() - JavaScript | MDN",
+ "lang": "en",
+ "generator": "MDN",
+ "segments": [
+  {
+   "id": "028opcnzrju",
+   "kind": "heading",
+   "text": "Promise.prototype.then()",
+   "inlineMarkup": "Promise.prototype.then()",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[1]/h1[1]",
+   "translate": true,
+   "level": 1
+  },
+  {
+   "id": "0esic8ebkor",
+   "kind": "p",
+   "text": "The then() method of Promise instances takes up to two arguments: callback functions for the fulfilled and rejected cases of the Promise. It stores the callbacks within the promise it is called on and immediately returns another Promise object, allowing you to chain calls to other promise methods.",
+   "inlineMarkup": "The *`then()`* method of [link]`Promise`[/link] instances takes up to two arguments: callback functions for the fulfilled and rejected cases of the `Promise`. It stores the callbacks within the promise it is called on and immediately returns another [link]`Promise`[/link] object, allowing you to [link]chain[/link] calls to other promise methods.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[1]/section[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "1opct4yodhm",
+   "kind": "heading",
+   "text": "Try it",
+   "inlineMarkup": "[link]Try it[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[1]/h2[1]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "2csqes6f3l7",
+   "kind": "heading",
+   "text": "JavaScript Demo: Promise.prototype.then()",
+   "inlineMarkup": "JavaScript Demo: Promise.prototype.then()",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[1]/interactive-example[1]/#shadow-root/mdn-play-controller[1]/div[1]/header[1]/h4[1]",
+   "translate": true,
+   "level": 4
+  },
+  {
+   "id": "1vs1g64vt7z",
+   "kind": "code",
+   "text": "const promise1 = new Promise((resolve, reject) => {\n  resolve(\"Success!\");\n});\n\npromise1.then((value) => {\n  console.log(value);\n  // Expected output: \"Success!\"\n});",
+   "inlineMarkup": "const promise1 = new Promise((resolve, reject) => {\n  resolve(\"Success!\");\n});\n\npromise1.then((value) => {\n  console.log(value);\n  // Expected output: \"Success!\"\n});",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[1]/interactive-example[1]/#shadow-root/mdn-play-controller[1]/div[1]/mdn-play-editor[1]/#shadow-root/div[1]/div[1]/div[2]/div[2]",
+   "translate": false,
+   "codeLang": "javascript"
+  },
+  {
+   "id": "2gi5s58mpdq",
+   "kind": "heading",
+   "text": "Syntax",
+   "inlineMarkup": "[link]Syntax[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[2]/h2[1]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "17aynqln0w8",
+   "kind": "code",
+   "text": "then(onFulfilled)\nthen(onFulfilled, onRejected)",
+   "inlineMarkup": "then(onFulfilled)\nthen(onFulfilled, onRejected)",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[2]/mdn-code-example[1]/#shadow-root/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1tsthns4fd8",
+   "kind": "heading",
+   "text": "Parameters",
+   "inlineMarkup": "[link]Parameters[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[3]/h3[1]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "0wjmjwdazvv",
+   "kind": "p",
+   "text": "onFulfilled",
+   "inlineMarkup": "[link]`onFulfilled`[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[3]/dl[1]/dt[1]",
+   "translate": true
+  },
+  {
+   "id": "0o2asdqdp11",
+   "kind": "p",
+   "text": "A function to asynchronously execute when this promise becomes fulfilled. Its return value becomes the fulfillment value of the promise returned by then(). The function is called with the following arguments:",
+   "inlineMarkup": "A function to asynchronously execute when this promise becomes fulfilled. Its return value becomes the fulfillment value of the promise returned by `then()`. The function is called with the following arguments:",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[3]/dl[1]/dd[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0m6m3epmtli",
+   "kind": "p",
+   "text": "value",
+   "inlineMarkup": "[link]`value`[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[3]/dl[1]/dd[1]/dl[1]/dt[1]",
+   "translate": true
+  },
+  {
+   "id": "03nouyavpzv",
+   "kind": "p",
+   "text": "The value that the promise was fulfilled with.",
+   "inlineMarkup": "The value that the promise was fulfilled with.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[3]/dl[1]/dd[1]/dl[1]/dd[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "2ep9y02h3uj",
+   "kind": "p",
+   "text": "If it is not a function, it is internally replaced with an identity function ((x) => x) which simply passes the fulfillment value forward.",
+   "inlineMarkup": "If it is not a function, it is internally replaced with an *identity* function (`(x) => x`) which simply passes the fulfillment value forward.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[3]/dl[1]/dd[1]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "28idrqwlt5l",
+   "kind": "p",
+   "text": "onRejected Optional",
+   "inlineMarkup": "[link]`onRejected` Optional[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[3]/dl[1]/dt[2]",
+   "translate": true
+  },
+  {
+   "id": "1cnfbsa5prb",
+   "kind": "p",
+   "text": "A function to asynchronously execute when this promise becomes rejected. Its return value becomes the fulfillment value of the promise returned by then(). The function is called with the following arguments:",
+   "inlineMarkup": "A function to asynchronously execute when this promise becomes rejected. Its return value becomes the fulfillment value of the promise returned by `then()`. The function is called with the following arguments:",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[3]/dl[1]/dd[2]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "2178kwa2gk0",
+   "kind": "p",
+   "text": "reason",
+   "inlineMarkup": "[link]`reason`[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[3]/dl[1]/dd[2]/dl[1]/dt[1]",
+   "translate": true
+  },
+  {
+   "id": "02z6ozgak8g",
+   "kind": "p",
+   "text": "The value that the promise was rejected with.",
+   "inlineMarkup": "The value that the promise was rejected with.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[3]/dl[1]/dd[2]/dl[1]/dd[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "1vtwuxm8wse",
+   "kind": "p",
+   "text": "If it is not a function, it is internally replaced with a thrower function ((x) => { throw x; }) which throws the rejection reason it received.",
+   "inlineMarkup": "If it is not a function, it is internally replaced with a *thrower* function (`(x) => { throw x; }`) which throws the rejection reason it received.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[3]/dl[1]/dd[2]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "0ngs4hkx90i",
+   "kind": "heading",
+   "text": "Return value",
+   "inlineMarkup": "[link]Return value[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[4]/h3[1]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "26ql46trxib",
+   "kind": "p",
+   "text": "Returns a new Promise immediately. This returned promise is always pending when returned, regardless of the current promise's status.",
+   "inlineMarkup": "Returns a new [link]`Promise`[/link] immediately. This returned promise is always pending when returned, regardless of the current promise's status.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[4]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "00ql58xqfzy",
+   "kind": "p",
+   "text": "One of the onFulfilled and onRejected handlers will be executed to handle the current promise's fulfillment or rejection. The call always happens asynchronously, even when the current promise is already settled. The behavior of the promise returned by then() (referred to as p in the following list) depends on the handler's execution result, following a specific set of rules. If the handler function:",
+   "inlineMarkup": "One of the `onFulfilled` and `onRejected` handlers will be executed to handle the current promise's fulfillment or rejection. The call always happens asynchronously, even when the current promise is already settled. The behavior of the promise returned by `then()` (referred to as `p` in the following list) depends on the handler's execution result, following a specific set of rules. If the handler function:",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[4]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "182mx0i4g4r",
+   "kind": "li",
+   "text": "returns a value: p gets fulfilled with the returned value as its value.",
+   "inlineMarkup": "returns a value: `p` gets fulfilled with the returned value as its value.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[4]/ul[1]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "2axybdnf40b",
+   "kind": "li",
+   "text": "doesn't return anything: p gets fulfilled with undefined as its value.",
+   "inlineMarkup": "doesn't return anything: `p` gets fulfilled with `undefined` as its value.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[4]/ul[1]/li[2]",
+   "translate": true
+  },
+  {
+   "id": "1bm0790pn73",
+   "kind": "li",
+   "text": "throws an error: p gets rejected with the thrown error as its value.",
+   "inlineMarkup": "throws an error: `p` gets rejected with the thrown error as its value.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[4]/ul[1]/li[3]",
+   "translate": true
+  },
+  {
+   "id": "13vl3wsisp9",
+   "kind": "li",
+   "text": "returns an already fulfilled promise: p gets fulfilled with that promise's value as its value.",
+   "inlineMarkup": "returns an already fulfilled promise: `p` gets fulfilled with that promise's value as its value.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[4]/ul[1]/li[4]",
+   "translate": true
+  },
+  {
+   "id": "2dcm3nbkz4e",
+   "kind": "li",
+   "text": "returns an already rejected promise: p gets rejected with that promise's value as its value.",
+   "inlineMarkup": "returns an already rejected promise: `p` gets rejected with that promise's value as its value.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[4]/ul[1]/li[5]",
+   "translate": true
+  },
+  {
+   "id": "0qu88bdp0gz",
+   "kind": "li",
+   "text": "returns another pending promise: p is pending and becomes fulfilled/rejected with that promise's value as its value immediately after that promise becomes fulfilled/rejected.",
+   "inlineMarkup": "returns another pending promise: `p` is pending and becomes fulfilled/rejected with that promise's value as its value immediately after that promise becomes fulfilled/rejected.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[4]/ul[1]/li[6]",
+   "translate": true
+  },
+  {
+   "id": "0e8ywgqb6mt",
+   "kind": "heading",
+   "text": "Description",
+   "inlineMarkup": "[link]Description[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[5]/h2[1]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "1l4q4vth0j0",
+   "kind": "p",
+   "text": "The then() method schedules callback functions for the eventual completion of a Promise — either fulfillment or rejection. It is the primitive method of promises: the thenable protocol expects all promise-like objects to expose a then() method, and the catch() and finally() methods both work by invoking the object's then() method.",
+   "inlineMarkup": "The `then()` method schedules callback functions for the eventual completion of a Promise — either fulfillment or rejection. It is the primitive method of promises: the [link]thenable[/link] protocol expects all promise-like objects to expose a `then()` method, and the [link]`catch()`[/link] and [link]`finally()`[/link] methods both work by invoking the object's `then()` method.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[5]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "29d307bujng",
+   "kind": "p",
+   "text": "For more information about the onRejected handler, see the catch() reference.",
+   "inlineMarkup": "For more information about the `onRejected` handler, see the [link]`catch()`[/link] reference.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[5]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "0njzkafnwmc",
+   "kind": "p",
+   "text": "then() returns a new promise object but mutates the promise object it's called on, appending the handlers to an internal list if the promise is pending. Therefore the handler is retained by the original promise for as long as that promise remains pending and reachable. For example, the following example will eventually run out of memory even though the returned promise is not retained:",
+   "inlineMarkup": "`then()` returns a new promise object but mutates the promise object it's called on, appending the handlers to an internal list if the promise is pending. Therefore the handler is retained by the original promise for as long as that promise remains pending and reachable. For example, the following example will eventually run out of memory even though the returned promise is not retained:",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[5]/p[3]",
+   "translate": true
+  },
+  {
+   "id": "1h3mn0fgy0d",
+   "kind": "code",
+   "text": "const pendingPromise = new Promise(() => {});\nwhile (true) {\n  pendingPromise.then(doSomething);\n}",
+   "inlineMarkup": "const pendingPromise = new Promise(() => {});\nwhile (true) {\n  pendingPromise.then(doSomething);\n}",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[5]/mdn-code-example[1]/#shadow-root/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "03emlk0l06g",
+   "kind": "p",
+   "text": "If you call the then() method twice on the same promise object (instead of chaining), then this promise object will have two pairs of settlement handlers. All handlers attached to the same promise object are always called in the order they were added. Moreover, the two promises returned by each call of then() start separate chains and do not wait for each other's settlement.",
+   "inlineMarkup": "If you call the `then()` method twice on the same promise object (instead of chaining), then this promise object will have two pairs of settlement handlers. All handlers attached to the same promise object are always called in the order they were added. Moreover, the two promises returned by each call of `then()` start separate chains and do not wait for each other's settlement.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[5]/p[4]",
+   "translate": true
+  },
+  {
+   "id": "0wfg5p7764d",
+   "kind": "p",
+   "text": "Thenable objects that arise along the then() chain are always resolved — the onFulfilled handler never receives a thenable object, and any thenable returned by either handler are always resolved before being passed to the next handler. This is because when constructing the new promise, the resolve and reject functions passed by the executor are saved, and when the current promise settles, the respective function will be called with the fulfillment value or rejection reason. The resolving logic comes from the resolve function passed by the Promise() constructor.",
+   "inlineMarkup": "[link]Thenable[/link] objects that arise along the `then()` chain are always [link]resolved[/link] — the `onFulfilled` handler never receives a thenable object, and any thenable returned by either handler are always resolved before being passed to the next handler. This is because when constructing the new promise, the `resolve` and `reject` functions passed by the `executor` are saved, and when the current promise settles, the respective function will be called with the fulfillment value or rejection reason. The resolving logic comes from the `resolve` function passed by the [link]`Promise()`[/link] constructor.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[5]/p[5]",
+   "translate": true
+  },
+  {
+   "id": "0pls0z545u4",
+   "kind": "p",
+   "text": "then() supports subclassing, which means it can be called on instances of subclasses of Promise, and the result will be a promise of the subclass type. You can customize the type of the return value through the [Symbol.species] property.",
+   "inlineMarkup": "`then()` supports subclassing, which means it can be called on instances of subclasses of `Promise`, and the result will be a promise of the subclass type. You can customize the type of the return value through the [link]`[Symbol.species]`[/link] property.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[5]/p[6]",
+   "translate": true
+  },
+  {
+   "id": "2739ducxpyg",
+   "kind": "heading",
+   "text": "Examples",
+   "inlineMarkup": "[link]Examples[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[6]/h2[1]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "1l3w6opvxuy",
+   "kind": "heading",
+   "text": "Using the then() method",
+   "inlineMarkup": "[link]Using the then() method[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[7]/h3[1]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "0ysuyyq0nsv",
+   "kind": "code",
+   "text": "const p1 = new Promise((resolve, reject) => {\n  resolve(\"Success!\");\n  // or\n  // reject(new Error(\"Error!\"));\n});\n\np1.then(\n  (value) => {\n    console.log(value); // Success!\n  },\n  (reason) => {\n    console.error(reason); // Error!\n  },\n);",
+   "inlineMarkup": "const p1 = new Promise((resolve, reject) => {\n  resolve(\"Success!\");\n  // or\n  // reject(new Error(\"Error!\"));\n});\n\np1.then(\n  (value) => {\n    console.log(value); // Success!\n  },\n  (reason) => {\n    console.error(reason); // Error!\n  },\n);",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[7]/mdn-code-example[1]/#shadow-root/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0bf942joor8",
+   "kind": "heading",
+   "text": "Having a non-function as either parameter",
+   "inlineMarkup": "[link]Having a non-function as either parameter[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[8]/h3[1]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "0t670wxr571",
+   "kind": "code",
+   "text": "Promise.resolve(1).then(2).then(console.log); // 1\nPromise.reject(new Error(\"failed\")).then(2, 2).then(console.log, console.log); // Error: failed",
+   "inlineMarkup": "Promise.resolve(1).then(2).then(console.log); // 1\nPromise.reject(new Error(\"failed\")).then(2, 2).then(console.log, console.log); // Error: failed",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[8]/mdn-code-example[1]/#shadow-root/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "14bvm8souwa",
+   "kind": "heading",
+   "text": "Chaining",
+   "inlineMarkup": "[link]Chaining[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/h3[1]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "01b6qsern1e",
+   "kind": "p",
+   "text": "The then method returns a new Promise, which allows for method chaining.",
+   "inlineMarkup": "The `then` method returns a new `Promise`, which allows for method chaining.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0l1m3a8il66",
+   "kind": "p",
+   "text": "If the function passed as handler to then returns a Promise, an equivalent Promise will be exposed to the subsequent then in the method chain. The below snippet simulates asynchronous code with the setTimeout function.",
+   "inlineMarkup": "If the function passed as handler to `then` returns a `Promise`, an equivalent `Promise` will be exposed to the subsequent `then` in the method chain. The below snippet simulates asynchronous code with the `setTimeout` function.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "0tthyjx1640",
+   "kind": "code",
+   "text": "Promise.resolve(\"foo\")\n  // 1. Receive \"foo\", concatenate \"bar\" to it, and resolve that to the next then\n  .then(\n    (string) =>\n      new Promise((resolve, reject) => {\n        setTimeout(() => {\n          string += \"bar\";\n          resolve(string);\n        }, 1);\n      }),\n  )\n  // 2. receive \"foobar\", register a callback function to work on that string\n  // and print it to the console, but not before returning the unworked on\n  // string to the next then\n  .then((string) => {\n    setTimeout(() => {\n      string += \"baz\";\n      console.log(string); // foobarbaz\n    }, 1);\n    return string;\n  })\n  // 3. print helpful messages about how the code in this section will be run\n  // before the string is actually processed by the mocked asynchronous code in the\n  // previous then block.\n  .then((string) => {\n    console.log(\n      \"Last Then: oops... didn't bother to instantiate and return a promise in the prior then so the sequence may be a bit surprising\",\n    );\n\n    // Note that `string` will not have the 'baz' bit of it at this point. This\n    // is because we mocked that to happen asynchronously with a setTimeout function\n    console.log(string); // foobar\n  });\n\n// Logs, in order:\n// Last Then: oops... didn't bother to instantiate and return a promise in the prior then so the sequence may be a bit surprising\n// foobar\n// foobarbaz",
+   "inlineMarkup": "Promise.resolve(\"foo\")\n  // 1. Receive \"foo\", concatenate \"bar\" to it, and resolve that to the next then\n  .then(\n    (string) =>\n      new Promise((resolve, reject) => {\n        setTimeout(() => {\n          string += \"bar\";\n          resolve(string);\n        }, 1);\n      }),\n  )\n  // 2. receive \"foobar\", register a callback function to work on that string\n  // and print it to the console, but not before returning the unworked on\n  // string to the next then\n  .then((string) => {\n    setTimeout(() => {\n      string += \"baz\";\n      console.log(string); // foobarbaz\n    }, 1);\n    return string;\n  })\n  // 3. print helpful messages about how the code in this section will be run\n  // before the string is actually processed by the mocked asynchronous code in the\n  // previous then block.\n  .then((string) => {\n    console.log(\n      \"Last Then: oops... didn't bother to instantiate and return a promise in the prior then so the sequence may be a bit surprising\",\n    );\n\n    // Note that `string` will not have the 'baz' bit of it at this point. This\n    // is because we mocked that to happen asynchronously with a setTimeout function\n    console.log(string); // foobar\n  });\n\n// Logs, in order:\n// Last Then: oops... didn't bother to instantiate and return a promise in the prior then so the sequence may be a bit surprising\n// foobar\n// foobarbaz",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[1]/#shadow-root/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0hwy36bgaf8",
+   "kind": "p",
+   "text": "The value returned from then() is resolved in the same way as Promise.resolve(). This means thenable objects are supported, and if the return value is not a promise, it's implicitly wrapped in a Promise and then resolved.",
+   "inlineMarkup": "The value returned from `then()` is resolved in the same way as [link]`Promise.resolve()`[/link]. This means [link]thenable objects[/link] are supported, and if the return value is not a promise, it's implicitly wrapped in a `Promise` and then resolved.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[3]",
+   "translate": true
+  },
+  {
+   "id": "1z3pvq0pf04",
+   "kind": "code",
+   "text": "const p2 = new Promise((resolve, reject) => {\n  resolve(1);\n});\n\np2.then((value) => {\n  console.log(value); // 1\n  return value + 1;\n}).then((value) => {\n  console.log(value, \"- A synchronous value works\"); // 2 - A synchronous value works\n});\n\np2.then((value) => {\n  console.log(value); // 1\n});",
+   "inlineMarkup": "const p2 = new Promise((resolve, reject) => {\n  resolve(1);\n});\n\np2.then((value) => {\n  console.log(value); // 1\n  return value + 1;\n}).then((value) => {\n  console.log(value, \"- A synchronous value works\"); // 2 - A synchronous value works\n});\n\np2.then((value) => {\n  console.log(value); // 1\n});",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[2]/#shadow-root/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "08kx5h129qj",
+   "kind": "p",
+   "text": "A then call returns a promise that eventually rejects if the function throws an error or returns a rejected Promise.",
+   "inlineMarkup": "A `then` call returns a promise that eventually rejects if the function throws an error or returns a rejected Promise.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[4]",
+   "translate": true
+  },
+  {
+   "id": "14hxqsddjkm",
+   "kind": "code",
+   "text": "Promise.resolve()\n  .then(() => {\n    // Makes .then() return a rejected promise\n    throw new Error(\"Oh no!\");\n  })\n  .then(\n    () => {\n      console.log(\"Not called.\");\n    },\n    (error) => {\n      console.error(`onRejected function called: ${error.message}`);\n    },\n  );",
+   "inlineMarkup": "Promise.resolve()\n  .then(() => {\n    // Makes .then() return a rejected promise\n    throw new Error(\"Oh no!\");\n  })\n  .then(\n    () => {\n      console.log(\"Not called.\");\n    },\n    (error) => {\n      console.error(`onRejected function called: ${error.message}`);\n    },\n  );",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[3]/#shadow-root/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "2dysga1hehp",
+   "kind": "p",
+   "text": "In practice, it is often desirable to catch() rejected promises rather than then()'s two-case syntax, as demonstrated below.",
+   "inlineMarkup": "In practice, it is often desirable to [link]`catch()`[/link] rejected promises rather than `then()`'s two-case syntax, as demonstrated below.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[5]",
+   "translate": true
+  },
+  {
+   "id": "08n8wvxz0av",
+   "kind": "code",
+   "text": "Promise.resolve()\n  .then(() => {\n    // Makes .then() return a rejected promise\n    throw new Error(\"Oh no!\");\n  })\n  .catch((error) => {\n    console.error(`onRejected function called: ${error.message}`);\n  })\n  .then(() => {\n    console.log(\"I am always called even if the prior then's promise rejects\");\n  });",
+   "inlineMarkup": "Promise.resolve()\n  .then(() => {\n    // Makes .then() return a rejected promise\n    throw new Error(\"Oh no!\");\n  })\n  .catch((error) => {\n    console.error(`onRejected function called: ${error.message}`);\n  })\n  .then(() => {\n    console.log(\"I am always called even if the prior then's promise rejects\");\n  });",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[4]/#shadow-root/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "2fvbpxu65em",
+   "kind": "p",
+   "text": "In all other cases, the returned promise eventually fulfills. In the following example, the first then() returns 42 wrapped in a fulfilled Promise, even though the previous Promise in the chain was rejected.",
+   "inlineMarkup": "In all other cases, the returned promise eventually fulfills. In the following example, the first `then()` returns `42` wrapped in a fulfilled Promise, even though the previous Promise in the chain was rejected.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[6]",
+   "translate": true
+  },
+  {
+   "id": "1nk4nrcnzwi",
+   "kind": "code",
+   "text": "Promise.reject(new Error(\"Oh no!\"))\n  .then(\n    () => 99,\n    () => 42,\n  ) // onRejected returns 42 which is wrapped in a fulfilled Promise\n  .then((solution) => console.log(`Resolved with ${solution}`)); // Fulfilled with 42",
+   "inlineMarkup": "Promise.reject(new Error(\"Oh no!\"))\n  .then(\n    () => 99,\n    () => 42,\n  ) // onRejected returns 42 which is wrapped in a fulfilled Promise\n  .then((solution) => console.log(`Resolved with ${solution}`)); // Fulfilled with 42",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[5]/#shadow-root/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "2cwpes0rztp",
+   "kind": "p",
+   "text": "If onFulfilled returns a promise, the return value of then will be fulfilled/rejected based on the eventual state of that promise.",
+   "inlineMarkup": "If `onFulfilled` returns a promise, the return value of `then` will be fulfilled/rejected based on the eventual state of that promise.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[7]",
+   "translate": true
+  },
+  {
+   "id": "1e035x2ytvj",
+   "kind": "code",
+   "text": "function resolveLater(resolve, reject) {\n  setTimeout(() => {\n    resolve(10);\n  }, 1000);\n}\nfunction rejectLater(resolve, reject) {\n  setTimeout(() => {\n    reject(new Error(\"Error\"));\n  }, 1000);\n}\n\nconst p1 = Promise.resolve(\"foo\");\n// Return promise here, that will be resolved to 10 after 1 second\nconst p2 = p1.then(() => new Promise(resolveLater));\np2.then(\n  (v) => {\n    console.log(\"resolved\", v); // \"resolved\", 10\n  },\n  (e) => {\n    // not called\n    console.error(\"rejected\", e);\n  },\n);\n\n// Return promise here, that will be rejected with 'Error' after 1 second\nconst p3 = p1.then(() => new Promise(rejectLater));\np3.then(\n  (v) => {\n    // not called\n    console.log(\"resolved\", v);\n  },\n  (e) => {\n    console.error(\"rejected\", e); // \"rejected\", 'Error'\n  },\n);",
+   "inlineMarkup": "function resolveLater(resolve, reject) {\n  setTimeout(() => {\n    resolve(10);\n  }, 1000);\n}\nfunction rejectLater(resolve, reject) {\n  setTimeout(() => {\n    reject(new Error(\"Error\"));\n  }, 1000);\n}\n\nconst p1 = Promise.resolve(\"foo\");\n// Return promise here, that will be resolved to 10 after 1 second\nconst p2 = p1.then(() => new Promise(resolveLater));\np2.then(\n  (v) => {\n    console.log(\"resolved\", v); // \"resolved\", 10\n  },\n  (e) => {\n    // not called\n    console.error(\"rejected\", e);\n  },\n);\n\n// Return promise here, that will be rejected with 'Error' after 1 second\nconst p3 = p1.then(() => new Promise(rejectLater));\np3.then(\n  (v) => {\n    // not called\n    console.log(\"resolved\", v);\n  },\n  (e) => {\n    console.error(\"rejected\", e); // \"rejected\", 'Error'\n  },\n);",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[6]/#shadow-root/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0hz460ddayb",
+   "kind": "p",
+   "text": "You can use chaining to implement one function with a Promise-based API on top of another such function.",
+   "inlineMarkup": "You can use chaining to implement one function with a Promise-based API on top of another such function.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[8]",
+   "translate": true
+  },
+  {
+   "id": "11h6rlfy4d2",
+   "kind": "code",
+   "text": "function fetchCurrentData() {\n  // The fetch() API returns a Promise. This function\n  // exposes a similar API, except the fulfillment\n  // value of this function's Promise has had more\n  // work done on it.\n  return fetch(\"current-data.json\").then((response) => {\n    if (response.headers.get(\"content-type\") !== \"application/json\") {\n      throw new TypeError();\n    }\n    const j = response.json();\n    // maybe do something with j\n\n    // fulfillment value given to user of\n    // fetchCurrentData().then()\n    return j;\n  });\n}",
+   "inlineMarkup": "function fetchCurrentData() {\n  // The fetch() API returns a Promise. This function\n  // exposes a similar API, except the fulfillment\n  // value of this function's Promise has had more\n  // work done on it.\n  return fetch(\"current-data.json\").then((response) => {\n    if (response.headers.get(\"content-type\") !== \"application/json\") {\n      throw new TypeError();\n    }\n    const j = response.json();\n    // maybe do something with j\n\n    // fulfillment value given to user of\n    // fetchCurrentData().then()\n    return j;\n  });\n}",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[7]/#shadow-root/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0r1prcstdi1",
+   "kind": "heading",
+   "text": "Asynchronicity of then()",
+   "inlineMarkup": "[link]Asynchronicity of then()[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[10]/h3[1]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "064u6cxq2u2",
+   "kind": "p",
+   "text": "The following is an example to demonstrate the asynchronicity of the then method.",
+   "inlineMarkup": "The following is an example to demonstrate the asynchronicity of the `then` method.",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[10]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0bcyfmkr62z",
+   "kind": "code",
+   "text": "// Using a resolved promise 'resolvedProm' for example,\n// the function call 'resolvedProm.then(...)' returns a new promise immediately,\n// but its handler '(value) => {...}' will get called asynchronously as demonstrated by the console.logs.\n// the new promise is assigned to 'thenProm',\n// and thenProm will be resolved with the value returned by handler\nconst resolvedProm = Promise.resolve(33);\nconsole.log(resolvedProm);\n\nconst thenProm = resolvedProm.then((value) => {\n  console.log(\n    `this gets called after the end of the main stack. the value received is: ${value}, the value returned is: ${\n      value + 1\n    }`,\n  );\n  return value + 1;\n});\nconsole.log(thenProm);\n\n// Using setTimeout, we can postpone the execution of a function to the moment the stack is empty\nsetTimeout(() => {\n  console.log(thenProm);\n});\n\n// Logs, in order:\n// Promise {[[PromiseStatus]]: \"resolved\", [[PromiseResult]]: 33}\n// Promise {[[PromiseStatus]]: \"pending\", [[PromiseResult]]: undefined}\n// \"this gets called after the end of the main stack. the value received is: 33, the value returned is: 34\"\n// Promise {[[PromiseStatus]]: \"resolved\", [[PromiseResult]]: 34}",
+   "inlineMarkup": "// Using a resolved promise 'resolvedProm' for example,\n// the function call 'resolvedProm.then(...)' returns a new promise immediately,\n// but its handler '(value) => {...}' will get called asynchronously as demonstrated by the console.logs.\n// the new promise is assigned to 'thenProm',\n// and thenProm will be resolved with the value returned by handler\nconst resolvedProm = Promise.resolve(33);\nconsole.log(resolvedProm);\n\nconst thenProm = resolvedProm.then((value) => {\n  console.log(\n    `this gets called after the end of the main stack. the value received is: ${value}, the value returned is: ${\n      value + 1\n    }`,\n  );\n  return value + 1;\n});\nconsole.log(thenProm);\n\n// Using setTimeout, we can postpone the execution of a function to the moment the stack is empty\nsetTimeout(() => {\n  console.log(thenProm);\n});\n\n// Logs, in order:\n// Promise {[[PromiseStatus]]: \"resolved\", [[PromiseResult]]: 33}\n// Promise {[[PromiseStatus]]: \"pending\", [[PromiseResult]]: undefined}\n// \"this gets called after the end of the main stack. the value received is: 33, the value returned is: 34\"\n// Promise {[[PromiseStatus]]: \"resolved\", [[PromiseResult]]: 34}",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[10]/mdn-code-example[1]/#shadow-root/div[1]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "0bv6p7eqiba",
+   "kind": "heading",
+   "text": "Specifications",
+   "inlineMarkup": "[link]Specifications[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[11]/h2[1]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "2fs2mvqmfw4",
+   "kind": "table-cell",
+   "text": "Specification",
+   "inlineMarkup": "Specification",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[11]/table[1]/thead[1]/tr[1]/th[1]",
+   "translate": true,
+   "groupId": "row-0ut6r3s828k"
+  },
+  {
+   "id": "16ngbux8s2b",
+   "kind": "table-cell",
+   "text": "ECMAScript® 2027 Language Specification\n# sec-promise.prototype.then",
+   "inlineMarkup": "[link]ECMAScript® 2027 Language Specification\n# sec-promise.prototype.then[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[11]/table[1]/tbody[1]/tr[1]/td[1]",
+   "translate": true,
+   "groupId": "row-0dzl5iqxk5s"
+  },
+  {
+   "id": "1w6osjv34nc",
+   "kind": "heading",
+   "text": "Browser compatibility",
+   "inlineMarkup": "[link]Browser compatibility[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/h2[1]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "0d25tcbfcgd",
+   "kind": "table-cell",
+   "text": "Chrome",
+   "inlineMarkup": "Chrome",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[1]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "2crx4fyl9xg",
+   "kind": "table-cell",
+   "text": "Edge",
+   "inlineMarkup": "Edge",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[2]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "0507p7t158v",
+   "kind": "table-cell",
+   "text": "Firefox",
+   "inlineMarkup": "Firefox",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[3]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "0092pw2x9ar",
+   "kind": "table-cell",
+   "text": "Opera",
+   "inlineMarkup": "Opera",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[4]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "03j3pc7rtof",
+   "kind": "table-cell",
+   "text": "Safari",
+   "inlineMarkup": "Safari",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[5]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "037kunu0mjn",
+   "kind": "table-cell",
+   "text": "Chrome Android",
+   "inlineMarkup": "Chrome Android",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[6]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "1w1d4n4r6dn",
+   "kind": "table-cell",
+   "text": "Firefox for Android",
+   "inlineMarkup": "Firefox for Android",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[7]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "1lx29xoglh7",
+   "kind": "table-cell",
+   "text": "Opera Android",
+   "inlineMarkup": "Opera Android",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[8]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "0ejbgolsjem",
+   "kind": "table-cell",
+   "text": "Safari on iOS",
+   "inlineMarkup": "Safari on iOS",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[9]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "1of5cetz1e7",
+   "kind": "table-cell",
+   "text": "Samsung Browser",
+   "inlineMarkup": "Samsung Browser",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[10]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "0yth05179bh",
+   "kind": "table-cell",
+   "text": "WebView Android",
+   "inlineMarkup": "WebView Android",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[11]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "1i33t47s3hu",
+   "kind": "table-cell",
+   "text": "WebView on iOS",
+   "inlineMarkup": "WebView on iOS",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[12]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "0fnp4twfakj",
+   "kind": "table-cell",
+   "text": "Bun",
+   "inlineMarkup": "Bun",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[13]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "1qchcvbkisg",
+   "kind": "table-cell",
+   "text": "Deno",
+   "inlineMarkup": "Deno",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[14]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "25rwmoqlr9o",
+   "kind": "table-cell",
+   "text": "Node.js",
+   "inlineMarkup": "Node.js",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/thead[1]/tr[2]/th[15]/div[1]",
+   "translate": true,
+   "groupId": "row-298jq2y3v28"
+  },
+  {
+   "id": "1e98lxs5459",
+   "kind": "table-cell",
+   "text": "then()",
+   "inlineMarkup": "`then()`",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/tbody[1]/tr[1]/th[1]/div[1]",
+   "translate": true,
+   "groupId": "row-2c5lw7i221m"
+  },
+  {
+   "id": "1dcjqtr4b3x",
+   "kind": "heading",
+   "text": "See also",
+   "inlineMarkup": "[link]See also[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[13]/h2[1]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "2cdg0m5fw84",
+   "kind": "li",
+   "text": "Promise",
+   "inlineMarkup": "[link]`Promise`[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[13]/ul[1]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "0nxm59my175",
+   "kind": "li",
+   "text": "Promise.prototype.catch()",
+   "inlineMarkup": "[link]`Promise.prototype.catch()`[/link]",
+   "domPath": "/html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[13]/ul[1]/li[2]",
+   "translate": true
+  }
+ ]
+}

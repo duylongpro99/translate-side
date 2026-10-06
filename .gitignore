@@ -14,3 +14,5 @@ web-ext.config.ts
 
 # Local-only skill symlink (user decision: keep outside git)
 .claude/skills/managed-session
+.cache/
+eval-results/

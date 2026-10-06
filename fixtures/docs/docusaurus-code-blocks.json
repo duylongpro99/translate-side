@@ -1,0 +1,1752 @@
+{
+ "slug": "docusaurus-code-blocks",
+ "via": "walk",
+ "url": "https://docusaurus.io/docs/markdown-features/code-blocks",
+ "title": "Code blocks | Docusaurus",
+ "lang": "en",
+ "generator": "Docusaurus",
+ "segments": [
+  {
+   "id": "20egjiog7av",
+   "kind": "heading",
+   "text": "Code blocks",
+   "inlineMarkup": "Code blocks",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/header[1]/h1[1]",
+   "translate": true,
+   "level": 1
+  },
+  {
+   "id": "0b9ob9aoas9",
+   "kind": "p",
+   "text": "Code blocks within documentation are super-powered 💪.",
+   "inlineMarkup": "Code blocks within documentation are super-powered 💪.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0k3tz08zabc",
+   "kind": "heading",
+   "text": "Code title",
+   "inlineMarkup": "Code title",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[1]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "0fits6pkg9t",
+   "kind": "p",
+   "text": "You can add a title to the code block by adding a title key after the language (leave a space between them).",
+   "inlineMarkup": "You can add a title to the code block by adding a `title` key after the language (leave a space between them).",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "01c58o4bjnc",
+   "kind": "code",
+   "text": "```jsx title=\"/src/components/HelloCodeTitle.js\"\nfunction HelloCodeTitle(props) {\n  return <h1>Hello, {props.name}</h1>;\n}\n```",
+   "inlineMarkup": "```jsx title=\"/src/components/HelloCodeTitle.js\"\nfunction HelloCodeTitle(props) {\n  return <h1>Hello, {props.name}</h1>;\n}\n```",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "md"
+  },
+  {
+   "id": "1k2ji66r9pw",
+   "kind": "p",
+   "text": "/src/components/HelloCodeTitle.js",
+   "inlineMarkup": "/src/components/HelloCodeTitle.js",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[2]/div[2]/div[1]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "0k02jd6liim",
+   "kind": "code",
+   "text": "function HelloCodeTitle(props) {\n  return <h1>Hello, {props.name}</h1>;\n}",
+   "inlineMarkup": "function HelloCodeTitle(props) {\n  return <h1>Hello, {props.name}</h1>;\n}",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[2]/div[2]/div[1]/div[2]/pre[1]",
+   "translate": false,
+   "codeLang": "jsx"
+  },
+  {
+   "id": "1emjun2d20b",
+   "kind": "heading",
+   "text": "Syntax highlighting",
+   "inlineMarkup": "Syntax highlighting",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[2]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "0swerkfhkqx",
+   "kind": "p",
+   "text": "Code blocks are text blocks wrapped around by strings of 3 backticks. You may check out this reference for the specifications of MDX.",
+   "inlineMarkup": "Code blocks are text blocks wrapped around by strings of 3 backticks. You may check out [link]this reference[/link] for the specifications of MDX.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[3]",
+   "translate": true
+  },
+  {
+   "id": "17pubz06z13",
+   "kind": "code",
+   "text": "```js\nconsole.log('Every repo must come with a mascot.');\n```",
+   "inlineMarkup": "```js\nconsole.log('Every repo must come with a mascot.');\n```",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[3]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "md"
+  },
+  {
+   "id": "0popd4lul4g",
+   "kind": "p",
+   "text": "Use the matching language meta string for your code block, and Docusaurus will pick up syntax highlighting automatically, powered by Prism React Renderer.",
+   "inlineMarkup": "Use the matching language meta string for your code block, and Docusaurus will pick up syntax highlighting automatically, powered by [link]Prism React Renderer[/link].",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[4]",
+   "translate": true
+  },
+  {
+   "id": "2ci6ceul32n",
+   "kind": "code",
+   "text": "console.log('Every repo must come with a mascot.');",
+   "inlineMarkup": "console.log('Every repo must come with a mascot.');",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[4]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "js"
+  },
+  {
+   "id": "17sv9xto1o4",
+   "kind": "heading",
+   "text": "Theming",
+   "inlineMarkup": "Theming",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[1]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "0mt5p9f2hen",
+   "kind": "p",
+   "text": "By default, the Prism syntax highlighting theme we use is Palenight. You can change this to another theme by passing theme field in prism as themeConfig in your docusaurus.config.js.",
+   "inlineMarkup": "By default, the Prism [link]syntax highlighting theme[/link] we use is [link]Palenight[/link]. You can change this to another theme by passing `theme` field in `prism` as `themeConfig` in your docusaurus.config.js.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[5]",
+   "translate": true
+  },
+  {
+   "id": "1wk46pdhssj",
+   "kind": "p",
+   "text": "For example, if you prefer to use the dracula highlighting theme:",
+   "inlineMarkup": "For example, if you prefer to use the `dracula` highlighting theme:",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[6]",
+   "translate": true
+  },
+  {
+   "id": "1giznx6abpj",
+   "kind": "p",
+   "text": "docusaurus.config.js",
+   "inlineMarkup": "docusaurus.config.js",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[5]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "2bvlsy8toxb",
+   "kind": "code",
+   "text": "import {themes as prismThemes} from 'prism-react-renderer';\n\nexport default {\n  themeConfig: {\n    prism: {\n      theme: prismThemes.dracula,\n    },\n  },\n};",
+   "inlineMarkup": "import {themes as prismThemes} from 'prism-react-renderer';\n\nexport default {\n  themeConfig: {\n    prism: {\n      theme: prismThemes.dracula,\n    },\n  },\n};",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[5]/div[2]/pre[1]",
+   "translate": false,
+   "codeLang": "js"
+  },
+  {
+   "id": "0n7hw2ntbpd",
+   "kind": "p",
+   "text": "Because a Prism theme is just a JS object, you can also write your own theme if you are not satisfied with the default. Docusaurus enhances the github and vsDark themes to provide richer highlight, and you can check our implementations for the light and dark code block themes.",
+   "inlineMarkup": "Because a Prism theme is just a JS object, you can also write your own theme if you are not satisfied with the default. Docusaurus enhances the `github` and `vsDark` themes to provide richer highlight, and you can check our implementations for the [link]light[/link] and [link]dark[/link] code block themes.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[7]",
+   "translate": true
+  },
+  {
+   "id": "0sbcb495bav",
+   "kind": "heading",
+   "text": "Supported Languages",
+   "inlineMarkup": "Supported Languages",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[2]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "1gvu66x1o7l",
+   "kind": "p",
+   "text": "By default, Docusaurus comes with a subset of commonly used languages.",
+   "inlineMarkup": "By default, Docusaurus comes with a subset of [link]commonly used languages[/link].",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[8]",
+   "translate": true
+  },
+  {
+   "id": "11kfqnoermo",
+   "kind": "p",
+   "text": "warning",
+   "inlineMarkup": "warning",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[6]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "11r2zc2box4",
+   "kind": "p",
+   "text": "Some popular languages like Java, C#, or PHP are not enabled by default.",
+   "inlineMarkup": "Some popular languages like Java, C#, or PHP are not enabled by default.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[6]/div[2]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "1qesdsouw3x",
+   "kind": "p",
+   "text": "To add syntax highlighting for any of the other Prism-supported languages, define it in an array of additional languages.",
+   "inlineMarkup": "To add syntax highlighting for any of the other [link]Prism-supported languages[/link], define it in an array of additional languages.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[9]",
+   "translate": true
+  },
+  {
+   "id": "15yux0xjmmg",
+   "kind": "p",
+   "text": "note",
+   "inlineMarkup": "note",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[7]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "1dubayf0m87",
+   "kind": "p",
+   "text": "Each additional language has to be a valid Prism component name. For example, Prism would map the language cs to csharp, but only prism-csharp.js exists as a component, so you need to use additionalLanguages: ['csharp']. You can look into node_modules/prismjs/components to find all components (languages) available.",
+   "inlineMarkup": "Each additional language has to be a valid Prism component name. For example, Prism would map the *language* `cs` to `csharp`, but only `prism-csharp.js` exists as a *component*, so you need to use `additionalLanguages: ['csharp']`. You can look into `node_modules/prismjs/components` to find all components (languages) available.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[7]/div[2]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0yhrqjm3jhs",
+   "kind": "p",
+   "text": "For example, if you want to add highlighting for the PowerShell language:",
+   "inlineMarkup": "For example, if you want to add highlighting for the PowerShell language:",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[10]",
+   "translate": true
+  },
+  {
+   "id": "1o287g3uixx",
+   "kind": "p",
+   "text": "docusaurus.config.js",
+   "inlineMarkup": "docusaurus.config.js",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[8]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "1ljwjuxoduv",
+   "kind": "code",
+   "text": "export default {\n  // ...\n  themeConfig: {\n    prism: {\n      additionalLanguages: ['powershell'],\n    },\n    // ...\n  },\n};",
+   "inlineMarkup": "export default {\n  // ...\n  themeConfig: {\n    prism: {\n      additionalLanguages: ['powershell'],\n    },\n    // ...\n  },\n};",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[8]/div[2]/pre[1]",
+   "translate": false,
+   "codeLang": "js"
+  },
+  {
+   "id": "05bxxmczhc1",
+   "kind": "p",
+   "text": "After adding additionalLanguages, restart Docusaurus.",
+   "inlineMarkup": "After adding `additionalLanguages`, restart Docusaurus.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[11]",
+   "translate": true
+  },
+  {
+   "id": "0kkx79cpr4g",
+   "kind": "p",
+   "text": "If you want to add highlighting for languages not yet supported by Prism, you can swizzle prism-include-languages:",
+   "inlineMarkup": "If you want to add highlighting for languages not yet supported by Prism, you can swizzle `prism-include-languages`:",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[12]",
+   "translate": true
+  },
+  {
+   "id": "0bi59sew0f3",
+   "kind": "li",
+   "text": "npm",
+   "inlineMarkup": "npm",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/ul[1]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "1p86jkv9e48",
+   "kind": "li",
+   "text": "Yarn",
+   "inlineMarkup": "Yarn",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/ul[1]/li[2]",
+   "translate": true
+  },
+  {
+   "id": "146ijrpxsyu",
+   "kind": "li",
+   "text": "pnpm",
+   "inlineMarkup": "pnpm",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/ul[1]/li[3]",
+   "translate": true
+  },
+  {
+   "id": "10x8izo0ugz",
+   "kind": "li",
+   "text": "Bun",
+   "inlineMarkup": "Bun",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/ul[1]/li[4]",
+   "translate": true
+  },
+  {
+   "id": "22fp0ta4z5b",
+   "kind": "code",
+   "text": "npm run swizzle @docusaurus/theme-classic prism-include-languages",
+   "inlineMarkup": "npm run swizzle @docusaurus/theme-classic prism-include-languages",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/div[1]/div[1]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash"
+  },
+  {
+   "id": "1om0kiyszev",
+   "kind": "code",
+   "text": "yarn swizzle @docusaurus/theme-classic prism-include-languages",
+   "inlineMarkup": "yarn swizzle @docusaurus/theme-classic prism-include-languages",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/div[1]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "1vv5ks0iaio",
+   "kind": "code",
+   "text": "pnpm run swizzle @docusaurus/theme-classic prism-include-languages",
+   "inlineMarkup": "pnpm run swizzle @docusaurus/theme-classic prism-include-languages",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/div[1]/div[3]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "1ib9l0nqc5b",
+   "kind": "code",
+   "text": "bun run swizzle @docusaurus/theme-classic prism-include-languages",
+   "inlineMarkup": "bun run swizzle @docusaurus/theme-classic prism-include-languages",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/div[1]/div[4]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "19wut705r56",
+   "kind": "p",
+   "text": "It will produce prism-include-languages.js in your src/theme folder. You can add highlighting support for custom languages by editing prism-include-languages.js:",
+   "inlineMarkup": "It will produce `prism-include-languages.js` in your `src/theme` folder. You can add highlighting support for custom languages by editing `prism-include-languages.js`:",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[13]",
+   "translate": true
+  },
+  {
+   "id": "0p0jy2s7wnk",
+   "kind": "p",
+   "text": "src/theme/prism-include-languages.js",
+   "inlineMarkup": "src/theme/prism-include-languages.js",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[10]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "23ptlebaiq8",
+   "kind": "code",
+   "text": "const prismIncludeLanguages = (Prism) => {\n  // ...\n\n  additionalLanguages.forEach((lang) => {\n    require(`prismjs/components/prism-${lang}`);\n  });\n\n  require('/path/to/your/prism-language-definition');\n\n  // ...\n};",
+   "inlineMarkup": "const prismIncludeLanguages = (Prism) => {\n  // ...\n\n  additionalLanguages.forEach((lang) => {\n    require(`prismjs/components/prism-${lang}`);\n  });\n\n  require('/path/to/your/prism-language-definition');\n\n  // ...\n};",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[10]/div[2]/pre[1]",
+   "translate": false,
+   "codeLang": "js"
+  },
+  {
+   "id": "0j0vs5cbvsy",
+   "kind": "p",
+   "text": "You can refer to Prism's official language definitions when you are writing your own language definitions.",
+   "inlineMarkup": "You can refer to [link]Prism's official language definitions[/link] when you are writing your own language definitions.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[14]",
+   "translate": true
+  },
+  {
+   "id": "138o0fh9uo4",
+   "kind": "p",
+   "text": "When adding a custom language definition, you do not need to add the language to the additionalLanguages config array, since Docusaurus only looks up the additionalLanguages strings in languages that Prism provides. Adding the language import in prism-include-languages.js is sufficient.",
+   "inlineMarkup": "When adding a custom language definition, you do not need to add the language to the `additionalLanguages` config array, since Docusaurus only looks up the `additionalLanguages` strings in languages that Prism provides. Adding the language import in `prism-include-languages.js` is sufficient.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[15]",
+   "translate": true
+  },
+  {
+   "id": "0n7644v8wiy",
+   "kind": "heading",
+   "text": "Line highlighting",
+   "inlineMarkup": "Line highlighting",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[3]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "21l29rgxrmv",
+   "kind": "heading",
+   "text": "Highlighting with comments",
+   "inlineMarkup": "Highlighting with comments",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[3]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "04ahs1512fk",
+   "kind": "p",
+   "text": "You can use comments with highlight-next-line, highlight-start, and highlight-end to select which lines are highlighted.",
+   "inlineMarkup": "You can use comments with `highlight-next-line`, `highlight-start`, and `highlight-end` to select which lines are highlighted.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[16]",
+   "translate": true
+  },
+  {
+   "id": "2d6c9ev0f06",
+   "kind": "code",
+   "text": "```js\nfunction HighlightSomeText(highlight) {\n  if (highlight) {\n    // highlight-next-line\n    return 'This text is highlighted!';\n  }\n\n  return 'Nothing highlighted';\n}\n\nfunction HighlightMoreText(highlight) {\n  // highlight-start\n  if (highlight) {\n    return 'This range is highlighted!';\n  }\n  // highlight-end\n\n  return 'Nothing highlighted';\n}\n```",
+   "inlineMarkup": "```js\nfunction HighlightSomeText(highlight) {\n  if (highlight) {\n    // highlight-next-line\n    return 'This text is highlighted!';\n  }\n\n  return 'Nothing highlighted';\n}\n\nfunction HighlightMoreText(highlight) {\n  // highlight-start\n  if (highlight) {\n    return 'This range is highlighted!';\n  }\n  // highlight-end\n\n  return 'Nothing highlighted';\n}\n```",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[11]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "md"
+  },
+  {
+   "id": "1q2us1jmfb3",
+   "kind": "code",
+   "text": "function HighlightSomeText(highlight) {\n  if (highlight) {\n    return 'This text is highlighted!';\n  }\n\n  return 'Nothing highlighted';\n}\n\nfunction HighlightMoreText(highlight) {\n  if (highlight) {\n    return 'This range is highlighted!';\n  }\n\n  return 'Nothing highlighted';\n}",
+   "inlineMarkup": "function HighlightSomeText(highlight) {\n  if (highlight) {\n    return 'This text is highlighted!';\n  }\n\n  return 'Nothing highlighted';\n}\n\nfunction HighlightMoreText(highlight) {\n  if (highlight) {\n    return 'This range is highlighted!';\n  }\n\n  return 'Nothing highlighted';\n}",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[12]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "js"
+  },
+  {
+   "id": "2b27zqnyaru",
+   "kind": "p",
+   "text": "Supported commenting syntax:",
+   "inlineMarkup": "Supported commenting syntax:",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[17]",
+   "translate": true
+  },
+  {
+   "id": "08ah3imz706",
+   "kind": "table-cell",
+   "text": "Style",
+   "inlineMarkup": "Style",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/thead[1]/tr[1]/th[1]",
+   "translate": true,
+   "groupId": "row-0xc8sd2z5da"
+  },
+  {
+   "id": "0hme0lhmzcg",
+   "kind": "table-cell",
+   "text": "Syntax",
+   "inlineMarkup": "Syntax",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/thead[1]/tr[1]/th[2]",
+   "translate": true,
+   "groupId": "row-0xc8sd2z5da"
+  },
+  {
+   "id": "00zp77zfy0g",
+   "kind": "table-cell",
+   "text": "C-style",
+   "inlineMarkup": "C-style",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[1]/td[1]",
+   "translate": true,
+   "groupId": "row-0t43y0cxqe8"
+  },
+  {
+   "id": "01waeuubb5q",
+   "kind": "table-cell",
+   "text": "/* ... */ and // ...",
+   "inlineMarkup": "`/* ... */` and `// ...`",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[1]/td[2]",
+   "translate": true,
+   "groupId": "row-0t43y0cxqe8"
+  },
+  {
+   "id": "0173d13p04x",
+   "kind": "table-cell",
+   "text": "JSX-style",
+   "inlineMarkup": "JSX-style",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[2]/td[1]",
+   "translate": true,
+   "groupId": "row-2520gj2m3kv"
+  },
+  {
+   "id": "1b4yyoucqie",
+   "kind": "table-cell",
+   "text": "{/* ... */}",
+   "inlineMarkup": "`{/* ... */}`",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[2]/td[2]",
+   "translate": false,
+   "groupId": "row-2520gj2m3kv"
+  },
+  {
+   "id": "1sisfh1c3uf",
+   "kind": "table-cell",
+   "text": "Bash-style",
+   "inlineMarkup": "Bash-style",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[3]/td[1]",
+   "translate": true,
+   "groupId": "row-1fs6z9bx96j"
+  },
+  {
+   "id": "0efmn9msyyz",
+   "kind": "table-cell",
+   "text": "# ...",
+   "inlineMarkup": "`# ...`",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[3]/td[2]",
+   "translate": false,
+   "groupId": "row-1fs6z9bx96j"
+  },
+  {
+   "id": "0gv3wu7fevg",
+   "kind": "table-cell",
+   "text": "HTML-style",
+   "inlineMarkup": "HTML-style",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[4]/td[1]",
+   "translate": true,
+   "groupId": "row-1wgnr5qlnje"
+  },
+  {
+   "id": "06qg0c50xvn",
+   "kind": "table-cell",
+   "text": "<!-- ... -->",
+   "inlineMarkup": "`<!-- ... -->`",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[4]/td[2]",
+   "translate": false,
+   "groupId": "row-1wgnr5qlnje"
+  },
+  {
+   "id": "1popbpzbsit",
+   "kind": "p",
+   "text": "We will do our best to infer which set of comment styles to use based on the language, and default to allowing all comment styles. If there's a comment style that is not currently supported, we are open to adding them! Pull requests welcome. Note that different comment styles have no semantic difference, only their content does.",
+   "inlineMarkup": "We will do our best to infer which set of comment styles to use based on the language, and default to allowing *all* comment styles. If there's a comment style that is not currently supported, we are open to adding them! Pull requests welcome. Note that different comment styles have no semantic difference, only their content does.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[18]",
+   "translate": true
+  },
+  {
+   "id": "1d8z4r32bdt",
+   "kind": "p",
+   "text": "You can set your own background color for highlighted code line in your src/css/custom.css which will better fit to your selected syntax highlighting theme. The color given below works for the default highlighting theme (Palenight), so if you are using another theme, you will have to tweak the color accordingly.",
+   "inlineMarkup": "You can set your own background color for highlighted code line in your `src/css/custom.css` which will better fit to your selected syntax highlighting theme. The color given below works for the default highlighting theme (Palenight), so if you are using another theme, you will have to tweak the color accordingly.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[19]",
+   "translate": true
+  },
+  {
+   "id": "12rw638ihu7",
+   "kind": "p",
+   "text": "/src/css/custom.css",
+   "inlineMarkup": "/src/css/custom.css",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[13]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "1jv55ip3jol",
+   "kind": "code",
+   "text": ":root {\n  --docusaurus-highlighted-code-line-bg: rgb(72, 77, 91);\n}\n\n/* If you have a different syntax highlighting theme for dark mode. */\n[data-theme='dark'] {\n  /* Color which works with dark mode syntax highlighting theme */\n  --docusaurus-highlighted-code-line-bg: rgb(100, 100, 100);\n}",
+   "inlineMarkup": ":root {\n  --docusaurus-highlighted-code-line-bg: rgb(72, 77, 91);\n}\n\n/* If you have a different syntax highlighting theme for dark mode. */\n[data-theme='dark'] {\n  /* Color which works with dark mode syntax highlighting theme */\n  --docusaurus-highlighted-code-line-bg: rgb(100, 100, 100);\n}",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[13]/div[2]/pre[1]",
+   "translate": false,
+   "codeLang": "css"
+  },
+  {
+   "id": "2crq6rr0n56",
+   "kind": "p",
+   "text": "If you also need to style the highlighted code line in some other way, you can target on theme-code-block-highlighted-line CSS class.",
+   "inlineMarkup": "If you also need to style the highlighted code line in some other way, you can target on `theme-code-block-highlighted-line` CSS class.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[20]",
+   "translate": true
+  },
+  {
+   "id": "2cpvdvtiwx8",
+   "kind": "heading",
+   "text": "Highlighting with metadata string",
+   "inlineMarkup": "Highlighting with metadata string",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[4]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "1qmp6u1iu81",
+   "kind": "p",
+   "text": "You can also specify highlighted line ranges within the language meta string (leave a space after the language). To highlight multiple lines, separate the line numbers by commas or use the range syntax to select a chunk of lines. This feature uses the parse-number-range library and you can find more syntax on their project details.",
+   "inlineMarkup": "You can also specify highlighted line ranges within the language meta string (leave a space after the language). To highlight multiple lines, separate the line numbers by commas or use the range syntax to select a chunk of lines. This feature uses the `parse-number-range` library and you can find [link]more syntax[/link] on their project details.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[21]",
+   "translate": true
+  },
+  {
+   "id": "1r539x3es2q",
+   "kind": "code",
+   "text": "```jsx {1,4-6,11}\nimport React from 'react';\n\nfunction MyComponent(props) {\n  if (props.isBar) {\n    return <div>Bar</div>;\n  }\n\n  return <div>Foo</div>;\n}\n\nexport default MyComponent;\n```",
+   "inlineMarkup": "```jsx {1,4-6,11}\nimport React from 'react';\n\nfunction MyComponent(props) {\n  if (props.isBar) {\n    return <div>Bar</div>;\n  }\n\n  return <div>Foo</div>;\n}\n\nexport default MyComponent;\n```",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[14]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "md"
+  },
+  {
+   "id": "0qe80yz4mip",
+   "kind": "code",
+   "text": "import React from 'react';\n\nfunction MyComponent(props) {\n  if (props.isBar) {\n    return <div>Bar</div>;\n  }\n\n  return <div>Foo</div>;\n}\n\nexport default MyComponent;",
+   "inlineMarkup": "import React from 'react';\n\nfunction MyComponent(props) {\n  if (props.isBar) {\n    return <div>Bar</div>;\n  }\n\n  return <div>Foo</div>;\n}\n\nexport default MyComponent;",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[15]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "jsx"
+  },
+  {
+   "id": "0u0yvc42zrp",
+   "kind": "p",
+   "text": "prefer comments",
+   "inlineMarkup": "prefer comments",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[16]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "1yswjkvh0px",
+   "kind": "p",
+   "text": "Prefer highlighting with comments where you can. By inlining highlight in the code, you don't have to manually count the lines if your code block becomes long. If you add/remove lines, you also don't have to offset your line ranges.",
+   "inlineMarkup": "Prefer highlighting with comments where you can. By inlining highlight in the code, you don't have to manually count the lines if your code block becomes long. If you add/remove lines, you also don't have to offset your line ranges.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[16]/div[2]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "1igvoyxxza3",
+   "kind": "code",
+   "text": "- ```jsx {3}\n+ ```jsx {4}\n  function HighlightSomeText(highlight) {\n    if (highlight) {\n+     console.log('Highlighted text found');\n      return 'This text is highlighted!';\n    }\n\n    return 'Nothing highlighted';\n  }\n  ```",
+   "inlineMarkup": "- ```jsx {3}\n+ ```jsx {4}\n  function HighlightSomeText(highlight) {\n    if (highlight) {\n+     console.log('Highlighted text found');\n      return 'This text is highlighted!';\n    }\n\n    return 'Nothing highlighted';\n  }\n  ```",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[16]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "diff"
+  },
+  {
+   "id": "17be71s18gp",
+   "kind": "p",
+   "text": "Below, we will introduce how the magic comment system can be extended to define custom directives and their functionalities. The magic comments would only be parsed if a highlight metastring is not present.",
+   "inlineMarkup": "Below, we will introduce how the magic comment system can be extended to define custom directives and their functionalities. The magic comments would only be parsed if a highlight metastring is not present.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[16]/div[2]/p[2]",
+   "translate": true
+  },
+  {
+   "id": "0pingcqk22f",
+   "kind": "heading",
+   "text": "Custom magic comments",
+   "inlineMarkup": "Custom magic comments",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[5]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "0smp5mfrhiy",
+   "kind": "p",
+   "text": "// highlight-next-line and // highlight-start etc. are called \"magic comments\", because they will be parsed and removed, and their purposes are to add metadata to the next line, or the section that the pair of start- and end-comments enclose.",
+   "inlineMarkup": "`// highlight-next-line` and `// highlight-start` etc. are called \"magic comments\", because they will be parsed and removed, and their purposes are to add metadata to the next line, or the section that the pair of start- and end-comments enclose.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[22]",
+   "translate": true
+  },
+  {
+   "id": "1fd48ghdwmk",
+   "kind": "p",
+   "text": "You can declare custom magic comments through theme config. For example, you can register another magic comment that adds a code-block-error-line class name:",
+   "inlineMarkup": "You can declare custom magic comments through theme config. For example, you can register another magic comment that adds a `code-block-error-line` class name:",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[23]",
+   "translate": true
+  },
+  {
+   "id": "2bcgbwb5pgf",
+   "kind": "li",
+   "text": "docusaurus.config.js",
+   "inlineMarkup": "docusaurus.config.js",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[17]/ul[1]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "2dzd069ugwl",
+   "kind": "li",
+   "text": "src/css/custom.css",
+   "inlineMarkup": "src/css/custom.css",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[17]/ul[1]/li[2]",
+   "translate": true
+  },
+  {
+   "id": "1jbcl4k2ncn",
+   "kind": "li",
+   "text": "myDoc.md",
+   "inlineMarkup": "myDoc.md",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[17]/ul[1]/li[3]",
+   "translate": true
+  },
+  {
+   "id": "1vnm0hkr2r9",
+   "kind": "code",
+   "text": "export default {\n  themeConfig: {\n    prism: {\n      magicComments: [\n        // Remember to extend the default highlight class name as well!\n        {\n          className: 'theme-code-block-highlighted-line',\n          line: 'highlight-next-line',\n          block: {start: 'highlight-start', end: 'highlight-end'},\n        },\n        {\n          className: 'code-block-error-line',\n          line: 'This will error',\n        },\n      ],\n    },\n  },\n};",
+   "inlineMarkup": "export default {\n  themeConfig: {\n    prism: {\n      magicComments: [\n        // Remember to extend the default highlight class name as well!\n        {\n          className: 'theme-code-block-highlighted-line',\n          line: 'highlight-next-line',\n          block: {start: 'highlight-start', end: 'highlight-end'},\n        },\n        {\n          className: 'code-block-error-line',\n          line: 'This will error',\n        },\n      ],\n    },\n  },\n};",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[17]/div[1]/div[1]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "js"
+  },
+  {
+   "id": "0j7n8bephfq",
+   "kind": "code",
+   "text": ".code-block-error-line {\n  background-color: #ff000020;\n  display: block;\n  margin: 0 calc(-1 * var(--ifm-pre-padding));\n  padding: 0 var(--ifm-pre-padding);\n  border-left: 3px solid #ff000080;\n}",
+   "inlineMarkup": ".code-block-error-line {\n  background-color: #ff000020;\n  display: block;\n  margin: 0 calc(-1 * var(--ifm-pre-padding));\n  padding: 0 var(--ifm-pre-padding);\n  border-left: 3px solid #ff000080;\n}",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[17]/div[1]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "css",
+   "hidden": true
+  },
+  {
+   "id": "2390jv0t0pu",
+   "kind": "code",
+   "text": "In JavaScript, trying to access properties on `null` will error.\n\n```js\nconst name = null;\n// This will error\nconsole.log(name.toUpperCase());\n// Uncaught TypeError: Cannot read properties of null (reading 'toUpperCase')\n```",
+   "inlineMarkup": "In JavaScript, trying to access properties on `null` will error.\n\n```js\nconst name = null;\n// This will error\nconsole.log(name.toUpperCase());\n// Uncaught TypeError: Cannot read properties of null (reading 'toUpperCase')\n```",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[17]/div[1]/div[3]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "md",
+   "hidden": true
+  },
+  {
+   "id": "08xrbnxpoik",
+   "kind": "p",
+   "text": "In JavaScript, trying to access properties on null will error.",
+   "inlineMarkup": "In JavaScript, trying to access properties on `null` will error.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[18]/div[2]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0gkg6u5x3gv",
+   "kind": "code",
+   "text": "const name = null;\nconsole.log(name.toUpperCase());\n// Uncaught TypeError: Cannot read properties of null (reading 'toUpperCase')",
+   "inlineMarkup": "const name = null;\nconsole.log(name.toUpperCase());\n// Uncaught TypeError: Cannot read properties of null (reading 'toUpperCase')",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[18]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "js"
+  },
+  {
+   "id": "0vex1tx5yfl",
+   "kind": "p",
+   "text": "If you use number ranges in metastring (the {1,3-4} syntax), Docusaurus will apply the first magicComments entry's class name. This, by default, is theme-code-block-highlighted-line, but if you change the magicComments config and use a different entry as the first one, the meaning of the metastring range will change as well.",
+   "inlineMarkup": "If you use number ranges in metastring (the `{1,3-4}` syntax), Docusaurus will apply the *first `magicComments` entry*'s class name. This, by default, is `theme-code-block-highlighted-line`, but if you change the `magicComments` config and use a different entry as the first one, the meaning of the metastring range will change as well.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[24]",
+   "translate": true
+  },
+  {
+   "id": "0f7dj6hl2rk",
+   "kind": "p",
+   "text": "You can disable the default line highlighting comments with magicComments: []. If there's no magic comment config, but Docusaurus encounters a code block containing a metastring range, it will error because there will be no class name to apply—the highlighting class name, after all, is just a magic comment entry.",
+   "inlineMarkup": "You can disable the default line highlighting comments with `magicComments: []`. If there's no magic comment config, but Docusaurus encounters a code block containing a metastring range, it will error because there will be no class name to apply—the highlighting class name, after all, is just a magic comment entry.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[25]",
+   "translate": true
+  },
+  {
+   "id": "1ba0irvtx33",
+   "kind": "p",
+   "text": "Every magic comment entry will contain three keys: className (required), line, which applies to the directly next line, or block (containing start and end), which applies to the entire block enclosed by the two comments.",
+   "inlineMarkup": "Every magic comment entry will contain three keys: `className` (required), `line`, which applies to the directly next line, or `block` (containing `start` and `end`), which applies to the entire block enclosed by the two comments.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[26]",
+   "translate": true
+  },
+  {
+   "id": "1s7cqxe7kny",
+   "kind": "p",
+   "text": "Using CSS to target the class can already do a lot, but you can unlock the full potential of this feature through swizzling.",
+   "inlineMarkup": "Using CSS to target the class can already do a lot, but you can unlock the full potential of this feature through [link]swizzling[/link].",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[27]",
+   "translate": true
+  },
+  {
+   "id": "2320e4dbqb9",
+   "kind": "li",
+   "text": "npm",
+   "inlineMarkup": "npm",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/ul[1]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "0yduiolflv4",
+   "kind": "li",
+   "text": "Yarn",
+   "inlineMarkup": "Yarn",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/ul[1]/li[2]",
+   "translate": true
+  },
+  {
+   "id": "0xc9f4pi29f",
+   "kind": "li",
+   "text": "pnpm",
+   "inlineMarkup": "pnpm",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/ul[1]/li[3]",
+   "translate": true
+  },
+  {
+   "id": "1cruth2z85h",
+   "kind": "li",
+   "text": "Bun",
+   "inlineMarkup": "Bun",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/ul[1]/li[4]",
+   "translate": true
+  },
+  {
+   "id": "0cuvf18rjcq",
+   "kind": "code",
+   "text": "npm run swizzle @docusaurus/theme-classic CodeBlock/Line",
+   "inlineMarkup": "npm run swizzle @docusaurus/theme-classic CodeBlock/Line",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/div[1]/div[1]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash"
+  },
+  {
+   "id": "24aj95xy5o2",
+   "kind": "code",
+   "text": "yarn swizzle @docusaurus/theme-classic CodeBlock/Line",
+   "inlineMarkup": "yarn swizzle @docusaurus/theme-classic CodeBlock/Line",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/div[1]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "07ncklelqut",
+   "kind": "code",
+   "text": "pnpm run swizzle @docusaurus/theme-classic CodeBlock/Line",
+   "inlineMarkup": "pnpm run swizzle @docusaurus/theme-classic CodeBlock/Line",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/div[1]/div[3]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "0vxgpxeh15f",
+   "kind": "code",
+   "text": "bun run swizzle @docusaurus/theme-classic CodeBlock/Line",
+   "inlineMarkup": "bun run swizzle @docusaurus/theme-classic CodeBlock/Line",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/div[1]/div[4]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "0iedjs0n0u1",
+   "kind": "p",
+   "text": "The Line component will receive the list of class names, based on which you can conditionally render different markup.",
+   "inlineMarkup": "The `Line` component will receive the list of class names, based on which you can conditionally render different markup.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[28]",
+   "translate": true
+  },
+  {
+   "id": "01t7ky23ncd",
+   "kind": "heading",
+   "text": "Line numbering",
+   "inlineMarkup": "Line numbering",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[4]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "0c1atwzzvxg",
+   "kind": "p",
+   "text": "You can enable line numbering for your code block by using showLineNumbers key within the language meta string (don't forget to add space directly before the key).",
+   "inlineMarkup": "You can enable line numbering for your code block by using `showLineNumbers` key within the language meta string (don't forget to add space directly before the key).",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[29]",
+   "translate": true
+  },
+  {
+   "id": "2dsf4lnchxh",
+   "kind": "code",
+   "text": "```jsx showLineNumbers\nimport React from 'react';\n\nexport default function MyComponent(props) {\n  return <div>Foo</div>;\n}\n```",
+   "inlineMarkup": "```jsx showLineNumbers\nimport React from 'react';\n\nexport default function MyComponent(props) {\n  return <div>Foo</div>;\n}\n```",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[20]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "md"
+  },
+  {
+   "id": "0uxacdhmoxl",
+   "kind": "code",
+   "text": "import React from 'react';\n\nexport default function MyComponent(props) {\n  return <div>Foo</div>;\n}",
+   "inlineMarkup": "import React from 'react';\n\nexport default function MyComponent(props) {\n  return <div>Foo</div>;\n}",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[21]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "jsx"
+  },
+  {
+   "id": "2e3m6hn722c",
+   "kind": "p",
+   "text": "By default, the counter starts at line number 1. It's possible to pass a custom counter start value to split large code blocks for readability:",
+   "inlineMarkup": "By default, the counter starts at line number 1. It's possible to pass a custom counter start value to split large code blocks for readability:",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[30]",
+   "translate": true
+  },
+  {
+   "id": "00mrpiywanr",
+   "kind": "code",
+   "text": "```jsx showLineNumbers=3\nexport default function MyComponent(props) {\n  return <div>Foo</div>;\n}\n```",
+   "inlineMarkup": "```jsx showLineNumbers=3\nexport default function MyComponent(props) {\n  return <div>Foo</div>;\n}\n```",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[22]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "md"
+  },
+  {
+   "id": "2fhaalfxoze",
+   "kind": "code",
+   "text": "export default function MyComponent(props) {\n  return <div>Foo</div>;\n}",
+   "inlineMarkup": "export default function MyComponent(props) {\n  return <div>Foo</div>;\n}",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[23]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "jsx"
+  },
+  {
+   "id": "0mrgy6e6np4",
+   "kind": "heading",
+   "text": "Interactive code editor",
+   "inlineMarkup": "Interactive code editor",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[5]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "0vcnzxk0w4v",
+   "kind": "p",
+   "text": "(Powered by React Live)",
+   "inlineMarkup": "(Powered by [link]React Live[/link])",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[31]",
+   "translate": true
+  },
+  {
+   "id": "2c328ioc8q7",
+   "kind": "p",
+   "text": "You can create an interactive coding editor with the @docusaurus/theme-live-codeblock plugin. First, add the plugin to your package.",
+   "inlineMarkup": "You can create an interactive coding editor with the `@docusaurus/theme-live-codeblock` plugin. First, add the plugin to your package.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[32]",
+   "translate": true
+  },
+  {
+   "id": "1rdjnwntfw0",
+   "kind": "li",
+   "text": "npm",
+   "inlineMarkup": "npm",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/ul[1]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "268ijjbq015",
+   "kind": "li",
+   "text": "Yarn",
+   "inlineMarkup": "Yarn",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/ul[1]/li[2]",
+   "translate": true
+  },
+  {
+   "id": "0l4jcb3jigp",
+   "kind": "li",
+   "text": "pnpm",
+   "inlineMarkup": "pnpm",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/ul[1]/li[3]",
+   "translate": true
+  },
+  {
+   "id": "1e6mpogz3dd",
+   "kind": "li",
+   "text": "Bun",
+   "inlineMarkup": "Bun",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/ul[1]/li[4]",
+   "translate": true
+  },
+  {
+   "id": "22j6l9sgazy",
+   "kind": "code",
+   "text": "npm install --save @docusaurus/theme-live-codeblock",
+   "inlineMarkup": "npm install --save @docusaurus/theme-live-codeblock",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/div[1]/div[1]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash"
+  },
+  {
+   "id": "0hfnh5uk4fr",
+   "kind": "code",
+   "text": "yarn add @docusaurus/theme-live-codeblock",
+   "inlineMarkup": "yarn add @docusaurus/theme-live-codeblock",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/div[1]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "1uxfx0zr1u8",
+   "kind": "code",
+   "text": "pnpm add @docusaurus/theme-live-codeblock",
+   "inlineMarkup": "pnpm add @docusaurus/theme-live-codeblock",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/div[1]/div[3]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "1ccbg5bynhz",
+   "kind": "code",
+   "text": "bun add @docusaurus/theme-live-codeblock",
+   "inlineMarkup": "bun add @docusaurus/theme-live-codeblock",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/div[1]/div[4]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "0cvlsufw3cz",
+   "kind": "p",
+   "text": "You will also need to add the plugin to your docusaurus.config.js.",
+   "inlineMarkup": "You will also need to add the plugin to your `docusaurus.config.js`.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[33]",
+   "translate": true
+  },
+  {
+   "id": "0maudj7klhi",
+   "kind": "code",
+   "text": "export default {\n  // ...\n  themes: ['@docusaurus/theme-live-codeblock'],\n  // ...\n};",
+   "inlineMarkup": "export default {\n  // ...\n  themes: ['@docusaurus/theme-live-codeblock'],\n  // ...\n};",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[25]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "js"
+  },
+  {
+   "id": "08fqo95kzdo",
+   "kind": "p",
+   "text": "To use the plugin, create a code block with live attached to the language meta string.",
+   "inlineMarkup": "To use the plugin, create a code block with `live` attached to the language meta string.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[34]",
+   "translate": true
+  },
+  {
+   "id": "1fxs6f0jopq",
+   "kind": "code",
+   "text": "```jsx live\nfunction Clock(props) {\n  const [date, setDate] = useState(new Date());\n\n  useEffect(() => {\n    const id = setInterval(() => {\n      setDate(new Date());\n    }, 1000);\n    return () => clearInterval(id);\n  }, []);\n\n  return <h2>It is {date.toLocaleTimeString()}.</h2>;\n}\n```",
+   "inlineMarkup": "```jsx live\nfunction Clock(props) {\n  const [date, setDate] = useState(new Date());\n\n  useEffect(() => {\n    const id = setInterval(() => {\n      setDate(new Date());\n    }, 1000);\n    return () => clearInterval(id);\n  }, []);\n\n  return <h2>It is {date.toLocaleTimeString()}.</h2>;\n}\n```",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[26]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "md"
+  },
+  {
+   "id": "1stm2emqflx",
+   "kind": "p",
+   "text": "The code block will be rendered as an interactive editor. Changes to the code will reflect on the result panel live.",
+   "inlineMarkup": "The code block will be rendered as an interactive editor. Changes to the code will reflect on the result panel live.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[35]",
+   "translate": true
+  },
+  {
+   "id": "1b1ibstirqf",
+   "kind": "code",
+   "text": "function Clock(props) {\n  const [date, setDate] = useState(new Date());\n\n  useEffect(() => {\n    const id = setInterval(() => {\n      setDate(new Date());\n    }, 1000);\n    return () => clearInterval(id);\n  }, []);\n\n  return <h2>It is {date.toLocaleTimeString()}.</h2>;\n}",
+   "inlineMarkup": "function Clock(props) {\n  const [date, setDate] = useState(new Date());\n\n  useEffect(() => {\n    const id = setInterval(() => {\n      setDate(new Date());\n    }, 1000);\n    return () => clearInterval(id);\n  }, []);\n\n  return <h2>It is {date.toLocaleTimeString()}.</h2>;\n}",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[27]/div[2]/div[1]/div[2]/pre[1]",
+   "translate": false,
+   "codeLang": "tsx"
+  },
+  {
+   "id": "0czvjuw4i2y",
+   "kind": "heading",
+   "text": "It is 8:56:41 PM.",
+   "inlineMarkup": "It is 8:56:41 PM.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[27]/div[2]/div[1]/div[4]/div[1]/h2[1]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "12qia0colqf",
+   "kind": "heading",
+   "text": "Imports",
+   "inlineMarkup": "Imports",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[6]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "2arsjiecacu",
+   "kind": "p",
+   "text": "react-live and imports",
+   "inlineMarkup": "react-live and imports",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[28]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "1mm3qhk9yyh",
+   "kind": "p",
+   "text": "It is not possible to import components directly from the react-live code editor, you have to define available imports upfront.",
+   "inlineMarkup": "It is not possible to import components directly from the react-live code editor, you have to define available imports upfront.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[28]/div[2]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "24m6bjk5kpz",
+   "kind": "p",
+   "text": "By default, all React imports are available. If you need more imports available, swizzle the react-live scope:",
+   "inlineMarkup": "By default, all React imports are available. If you need more imports available, swizzle the react-live scope:",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[36]",
+   "translate": true
+  },
+  {
+   "id": "0sglznaaiip",
+   "kind": "li",
+   "text": "npm",
+   "inlineMarkup": "npm",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/ul[1]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "0jk5upxttxo",
+   "kind": "li",
+   "text": "Yarn",
+   "inlineMarkup": "Yarn",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/ul[1]/li[2]",
+   "translate": true
+  },
+  {
+   "id": "0iouny6vnfb",
+   "kind": "li",
+   "text": "pnpm",
+   "inlineMarkup": "pnpm",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/ul[1]/li[3]",
+   "translate": true
+  },
+  {
+   "id": "06hobnsznwm",
+   "kind": "li",
+   "text": "Bun",
+   "inlineMarkup": "Bun",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/ul[1]/li[4]",
+   "translate": true
+  },
+  {
+   "id": "03e4av5qw4g",
+   "kind": "code",
+   "text": "npm run swizzle @docusaurus/theme-live-codeblock ReactLiveScope -- --eject",
+   "inlineMarkup": "npm run swizzle @docusaurus/theme-live-codeblock ReactLiveScope -- --eject",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/div[1]/div[1]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash"
+  },
+  {
+   "id": "1tg9v1q466w",
+   "kind": "code",
+   "text": "yarn swizzle @docusaurus/theme-live-codeblock ReactLiveScope --eject",
+   "inlineMarkup": "yarn swizzle @docusaurus/theme-live-codeblock ReactLiveScope --eject",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/div[1]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "1pr5z6xrctq",
+   "kind": "code",
+   "text": "pnpm run swizzle @docusaurus/theme-live-codeblock ReactLiveScope --eject",
+   "inlineMarkup": "pnpm run swizzle @docusaurus/theme-live-codeblock ReactLiveScope --eject",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/div[1]/div[3]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "159f6ounxye",
+   "kind": "code",
+   "text": "bun run swizzle @docusaurus/theme-live-codeblock ReactLiveScope --eject",
+   "inlineMarkup": "bun run swizzle @docusaurus/theme-live-codeblock ReactLiveScope --eject",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/div[1]/div[4]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "15o6zf1qnm7",
+   "kind": "p",
+   "text": "src/theme/ReactLiveScope/index.js",
+   "inlineMarkup": "src/theme/ReactLiveScope/index.js",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[30]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "1frczw73las",
+   "kind": "code",
+   "text": "import React from 'react';\n\nconst ButtonExample = (props) => (\n  <button\n    {...props}\n    style={{\n      backgroundColor: 'white',\n      color: 'black',\n      border: 'solid red',\n      borderRadius: 20,\n      padding: 10,\n      cursor: 'pointer',\n      ...props.style,\n    }}\n  />\n);\n\n// Add react-live imports you need here\nconst ReactLiveScope = {\n  React,\n  ...React,\n  ButtonExample,\n};\n\nexport default ReactLiveScope;",
+   "inlineMarkup": "import React from 'react';\n\nconst ButtonExample = (props) => (\n  <button\n    {...props}\n    style={{\n      backgroundColor: 'white',\n      color: 'black',\n      border: 'solid red',\n      borderRadius: 20,\n      padding: 10,\n      cursor: 'pointer',\n      ...props.style,\n    }}\n  />\n);\n\n// Add react-live imports you need here\nconst ReactLiveScope = {\n  React,\n  ...React,\n  ButtonExample,\n};\n\nexport default ReactLiveScope;",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[30]/div[2]/pre[1]",
+   "translate": false,
+   "codeLang": "jsx"
+  },
+  {
+   "id": "21al3k7kbts",
+   "kind": "p",
+   "text": "The ButtonExample component is now available to use:",
+   "inlineMarkup": "The `ButtonExample` component is now available to use:",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[37]",
+   "translate": true
+  },
+  {
+   "id": "1fn1s033hvq",
+   "kind": "code",
+   "text": "function MyPlayground(props) {\n  return (\n    <div>\n      <ButtonExample onClick={() => alert('hey!')}>Click me</ButtonExample>\n    </div>\n  );\n}",
+   "inlineMarkup": "function MyPlayground(props) {\n  return (\n    <div>\n      <ButtonExample onClick={() => alert('hey!')}>Click me</ButtonExample>\n    </div>\n  );\n}",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[31]/div[2]/div[1]/div[2]/pre[1]",
+   "translate": false,
+   "codeLang": "tsx"
+  },
+  {
+   "id": "0532mbec096",
+   "kind": "heading",
+   "text": "Imperative Rendering (noInline)",
+   "inlineMarkup": "Imperative Rendering (noInline)",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[7]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "2ff29zhlv26",
+   "kind": "p",
+   "text": "The noInline option should be used to avoid errors when your code spans multiple components or variables.",
+   "inlineMarkup": "The `noInline` option should be used to avoid errors when your code spans multiple components or variables.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[38]",
+   "translate": true
+  },
+  {
+   "id": "0mruvm0y52v",
+   "kind": "code",
+   "text": "```jsx live noInline\nconst project = 'Docusaurus';\n\nconst Greeting = () => <p>Hello {project}!</p>;\n\nrender(<Greeting />);\n```",
+   "inlineMarkup": "```jsx live noInline\nconst project = 'Docusaurus';\n\nconst Greeting = () => <p>Hello {project}!</p>;\n\nrender(<Greeting />);\n```",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[32]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "md"
+  },
+  {
+   "id": "0d0v80w4dm9",
+   "kind": "p",
+   "text": "Unlike an ordinary interactive code block, when using noInline React Live won't wrap your code in an inline function to render it.",
+   "inlineMarkup": "Unlike an ordinary interactive code block, when using `noInline` React Live won't wrap your code in an inline function to render it.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[39]",
+   "translate": true
+  },
+  {
+   "id": "08hj8ch7w0u",
+   "kind": "p",
+   "text": "You will need to explicitly call render() at the end of your code to display the output.",
+   "inlineMarkup": "You will need to explicitly call `render()` at the end of your code to display the output.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[40]",
+   "translate": true
+  },
+  {
+   "id": "23w13ndixga",
+   "kind": "code",
+   "text": "const project = \"Docusaurus\";\n\nconst Greeting = () => (\n  <p>Hello {project}!</p>\n);\n\nrender(\n  <Greeting />\n);",
+   "inlineMarkup": "const project = \"Docusaurus\";\n\nconst Greeting = () => (\n  <p>Hello {project}!</p>\n);\n\nrender(\n  <Greeting />\n);",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[33]/div[2]/div[1]/div[2]/pre[1]",
+   "translate": false,
+   "codeLang": "tsx"
+  },
+  {
+   "id": "16g0pnd1uuk",
+   "kind": "p",
+   "text": "Hello Docusaurus!",
+   "inlineMarkup": "Hello Docusaurus!",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[33]/div[2]/div[1]/div[4]/div[1]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "266ytrb6deb",
+   "kind": "heading",
+   "text": "Using JSX markup in code blocks",
+   "inlineMarkup": "Using JSX markup in code blocks",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[6]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "06o9moaardv",
+   "kind": "p",
+   "text": "Code block in Markdown always preserves its content as plain text, meaning you can't do something like:",
+   "inlineMarkup": "Code block in Markdown always preserves its content as plain text, meaning you can't do something like:",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[41]",
+   "translate": true
+  },
+  {
+   "id": "0hnfr3afmcz",
+   "kind": "code",
+   "text": "type EditUrlFunction = (params: {\n  // This doesn't turn into a link (for good reason!)\n  version: <a href=\"/docs/versioning\">Version</a>;\n  versionDocsDirPath: string;\n  docPath: string;\n  permalink: string;\n  locale: string;\n}) => string | undefined;",
+   "inlineMarkup": "type EditUrlFunction = (params: {\n  // This doesn't turn into a link (for good reason!)\n  version: <a href=\"/docs/versioning\">Version</a>;\n  versionDocsDirPath: string;\n  docPath: string;\n  permalink: string;\n  locale: string;\n}) => string | undefined;",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[34]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "ts"
+  },
+  {
+   "id": "1p9h67ghylj",
+   "kind": "p",
+   "text": "If you want to embed HTML markup such as anchor links or bold type, you can use the <pre> tag, <code> tag, or <CodeBlock> component.",
+   "inlineMarkup": "If you want to embed HTML markup such as anchor links or bold type, you can use the `<pre>` tag, `<code>` tag, or `<CodeBlock>` component.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[42]",
+   "translate": true
+  },
+  {
+   "id": "16pl8cxacwe",
+   "kind": "code",
+   "text": "<pre>\n  <b>Input: </b>1 2 3 4{'\\n'}\n  <b>Output: </b>\"366300745\"{'\\n'}\n</pre>",
+   "inlineMarkup": "<pre>\n  <b>Input: </b>1 2 3 4{'\\n'}\n  <b>Output: </b>\"366300745\"{'\\n'}\n</pre>",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[35]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "jsx"
+  },
+  {
+   "id": "1rj8l4z45kp",
+   "kind": "code",
+   "text": "Input: 1 2 3 4\nOutput: \"366300745\"",
+   "inlineMarkup": "Input: 1 2 3 4\nOutput: \"366300745\"",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[36]/div[2]/pre[1]",
+   "translate": false
+  },
+  {
+   "id": "1s7ejakhhj9",
+   "kind": "p",
+   "text": "MDX is whitespace insensitive",
+   "inlineMarkup": "MDX is whitespace insensitive",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[37]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "143y13e8arf",
+   "kind": "p",
+   "text": "MDX is in line with JSX behavior: line break characters, even when inside <pre>, are turned into spaces. You have to explicitly write the new line character for it to be printed out.",
+   "inlineMarkup": "MDX is in line with JSX behavior: line break characters, even when inside `<pre>`, are turned into spaces. You have to explicitly write the new line character for it to be printed out.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[37]/div[2]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "15z588rzjvr",
+   "kind": "p",
+   "text": "warning",
+   "inlineMarkup": "warning",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[38]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "24u3axa3hzo",
+   "kind": "p",
+   "text": "Syntax highlighting only works on plain strings. Docusaurus will not attempt to parse code block content containing JSX children.",
+   "inlineMarkup": "Syntax highlighting only works on plain strings. Docusaurus will not attempt to parse code block content containing JSX children.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[38]/div[2]/p[1]",
+   "translate": true
+  },
+  {
+   "id": "0otnbjyx3kp",
+   "kind": "heading",
+   "text": "Multi-language support code blocks",
+   "inlineMarkup": "Multi-language support code blocks",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[7]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "19tf26cgexw",
+   "kind": "p",
+   "text": "With MDX, you can easily create interactive components within your documentation, for example, to display code in multiple programming languages and switch between them using a tabs component.",
+   "inlineMarkup": "With MDX, you can easily create interactive components within your documentation, for example, to display code in multiple programming languages and switch between them using a tabs component.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[43]",
+   "translate": true
+  },
+  {
+   "id": "08ap97szy3p",
+   "kind": "p",
+   "text": "Instead of implementing a dedicated component for multi-language support code blocks, we've implemented a general-purpose <Tabs> component in the classic theme so that you can use it for other non-code scenarios as well.",
+   "inlineMarkup": "Instead of implementing a dedicated component for multi-language support code blocks, we've implemented a general-purpose [link]`<Tabs>`[/link] component in the classic theme so that you can use it for other non-code scenarios as well.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[44]",
+   "translate": true
+  },
+  {
+   "id": "1136e6drjl8",
+   "kind": "p",
+   "text": "The following example is how you can have multi-language code tabs in your docs. Note that the empty lines above and below each language block are intentional. This is a current limitation of MDX: you have to leave empty lines around Markdown syntax for the MDX parser to know that it's Markdown syntax and not JSX.",
+   "inlineMarkup": "The following example is how you can have multi-language code tabs in your docs. Note that the empty lines above and below each language block are *intentional*. This is a [link]current limitation of MDX[/link]: you have to leave empty lines around Markdown syntax for the MDX parser to know that it's Markdown syntax and not JSX.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[45]",
+   "translate": true
+  },
+  {
+   "id": "1h4ihjk7o1s",
+   "kind": "code",
+   "text": "import Tabs from '@theme/Tabs';\nimport TabItem from '@theme/TabItem';\n\n<Tabs>\n<TabItem value=\"js\" label=\"JavaScript\">\n\n```js\nfunction helloWorld() {\n  console.log('Hello, world!');\n}\n```\n\n</TabItem>\n<TabItem value=\"py\" label=\"Python\">\n\n```py\ndef hello_world():\n  print(\"Hello, world!\")\n```\n\n</TabItem>\n<TabItem value=\"java\" label=\"Java\">\n\n```java\nclass HelloWorld {\n  public static void main(String args[]) {\n    System.out.println(\"Hello, World\");\n  }\n}\n```\n\n</TabItem>\n</Tabs>",
+   "inlineMarkup": "import Tabs from '@theme/Tabs';\nimport TabItem from '@theme/TabItem';\n\n<Tabs>\n<TabItem value=\"js\" label=\"JavaScript\">\n\n```js\nfunction helloWorld() {\n  console.log('Hello, world!');\n}\n```\n\n</TabItem>\n<TabItem value=\"py\" label=\"Python\">\n\n```py\ndef hello_world():\n  print(\"Hello, world!\")\n```\n\n</TabItem>\n<TabItem value=\"java\" label=\"Java\">\n\n```java\nclass HelloWorld {\n  public static void main(String args[]) {\n    System.out.println(\"Hello, World\");\n  }\n}\n```\n\n</TabItem>\n</Tabs>",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[39]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "jsx"
+  },
+  {
+   "id": "0gls0ilcjwo",
+   "kind": "p",
+   "text": "And you will get the following:",
+   "inlineMarkup": "And you will get the following:",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[46]",
+   "translate": true
+  },
+  {
+   "id": "1p7xsnga458",
+   "kind": "li",
+   "text": "JavaScript",
+   "inlineMarkup": "JavaScript",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[40]/div[2]/div[1]/ul[1]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "01f1jh78pb2",
+   "kind": "li",
+   "text": "Python",
+   "inlineMarkup": "Python",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[40]/div[2]/div[1]/ul[1]/li[2]",
+   "translate": true
+  },
+  {
+   "id": "0hvjvy0lijn",
+   "kind": "li",
+   "text": "Java",
+   "inlineMarkup": "Java",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[40]/div[2]/div[1]/ul[1]/li[3]",
+   "translate": true
+  },
+  {
+   "id": "1c0cq3c6z2j",
+   "kind": "code",
+   "text": "function helloWorld() {\n  console.log('Hello, world!');\n}",
+   "inlineMarkup": "function helloWorld() {\n  console.log('Hello, world!');\n}",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[40]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "js"
+  },
+  {
+   "id": "07e4pz08ve9",
+   "kind": "code",
+   "text": "def hello_world():\n  print(\"Hello, world!\")",
+   "inlineMarkup": "def hello_world():\n  print(\"Hello, world!\")",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[40]/div[2]/div[1]/div[1]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "py",
+   "hidden": true
+  },
+  {
+   "id": "29hwtufnd64",
+   "kind": "code",
+   "text": "class HelloWorld {\n  public static void main(String args[]) {\n    System.out.println(\"Hello, World\");\n  }\n}",
+   "inlineMarkup": "class HelloWorld {\n  public static void main(String args[]) {\n    System.out.println(\"Hello, World\");\n  }\n}",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[40]/div[2]/div[1]/div[1]/div[3]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "java",
+   "hidden": true
+  },
+  {
+   "id": "1zz8xj2yhzx",
+   "kind": "p",
+   "text": "If you have multiple of these multi-language code tabs, and you want to sync the selection across the tab instances, refer to the Syncing tab choices section.",
+   "inlineMarkup": "If you have multiple of these multi-language code tabs, and you want to sync the selection across the tab instances, refer to the [link]Syncing tab choices section[/link].",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[47]",
+   "translate": true
+  },
+  {
+   "id": "02agnutbb5e",
+   "kind": "heading",
+   "text": "Docusaurus npm2yarn remark plugin",
+   "inlineMarkup": "Docusaurus npm2yarn remark plugin",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[8]",
+   "translate": true,
+   "level": 3
+  },
+  {
+   "id": "0dsxif2rtvl",
+   "kind": "p",
+   "text": "Displaying CLI commands in both npm and Yarn is a very common need, for example:",
+   "inlineMarkup": "Displaying CLI commands in both npm and Yarn is a very common need, for example:",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[48]",
+   "translate": true
+  },
+  {
+   "id": "2awx9gxr7dx",
+   "kind": "li",
+   "text": "npm",
+   "inlineMarkup": "npm",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/ul[1]/li[1]",
+   "translate": true
+  },
+  {
+   "id": "27n314sgzcp",
+   "kind": "li",
+   "text": "Yarn",
+   "inlineMarkup": "Yarn",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/ul[1]/li[2]",
+   "translate": true
+  },
+  {
+   "id": "2fm7adujdmt",
+   "kind": "li",
+   "text": "pnpm",
+   "inlineMarkup": "pnpm",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/ul[1]/li[3]",
+   "translate": true
+  },
+  {
+   "id": "0ckn023p8gu",
+   "kind": "li",
+   "text": "Bun",
+   "inlineMarkup": "Bun",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/ul[1]/li[4]",
+   "translate": true
+  },
+  {
+   "id": "082hrjht69v",
+   "kind": "code",
+   "text": "npm install @docusaurus/remark-plugin-npm2yarn",
+   "inlineMarkup": "npm install @docusaurus/remark-plugin-npm2yarn",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/div[1]/div[1]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash"
+  },
+  {
+   "id": "1fgbb0ru3f9",
+   "kind": "code",
+   "text": "yarn add @docusaurus/remark-plugin-npm2yarn",
+   "inlineMarkup": "yarn add @docusaurus/remark-plugin-npm2yarn",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/div[1]/div[2]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "00pyxe9xok6",
+   "kind": "code",
+   "text": "pnpm add @docusaurus/remark-plugin-npm2yarn",
+   "inlineMarkup": "pnpm add @docusaurus/remark-plugin-npm2yarn",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/div[1]/div[3]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "1yns93ah500",
+   "kind": "code",
+   "text": "bun add @docusaurus/remark-plugin-npm2yarn",
+   "inlineMarkup": "bun add @docusaurus/remark-plugin-npm2yarn",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/div[1]/div[4]/div[1]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "bash",
+   "hidden": true
+  },
+  {
+   "id": "16ijdqmcuo9",
+   "kind": "p",
+   "text": "Docusaurus provides such a utility out of the box, freeing you from using the Tabs component every time. To enable this feature, first install the @docusaurus/remark-plugin-npm2yarn package as above, and then in docusaurus.config.js, for the plugins where you need this feature (doc, blog, pages, etc.), register it in the remarkPlugins option. (See Docs configuration for more details on configuration format)",
+   "inlineMarkup": "Docusaurus provides such a utility out of the box, freeing you from using the `Tabs` component every time. To enable this feature, first install the `@docusaurus/remark-plugin-npm2yarn` package as above, and then in `docusaurus.config.js`, for the plugins where you need this feature (doc, blog, pages, etc.), register it in the `remarkPlugins` option. (See [link]Docs configuration[/link] for more details on configuration format)",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[49]",
+   "translate": true
+  },
+  {
+   "id": "24qqnrw97n9",
+   "kind": "p",
+   "text": "docusaurus.config.js",
+   "inlineMarkup": "docusaurus.config.js",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[42]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "113juvo4unj",
+   "kind": "code",
+   "text": "export default {\n  // ...\n  presets: [\n    [\n      '@docusaurus/preset-classic',\n      {\n        docs: {\n          remarkPlugins: [\n            [require('@docusaurus/remark-plugin-npm2yarn'), {sync: true}],\n          ],\n        },\n        pages: {\n          remarkPlugins: [require('@docusaurus/remark-plugin-npm2yarn')],\n        },\n        blog: {\n          remarkPlugins: [\n            [\n              require('@docusaurus/remark-plugin-npm2yarn'),\n              {converters: ['pnpm']},\n            ],\n          ],\n          // ...\n        },\n      },\n    ],\n  ],\n};",
+   "inlineMarkup": "export default {\n  // ...\n  presets: [\n    [\n      '@docusaurus/preset-classic',\n      {\n        docs: {\n          remarkPlugins: [\n            [require('@docusaurus/remark-plugin-npm2yarn'), {sync: true}],\n          ],\n        },\n        pages: {\n          remarkPlugins: [require('@docusaurus/remark-plugin-npm2yarn')],\n        },\n        blog: {\n          remarkPlugins: [\n            [\n              require('@docusaurus/remark-plugin-npm2yarn'),\n              {converters: ['pnpm']},\n            ],\n          ],\n          // ...\n        },\n      },\n    ],\n  ],\n};",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[42]/div[2]/pre[1]",
+   "translate": false,
+   "codeLang": "js"
+  },
+  {
+   "id": "0vnl71ywtdh",
+   "kind": "p",
+   "text": "And then use it by adding the npm2yarn key to the code block:",
+   "inlineMarkup": "And then use it by adding the `npm2yarn` key to the code block:",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[50]",
+   "translate": true
+  },
+  {
+   "id": "13ebigiwv98",
+   "kind": "code",
+   "text": "```bash npm2yarn\nnpm install @docusaurus/remark-plugin-npm2yarn\n```",
+   "inlineMarkup": "```bash npm2yarn\nnpm install @docusaurus/remark-plugin-npm2yarn\n```",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[43]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "md"
+  },
+  {
+   "id": "23cdq0w6mbh",
+   "kind": "heading",
+   "text": "Configuration",
+   "inlineMarkup": "Configuration",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h4[1]",
+   "translate": true,
+   "level": 4
+  },
+  {
+   "id": "1qoejbbp8c6",
+   "kind": "table-cell",
+   "text": "Option",
+   "inlineMarkup": "Option",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/thead[1]/tr[1]/th[1]",
+   "translate": true,
+   "groupId": "row-2dcaex3d6pf"
+  },
+  {
+   "id": "1hbioscey26",
+   "kind": "table-cell",
+   "text": "Type",
+   "inlineMarkup": "Type",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/thead[1]/tr[1]/th[2]",
+   "translate": true,
+   "groupId": "row-2dcaex3d6pf"
+  },
+  {
+   "id": "1bim3tp2btx",
+   "kind": "table-cell",
+   "text": "Default",
+   "inlineMarkup": "Default",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/thead[1]/tr[1]/th[3]",
+   "translate": true,
+   "groupId": "row-2dcaex3d6pf"
+  },
+  {
+   "id": "0bfeozlga1s",
+   "kind": "table-cell",
+   "text": "Description",
+   "inlineMarkup": "Description",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/thead[1]/tr[1]/th[4]",
+   "translate": true,
+   "groupId": "row-2dcaex3d6pf"
+  },
+  {
+   "id": "1plgoz9bc6d",
+   "kind": "table-cell",
+   "text": "sync",
+   "inlineMarkup": "`sync`",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[1]/td[1]",
+   "translate": true,
+   "groupId": "row-0f3vauoi7rj"
+  },
+  {
+   "id": "0z92fikxy3w",
+   "kind": "table-cell",
+   "text": "boolean",
+   "inlineMarkup": "`boolean`",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[1]/td[2]",
+   "translate": true,
+   "groupId": "row-0f3vauoi7rj"
+  },
+  {
+   "id": "1dlthygmbrs",
+   "kind": "table-cell",
+   "text": "false",
+   "inlineMarkup": "`false`",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[1]/td[3]",
+   "translate": true,
+   "groupId": "row-0f3vauoi7rj"
+  },
+  {
+   "id": "0cgwfzkauxg",
+   "kind": "table-cell",
+   "text": "Whether to sync the selected converter across all code blocks.",
+   "inlineMarkup": "Whether to sync the selected converter across all code blocks.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[1]/td[4]",
+   "translate": true,
+   "groupId": "row-0f3vauoi7rj"
+  },
+  {
+   "id": "0v5qtsoy3ag",
+   "kind": "table-cell",
+   "text": "converters",
+   "inlineMarkup": "`converters`",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[2]/td[1]",
+   "translate": true,
+   "groupId": "row-2gh5lw0kvu8"
+  },
+  {
+   "id": "0isof5t3vo3",
+   "kind": "table-cell",
+   "text": "array",
+   "inlineMarkup": "`array`",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[2]/td[2]",
+   "translate": true,
+   "groupId": "row-2gh5lw0kvu8"
+  },
+  {
+   "id": "0t7u1u7tcmb",
+   "kind": "table-cell",
+   "text": "'yarn', 'pnpm'",
+   "inlineMarkup": "`'yarn'`, `'pnpm'`",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[2]/td[3]",
+   "translate": true,
+   "groupId": "row-2gh5lw0kvu8"
+  },
+  {
+   "id": "21bln7iz827",
+   "kind": "table-cell",
+   "text": "The list of converters to use. The order of the converters is important, as the first converter will be used as the default choice.",
+   "inlineMarkup": "The list of converters to use. The order of the converters is important, as the first converter will be used as the default choice.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[2]/td[4]",
+   "translate": true,
+   "groupId": "row-2gh5lw0kvu8"
+  },
+  {
+   "id": "1awxj0noocx",
+   "kind": "heading",
+   "text": "Usage in JSX",
+   "inlineMarkup": "Usage in JSX",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[8]",
+   "translate": true,
+   "level": 2
+  },
+  {
+   "id": "2el8ppjvocr",
+   "kind": "p",
+   "text": "Outside of Markdown, you can use the @theme/CodeBlock component to get the same output.",
+   "inlineMarkup": "Outside of Markdown, you can use the `@theme/CodeBlock` component to get the same output.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[51]",
+   "translate": true
+  },
+  {
+   "id": "131fob2yjl0",
+   "kind": "code",
+   "text": "import CodeBlock from '@theme/CodeBlock';\n\nexport default function MyReactPage() {\n  return (\n    <div>\n      <CodeBlock\n        language=\"jsx\"\n        title=\"/src/components/HelloCodeTitle.js\"\n        showLineNumbers>\n        {`function HelloCodeTitle(props) {\n  return <h1>Hello, {props.name}</h1>;\n}`}\n      </CodeBlock>\n    </div>\n  );\n}",
+   "inlineMarkup": "import CodeBlock from '@theme/CodeBlock';\n\nexport default function MyReactPage() {\n  return (\n    <div>\n      <CodeBlock\n        language=\"jsx\"\n        title=\"/src/components/HelloCodeTitle.js\"\n        showLineNumbers>\n        {`function HelloCodeTitle(props) {\n  return <h1>Hello, {props.name}</h1>;\n}`}\n      </CodeBlock>\n    </div>\n  );\n}",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[44]/div[1]/pre[1]",
+   "translate": false,
+   "codeLang": "jsx"
+  },
+  {
+   "id": "0h545vvva3q",
+   "kind": "p",
+   "text": "/src/components/HelloCodeTitle.js",
+   "inlineMarkup": "/src/components/HelloCodeTitle.js",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[45]/div[2]/div[1]/div[1]",
+   "translate": true
+  },
+  {
+   "id": "1nrjv62dz60",
+   "kind": "code",
+   "text": "function HelloCodeTitle(props) {\nreturn <h1>Hello, {props.name}</h1>;\n}",
+   "inlineMarkup": "function HelloCodeTitle(props) {\nreturn <h1>Hello, {props.name}</h1>;\n}",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[45]/div[2]/div[1]/div[2]/pre[1]",
+   "translate": false,
+   "codeLang": "jsx"
+  },
+  {
+   "id": "22u4q3ymvjl",
+   "kind": "p",
+   "text": "The props accepted are language, title and showLineNumbers, in the same way as you write Markdown code blocks.",
+   "inlineMarkup": "The props accepted are `language`, `title` and `showLineNumbers`, in the same way as you write Markdown code blocks.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[52]",
+   "translate": true
+  },
+  {
+   "id": "27aah3j4w01",
+   "kind": "p",
+   "text": "Although discouraged, you can also pass in a metastring prop like metastring='{1-2} title=\"/src/components/HelloCodeTitle.js\" showLineNumbers', which is how Markdown code blocks are handled under the hood. However, we recommend you use comments for highlighting lines.",
+   "inlineMarkup": "Although discouraged, you can also pass in a `metastring` prop like `metastring='{1-2} title=\"/src/components/HelloCodeTitle.js\" showLineNumbers'`, which is how Markdown code blocks are handled under the hood. However, we recommend you [link]use comments for highlighting lines[/link].",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[53]",
+   "translate": true
+  },
+  {
+   "id": "04b3jl2bnm8",
+   "kind": "p",
+   "text": "As previously stated, syntax highlighting is only applied when the children is a simple string.",
+   "inlineMarkup": "As [link]previously stated[/link], syntax highlighting is only applied when the children is a simple string.",
+   "domPath": "/html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[54]",
+   "translate": true
+  }
+ ]
+}

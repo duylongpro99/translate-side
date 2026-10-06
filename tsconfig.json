@@ -11,6 +11,6 @@
     "jsx": "react-jsx",
     "jsxImportSource": "preact"
   },
-  "include": [".wxt/wxt.d.ts", "src", "tests", "*.config.ts"],
+  "include": [".wxt/wxt.d.ts", "src", "tests", "scripts/eval", "*.config.ts"],
   "exclude": ["src/engine/runtime.d.ts"]
 }
