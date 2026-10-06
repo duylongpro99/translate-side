@@ -188,7 +188,7 @@ export class SegParser {
         this.#final(open.id, open.text.slice(0, lc.at));
       } else {
         // A held-back partial tag right after unclosed text may have been the segment's own text
-        // (`… Vec<se`): flagged so the repair plan re-requests the segment (M1-E3, found by fuzzing).
+        // (`… Vec<se`): flagged so the repair plan re-requests the segment (decision M1-D8 (a)).
         this.#fix('unclosed-end', { id: open.id, ...(this.#heldAtEnd === '' ? {} : { detail: 'partial-tag' }) });
         this.#final(open.id, open.text);
       }
@@ -274,7 +274,7 @@ export class SegParser {
         if (this.#v2 && this.#open !== null) {
           // v2: an OPEN inside a segment is content; a missing close shows up as missing + merged.
           // In nonce mode a swallowed OPEN carrying the nonce is a model tag, never literal text:
-          // its id is recorded, so the plan can see a later segment under it as a duplicate.
+          // its id is recorded, so the plan can see a later segment under it as a duplicate (M1-D8 (b)).
           const modelTag = this.#nonceMode === 'on' && open.nonce === this.#nonce && open.id !== null;
           this.#fix('open-in-text', { id: this.#open.id, ...(modelTag ? { detail: `nonce:${open.id}` } : {}) });
           this.#text(open.tag);
