@@ -8,7 +8,8 @@
 //   literal close followed by a tag or by the segment's end) can fail, as the repair repeats it;
 // - no silent corruption: a segment's last final is the model's text for it, except the ids
 //   faults.ts marks tainted (a merge near the 1.6× ratio threshold, a wrong first copy, stray text
-//   after an unclosed segment), and their number is bounded;
+//   after an unclosed segment), and their number is bounded, and the two declared limits of plain
+//   v2 with the nonce not copied (M1-D11, L1 and L2), counted on their own;
 // - the finals and failures do not depend on how the stream is split.
 // A mutation check runs the same fuzz without the merge rule and expects it to catch the loss.
 
@@ -44,6 +45,27 @@ export const translateText = (s: string): string => `T: ${s}`;
 /** S2's declared limit without the nonce: a literal close followed by a tag-shaped string or by the end of the text. */
 const L_SHAPE = /<\s*\/\s*seg\s*>\s*(<\s*\/?\s*seg(\s[^<>]*)?>|$)/i;
 const lShaped = (chunk: WireChunk): boolean => chunk.segments.some((e) => L_SHAPE.test(translateText(e.segment.inlineMarkup).trim()));
+
+/**
+ * Decision M1-D11, the declared limits of plain v2 (nonce not copied) on wrong text. Segment `n`
+ * may end with another segment's text when the source of another segment names it in a literal:
+ * L1, an L-adjacent `</seg><seg id="n">` and the model drops or merges away segment n (its tail
+ * is accepted as n); L2, a literal `<seg id="n">` and the model empties segment i, leaves it
+ * unclosed and sends a wrong copy of n (the per-id counts tie with a genuine echo).
+ */
+const OPEN_TAG = /<\s*seg(\s[^<>]*)?>/gi;
+const openIds = (text: string): number[] =>
+  [...text.matchAll(OPEN_TAG)].flatMap((m) => {
+    const g = /\bid\s*=\s*(?:"(\d+)"|'(\d+)'|(\d+))/i.exec(m[1] ?? '');
+    return g === null ? [] : [Number(g[1] ?? g[2] ?? g[3])];
+  });
+function declaredLimit(chunk: WireChunk, n: number, faults: readonly Fault[]): 'L1' | 'L2' | null {
+  const others = chunk.segments.filter((e) => e.n !== n).map((e) => e.segment.inlineMarkup);
+  const adjacent = others.some((t) => [...t.matchAll(/<\s*\/\s*seg\s*>\s*(<\s*seg(\s[^<>]*)?>)/gi)].some((m) => openIds(m[1] ?? '').includes(n)));
+  if (adjacent && (faults.includes('drop') || faults.includes('merge'))) return 'L1';
+  if (others.some((t) => openIds(t).includes(n)) && (faults.includes('swallow-dup') || faults.includes('dup'))) return 'L2';
+  return null;
+}
 
 function stream(output: string, stopReason: StopReason, rng: () => number): NormalizedEvent[] {
   const next = deltaSizes(rng, 1 + Math.floor(rng() * 12));
@@ -95,7 +117,7 @@ async function runOnce(
 
 const REPAIR_FAULTS = ['drop', 'merge', 'empty', 'cut', 'dup', 'unclose-middle', 'reorder', 'quote-drift', 'preamble', 'between-text', 'bad-id', 'unknown', 'fence', 'case-drift', 'unclose-last'] as const;
 
-const newStats = () => ({ chunks: 0, segments: 0, v2: 0, lShaped: 0, faulted: 0, rerequested: 0, lostCleanRepair: 0, failedNonceLimit: 0, failedFaultyRepair: 0, taintedWrong: 0, silentWrong: 0, splitDependent: 0 });
+const newStats = () => ({ chunks: 0, segments: 0, v2: 0, lShaped: 0, faulted: 0, rerequested: 0, lostCleanRepair: 0, failedNonceLimit: 0, wrongLimitL1: 0, wrongLimitL2: 0, failedFaultyRepair: 0, taintedWrong: 0, silentWrong: 0, splitDependent: 0 });
 
 interface FuzzResult {
   stats: ReturnType<typeof newStats>;
@@ -142,7 +164,10 @@ async function fuzz(iterations: number, seed: number, mergeFactor?: number): Pro
         }
       } else if (got !== translateText(e.segment.inlineMarkup).trim()) {
         // A merge in the repair answer is the same S2 limit as in the first one.
+        const limit = chunk.grammar === 'v2' && !copyNonce ? declaredLimit(chunk, e.n, first.faults) : null;
         if (first.tainted.has(e.n) || (faultyRepair && repairFaults[0] === 'merge')) stats.taintedWrong++;
+        else if (limit === 'L1') stats.wrongLimitL1++;
+        else if (limit === 'L2') stats.wrongLimitL2++;
         else {
           stats.silentWrong++;
           violations.push(`segment ${e.n} silently wrong (${JSON.stringify(got)}): ${ctx}`);
@@ -173,8 +198,9 @@ describe(`parser fuzz (${ITERATIONS} chunks, seed ${SEED})`, () => {
     }
   }, 60_000);
 
-  // Review T-B5 (seed 42, chunk 2582: taint after a cut) and T-B6 (seed 123456789, chunk 157: M1-D10 per id).
-  it.each([42, 123456789])('holds on the tester seed %i (3,000 chunks)', async (seed) => {
+  // Review T-B5 (seed 42, chunk 2582: taint after a cut), T-B6 (seed 123456789, chunk 157: M1-D10 per
+  // id) and M1-D11 (seed 999999937, chunk 2175: limit L1).
+  it.each([42, 123456789, 999999937])('holds on the tester seed %i (3,000 chunks)', async (seed) => {
     const { violations } = await fuzz(3000, seed);
     expect(violations.slice(0, 3)).toEqual([]);
   }, 60_000);

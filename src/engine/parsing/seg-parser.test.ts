@@ -350,6 +350,25 @@ const NONCE_CASES: Case[] = [
     expect(plan(r, s).ambiguous).toBe(true);
     expect(plan(r, s).rerequest).toEqual([1, 2, 3]);
   }, { grammar: 'v2' }],
+  // Decision M1-D11: declared limits of plain v2 (nonce not copied). These pin the CURRENT, wrong
+  // behaviour, so that a future fix (or a regression in it) is noticed.
+  ['DECLARED LIMIT M1-D11 L1: L-adjacent literal naming a dropped id; its tail is accepted as that id', '<seg id="2">B</seg><seg id="3">X </seg><seg id="1"> Y</seg>', (r) => {
+    const s = src({ 3: 'X </seg><seg id="1"> Y' });
+    expect(r.segs.get(1)).toBe(' Y');
+    expect(plan(r, s).ambiguous).toBe(false);
+    expect(plan(r, s).rerequest).toEqual([3]);
+  }, { grammar: 'v2' }],
+  ['DECLARED LIMIT M1-D11 L1: L-adjacent literal naming the next id (seed 999999937 shape)', '<seg id="1">X </seg><seg id="2"> Y</seg><seg id="3">C</seg>', (r) => {
+    const s = src({ 1: 'X </seg><seg id="2"> Y' });
+    expect(r.segs.get(2)).toBe(' Y');
+    expect(plan(r, s).ambiguous).toBe(false);
+    expect(plan(r, s).rerequest).toEqual([1]);
+  }, { grammar: 'v2' }],
+  ['DECLARED LIMIT M1-D11 L2: literal OPEN of the same id, emptied unclosed segment, wrong copy kept', '<seg id="1">\n<seg id="2">Second sentence here.</seg><seg id="2">garbage</seg><seg id="3">Third sentence.</seg>', (r) => {
+    const s = src({ 1: 'Has <seg id="2"> inside it.' });
+    expect(r.segs.get(2)).toBe('garbage');
+    expect(plan(r, s).ambiguous).toBe(false);
+  }, { grammar: 'v2' }],
   ['nonce: wrong nonce on the first tag → treated as not copied', '<seg id="1" n="zzzz">A</seg><seg id="2" n="zzzz">B</seg><seg id="3" n="zzzz">C</seg>', (r) => {
     expect(view(r).segs).toEqual({ 1: 'A', 2: 'B', 3: 'C' });
     expect(plan(r).rerequest).toEqual([]);
