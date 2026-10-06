@@ -48,8 +48,13 @@ export interface JobView {
   segs: ReadonlyMap<string, SegState>;
   counts: { total: number; final: number; failed: number };
   usage: UsageTotals;
-  /** USD for this page so far, across runs (cancel + resume); undefined without pricing. */
+  /** USD for this page so far, across runs (cancel + resume, a language change); undefined without pricing or usage. */
   cost: number | undefined;
+  /**
+   * Requests of this page that were aborted before they reported usage (providers send it at the
+   * end of a stream), so `usage` and `cost` leave them out. Not estimated: the readout says so.
+   */
+  unmetered: number;
   /** The error that stopped the job (status `stopped`). */
   stopError?: LLMError;
   /** Epoch ms: when this run started, when its first text became visible, when it ended. */
@@ -131,6 +136,29 @@ export class Gate {
   }
 }
 
+/**
+ * Tells when a request starts and ends, and whether it was aborted before its usage arrived.
+ * Wrap it inside the gate: a request still waiting there was never sent.
+ */
+export function meteredClient(inner: LLMClient, meter: { start(): void; end(unmetered: boolean): void }): LLMClient {
+  return {
+    model: inner.model,
+    reasoningReserveTokens: inner.reasoningReserveTokens,
+    async *stream(req: NormalizedRequest) {
+      let metered = false;
+      meter.start();
+      try {
+        for await (const e of inner.stream(req)) {
+          if (e.type === 'usage') metered = true;
+          yield e;
+        }
+      } finally {
+        meter.end(!metered && req.signal.aborted);
+      }
+    },
+  };
+}
+
 /** Every request waits at the gate before it is sent; a stream already running is not touched. */
 export function gatedClient(inner: LLMClient, gate: Gate): LLMClient {
   return {
@@ -175,6 +203,8 @@ interface Job {
   segs: Map<string, SegState>;
   controller: AbortController;
   gate: Gate;
+  /** Requests sent and not ended yet. */
+  inflight: number;
   /** Bumped per run, so a finished run can't overwrite a newer one. */
   run: number;
 }
@@ -231,11 +261,15 @@ export class Jobs {
   /**
    * Translates the page in `tabId`. A job of another document in that tab is cancelled and
    * replaced. `resume` keeps a cancelled or finished job's finals and its cost, and translates
-   * only what is left (pending or failed).
+   * only what is left (pending or failed). `keepCost` keeps only the cost of the same document's
+   * earlier runs (a restart in other languages): the page total stays honest.
    */
-  async start(tabId: number, docId: string, doc: JobDoc, { resume = false } = {}): Promise<void> {
+  async start(tabId: number, docId: string, doc: JobDoc, { resume = false, keepCost = false } = {}): Promise<void> {
     const prev = this.jobs.get(tabId);
     const keep = resume && prev?.docId === docId && prev.view.status !== 'running' ? prev : undefined;
+    const costFrom = keep ?? (keepCost && prev?.docId === docId ? prev : undefined);
+    // A replaced run's requests in flight end without usage; they are this page's spend too.
+    const abandoned = costFrom && costFrom.view.status === 'running' ? costFrom.inflight : 0;
     if (prev?.view.status === 'running') prev.controller.abort(new DOMException('replaced', 'AbortError'));
 
     const translatable = doc.segments.filter((s) => s.translate);
@@ -253,6 +287,7 @@ export class Jobs {
       segs,
       controller: new AbortController(),
       gate,
+      inflight: 0,
       run: (prev?.run ?? 0) + 1,
       view: {
         status: 'running',
@@ -262,8 +297,9 @@ export class Jobs {
         segments: doc.segments,
         segs,
         counts: count(segs),
-        usage: keep ? { ...keep.view.usage } : { input: 0, cachedInput: 0, output: 0 },
-        cost: keep?.view.cost,
+        usage: costFrom ? { ...costFrom.view.usage } : { input: 0, cachedInput: 0, output: 0 },
+        cost: costFrom?.view.cost,
+        unmetered: (costFrom?.view.unmetered ?? 0) + abandoned,
         startedAt: this.now(),
       },
     };
@@ -283,7 +319,15 @@ export class Jobs {
       this.finish(tabId, job, 'done');
       return;
     }
-    const engine = this.deps.engine?.(gatedClient(client, gate)) ?? this.defaultEngine(gatedClient(client, gate));
+    const meter = {
+      start: () => void job.inflight++,
+      end: (unmetered: boolean) => {
+        job.inflight--;
+        if (unmetered) this.patch(tabId, job, { unmetered: job.view.unmetered + 1, cost: costUsd(profile.pricing, job.view.usage) });
+      },
+    };
+    const gated = gatedClient(meteredClient(client, meter), gate);
+    const engine = this.deps.engine?.(gated) ?? this.defaultEngine(gated);
     const engineJob: TranslationJob = {
       doc: {
         url: doc.url,
@@ -361,7 +405,10 @@ export class Jobs {
       case 'segment.partial':
       case 'segment.final':
       case 'segment.failed': {
-        if (!job.segs.has(event.id)) return;
+        // A job that ended (cancel, stop) keeps what it showed: a late event of another chunk in
+        // flight must not bring back a preview or change a count (review E-R2). Usage still
+        // counts below: it was spent.
+        if (job.view.status !== 'running' || !job.segs.has(event.id)) return;
         const cur = job.segs.get(event.id);
         const next = applySegmentEvent(cur, event);
         if (next === cur || next === undefined) return;

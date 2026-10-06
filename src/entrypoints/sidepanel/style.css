@@ -237,6 +237,9 @@ body {
   font-variant-numeric: tabular-nums;
   color: var(--fg);
 }
+.job__cost-note {
+  color: var(--muted);
+}
 .job__button {
   font: inherit;
   padding: 3px 10px;

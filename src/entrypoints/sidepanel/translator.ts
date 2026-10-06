@@ -30,12 +30,26 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}): Tra
     segments,
   });
 
+  /** The document each tab's session holds now: a job starts only for a page that is still there. */
+  const live = new Map<number, string>();
+  const isLive = (tabId: number, docId: string) => live.get(tabId) === docId;
+
   const hooks: SessionHooks = {
     ready(tabId, docId, result) {
-      void readPreferences(api).then((prefs) => jobs.start(tabId, docId, docFor(prefs, result.url, result.title, result.lang, result.segments)));
+      live.set(tabId, docId);
+      void readPreferences(api).then((prefs) => {
+        // The page may have gone, or the tab closed, while the settings were read (review E-R1).
+        if (isLive(tabId, docId)) void jobs.start(tabId, docId, docFor(prefs, result.url, result.title, result.lang, result.segments));
+      });
     },
-    gone: (tabId) => jobs.cancel(tabId),
-    closed: (tabId) => jobs.drop(tabId),
+    gone: (tabId) => {
+      live.delete(tabId);
+      jobs.cancel(tabId);
+    },
+    closed: (tabId) => {
+      live.delete(tabId);
+      jobs.drop(tabId);
+    },
     active: (tabId) => jobs.setActive(tabId),
   };
 
@@ -60,7 +74,11 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}): Tra
     const onLocal = (changes: Record<string, unknown>) => {
       if (secretKey(GEMINI_CONNECTION.id) in changes) retryStopped();
     };
-    /** New languages: translate the page again, from scratch. */
+    /**
+     * New languages: translate the active tab's page again, from scratch, keeping what the earlier
+     * runs cost in the page total (review E-R3). A background tab's job keeps the languages it
+     * started with until its page is read again (reopened or reloaded).
+     */
     const onSync = (changes: Record<string, unknown>) => {
       if (!('prefs' in changes)) return;
       const tabId = activeTab();
@@ -70,7 +88,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}): Tra
         const { doc, docId } = current;
         const next = docFor(prefs, doc.url, doc.title, doc.pageLang, doc.segments);
         if (next.targetLang === doc.targetLang && next.sourceLang === doc.sourceLang) return;
-        if (jobs.docOf(tabId) === docId) void jobs.start(tabId, docId, next);
+        if (isLive(tabId, docId) && jobs.docOf(tabId) === docId) void jobs.start(tabId, docId, next, { keepCost: true });
       });
     };
     const onPagehide = () => jobs.cancelAll();

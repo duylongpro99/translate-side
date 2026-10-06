@@ -19,9 +19,12 @@ const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 export function JobBar({ job, actions }: { job: JobView; actions: JobActions }) {
   const { final, failed, total } = job.counts;
   const into = languageLabel(job.targetLang);
+  // Providers report usage at the end of a stream, so a cancelled request's spend is unknown:
+  // say so instead of estimating it (review E-T2).
   const cost = job.cost === undefined ? null : (
     <span class="job__cost" data-testid="job-cost" title={`${job.usage.input} input tokens (${job.usage.cachedInput} cached), ${job.usage.output} output tokens`}>
       {formatUsd(job.cost)}
+      {job.unmetered > 0 ? <span class="job__cost-note"> · excludes cancelled requests</span> : null}
     </span>
   );
   const attrs = {

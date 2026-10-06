@@ -187,6 +187,7 @@ describe('translation in the panel (plan M1-E10)', () => {
     counts: { total: 4, final: segs.filter(([, s]) => s.status === 'final').length, failed: segs.filter(([, s]) => s.status === 'failed').length },
     usage: { input: 1000, cachedInput: 0, output: 800 },
     cost: 0.0023,
+    unmetered: 0,
     startedAt: 1,
     ...patch,
   });
@@ -235,8 +236,10 @@ describe('translation in the panel (plan M1-E10)', () => {
     expect(root.querySelector('[data-testid=job-cost]')?.textContent).toBe('$0.0023');
     act(() => (root.querySelector('[data-testid=job] button') as HTMLButtonElement).click());
     expect(f.calls).toEqual(['cancel']);
-    await f.j.push(jobView([[p1, { status: 'final', text: 'x', revision: 1 }]], { status: 'cancelled' }));
+    await f.j.push(jobView([[p1, { status: 'final', text: 'x', revision: 1 }]], { status: 'cancelled', unmetered: 2 }));
     expect(root.querySelector('[data-testid=job]')?.textContent).toContain('Cancelled · 1 of 4 translated');
+    // Usage of a cancelled request never arrives: the readout says what it leaves out (review E-T2).
+    expect(root.querySelector('[data-testid=job-cost]')?.textContent).toBe('$0.0023 · excludes cancelled requests');
     act(() => (root.querySelector('[data-testid=job] button') as HTMLButtonElement).click());
     expect(f.calls).toEqual(['cancel', 'resume']);
     await f.j.push(jobView([], { status: 'done', counts: { total: 4, final: 4, failed: 0 }, endedAt: 14_201, cost: 0.0072 }));

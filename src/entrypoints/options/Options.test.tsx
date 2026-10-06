@@ -7,7 +7,7 @@ import { Options } from './Options.tsx';
 
 type Api = Parameters<typeof Options>[0]['api'];
 
-function fakeApi({ grant = true } = {}) {
+function fakeApi({ grant = true, answer = Promise.resolve() } = {}) {
   const local = new Map<string, unknown>();
   const sync = new Map<string, unknown>();
   const granted = new Set<string>();
@@ -27,8 +27,10 @@ function fakeApi({ grant = true } = {}) {
       contains: ({ origins }: { origins: string[] }) => Promise.resolve(origins.every((o) => granted.has(o))),
       request: ({ origins }: { origins: string[] }) => {
         log.push(`request ${origins.join(',')}`);
-        if (grant) origins.forEach((o) => granted.add(o));
-        return Promise.resolve(grant);
+        return answer.then(() => {
+          if (grant) origins.forEach((o) => granted.add(o));
+          return grant;
+        });
       },
       remove: ({ origins }: { origins: string[] }) => Promise.resolve(origins.every((o) => granted.delete(o))),
     },
@@ -68,6 +70,27 @@ describe('options v0 (plan M1-E9)', () => {
     expect(root.innerHTML).not.toContain('AIzaSyExampleKey1234');
     expect(input.value).toBe('');
     expect(root.textContent).toContain('stored on this device only');
+  });
+
+  it('shows the saved key at once, while the permission prompt is still open (review E-T1)', async () => {
+    let answer = () => {};
+    const f = fakeApi({ answer: new Promise<void>((r) => (answer = r)) });
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    const input = root.querySelector('#key') as HTMLInputElement;
+    act(() => {
+      input.value = 'AIzaSyExampleKey1234';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => {
+      (root.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    await flush();
+    expect(root.querySelector('[data-testid=masked-key]')?.textContent).toBe('AIz…1234');
+    expect(root.textContent).not.toContain('No key yet');
+    answer();
+    await flush();
+    expect(root.querySelector('[role=status]')?.textContent).toBe('Saved.');
   });
 
   it('offers Grant access when the permission was refused', async () => {

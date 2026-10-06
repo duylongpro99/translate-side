@@ -284,6 +284,78 @@ describe('Jobs (plan M1-E8)', () => {
     expect(jobs.get(1)?.counts).toEqual({ total: 3, final: 0, failed: 0 });
   });
 
+  it('a stopped job ignores late segment events of the other chunk in flight, but still counts their usage (review E-R2)', async () => {
+    const auth: LLMError = { kind: 'auth', status: 401, message: 'Key invalid or missing' };
+    const engine = () => ({
+      async *translate() {
+        yield partial('s1', 'vi:P1 wo');
+        yield failedEv('s0', auth);
+        // The other chunk had not noticed the abort yet.
+        yield partial('s1', 'vi:P1 word0 word1');
+        yield final('s2', 'vi:P2');
+        yield { type: 'usage', input: 1000, output: 500 } as EngineEvent;
+      },
+    });
+    const jobs = new Jobs({ translateClient: ok(translatorClient()), engine: engine as never });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(3));
+    const v = jobs.get(1) as JobView;
+    expect(v.status).toBe('stopped');
+    expect(v.segs.get('s1')).toEqual({ status: 'pending' });
+    expect(v.segs.get('s2')).toEqual({ status: 'pending' });
+    expect(v.counts).toEqual({ total: 3, final: 0, failed: 1 });
+    expect(v.usage).toEqual({ input: 1000, cachedInput: 0, output: 500 });
+  });
+
+  it('counts the requests a cancel cut off before their usage arrived; one still waiting at the gate is not one (review E-T2)', async () => {
+    const t = instrumented(translatorClient(), { hold: true });
+    const jobs = new Jobs({ translateClient: ok(t.client) });
+    jobs.setActive(1);
+    const run = jobs.start(1, 'd', doc(30));
+    await until(() => t.active === 2);
+    jobs.cancel(1);
+    await run;
+    await until(() => (jobs.get(1)?.unmetered ?? 0) === 2);
+    // No usage at all yet, but the readout exists, so it can say what it leaves out.
+    expect(jobs.get(1)?.cost).toBe(0);
+
+    const bg = new Jobs({ translateClient: ok(instrumented(translatorClient()).client) });
+    bg.setActive(5);
+    const waiting = bg.start(1, 'd', doc(5));
+    await settle(20);
+    bg.cancel(1);
+    await waiting;
+    expect(bg.get(1)?.unmetered).toBe(0);
+  });
+
+  it('a restart in other languages keeps the earlier runs in the page cost (review E-R3)', async () => {
+    const t = instrumented(translatorClient(), { hold: true });
+    const jobs = new Jobs({ translateClient: ok(t.client) });
+    jobs.setActive(1);
+    const first = jobs.start(1, 'd', doc(30));
+    await until(() => t.active === 2);
+    t.releaseAll();
+    await until(() => (jobs.get(1)?.usage.input ?? 0) > 0 && t.active === 2);
+    const spent = jobs.get(1) as JobView;
+    const restart = jobs.start(1, 'd', { ...doc(30), targetLang: 'ja' }, { keepCost: true });
+    const v = jobs.get(1) as JobView;
+    expect(v.targetLang).toBe('ja');
+    expect(v.counts.final).toBe(0);
+    expect(v.usage).toEqual(spent.usage);
+    expect(v.cost).toBe(spent.cost);
+    // The 2 requests the restart cut off are flagged, not estimated.
+    expect(v.unmetered).toBe(2);
+    const timer = setInterval(t.releaseAll, 2);
+    await Promise.all([first, restart]);
+    expect(jobs.get(1)?.cost ?? 0).toBeGreaterThan(spent.cost ?? 0);
+    // Another document starts from zero.
+    const other = jobs.start(1, 'd2', doc(1), { keepCost: true });
+    expect(jobs.get(1)?.usage).toEqual({ input: 0, cachedInput: 0, output: 0 });
+    expect(jobs.get(1)?.unmetered).toBe(0);
+    await other;
+    clearInterval(timer);
+  });
+
   it('a new document in the tab replaces its job; drop forgets it', async () => {
     const t = instrumented(translatorClient(), { hold: true });
     const jobs = new Jobs({ translateClient: ok(t.client) });

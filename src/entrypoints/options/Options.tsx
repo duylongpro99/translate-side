@@ -52,6 +52,8 @@ function KeySection({ api }: { api: Browser }) {
     const granted = requestAccess();
     void (async () => {
       await saveApiKey(api, GEMINI_CONNECTION.id, key);
+      // The key is stored: show it (masked) now, not once the permission prompt is answered (review E-T1).
+      setSaved(key);
       setDraft('');
       const ok = await granted;
       setNote(ok ? 'Saved.' : 'Saved, but Translate Side has no access to the Gemini API yet. Grant it below.');
