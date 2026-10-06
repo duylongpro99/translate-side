@@ -6,13 +6,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
-import type { LLMClient, LLMError, ResolvedConnection } from '@/llm/types';
+import type { LLMClient, ResolvedConnection } from '@/llm/types';
 import { costUsd, priceFor } from './pricing.ts';
-import { JUDGE_MODEL, JUDGE_PROMPT_ID, judgeSystemPrompt, judgeUserPrompt } from './judge-core.ts';
+import { askJudge, isComplete, judgeOnce, JUDGE_MODEL, JUDGE_PROMPT_ID, judgeSystemPrompt, judgeUserPrompt, QuotaStop } from './judge-core.ts';
 import { loadPassage } from './passages.ts';
 import { JUDGE_FILE, loadRun, type JudgeFile } from './runs.ts';
 import { DIMENSIONS } from './rubric.ts';
-import { parseJudgeReply } from './scores.ts';
 
 const { values: opt, positionals } = parseArgs({
   args: process.argv.slice(2).filter((a) => a !== '--'),
@@ -48,40 +47,16 @@ const llm = client();
 const price = priceFor(model, opt.price);
 const usage = { input: 0, cachedInput: 0, output: 0 };
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-const RETRYABLE = new Set(['rate_limit', 'overloaded', 'network', 'unknown']);
-/** A wait longer than this is a daily quota, not a burst: stop instead of sleeping on it. */
-const MAX_WAIT_MS = 90_000;
-class QuotaStop extends Error {}
+const ask = (system: string, user: string): Promise<string> => askJudge(llm, system, user, usage, sleep);
 
-async function ask(system: string, user: string): Promise<string> {
-  let last: LLMError | undefined;
-  for (let attempt = 0; attempt < 6; attempt++) {
-    let text = '';
-    last = undefined;
-    for await (const e of llm.stream({ model: llm.model, system, messages: [{ role: 'user', content: user }], maxOutputTokens: 1200 + llm.reasoningReserveTokens, temperature: 0, signal: new AbortController().signal })) {
-      if (e.type === 'text') text += e.delta;
-      else if (e.type === 'usage') {
-        usage.input += e.input;
-        usage.cachedInput += e.cachedInput ?? 0;
-        usage.output += e.output;
-      } else if (e.type === 'error') last = e.error;
-    }
-    if (!last) return text;
-    if (last.kind === 'quota' || (last.retryAfterMs ?? 0) > MAX_WAIT_MS || /PerDay|retry in \d+h/i.test(`${last.message} ${JSON.stringify(last.raw ?? '')}`)) throw new QuotaStop(`${last.kind}: ${last.message.slice(0, 300)}`);
-    if (!RETRYABLE.has(last.kind)) break;
-    await sleep(last.retryAfterMs ?? Math.min(30_000, 2000 * 2 ** attempt));
-  }
-  throw new Error(`${last?.kind}: ${last?.message}`);
-}
-
-const complete = (sc: JudgeFile['scores'][string] | undefined): boolean => sc !== undefined && DIMENSIONS.every((d) => sc[d] !== undefined);
 const prior = run.judge?.judgeModel === model && run.judge.prompt === JUDGE_PROMPT_ID ? run.judge : undefined;
-const judged: JudgeFile['scores'] = Object.fromEntries(Object.entries(prior?.scores ?? {}).filter(([id, sc]) => run.outputs[id] && complete(sc)));
+const judged: JudgeFile['scores'] = Object.fromEntries(Object.entries(prior?.scores ?? {}).filter(([id, sc]) => run.outputs[id] && isComplete(sc)));
 const ids = Object.keys(run.outputs).sort().filter((id) => !judged[id]);
 const failed: string[] = [];
 let stopped: string | undefined;
 let next = 0;
 usage.input += prior?.usage.input ?? 0;
+usage.cachedInput += prior?.usage.cachedInput ?? 0;
 usage.output += prior?.usage.output ?? 0;
 const save = (): void => {
   const file: JudgeFile = {
@@ -90,7 +65,7 @@ const save = (): void => {
     at: new Date().toISOString(),
     scores: Object.fromEntries(Object.entries(judged).sort(([a], [b]) => a.localeCompare(b))),
     failed: [...failed].sort(),
-    usage: { input: usage.input, output: usage.output },
+    usage: { input: usage.input, cachedInput: usage.cachedInput, output: usage.output },
     costUsd: price ? costUsd(price, usage) : null,
   };
   fs.writeFileSync(path.join(run.dir, JUDGE_FILE), `${JSON.stringify(file, null, 1)}\n`);
@@ -102,12 +77,15 @@ async function worker(): Promise<void> {
     const system = judgeSystemPrompt(run.summary.target);
     const user = judgeUserPrompt(loadPassage(root, id).meta.title, items);
     try {
-      let reply = parseJudgeReply(await ask(system, user));
-      if (DIMENSIONS.some((d) => reply.scores[d] === undefined)) reply = parseJudgeReply(await ask(system, user));
-      if (DIMENSIONS.some((d) => reply.scores[d] === undefined)) failed.push(id);
-      judged[id] = { ...reply.scores, ...(reply.comment === undefined ? {} : { comment: reply.comment }) };
+      const result = await judgeOnce(ask, system, user);
+      if (!result) {
+        failed.push(id);
+        console.log(`${id.padEnd(28)} FAILED the reply lacked a dimension twice`);
+        continue;
+      }
+      judged[id] = result;
       save();
-      console.log(`${id.padEnd(28)} ${DIMENSIONS.map((d) => reply.scores[d] ?? '–').join(' ')}`);
+      console.log(`${id.padEnd(28)} ${DIMENSIONS.map((d) => result[d]).join(' ')}`);
     } catch (e) {
       if (e instanceof QuotaStop) stopped = e.message;
       else failed.push(id);

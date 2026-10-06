@@ -73,7 +73,7 @@ export function renderReport({ runs, categories }: ReportInput): string {
       }
     }
   }
-  const unscored = runs.map((r) => (r.human ? '' : `- ${runLabel(r.summary)}: no human scores yet (fill in ${r.dir}/human-scores.md)`)).filter(Boolean);
+  const unscored = runs.map((r) => (r.human && aggregate(r.human).overall !== undefined ? '' : `- ${runLabel(r.summary)}: no human scores yet (fill in ${r.dir}/human-scores.md)`)).filter(Boolean);
   if (unscored.length) lines.push('', ...unscored);
   return `${lines.join('\n')}\n`;
 }

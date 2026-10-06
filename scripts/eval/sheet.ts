@@ -18,6 +18,6 @@ const run = loadRun(path.resolve(dir));
 const out = path.resolve(opt.out ?? path.join(run.dir, HUMAN_SHEET));
 if (fs.existsSync(out) && !opt.force) throw new Error(`${out} exists: it may hold scores. Pass --force to overwrite.`);
 const ids = listPassageIds(root).filter((id) => run.outputs[id]);
-const blocks = ids.map((id) => renderPassageBlock(loadPassage(root, id), run.outputs[id] ?? []));
+const blocks = ids.map((id) => renderPassageBlock(loadPassage(root, id), run.outputs[id] ?? [], run.summary.target));
 fs.writeFileSync(out, renderHumanSheet(run.summary, blocks));
 console.log(`wrote ${path.relative(root, out)} (${ids.length} passages)`);

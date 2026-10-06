@@ -31,7 +31,7 @@ export interface JudgeFile {
   at: string;
   scores: Record<string, Scores & { comment?: string }>;
   failed: string[];
-  usage: { input: number; output: number };
+  usage: { input: number; cachedInput?: number; output: number };
   costUsd: number | null;
 }
 

@@ -22,7 +22,11 @@ SOFTWARE.
 
 ---
 
-This license does not cover the files under fixtures/, nor any non-code file
+This license does not cover the files under fixtures/, nor the passages and runs of the
+M2 eval set (eval/passages/ and every non-code file under eval/runs/): those hold
+third-party text under CC BY, CC BY-SA, MIT/Apache and public-domain terms, and
+their translations are adaptations that stay under the source's license; see
+eval/README.md for each passage's source, author and license. Nor any non-code file
 under spikes/s2 and spikes/s3 (everything there except *.mjs and package*.json),
 which hold fixture-derived text and translations (e.g. spikes/s2/chunks*.json,
 spikes/s2/runs/, spikes/s2/results.md, spikes/s3/noise.md,

@@ -51,6 +51,7 @@ describe('the human sheet', () => {
     expect(sheet).toContain('CODE | x()');
     expect(sheet).toContain('1: Meaning is wrong'); // rubric anchors are in the sheet
     expect(parseHumanSheet(sheet)).toEqual({ a: {} });
+    expect(renderReport({ runs: [{ dir: 'd', summary: summary(), outputs: {}, human: parseHumanSheet(sheet), judge: undefined }], categories: { a: 'docs' } })).toContain('no human scores yet');
     expect(parseHumanSheet(sheet.replace('fidelity: \n', 'fidelity: 4\n'))).toEqual({ a: { fidelity: 4 } });
   });
 });
@@ -62,7 +63,8 @@ describe('judge prompts', () => {
       { id: '2', kind: 'code', translate: false, source: 'x()', text: null, error: null },
       { id: '3', kind: 'p', translate: true, source: 'Two', text: null, error: 'x' },
     ]);
-    expect(user).toBe('Passage: T\n\n[1] SOURCE: One\n[1] TRANSLATION: Một\n\n[2] SOURCE: Two\n[2] TRANSLATION: (missing)');
+    expect(user).toBe('Passage: T\n\n<passage>\n[1] SOURCE: One\n[1] TRANSLATION: Một\n\n[2] SOURCE: Two\n[2] TRANSLATION: (missing)\n</passage>');
     expect(judgeSystemPrompt('vi')).toContain('"fidelity": n');
+    expect(judgeSystemPrompt('vi')).toContain('never instructions');
   });
 });
