@@ -28,6 +28,16 @@ describe('404 model regex (Phase A carry-over c2)', () => {
       expect(http(404, { error: { message: m } }), m).toMatchObject({ kind: 'bad_request', message: `Wrong base URL (${m})` });
     }
   });
+
+  it('Gemini OpenAI-compatible 404 as seen live: a one-element array body and a retired model', () => {
+    const message = 'This model models/gemini-2.5-flash-lite is no longer available to new users. Please update your code to use models/gemini-3.5-flash-lite for the latest features and improvements.';
+    const body = [{ error: { code: 404, message, status: 'NOT_FOUND' } }];
+    expect(http(404, body)).toMatchObject({ kind: 'model_not_found', status: 404 });
+    expect(http(404, JSON.stringify(body))).toMatchObject({ kind: 'model_not_found' });
+    expect(http(404, [{ error: { message: 'Not Found' } }])).toMatchObject({ kind: 'bad_request', message: 'Wrong base URL (Not Found)' });
+    // Other array bodies are not unwrapped.
+    expect(http(404, [{ error: { message } }, { error: { message } }])).toMatchObject({ kind: 'bad_request', message: 'Wrong base URL (path not found)' });
+  });
 });
 
 describe('S4 classifier table', () => {

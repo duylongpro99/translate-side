@@ -56,9 +56,12 @@ export interface HttpErrorInput {
 // A 404 message that names a model: the word "model" directly followed by the name (quoted or
 // not), then "not found" / "does not exist"; or Gemini's "models/x is not found"; or Anthropic's
 // bare "model: claude-x". Ollama: `model "x" not found`; OpenAI: "The model `x` does not exist or
-// you do not have access to it." The name must follow "model" at once, so a wrong-path 404 whose
-// path merely contains the word (`path "/model/v1/x" not found`) does not match (Phase A c2).
-const MODEL_NOT_FOUND = /^model:\s*\S|\bmodel(?:\s*[:=]\s*|\s+)[`"']?[\w.\-:/]+[`"']?\s+(?:is\s+)?(?:not\s+found|does\s+not\s+exist)|\bmodels\/[\w.\-:]+\s+(?:is\s+|was\s+)?not\s+found/i;
+// you do not have access to it."; a retired Gemini model: "This model models/x is no longer
+// available to new users" (a 404 seen live, Phase C). The name must follow "model" at once, so a
+// wrong-path 404 whose path merely contains the word (`path "/model/v1/x" not found`) does not
+// match (Phase A c2).
+const MODEL_NOT_FOUND =
+  /^model:\s*\S|\bmodel(?:\s*[:=]\s*|\s+)[`"']?[\w.\-:/]+[`"']?\s+(?:is\s+)?(?:not\s+found|does\s+not\s+exist|no\s+longer\s+available)|\bmodels\/[\w.\-:]+\s+(?:is\s+|was\s+)?(?:not\s+found|no\s+longer\s+available)/i;
 const CONTEXT_LENGTH = /context[ _-]?(length|window)|prompt is too long|too many (input )?tokens|maximum context|reduce the length/i;
 const CREDIT_BALANCE = /credit balance/i;
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
@@ -213,12 +216,17 @@ function withRetryAfter(error: LLMError, input: HttpErrorInput): LLMError {
 }
 
 function parseBody(body: unknown): unknown {
-  if (typeof body !== 'string') return body;
-  try {
-    return JSON.parse(body) as unknown;
-  } catch {
-    return body;
+  let parsed = body;
+  if (typeof body === 'string') {
+    try {
+      parsed = JSON.parse(body) as unknown;
+    } catch {
+      return body;
+    }
   }
+  // Gemini's OpenAI-compatible endpoint wraps an error in a one-element array:
+  // `[{"error":{"code":404,"message":"…","status":"NOT_FOUND"}}]` (seen live, Phase C).
+  return Array.isArray(parsed) && parsed.length === 1 && isRecord(parsed[0]) ? parsed[0] : parsed;
 }
 
 function errorTypeAndCode(body: unknown): { type?: string; code?: string } {
