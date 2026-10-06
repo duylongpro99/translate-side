@@ -82,10 +82,27 @@ describe('withRetry', () => {
     expect(events.map((e) => e.type)).toEqual(['text', 'error']);
   });
 
-  it('passes on usage reported by a failed attempt', async () => {
-    const client = fakeClient([[{ type: 'usage', input: 7, output: 0 }, failed(err('overloaded'))], success('ok')]);
+  it('sums the usage of every attempt into one usage event before done (stream contract)', async () => {
+    const client = fakeClient([[{ type: 'usage', input: 7, output: 0, cachedInput: 4 }, failed(err('overloaded'))], success('ok')]);
     const events = await collect(withRetry(client, { sleep: fakeSleep(), random: () => 0 }).stream(request()));
-    expect(events.filter((e) => e.type === 'usage')).toHaveLength(2);
+    expect(events).toEqual([
+      { type: 'text', delta: 'ok' },
+      { type: 'usage', input: 17, output: 5, cachedInput: 4 },
+      { type: 'done', stopReason: 'end' },
+    ]);
+  });
+
+  it('sends the summed usage before the final error when retries run out', async () => {
+    const client = fakeClient([[{ type: 'usage', input: 3, output: 0 }, rateLimited(1000)]]);
+    const events = await collect(withRetry(client, { sleep: fakeSleep() }).stream(request()));
+    const total = 3 * (DEFAULT_RETRY_POLICY.maxRetries + 1);
+    expect(events).toEqual([{ type: 'usage', input: total, output: 0 }, rateLimited(1000)]);
+  });
+
+  it('sends the summed usage before an error that follows text', async () => {
+    const client = fakeClient([[{ type: 'usage', input: 2, output: 0 }, rateLimited()], [{ type: 'text', delta: 'Xin' }, { type: 'usage', input: 5, output: 1 }, failed(err('overloaded'))]]);
+    const events = await collect(withRetry(client, { sleep: fakeSleep(), random: () => 0 }).stream(request()));
+    expect(events).toEqual([{ type: 'text', delta: 'Xin' }, { type: 'usage', input: 7, output: 1 }, failed(err('overloaded'))]);
   });
 
   it('stops when the signal aborts during backoff', async () => {

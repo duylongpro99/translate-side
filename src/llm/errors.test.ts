@@ -56,10 +56,15 @@ describe('S4 classifier table', () => {
     expect(http(402, body)).toMatchObject({ kind: 'quota', status: 402, message: expect.stringContaining('https://ollama.com/upgrade') });
   });
 
-  it('row 5: 404 naming a model → model_not_found (content-type is ignored)', () => {
+  it('row 5: 404 whose message names a model → model_not_found (content-type is ignored)', () => {
     expect(http(404, '{"error":{"message":"model \\"no-such-model:1b\\" not found","type":"not_found_error","param":null,"code":null}}').kind).toBe('model_not_found');
     expect(http(404, '{"error": "model \'no-such-model:1b\' not found"}').kind).toBe('model_not_found');
     expect(http(404, { type: 'error', error: { type: 'not_found_error', message: 'model: claude-x' } }).kind).toBe('model_not_found');
+    // OpenAI's unknown-model 404 (written from the API docs, not a recorded response).
+    const openai = http(404, '{"error":{"message":"The model `gpt-9` does not exist or you do not have access to it.","type":"invalid_request_error","param":null,"code":"model_not_found"}}');
+    expect(openai).toMatchObject({ kind: 'model_not_found', message: 'The model `gpt-9` does not exist or you do not have access to it.' });
+    expect(http(404, { error: { message: 'gone', code: 'model_not_found' } }).kind).toBe('model_not_found');
+    expect(http(404, { error: { message: 'The model `gpt-9` does not exist' } }).kind).toBe('model_not_found');
   });
 
   it('row 6: 404 otherwise → bad_request "wrong base URL", not a quirk flip', () => {
@@ -67,6 +72,10 @@ describe('S4 classifier table', () => {
     expect(e.kind).toBe('bad_request');
     expect(e.message).toMatch(/^Wrong base URL/);
     expect(isQuirkFlipCandidate(e)).toBe(false);
+    // M1-D7 (deviation from S4 row 5): Anthropic's wrong-path 404 has `type: not_found_error`
+    // but names no model, so it is the wrong-base-URL case.
+    const anthropicPath = http(404, { type: 'error', error: { type: 'not_found_error', message: 'Not Found' } });
+    expect(anthropicPath).toMatchObject({ kind: 'bad_request', message: 'Wrong base URL (Not Found)' });
   });
 
   it('row 7: 429 → rate_limit with Retry-After in ms', () => {

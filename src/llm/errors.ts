@@ -53,7 +53,9 @@ export interface HttpErrorInput {
   now?: () => number;
 }
 
-const MODEL_NOT_FOUND = /model .* not found/i;
+// A 404 message that names a model. Ollama: `model "x" not found`; OpenAI: "The model `x` does
+// not exist or you do not have access to it."; Anthropic: "model: claude-x".
+const MODEL_NOT_FOUND = /\bmodel\b.*\b(not found|does not exist)|^model: \S/i;
 const CONTEXT_LENGTH = /context[ _-]?(length|window)|prompt is too long|too many (input )?tokens|maximum context|reduce the length/i;
 const CREDIT_BALANCE = /credit balance/i;
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
@@ -75,7 +77,10 @@ export function classifyHttpError(input: HttpErrorInput): LLMError {
     return { ...base, kind: 'auth', message: 'Key invalid or missing' };
   }
   if (status === 404) {
-    if ((serverMessage !== undefined && MODEL_NOT_FOUND.test(serverMessage)) || type === 'not_found_error') {
+    // §4.3.5: model_not_found only when the message names a model. Deliberate deviation from S4
+    // row 5 (user decision M1-D7): `type: not_found_error` alone is not enough, because Anthropic
+    // sends it with "Not Found" for a wrong path too.
+    if (code === 'model_not_found' || (serverMessage !== undefined && MODEL_NOT_FOUND.test(serverMessage))) {
       return { ...base, kind: 'model_not_found', message: msg('Model not found') };
     }
     return { ...base, kind: 'bad_request', message: `Wrong base URL (${serverMessage ?? 'path not found'})` };
@@ -139,7 +144,7 @@ export interface FetchErrorInput {
   error: unknown;
   /** The job's AbortSignal had aborted: this is a cancel. */
   aborted: boolean;
-  /** Result of `ResolvedConnection.hasHostPermission` (true where there is none). */
+  /** Result of `ResolvedConnection.hasHostPermission`. */
   hasHostPermission: boolean;
   baseUrl: string;
 }

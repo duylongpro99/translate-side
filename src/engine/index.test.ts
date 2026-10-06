@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createBudget, createEngine, createPromptRegistry, defineStrategy, definePrompt, maxOutputTokens } from './index.ts';
-import type { EngineEvent, StageContext, TranslationJob } from './index.ts';
+import { createBudget, createEngine, createPromptRegistry, defineStage, defineStrategy, definePrompt, maxOutputTokens } from './index.ts';
+import type { EngineEvent, TranslationJob } from './index.ts';
 import { fakeClient, fakeSleep, success } from './testing.ts';
 
 describe('engine', () => {
@@ -19,10 +19,10 @@ describe('engine', () => {
       id: 'single-pass',
       version: 1,
       stages: [
-        {
+        defineStage<TranslationJob, never>({
           id: 'translate',
           scope: 'document',
-          async *run(job: TranslationJob, ctx: StageContext) {
+          async *run(job, ctx) {
             const c = ctx.llm('translate');
             let text = '';
             for await (const e of c.stream({ model: c.model, system: '', messages: [], maxOutputTokens: 10, signal: ctx.signal })) {
@@ -32,7 +32,7 @@ describe('engine', () => {
               yield { type: 'segment.final', id: s.id, text, revision: 1, producedBy: { strategy: 'single-pass', stage: 'translate', model: c.model } };
             }
           },
-        } as never,
+        }),
       ],
     });
     const engine = createEngine({ llm: () => client, now: () => 0, sleep: fakeSleep(), strategies: [strategy], prompts: createPromptRegistry([]) });

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createBudget } from './budget.ts';
 import { createWorkingMemory } from './memory.ts';
 import { createPromptRegistry } from './prompts/registry.ts';
-import { defineStrategy, isEngineEvent, runStages, type AnyStage } from './runner.ts';
+import { defineStage, defineStrategy, isEngineEvent, runStages, type AnyStage } from './runner.ts';
 import { fakeClient, success } from './testing.ts';
 import type { EngineEvent, Stage, StageContext, TranslationJob } from './types.ts';
 
@@ -35,7 +35,7 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
 const partial = (id: string): EngineEvent => ({ type: 'segment.partial', id, text: id });
 
 function stage<I, O>(id: string, scope: Stage<I, O>['scope'], run: Stage<I, O>['run']): AnyStage {
-  return { id, scope, run } as AnyStage;
+  return defineStage<I, O>({ id, scope, run });
 }
 
 describe('runStages', () => {

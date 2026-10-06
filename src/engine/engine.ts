@@ -32,6 +32,9 @@ export interface EngineDeps {
   random?: () => number;
 }
 
+/** Shown for segments left untranslated when a strategy fails unexpectedly. */
+export const DEGRADED_MESSAGE = 'Translation stopped because of an internal error';
+
 export function createEngine(deps: EngineDeps): TranslationEngine {
   const strategies = new Map(deps.strategies.map((s) => [s.id, s]));
 
@@ -57,10 +60,11 @@ export function createEngine(deps: EngineDeps): TranslationEngine {
       if (signal.aborted) throw signal.reason;
       // Graceful degradation (§5.6): segments with a good revision keep it (the panel already
       // shows it); the rest fail individually instead of the job failing.
-      const message = error instanceof Error ? error.message : String(error);
+      // The exception may be an internal bug text, so the user sees a generic message; the
+      // original stays in `raw`.
       for (const segment of job.doc.segments) {
         if (segment.translate && !ctx.memory.translated.has(segment.id) && !failed.has(segment.id)) {
-          yield { type: 'segment.failed', id: segment.id, error: { kind: 'unknown', message, raw: error } };
+          yield { type: 'segment.failed', id: segment.id, error: { kind: 'unknown', message: DEGRADED_MESSAGE, raw: error } };
         }
       }
     }

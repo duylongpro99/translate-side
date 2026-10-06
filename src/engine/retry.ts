@@ -1,6 +1,6 @@
 // Retry and backoff (DESIGN.md §4.3.5, plan M1 §5 "Retry owner"). The pipeline is the ONLY
 // retry owner: adapters run their SDKs with `maxRetries: 0` and yield one classified error
-// (src/llm/types.ts). The engine wraps each role's client once (engine.ts), and wrapping is
+// (src/llm/types.ts; their only resend is the §4.2.4 quirk flip on a 400, never a rate limit). The engine wraps each role's client once (engine.ts), and wrapping is
 // idempotent, so retries can't stack.
 
 import type { LLMClient, LLMError, NormalizedEvent, NormalizedRequest } from '../llm/types.ts';
@@ -60,13 +60,22 @@ export interface RetryOptions {
   onRetry?: (info: RetryInfo) => void;
 }
 
+type Usage = Extract<NormalizedEvent, { type: 'usage' }>;
+
+function addUsage(sum: Usage | undefined, next: Usage): Usage {
+  if (sum === undefined) return next;
+  const cached = sum.cachedInput === undefined && next.cachedInput === undefined ? {} : { cachedInput: (sum.cachedInput ?? 0) + (next.cachedInput ?? 0) };
+  return { type: 'usage', input: sum.input + next.input, output: sum.output + next.output, ...cached };
+}
+
 const retrying = new WeakSet<LLMClient>();
 
 /**
  * A client that retries `client` per the policy. Only an error that arrives before any text is
  * retried, because text already shown can't be taken back: a later error goes to the caller
- * (the `<seg>` repair path). Usage events of failed attempts are passed on (they may be billed).
- * Wrapping a client that already retries returns it unchanged.
+ * (the `<seg>` repair path). It keeps the stream contract (src/llm/types.ts): the `usage` of every
+ * attempt (failed ones may be billed) is summed into at most one `usage` event, sent just before
+ * the terminal event. Wrapping a client that already retries returns it unchanged.
  */
 export function withRetry(client: LLMClient, options: RetryOptions): LLMClient {
   if (retrying.has(client)) return client;
@@ -76,21 +85,38 @@ export function withRetry(client: LLMClient, options: RetryOptions): LLMClient {
     model: client.model,
     reasoningReserveTokens: client.reasoningReserveTokens,
     async *stream(req: NormalizedRequest): AsyncGenerator<NormalizedEvent> {
+      let usage: Usage | undefined;
       for (let retries = 0; ; retries++) {
         req.signal.throwIfAborted();
         let failure: LLMError | undefined;
         let sawText = false;
         for await (const event of client.stream(req)) {
+          if (event.type === 'usage') {
+            usage = addUsage(usage, event);
+            continue;
+          }
           if (event.type === 'error' && !sawText) {
             failure = event.error;
             break;
           }
-          if (event.type === 'text' && event.delta !== '') sawText = true;
+          if (event.type === 'text') {
+            if (event.delta !== '') sawText = true;
+            yield event;
+            continue;
+          }
+          // Terminal: done, or an error after text.
+          if (usage !== undefined) yield usage;
           yield event;
+          return;
         }
-        if (failure === undefined) return;
+        if (failure === undefined) {
+          // The inner stream ended without a terminal event (a broken adapter): keep the usage.
+          if (usage !== undefined) yield usage;
+          return;
+        }
         const decision = decideRetry(failure, retries, policy, random);
         if (decision.action !== 'retry') {
+          if (usage !== undefined) yield usage;
           yield { type: 'error', error: failure };
           return;
         }

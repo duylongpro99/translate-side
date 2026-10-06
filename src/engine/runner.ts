@@ -30,6 +30,14 @@ const EVENT_TYPES = new Set<string>([
   'done',
 ] satisfies EngineEventType[]);
 
+/**
+ * Types a stage literal (its `run` input and output are checked against `I` and `O`) and erases
+ * them for a strategy's stage list, so callers need no casts.
+ */
+export function defineStage<I, O>(stage: Stage<I, O>): AnyStage {
+  return stage as unknown as AnyStage;
+}
+
 export function isEngineEvent(value: unknown): value is EngineEvent {
   return typeof value === 'object' && value !== null && EVENT_TYPES.has((value as { type?: unknown }).type as string);
 }

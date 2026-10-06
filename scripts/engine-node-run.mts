@@ -1,7 +1,7 @@
 // Criterion 6 (plan M1 §3): the engine runs in plain Node, outside vitest, with only injected
 // ports (a real setTimeout sleep, Date.now) and a scripted LLMClient. One rate limit is retried.
 // Run: pnpm run engine:node   (Node type stripping; Node >= 22.18)
-import { createEngine, createPromptRegistry, defineStrategy, type StageContext, type TranslationJob } from '../src/engine/index.ts';
+import { createEngine, createPromptRegistry, defineStage, defineStrategy, type TranslationJob } from '../src/engine/index.ts';
 import { fakeClient, rateLimited, success } from '../src/engine/testing.ts';
 
 const client = fakeClient([[rateLimited(5)], success('xin chào')]);
@@ -9,10 +9,10 @@ const strategy = defineStrategy({
   id: 'single-pass',
   version: 1,
   stages: [
-    {
+    defineStage<TranslationJob, never>({
       id: 'translate',
       scope: 'document',
-      async *run(job: TranslationJob, ctx: StageContext) {
+      async *run(job, ctx) {
         const c = ctx.llm('translate');
         let text = '';
         for await (const e of c.stream({ model: c.model, system: '', messages: [], maxOutputTokens: 10, signal: ctx.signal })) {
@@ -22,7 +22,7 @@ const strategy = defineStrategy({
           yield { type: 'segment.final', id: s.id, text, revision: 1, producedBy: { strategy: 'single-pass', stage: 'translate', model: c.model } };
         }
       },
-    } as never,
+    }),
   ],
 });
 const sleep = (ms: number, signal: AbortSignal): Promise<void> =>

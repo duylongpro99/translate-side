@@ -4,7 +4,7 @@
 import type { LLMClient, LLMError, NormalizedEvent, NormalizedRequest } from '../llm/types.ts';
 
 export interface FakeClient extends LLMClient {
-  /** Every request, one entry per `stream()` call (= one attempt: adapters don't retry). */
+  /** Every request, one entry per `stream()` call (= one attempt: adapters don't retry; this fake never quirk-flips). */
   readonly requests: NormalizedRequest[];
 }
 

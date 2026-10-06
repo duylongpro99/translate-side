@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { ModelRole, NormalizedEvent } from '../llm/types.ts';
-import { createEngine, type EngineDeps } from './engine.ts';
+import { DEGRADED_MESSAGE, createEngine, type EngineDeps } from './engine.ts';
 import { createPromptRegistry } from './prompts/registry.ts';
 import { DEFAULT_RETRY_POLICY, withRetry } from './retry.ts';
-import { defineStrategy, type AnyStage } from './runner.ts';
+import { defineStage, defineStrategy, type AnyStage } from './runner.ts';
 import { fakeClient, fakeSleep, rateLimited, success, type FakeClient } from './testing.ts';
-import type { EngineEvent, Segment, Stage, StageContext, Strategy, TranslationJob } from './types.ts';
+import type { EngineEvent, Segment, StageContext, Strategy, TranslationJob } from './types.ts';
 
 const seg = (id: string, translate = true): Segment => ({ id, kind: 'p', text: id, inlineMarkup: id, domPath: `p[${id}]`, translate });
 
@@ -41,7 +41,7 @@ async function collect(stream: AsyncIterable<EngineEvent>): Promise<EngineEvent[
 
 /** A translate-like stage: one model call per chunk, the text becomes the segment's final text. */
 function callStage(onEvents?: (events: NormalizedEvent[], ctx: StageContext) => void): AnyStage {
-  const s: Stage<Segment[], never> = {
+  return defineStage<Segment[], never>({
     id: 'translate',
     scope: 'chunk',
     role: 'translate',
@@ -60,17 +60,16 @@ function callStage(onEvents?: (events: NormalizedEvent[], ctx: StageContext) => 
       const usage = events.find((e) => e.type === 'usage');
       if (usage?.type === 'usage') yield { type: 'usage', role: 'translate', model: client.model, input: usage.input, output: usage.output };
     },
-  };
-  return s as AnyStage;
+  });
 }
 
-const chunker: AnyStage = {
+const chunker = defineStage<TranslationJob, Segment[][]>({
   id: 'chunk',
   scope: 'document',
-  async *run(j: TranslationJob) {
+  async *run(j) {
     yield j.doc.segments.map((s) => [s]);
   },
-} as AnyStage;
+});
 
 describe('criterion 7: a rate limit is retried by exactly one owner', () => {
   // The adapter side (SDK maxRetries: 0) is re-verified in Phase C when the real adapter exists.
@@ -81,16 +80,16 @@ describe('criterion 7: a rate limit is retried by exactly one owner', () => {
     const sleep = fakeSleep();
     // Two layers try to add retries on top: a stage that wraps its client again, and a role
     // client that the shell already wrapped. Neither may multiply the attempts.
-    const doubleWrapStage: AnyStage = {
+    const doubleWrapStage = defineStage<TranslationJob, never>({
       id: 'translate',
       scope: 'document',
-      async *run(_j: TranslationJob, ctx: StageContext) {
+      async *run(_j, ctx) {
         const client = withRetry(withRetry(ctx.llm('translate'), { sleep }), { sleep });
         for await (const e of client.stream({ model: client.model, system: 's', messages: [], maxOutputTokens: 1, signal: ctx.signal })) {
           if (e.type === 'error') yield { type: 'segment.failed', id: 'a', error: e.error };
         }
       },
-    } as AnyStage;
+    });
     const engine = createEngine(deps({ translate: adapter }, [defineStrategy({ id: 'test', version: 1, stages: [doubleWrapStage] })], sleep));
     const events = await collect(engine.translate(job([seg('a')]), new AbortController().signal));
 
@@ -112,17 +111,26 @@ describe('criterion 7: a rate limit is retried by exactly one owner', () => {
     expect(events.filter((e) => e.type === 'segment.final').map((e) => e.type === 'segment.final' && e.text)).toEqual(['vi:a']);
   });
 
+  it('a stage sees one usage event: the failed attempt\'s usage is summed with the real one', async () => {
+    const adapter = fakeClient([[{ type: 'usage', input: 7, output: 0 }, rateLimited(2000)], success('ok')]);
+    const seen: NormalizedEvent[][] = [];
+    const engine = createEngine(deps({ translate: adapter }, [defineStrategy({ id: 'test', version: 1, stages: [chunker, callStage((e) => seen.push(e))] })]));
+    const events = await collect(engine.translate(job([seg('a')]), new AbortController().signal));
+    expect(seen).toEqual([[{ type: 'text', delta: 'ok' }, { type: 'usage', input: 17, output: 5 }, { type: 'done', stopReason: 'end' }]]);
+    expect(events.filter((e) => e.type === 'usage')).toEqual([{ type: 'usage', role: 'translate', model: 'fake-model', input: 17, output: 5 }]);
+  });
+
   it('every role client the engine hands out is the same retrying wrapper', async () => {
     const adapter = fakeClient([success('ok')]);
     const clients: unknown[] = [];
-    const probe: AnyStage = {
+    const probe = defineStage<TranslationJob, never>({
       id: 'probe',
       scope: 'document',
-      async *run(_j: TranslationJob, ctx: StageContext) {
+      async *run(_j, ctx) {
         clients.push(ctx.llm('translate'), ctx.llm('translate'));
         yield* [];
       },
-    } as AnyStage;
+    });
     const engine = createEngine(deps({ translate: adapter }, [defineStrategy({ id: 'test', version: 1, stages: [probe, probe] })]));
     await collect(engine.translate(job([]), new AbortController().signal));
     expect(new Set(clients).size).toBe(1);
@@ -182,6 +190,8 @@ describe('createEngine', () => {
     const events = await collect(engine.translate(job([seg('a'), seg('b'), seg('c'), seg('code', false)]), new AbortController().signal));
     const failed = events.filter((e) => e.type === 'segment.failed');
     expect(failed.map((e) => e.type === 'segment.failed' && [e.id, e.error.kind])).toEqual([['b', 'overloaded'], ['c', 'unknown']]);
+    // The bug text is not shown to the user; it stays in `raw`.
+    expect(failed[1]).toMatchObject({ error: { message: DEGRADED_MESSAGE, raw: expect.objectContaining({ message: 'stage bug' }) } });
     expect(events.at(-1)).toEqual({ type: 'done' });
   });
 
