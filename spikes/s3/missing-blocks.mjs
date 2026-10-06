@@ -3,7 +3,7 @@ import fs from 'node:fs'; import { JSDOM } from 'jsdom';
 import { flattenShadow } from './analyze-lib.mjs'; import { norm, textOf } from './text.mjs';
 import { walk, NOISE } from './walk.mjs'; import { stripInContent, detectGenerator } from './noise-selectors.mjs';
 const M = JSON.parse(fs.readFileSync('../../fixtures/sites/manifest.json', 'utf8'));
-const N = JSON.parse(fs.readFileSync('noise.json', 'utf8'));
+const N = JSON.parse(fs.readFileSync('../../fixtures/noise.json', 'utf8'));
 const [slug, variant = 'W+G'] = process.argv.slice(2);
 const load = () => { const d = new JSDOM(fs.readFileSync(`../../fixtures/sites/${slug}.html`, 'utf8'), { url: M[slug].finalUrl }).window.document; flattenShadow(d); return d; };
 const d0 = load(); const truth = d0.querySelector(M[slug].contentSelector).cloneNode(true); truth.querySelectorAll(NOISE).forEach((e) => e.remove());

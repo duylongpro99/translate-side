@@ -5,7 +5,7 @@ import { flattenShadow } from './analyze-lib.mjs'; import { norm, textOf, shingl
 import { walk, NOISE } from './walk.mjs'; import { stripInContent, detectGenerator } from './noise-selectors.mjs';
 const DIR = '../../fixtures/sites';
 const M = JSON.parse(fs.readFileSync(`${DIR}/manifest.json`, 'utf8'));
-const N = JSON.parse(fs.readFileSync('noise.json', 'utf8'));
+const N = JSON.parse(fs.readFileSync('../../fixtures/noise.json', 'utf8'));
 // Occurrences of an item = outermost elements whose whole text equals it.
 function count(root, text) {
   let n = 0;

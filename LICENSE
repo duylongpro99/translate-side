@@ -25,7 +25,7 @@ SOFTWARE.
 This license does not cover the files under fixtures/, nor any non-code file
 under spikes/s2 and spikes/s3 (everything there except *.mjs and package*.json),
 which hold fixture-derived text and translations (e.g. spikes/s2/chunks*.json,
-spikes/s2/runs/, spikes/s2/results.md, spikes/s3/noise.json, noise.md,
+spikes/s2/runs/, spikes/s2/results.md, spikes/s3/noise.md,
 results-*.json, walk-extra.json, structure.md and why-headings-fix.txt). The fixtures are third-party web pages
 kept as test fixtures under their own licenses, and that text and its
 translations stay under those licenses; see fixtures/sites/ATTRIBUTION.md for

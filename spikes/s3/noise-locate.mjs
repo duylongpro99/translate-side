@@ -2,7 +2,7 @@
 import fs from 'node:fs'; import { JSDOM } from 'jsdom';
 import { flattenShadow } from './analyze-lib.mjs'; import { norm, textOf } from './text.mjs'; import { walk } from './walk.mjs';
 const M = JSON.parse(fs.readFileSync('../../fixtures/sites/manifest.json', 'utf8'));
-const N = JSON.parse(fs.readFileSync('noise.json', 'utf8'));
+const N = JSON.parse(fs.readFileSync('../../fixtures/noise.json', 'utf8'));
 const desc = (e) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (e.className && typeof e.className === 'string' ? '.' + e.className.trim().split(/\s+/).slice(0, 3).join('.') : '') +
   [...e.attributes].filter((a) => /^(role|aria-|data-(testid|component|link-name|gu-name)|hidden)/.test(a.name)).map((a) => `[${a.name}=${a.value.slice(0, 30)}]`).join('');
 for (const [slug, items] of Object.entries(N)) {

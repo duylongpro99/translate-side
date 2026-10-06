@@ -46,4 +46,4 @@ opens these files. jsdom does not: there they are plain `<template>` elements. T
 - Network hints are stripped, so no prefetch storm. Docusaurus had 882 prefetch links before scrubbing.
 
 Re-capture: `cd spikes/s3 && npm i && node capture.mjs [slug] && node attribution.mjs`. Pages change, so
-re-capturing changes snapshots, and the hand-labelled noise list in `spikes/s3/noise.json` has to be re-checked.
+re-capturing changes snapshots, and the hand-labelled noise list in `fixtures/noise.json` has to be re-checked.
