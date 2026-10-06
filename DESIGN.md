@@ -31,7 +31,7 @@ Status: draft v0.1 (2026-10-05)
 
 | Topic | Finding | Implication |
 |---|---|---|
-| Chrome side panel | `chrome.sidePanel` (MV3, Chrome 114+) renders an extension page in Chrome's own side panel. It can be enabled per tab, opened from the toolbar via `setPanelBehavior`, and has full extension API access. Per-tab close landed in Chrome 141. | Primary UI surface. |
+| Chrome side panel | `chrome.sidePanel` (MV3, Chrome 114+) renders an extension page in Chrome's own side panel. It can be enabled per tab, opened from the toolbar via `setPanelBehavior` or from a user gesture via `sidePanel.open()` (this extension uses the latter: `action.onClicked` → `sidePanel.open`, decision S5), and has full extension API access. Per-tab close landed in Chrome 141. | Primary UI surface. |
 | Firefox | Uses `sidebar_action`, which doesn't work with Chrome's API. | Use **WXT** (a cross-browser extension framework) to abstract over both, and target Chrome first. |
 | Chrome built-in AI | The Translator, Language Detector, and Prompt API (Gemini Nano) are stable in Chrome 138–148 on desktop. They run on-device, cost nothing, and work offline, but need capable hardware. | Use **Language Detector** to detect the source language for free. **Translator API** is an offline/free fallback, but its quality is close to classic machine translation (literal). The Prompt API (Nano) can be an experimental local option. |
 | Light cloud LLMs | Claude Haiku 4.5 costs $1 / $5 per 1M input/output tokens, with a 200K context window, streaming, and prompt caching. Other light options: Gemini Flash-Lite and GPT-mini class models, all available through OpenAI-compatible endpoints. | Default provider: Claude Haiku 4.5. Second adapter: "OpenAI-compatible", which covers OpenRouter, Gemini, Ollama, and LM Studio. |
@@ -248,9 +248,9 @@ When a request fails with a `bad_request` whose message names a parameter (e.g. 
 not supported"), the adapter flips that flag, retries once, and saves the learned quirk on the
 connection. Users never see this unless it keeps failing.
 
-The gpt-oss preset's `reasoning` is `{ control: "effort", lowest: "low", reserveTokens: 256 }` (S2).
+For gpt-oss models (S2), `reasoning` is `{ control: "effort", lowest: "low", reserveTokens: 256 }`.
 For a model whose thinking can be switched off, the lowest setting is `"off"` and the reserve is 0.
-Values for other presets come from their own measurements.
+Values for other models come from their own measurements.
 
 #### 4.2.5 Auto-detect for custom endpoints
 For a **Custom** connection, the user can pick the protocol, or leave it on **Auto-detect**.
@@ -420,9 +420,11 @@ model"). The choice applies to this tab only. The default routing stays the same
   `routing.translate`.
 - **Classify errors** in the adapter (decision S4). Match on status and message, never on
   `content-type`:
-  - Before `fetch`, validate the base URL (`http(s)`, non-empty host) and that the key is
-    header-safe.
-  - `401`, and `403` unless the CORS rule applies (auth): stop, mark the connection `error`, and
+  - Before `fetch`, validate the base URL (`http(s)`, non-empty host; else `bad_request`) and
+    that the key is header-safe (else `auth`).
+  - `403` with auth `none` on a localhost base URL → `cors` (`cause: "origin"`): show the
+    **[Fix…]** guide (§4.3.6). Kept from the plan default; untested (S4).
+  - `401`, and `403` unless the CORS rule above applies (auth): stop, mark the connection `error`, and
     show "Fix key" in the panel. Don't fall back silently, because that would send content to a
     different provider than you chose.
   - A `fetch` `TypeError` while the connection's host permission is not held → `cors`
@@ -431,8 +433,8 @@ model"). The choice applies to this tab only. The default routing stays the same
     server's message.
   - `404` → `model_not_found` when the message names a model, else "wrong base URL".
   - The quirk flip runs on status `400` only.
-  - `429` (rate limit; honor `Retry-After`) or `5xx`/network errors: retry with backoff, then move to the next
-    `fallback` profile. The panel shows which model translated each block (a small badge).
+  - `429` (rate limit; honor `Retry-After`) or `5xx`/network errors: retry with backoff, then
+    move to the next `fallback` profile. The panel shows which model translated each block (a small badge).
   - `context/length` errors: shrink `chunkTokens` and retry.
 - **Privacy rule for fallback**: a site rule marked *local only* never falls back to a cloud
   provider.
@@ -771,8 +773,7 @@ viewport comes first, you can start reading almost immediately.
 - Never auto-translate by default. Allowlisting a site grants an optional host permission for it,
   so the extension can re-inject on navigation; on allowlisted sites the open panel translates
   each new page automatically. The panel cannot be opened without a user gesture (decision S5).
-  A built-in denylist
-  (banking, mail, `chrome://`, password fields) is never sent.
+  A built-in denylist (banking, mail, `chrome://`, password fields) is never sent.
 - **Prompt injection**: page content is untrusted. It's wrapped in `<seg>` tags, the system
   prompt says it's data, and the output is only ever **rendered as text** (sanitized, no HTML
   injection). The model has no tools, so the worst a hostile page can do is cause a bad

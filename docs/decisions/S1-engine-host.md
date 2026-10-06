@@ -175,4 +175,4 @@ mid-page failures. The panel host removes that whole class of problem (finding 6
    - New: the same text, plus "; re-injected on navigation while the `activeTab` grant or a site permission holds
      (decision S5)".
 
-Who and when: the supervisor puts these to the user together with the S3/S5 spec changes, after Phase B acceptance.
+Approved by the user on 2026-10-05 together with the S3/S5 spec changes, and applied in b10a1c0.

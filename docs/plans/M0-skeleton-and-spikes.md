@@ -25,7 +25,7 @@ side panel page. Answering them now is cheap. Answering them after M1 means rewr
 
 | # | Check | Target |
 |---|---|---|
-| 1 | Fixture sites with no UI noise in segments, judged against the hand-checked list `spikes/s3/noise.json`, with M0-E5's generic + per-site cleanup selectors (decision S3) | ≥ 8 of 10 |
+| 1 | Fixture sites with no UI noise in segments, judged against the hand-checked list `spikes/s3/noise.json` (moves to `fixtures/` with M0-E8), with M0-E5's generic + per-site cleanup selectors (decision S3) | ≥ 8 of 10 |
 | 2 | Fixture sites with all code blocks intact and marked do-not-translate | 10 of 10 |
 | 3 | Segment ids stable across two extractions of the same page | 100% |
 | 4 | Panel opens on `chrome://` / Web Store pages with a clear "can't read this page" state, no crash | yes |
@@ -45,11 +45,11 @@ side panel page. Answering them now is cheap. Answering them after M1 means rewr
 | Decision | Input | Recommended default |
 |---|---|---|
 | UI framework (Preact or Svelte) | M0-E1 | Preact: smaller learning surface with TS, easy signals for streaming state. Pick once. |
-| Engine host | S1 | **Side panel page** (ROADMAP §8 item 2). It lives as long as a translation is needed, so no suspension or resume machinery. Choose the worker only if S1 shows keepalive is trivially reliable. |
-| `<seg>` grammar and repair policy | S2 | Strict `<seg id="N">` with lenient fallback; retry only missing segments; treat `max_tokens` cut as "re-request open segment". |
+| Engine host | S1 | Decided (S1): **side panel page**. An open Port does not keep the worker alive; the worker is a coordinator only (DESIGN §4.1). |
+| `<seg>` grammar and repair policy | S2 | Decided (S2, option C): lenient v1 grammar everywhere; close-by-lookahead grammar plus a per-chunk nonce only on chunks whose source holds literal tags; one-round repair; no escaping; output budget formula (DESIGN §5.7). |
 | Extraction policy | S3 | Decided (S3): `main`/`article`/`[role=main]` walk first, with generic + per-site cleanup selectors; Readability as the fallback when the walk finds no container or too little text; then the selection hint. |
-| Ollama 403 classification | S4 | `403` + auth `none` + localhost → `cors` (ROADMAP §8 item 5). |
-| Navigation and permissions | S5 | Allowlisting a site requests an optional host permission for re-injection; "auto-open" becomes "auto-translate when the panel is already open" (§8 item 6). |
+| Ollama 403 classification | S4 | Decided (S4): pre-fetch checks; `fetch` `TypeError` without host permission → `cors` (`cause: "permission"`); new `quota` kind; the local `403` + auth `none` → `cors` rule kept, untested (DESIGN §4.3.5). |
+| Navigation and permissions | S5 | Decided (S5): (a) `action.onClicked` → `sidePanel.open` with optional `http://*/*` too; (c) `Alt+T` opens only in M0; allowlisting a site requests an optional host permission for re-injection; "auto-open" becomes "auto-translate when the panel is already open". |
 | `minimum_chrome_version` | S5, S8 | 138, with features gated by availability checks rather than version (§8 item 18). |
 
 S6–S8 (prompt caching on Haiku, SDKs in the extension, Chrome built-in availability) are
@@ -65,7 +65,8 @@ before the shell wiring hardens.
   The boundary rule matters most: `engine/` may not import `chrome`, `wxt/*`, DOM types or
   `llm/` implementations.
 - M0-E2 Manifest and entrypoints: `sidePanel`, `storage`, `activeTab`, `scripting`,
-  `contextMenus`; `optional_host_permissions`; `Alt+T` command; `setPanelBehavior`.
+  `contextMenus`; `optional_host_permissions`; `Alt+T` command; `action.onClicked` → `sidePanel.open`
+  with `openPanelOnActionClick: false` (decision S5).
 
 **Sub-goal B — retire the architecture risks (weeks 1–2, time-boxed 1–2 days each)**
 - S1 worker suspension during streaming → engine host decision.
@@ -76,9 +77,10 @@ before the shell wiring hardens.
 
 **Sub-goal C — clean segments in the panel (weeks 2–3)**
 - M0-E3 Injection under `activeTab`, handling "already injected" and "cannot inject here".
-- M0-E4 Typed, versioned Port protocol (content ⇄ worker ⇄ panel), tab-scoped routing.
-- M0-E5 Extraction on a cloned DOM, with the poor-result fallback; denylisted origins never
-  extracted.
+- M0-E4 Typed, versioned Port protocol (content ⇄ panel directly via `tabs.connect`; the worker
+  handles action, injection and tab lifecycle; decision S1), tab-scoped routing.
+- M0-E5 Extraction: walk first with generic + per-site cleanup selectors, Readability fallback,
+  then the selection hint (decision S3); denylisted origins never extracted.
 - M0-E6 Segmenter: kinds, inline markers (`[link]…[/link]`, backticks, `*…*`), `domPath`,
   stable ids (hash of path + text), and **`groupId` for table rows** (§8 item 12).
 - M0-E7 Panel renders originals by kind; loading/empty/error states; dev-only segment view.

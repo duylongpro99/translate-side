@@ -94,7 +94,7 @@ Modules: `entrypoints/{background,content,sidepanel,options}`, `shared/messaging
 - M0-E1 Project setup: WXT, TS strict, UI framework choice, Vitest, ESLint + boundary rule, CI (lint, typecheck, unit).
 - M0-E2 Manifest and entrypoints: action click and `Alt+T` open the panel for the tab (`action.onClicked` → `sidePanel.open`, with `openPanelOnActionClick: false`; decision S5), context menu entry stub, options page stub.
 - M0-E3 Injection: on panel open, inject the content script with `chrome.scripting` under `activeTab`; handle "already injected" and "cannot inject here" (`chrome://`, Web Store).
-- M0-E4 Messaging: typed Port protocol, request/response helpers, tab-scoped routing in the worker.
+- M0-E4 Messaging: typed Port protocol, request/response helpers, tab-scoped routing; content ⇄ side panel directly via `tabs.connect`, the worker only for action, injection and tab lifecycle (decision S1).
 - M0-E5 Extraction: shadow-composed clone; `main`/`article`/`[role=main]` walk with in-content noise rules (generic + per-site cleanup selectors) and visibility filter; Readability fallback (decision S3); denylisted origins never extracted.
 - M0-E6 Segmenter: block kinds, inline marker conversion, `domPath`, stable ids across re-extraction (hash of path + text), table-row grouping field (`groupId`).
 - M0-E7 Panel: render originals by kind, loading/empty/error states, settings gear placeholder.
@@ -388,7 +388,7 @@ click per page, which is the difference between MVP and annoyance for the main u
 - Quality on small local models: `<seg>` compliance and glossary adherence drop sharply below ~7B. Mitigation: `single-pass` with smaller chunks for local presets, measured in M4 with the harness.
 - `chrome.storage.sync` quota (100 KB total, 8 KB per item) with a growing glossary and site rules. Mitigation in M6-E6.
 - Chrome Web Store review of wildcard optional host permissions. Mitigation: clear justification and request only on user action (already the design).
-- Cost surprises with target languages that expand 1.5–2×. Mitigation: `maxOutputTokens` multiplier per language from S2, soft limit in M4-E10.
+- Cost surprises with target languages that expand 1.5–2×. Mitigation: S2's output budget formula (no per-language multiplier needed for vi/de/ja; DESIGN §5.7), soft limit in M4-E10.
 
 ## 5. MVP and v1.0 cuts
 
@@ -423,9 +423,9 @@ if S8 shows it is reliable; otherwise it moves to v1.1 and onboarding offers two
 
 Ordered by how early they bite.
 
-1. **Who chunks and who builds prompts.** §4 and §4.1 put the chunker, prompt builder and the viewport-priority queue in the service worker; §5.1 says the shell never builds prompts and §5.3 makes `chunk` a stage inside the strategy. **Resolution:** the engine owns chunking, prompt building and chunk ordering (it already receives `priority: string[]`); the shell owns per-tab job lifecycle and passes `maxConcurrency` and `chunkTokens` into the job (`TranslationJob.options` or `Budget`). Update the §4 diagram.
+1. **Who chunks and who builds prompts.** **Resolved by S1** (`docs/decisions/S1-engine-host.md`): the engine, with the chunker and prompt builder, runs in the side panel; DESIGN §4 updated. §4 and §4.1 put the chunker, prompt builder and the viewport-priority queue in the service worker; §5.1 says the shell never builds prompts and §5.3 makes `chunk` a stage inside the strategy. **Resolution:** the engine owns chunking, prompt building and chunk ordering (it already receives `priority: string[]`); the shell owns per-tab job lifecycle and passes `maxConcurrency` and `chunkTokens` into the job (`TranslationJob.options` or `Budget`). Update the §4 diagram.
 
-2. **MV3 suspension vs. an engine in the worker.** §4.1 relies on a Port keeping the worker alive during streams. An idle open Port does not reliably prevent termination, and reading a fetch body is not an extension event. Spike S1; the likely outcome is running the engine in the side panel page. The design should name the host of the engine explicitly either way.
+2. **MV3 suspension vs. an engine in the worker.** **Resolved by S1** (`docs/decisions/S1-engine-host.md`): an open Port does not keep the worker alive, so the engine runs in the side panel page. §4.1 relies on a Port keeping the worker alive during streams. An idle open Port does not reliably prevent termination, and reading a fetch body is not an extension event. Spike S1; the likely outcome is running the engine in the side panel page. The design should name the host of the engine explicitly either way.
 
 3. **`chrome-builtin` cannot implement `ProtocolAdapter.stream(NormalizedRequest)`.** The Translator API takes no prompt, so §4.2.2's `chrome-builtin` column mixes two different things: Nano (`LanguageModel`, fits the contract) and Translator (does not). Also `Routing.fallback: [ollama, chrome-builtin]` is a list of *profiles*, but falling back to Translator requires switching *strategy* to `basic`. **Resolution:** a separate `MTClient` port (`translate(text, from, to)`) used only by the `basic` strategy; the fallback chain allows a terminal `basic` entry that switches strategy, not just model.
 
