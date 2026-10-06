@@ -1,0 +1,11 @@
+{"ev":"action.onClicked (toolbar or Alt+T)","t":"11:08:40 AM"}
+{"ev":"inject OK","t":"11:08:40 AM","url":"https://www.wikipedia.org/","why":"action"}
+{"ev":"inject OK","t":"11:08:47 AM","url":"https://www.wikipedia.org/","why":"panel button (no new grant)"}
+{"ev":"sidePanel.open OK","t":"11:09:07 AM","why":"context menu"}
+{"ev":"inject OK","t":"11:09:07 AM","url":"https://www.wikipedia.org/","why":"context menu"}
+
+4.Press Alt+Shift+Y, nothing happened
+{"ev":"openPanelOnActionClick = true","t":"11:09:54 AM"}
+5. toolbar icon did not toggle it closed, Press **Alt+T** -> panel no open -> Click **probe active tab now**
+{"err":"Cannot access contents of the page. Extension manifest must request permission to access the respective host.","ev":"inject FAIL","t":"11:11:50 AM","why":"panel button (no new grant)"}
+6.

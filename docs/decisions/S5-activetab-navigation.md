@@ -1,6 +1,6 @@
 # S5 — `activeTab` and navigation → permission and allowlist design
 
-Status: **user decisions 2026-10-05 recorded** (deviation (a) approved with `http://*/*`; (c) open-only in M0; R1 pause on tab switch); manual checklist still pending; amended after review round 1 · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS) · Spike code: `spikes/s5/`
+Status: **user decisions 2026-10-05 recorded** (deviation (a) approved with `http://*/*`; (c) open-only in M0; R1 pause on tab switch); manual checklist run 2026-10-06 (rows 1, 3, 5 confirm the decision); amended after review round 1 · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS) · Spike code: `spikes/s5/`
 
 ## Question
 
@@ -89,7 +89,7 @@ click **toggles the panel closed** (`panel-UNLOAD` 0.4 s after the click).
 
 `chrome.sidePanel.close` and `chrome.sidePanel.getLayout` are both `function`.
 
-### Manual check still open: `Alt+T` and the context menu
+### Manual check: `Alt+T` and the context menu (run 2026-10-06)
 
 CDP can neither press browser-level shortcuts nor click context-menu items, so these two paths weren't automated.
 `spikes/s5/manual-ext/README.md` is a 2-minute checklist with a logging extension. It covers `Alt+T` with
@@ -98,7 +98,21 @@ CDP can neither press browser-level shortcuts nor click context-menu items, so t
 Expected result: `_execute_action` is documented as equivalent to clicking the action, and `Extensions.triggerAction`
 followed the normal action path here (it fired `onClicked` and granted `activeTab` in `onclicked` mode). So `Alt+T`
 should behave exactly like the toolbar rows above, in both modes. Context-menu clicks and named commands are documented
-`activeTab` grants. **Unverified until someone runs the checklist.**
+`activeTab` grants.
+
+**Result (user, 2026-10-06; log in `spikes/s5/results/manual.txt`):**
+
+| Row | Expected | Result |
+|---|---|---|
+| 1 `Alt+T`, behavior off | opened, inject OK | `action.onClicked` fired, inject OK. Confirms deviation (a). |
+| 2 cross-origin move, probe | inject FAIL | Not tested: the probe ran on the same origin (OK, as expected there). Cross-origin loss is covered by the automated runs. |
+| 3 context menu | opened, inject OK | `sidePanel.open OK`, inject OK. |
+| 4 `Alt+Shift+Y` (named command) | inject OK | Nothing fired, most likely the suggested key wasn't bound (`chrome://extensions/shortcuts`). The product uses no named command. |
+| 5 behavior on, new site, `Alt+T`, probe | opened, inject FAIL | inject FAIL: `Alt+T` grants no `activeTab` under `openPanelOnActionClick: true`. The panel was likely still open, since the toolbar icon did not toggle it closed. |
+| 6–8 | — | Not run. Row 6 (toolbar click, behavior on) is covered by the automated `triggerAction` runs. |
+
+Rows 1, 3 and 5 match the decision. Spec change 7 is applied with the `Alt+T` sentence. The toolbar not toggling the
+panel closed with behavior on doesn't affect M0, which is open-only (deviation (c)).
 
 ## Decision
 
@@ -110,7 +124,7 @@ should behave exactly like the toolbar rows above, in both modes. Context-menu c
 - **Deviation (c): open-only in M0** (option 1). The panel closes with its own X. The toggle is revisited in M5.
 - **R1, jobs under the global panel: pause on tab switch.** Only the active tab's job schedules chunks. This is
   formalized in M1 (see Consequences).
-- **Spec change 7** (ROADMAP §8 item 6) stays conditional on the manual checklist, as written.
+- **Spec change 7** (ROADMAP §8 item 6) was conditional on the manual checklist; row 5 confirmed it, and it is applied.
 
 1. **Do not use `setPanelBehavior({ openPanelOnActionClick: true })`.** It opens the panel without granting
    `activeTab` and without firing `action.onClicked`, so the extension can never read the page it opened on. Use
@@ -240,14 +254,14 @@ when the panel is already open"; `minimum_chrome_version` 138.
 - **Runtime grant.** "Host permission granted" was emulated with install-time `host_permissions`, so re-injection after a
   **runtime** grant is not directly verified. The runtime-grant run (with the user's manual "Allow") showed the same
   `permissions.getAll()` result, but its post-grant probe ran on a different origin.
-- `Extensions.triggerAction` stands in for a real toolbar click. A real click, `Alt+T` and the context menu are in the
-  manual checklist, which hasn't been run yet.
+- `Extensions.triggerAction` stands in for a real toolbar click. `Alt+T` and the context menu were checked manually
+  on 2026-10-06 (rows 1, 3, 5); rows 2 and 6–8 were not run.
 - Global panel only. Tab-specific panels (`sidePanel.setOptions({ tabId, path })`) were not tested. They aren't needed
   under the S1 decision (one panel document per window hosts the per-tab jobs).
 
 ## Proposed spec changes
 
-**Changes 1–6 applied in 708be37** (user decisions 2026-10-05). **Change 7: pending the manual checklist** (rows 5/6).
+**Changes 1–6 applied in 708be37** (user decisions 2026-10-05). **Change 7 applied 2026-10-06** after the manual check (row 5 confirms the `Alt+T` sentence).
 
 1. **DESIGN.md §7, line 716.**
    - Old: "site rules (auto-open / never translate)"
