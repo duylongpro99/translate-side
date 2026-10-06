@@ -363,7 +363,9 @@ Every rule, in the order the parser applies it:
 **Events and timing** (compared with DESIGN §5.7 Step 3, "emits each segment as soon as its `</seg>` arrives"):
 
 - `segment.partial` is emitted as text arrives, except for the held-back `<…` prefix (at most 40 chars).
-- `segment.final` is emitted **when the lookahead decides**, not on the `</seg>` itself. That is at the next
+- **v1 chunks (option C's default)** finalize at the `</seg>`, as DESIGN §5.7 Step 3 already says. The rest of this
+  bullet applies to **v2 chunks only** (chunks whose source holds literal tags).
+- On a v2 chunk, `segment.final` is emitted **when the lookahead decides**, not on the `</seg>` itself. That is at the next
   non-whitespace character, which is normally the next segment's `<seg id=…>`, a token or two later. For the **last
   segment**, `final` waits for the end of the stream. For a segment with a `close-in-text`, it waits for the next close
   that passes the lookahead, or for the end. The M1 port should state this in the DESIGN Step 3 sentence (spec change 1).
@@ -424,8 +426,6 @@ segments meets the same literal text, so these chunks can end in `segment.failed
   - **Isolation.** Send each segment with a hit as a chunk of its own, so a mis-parse costs one segment.
 - **User decision 2026-10-05 (option C): the nonce**, together with v2. Isolation stays the fallback if M1-E3's corpus
   and replay check shows that models don't copy the nonce reliably.
-- Choose between the two after a corpus and replay check in M1-E3. The nonce is the stronger fix, but it relies on
-  the model copying an attribute faithfully. That was not measured here.
 
 ### Output budget
 
@@ -544,7 +544,8 @@ Plan default: "Strict `<seg id="N">` with lenient fallback; retry only missing s
 1. **DESIGN §5.7 Step 3**, after "If that happens, retry just that segment.", add: "The parser grammar and repair policy
    are fixed by S2 (`docs/decisions/S2-seg-parser-grammar.md`). Tags are parsed leniently (quoting and case drift
    accepted), and every close tag closes. Chunks whose source holds literal `<seg`/`</seg>` text are detected before
-   sending. They get a per-chunk nonce attribute, and the close-by-lookahead grammar: a close tag closes only when
+   sending. They get a per-chunk nonce attribute (isolation if M1-E3 shows models don't copy it), and the
+   close-by-lookahead grammar: a close tag closes only when
    followed by an open tag or the end of output, an open tag inside a segment is text, and a segment is final when
    that lookahead decides. A repaired segment replaces the shown text
    in place (same revision, a new attempt; M1-E3 decides between an `attempt` counter and a `replace` flag, because
@@ -580,5 +581,6 @@ Plan default: "Strict `<seg id="N">` with lenient fallback; retry only missing s
    - `usage.reasoning?: number`, where the provider reports it separately (Ollama does not; S2 §5);
    - a `{ type: "progress" }` event, sent while the model reasons and no text has arrived. At medium effort that lasted
      54 s at the median (§5), so the panel needs some sign of life during it.
-5. **ROADMAP §2 S2 row, Output column**: append "Decided in S2: v2 close-by-lookahead grammar, one-round repair, no
-   escaping, budget formula instead of a per-language multiplier."
+5. **ROADMAP §2 S2 row, Output column**: append "Decided in S2: lenient v1 grammar, plus the close-by-lookahead
+   grammar and a nonce for chunks with literal tags (option C); one-round repair; no escaping; budget formula instead
+   of a per-language multiplier."

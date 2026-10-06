@@ -35,8 +35,10 @@ Plan §5 default: "Readability first; 'poor result' heuristic (text ratio, lost 
   (`article.markdown-body`), with the doctype, `<base>`, charset, viewport and title (`spikes/s3/cut-github.mjs`).
   The github.com page markup around it is GitHub's, not covered by bat's license, so it is gone. The 30 open shadow
   roots were all in that page markup, so the fixture now has none. Every S3 number was re-scored after the cut. Three
-  changed, all on GitHub: walk / body text 0.84 → 1.00; whole-page-in-`main` control precision 92% → 100%, link
-  density 0.11 → 0.04 (`policy.md`, `thresholds.mjs`). The S2 chunk files did not change.
+  GitHub numbers changed from the cut: walk / body text 0.84 → 1.00; whole-page-in-`main` control precision
+  92% → 100%, link density 0.11 → 0.04 (`policy.md`, `thresholds.mjs`). Global Voices changed in the same re-score,
+  from the tester's added label ("বাংলা"), not from the cut: noise items 49 → 50, W 14.5% → 14.6% of output chars,
+  upper bound W 60 → 63, W+G+S 8 → 10 (`noise.md`). The S2 chunk files did not change.
 
   Authors, history links and changes are in `fixtures/sites/ATTRIBUTION.md`. There is also a `license` field per
   fixture in `manifest.json`.
@@ -243,7 +245,7 @@ The two methods fail differently:
 - **The walk keeps everything and adds UI noise.** All content blocks and all code blocks are kept on 10/10, except
   content its exclusion list drops, such as the `aria-hidden` tab panel on Global Voices (D1 above). The cost
   is 0–14.6% of output chars of in-content UI text: badges, edit and feedback links, tag lists, related stories. That
-  noise is visible: it gets translated and shown, and it costs tokens. Nothing is lost.
+  noise is visible: it gets translated and shown, and it costs tokens. Apart from that exception, nothing is lost.
 - **Readability is cleaner and loses content silently.** It has less noise (7/10 clean, ≤ 0.5% of chars). But it
   loses or corrupts content on docs sites with no usable signal:
   - code changed on 2 of 8 fixtures with code (hidden tab panels; Go code comments deleted inside `pre`);
@@ -383,6 +385,9 @@ reverse: Readability first, walk as the fallback.
   closed shadow root.
 - **GitHub page chrome is gone.** Since the cut (user decision), `github-readme-bat` no longer tests noise or
   shadow DOM outside the README. Its whole-page and walk / body numbers are trivially clean.
+- **Fixture scripts are not idempotent.** Running scrub.mjs + attribution.mjs re-adds one newline after the header
+  of fixtures committed without it; the pair is stable after one run. In the committed state only `github-readme-bat`
+  has the newline; the other 9 don't. Making all 10 consistent is logged for Phase C (M0-E8).
 - **History rewrite.** The replaced fixtures are in no commit on any branch, and `git log --all` on their paths is
   empty, so they can't be pushed. Their blobs are still *reflog-reachable* in the local object store. Removing them
   needs `git reflog expire --expire=now --all && git gc --prune=now`, which was not run (supervisor's call).
