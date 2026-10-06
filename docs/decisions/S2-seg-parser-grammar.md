@@ -346,12 +346,14 @@ Every rule, in the order the parser applies it:
    - A partial tag left in the buffer (`</se`, `<seg id`) goes to stray. It never becomes segment text, also when
      the stream was cut inside the closing tag. Three cut chunks in the cut arms leaked `</se` or `</` into the cut
      text before this fix (§4).
-   - Inside a segment with `stopReason: max_tokens`, the segment is `cut` (its id plus the partial text).
+   - Inside a segment with `stopReason: max_tokens`, the segment is `cut` (its id plus the partial text). M1
+     addendum (M1-D9): every stop reason other than `end` (`max_tokens`, `refusal`, `other`) counts as a cut.
    - Inside a segment with `end`, the segment is accepted (fix: `unclosed-end`). This is the one fix gpt-oss
      actually needed.
-   - In both cases, if the segment saw a `close-in-text` and no later close, it ends at that last close instead. The
+   - With `end`, if the segment saw a `close-in-text` and no later close, it ends at that last close instead. The
      rest is stray, and the `close-in-text` fix is withdrawn, because the close was real. This happens, for example,
-     after a final `</seg>` followed by a code fence or a model note.
+     after a final `</seg>` followed by a code fence or a model note. With a cut, the segment stays `cut` and is
+     re-requested (as in the spike; corrected in M1-D9, this line used to say "in both cases").
 6. **Ids.** On a segment's close:
    - a bad id: the segment's text is dropped (fix `bad-id`, raised at the open);
    - an id not in the chunk: dropped (fix `unknown`);
@@ -586,3 +588,18 @@ Plan default: "Strict `<seg id="N">` with lenient fallback; retry only missing s
 5. **ROADMAP §2 S2 row, Output column**: append "Decided in S2: lenient v1 grammar, plus the close-by-lookahead
    grammar and a nonce for chunks with literal tags (option C); one-round repair; no escaping; budget formula instead
    of a per-language multiplier."
+
+## M1 addendum (decisions M1-D8, M1-D9, M1-D10)
+
+Found by the M1-E12 fuzz tests; the engine port (`src/engine/parsing/`) implements them.
+
+- **M1-D8 (a).** A segment left unclosed at `end` whose text is followed by a held-back partial tag (`… Vec<se`) is
+  re-requested as truncated: the partial tag may have been its own text. Rule 5 still sends the partial tag to stray.
+- **M1-D8 (b).** On a nonce chunk where the model copied the nonce, an OPEN carrying the nonce that was read as text
+  inside a segment, whose id also arrives as its own segment, makes the structure ambiguous: the whole chunk is
+  re-requested.
+- **M1-D9.** Rule 5: every stop reason other than `end` counts as a cut, and a cut segment with a `close-in-text`
+  stays `cut` (see rule 5 above).
+- **M1-D10.** The same as M1-D8 (b) on a v2 chunk where the nonce was not copied: an OPEN read as text inside segment
+  i, whose id also arrives as its own segment, makes the chunk ambiguous when segment i holds more tag-shaped strings
+  than its source. A source that holds the tag as text has equal counts and is kept.

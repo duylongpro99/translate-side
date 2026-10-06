@@ -524,6 +524,7 @@ type EngineEvent =
   | { type: "stage"; stage: string; status: "start" | "done"; info?: unknown }
   | { type: "segment.partial"; id: string; text: string }                // streaming preview
   | { type: "segment.final"; id: string; text: string; revision: number;
+      attempt?: number;                                                  // absent = 1; a repair is 2
       producedBy: { strategy: string; stage: string; model: string };
       notes?: string[] }                                                 // e.g. idiom explained
   | { type: "segment.failed"; id: string; error: LLMError }
@@ -536,6 +537,10 @@ Key extensibility choice: **segments have revisions**. A strategy can emit a fas
 (`revision: 1`) and later a better version (`revision: 2`) after a review pass. The panel just
 replaces the text (with a subtle "refined" marker). So "stronger" strategies never cost the user
 time-to-first-read.
+
+A repaired segment (§5.7 Step 3) keeps its revision and carries a higher `attempt`. For the same id
+and revision, the panel replaces the text in place when the attempt is higher, and a later
+`segment.failed` for that revision replaces any attempt. A higher revision always wins.
 
 ### 5.3 Strategies and stages
 
@@ -673,8 +678,8 @@ whose source holds literal `<seg`/`</seg>` text are detected before sending. The
 nonce attribute (isolation if M1-E3 shows models don't copy it), and the close-by-lookahead
 grammar: a close tag closes only when followed by an open tag or the end of output, an open tag
 inside a segment is text, and a segment is final when that lookahead decides. A repaired segment
-replaces the shown text in place (same revision, a new attempt; M1-E3 decides between an
-`attempt` counter and a `replace` flag, because `revision` is taken by refine). Re-request
+replaces the shown text in place (same revision, a higher `attempt`, §5.2). Every stop reason
+other than `end` counts as a cut: the open segment is re-requested, never kept. Re-request
 missing, cut-and-later, empty, suspect-merged and literal-tag-mismatch segments in one follow-up
 call; re-request the whole chunk if ids are duplicated, unknown or malformed. Source `<`/`>` are
 sent unescaped.
