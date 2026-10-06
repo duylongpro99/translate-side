@@ -33,7 +33,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   for (const slug of Object.keys(M)) {
     const f = `${DIR}/${slug}.html`; if (!fs.existsSync(f)) continue;
     const dom = new JSDOM(fs.readFileSync(f, 'utf8')); const n = scrub(dom.window.document);
-    const html = dom.serialize(); fs.writeFileSync(f, html); M[slug].bytes = html.length; M[slug].scrubbed = true;
+    // jsdom drops the newline after the attribution comment; keep every header the same (one line).
+    const html = dom.serialize().replace(/^(<!DOCTYPE html>)?(<!-- fixture-attribution:[\s\S]*?-->)\n?/i, '$1$2\n'); fs.writeFileSync(f, html); M[slug].bytes = Buffer.byteLength(html); M[slug].scrubbed = true;
     console.log(slug, n);
   }
   fs.writeFileSync(`${DIR}/manifest.json`, JSON.stringify(M, null, 2) + '\n');

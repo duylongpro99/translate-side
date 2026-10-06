@@ -5,8 +5,13 @@ import type { Segment } from '@/engine/types';
 
 /** Bump on any incompatible change to the messages below. */
 export const PROTOCOL_VERSION = 1;
-/** The version is part of the port name: a content script from another version ignores the port. */
-export const CONTENT_PORT_NAME = `translate-side/content/v${PROTOCOL_VERSION}`;
+/** Every content port name starts with this; the version follows. */
+export const CONTENT_PORT_PREFIX = 'translate-side/content/';
+/**
+ * The version is part of the port name. A content script of another version disconnects the
+ * port at once, so the panel fails fast instead of waiting for a timeout.
+ */
+export const CONTENT_PORT_NAME = `${CONTENT_PORT_PREFIX}v${PROTOCOL_VERSION}`;
 
 export type ExtractVia = 'walk' | 'readability';
 
@@ -69,7 +74,7 @@ export function isResponseMessage(x: unknown): x is ResponseMessage {
 }
 
 export interface Client<A extends ApiShape> {
-  request<K extends keyof A & string>(name: K, body: A[K]['req']): Promise<A[K]['res']>;
+  request<K extends keyof A & string>(name: K, body: A[K]['req'], opts?: { timeoutMs?: number }): Promise<A[K]['res']>;
   readonly closed: boolean;
 }
 
@@ -102,16 +107,24 @@ export function createClient<A extends ApiShape = ContentApi>(port: PortLike, op
     get closed() {
       return closed;
     },
-    request(name, body) {
+    request(name, body, reqOpts) {
       if (closed) return Promise.reject(new ProtocolError('disconnected', 'The connection is closed.'));
       const id = nextId++;
+      const ms = reqOpts?.timeoutMs ?? timeoutMs;
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
           pending.delete(id);
-          reject(new ProtocolError('timeout', `No answer to "${name}" within ${timeoutMs} ms.`));
-        }, timeoutMs);
+          reject(new ProtocolError('timeout', `No answer to "${name}" within ${ms} ms.`));
+        }, ms);
         pending.set(id, { resolve: resolve as (v: unknown) => void, reject, timer });
-        port.postMessage({ kind: 'req', id, name, body });
+        try {
+          port.postMessage({ kind: 'req', id, name, body });
+        } catch {
+          // The port died before its onDisconnect fired.
+          pending.delete(id);
+          clearTimeout(timer);
+          reject(new ProtocolError('disconnected', 'The page closed the connection.'));
+        }
       });
     },
   };

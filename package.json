@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
+    "build:dev": "wxt build --mode development",
     "zip": "wxt zip",
     "postinstall": "wxt prepare",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p src/engine/tsconfig.json",

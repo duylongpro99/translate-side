@@ -20,6 +20,12 @@ const BLOCK_TAGS = new Set([
 ]);
 const BLOCK_SELECTOR = [...BLOCK_TAGS].join(', ');
 const HEADING = /^h([1-6])$/;
+/**
+ * Code blocks: `pre`, and code-editor surfaces that hold code as one div per line, e.g. MDN's
+ * interactive examples (CodeMirror 6 `.cm-content`; CodeMirror 5 `.CodeMirror-code`).
+ */
+export const CODE_BLOCK = 'pre, .cm-content, .CodeMirror-code';
+const EDITOR_LINES = new Set(['div', 'p']);
 const INLINE_CODE = new Set(['code', 'kbd', 'samp', 'tt']);
 const EMPHASIS = new Set(['em', 'i', 'strong', 'b']);
 /** No text of their own worth translating. */
@@ -43,9 +49,12 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
   };
 
   const emit = (el: Element, kind: SegmentKind, text: string, inlineMarkup: string, domPath: string, extra: Partial<Segment> = {}) => {
-    if (kind !== 'code' && !/[\p{L}\p{N}]/u.test(text)) return;
-    if (kind === 'code' && text.trim() === '') return;
-    const seg: Segment = { id: hashId(`${domPath}\n${text}`), kind, text, inlineMarkup, domPath, translate: kind !== 'code', ...extra };
+    const wordy = /[\p{L}\p{N}]/u.test(text);
+    // A block with no letters or digits (¶, —, a lone zero-width space) is dropped, except code
+    // and table cells: a cell like `{/* … */}` keeps its row aligned, and isn't translated.
+    if (!wordy && kind !== 'code' && kind !== 'table-cell') return;
+    if (text.trim() === '') return;
+    const seg: Segment = { id: hashId(`${domPath}\n${text}`), kind, text, inlineMarkup, domPath, translate: kind !== 'code' && wordy, ...extra };
     if (opts.isHidden?.(el)) seg.hidden = true;
     out.push(seg);
   };
@@ -58,7 +67,7 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
 
   const visitBlock = (el: Element, ctx: Context): void => {
     const tag = el.localName;
-    if (tag === 'pre' || (INLINE_CODE.has(tag) && el.querySelector(BLOCK_SELECTOR))) return emitCode(el);
+    if (el.matches(CODE_BLOCK) || (INLINE_CODE.has(tag) && el.querySelector(BLOCK_SELECTOR))) return emitCode(el);
     const h = HEADING.exec(tag);
     if (h) {
       const { text, markup } = inline([...el.childNodes]);
@@ -187,14 +196,22 @@ function normalize(s: string): string {
     .trim();
 }
 
-/** A code block's text, verbatim: `<br>` counts as a newline; trailing whitespace is dropped. */
+/**
+ * A code block's text, verbatim: `<br>` counts as a newline; trailing whitespace is dropped.
+ * Outside `pre` (editor surfaces, block `<code>`), each line div starts a new line.
+ */
 export function codeText(el: Element): string {
   let out = '';
+  const lineDivs = el.localName !== 'pre';
   const walk = (node: Node) => {
     if (node.nodeType === 3) out += (node as Text).data;
     else if (node.nodeType === 1) {
-      if ((node as Element).localName === 'br') out += '\n';
-      else for (const c of node.childNodes) walk(c);
+      const tag = (node as Element).localName;
+      if (tag === 'br') out += '\n';
+      else {
+        if (lineDivs && node !== el && EDITOR_LINES.has(tag) && out && !out.endsWith('\n')) out += '\n';
+        for (const c of node.childNodes) walk(c);
+      }
     }
   };
   walk(el);

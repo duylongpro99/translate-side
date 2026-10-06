@@ -1,6 +1,6 @@
 // Checks the BUILT manifest (not wxt.config.ts): WXT can add keys at build time, e.g.
 // content_scripts from a new entrypoint. DESIGN.md §8, plan M0-E2/E3 (decision S5). Run after `wxt build`.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 const path = process.argv[2] ?? '.output/chrome-mv3/manifest.json';
@@ -23,6 +23,11 @@ expectEqual('side_panel.default_path', m.side_panel?.default_path, 'sidepanel.ht
 expectEqual('background.service_worker', m.background?.service_worker, 'background.js');
 // The worker injects this file by path (src/shared/inject.ts CONTENT_SCRIPT_FILE).
 if (!existsSync(join(dirname(path), 'content-scripts/content.js'))) problems.push('content-scripts/content.js: missing from the build');
+// The segment view is dev-only (plan M0-E7): import.meta.env.DEV must drop it from this build.
+const chunks = join(dirname(path), 'chunks');
+if (existsSync(chunks) && readdirSync(chunks).some((f) => readFileSync(join(chunks, f), 'utf8').includes('dev-view'))) {
+  problems.push('chunks/: the dev-only segment view is in the production build');
+}
 
 if (problems.length > 0) {
   console.error(`${path} does not match DESIGN.md §8 / M0-E2:\n- ${problems.join('\n- ')}`);

@@ -1,0 +1,349 @@
+# via walk · 123 segments
+0o5i6w5hkqi heading [h1] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h1[1]
+  Admonitions
+14c0knlqwac p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[1]
+  Admonitions, also known as *call-outs*, are an excellent choice for including side content without significantly interrupting the document flow. Material for MkDocs provides several different types of admonitions and allows for the inclusion and nesting of arbitrary content.
+0i1c47cosdu heading [h2] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h2[1]
+  Configuration
+10wc36vvmnu p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[2]
+  This configuration enables admonitions, allows to make them collapsible and to nest arbitrary content inside admonitions. Add the following lines to `mkdocs.yml`:
+1s24o09vtx9 code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[1]/pre[1]
+  markdown_extensions:
+    - admonition
+    - pymdownx.details
+    - pymdownx.superfences
+13zqzjzhec9 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[3]
+  See additional configuration options:
+06ybo2bsq13 li /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/ul[1]/li[1]
+  [link]Admonition[/link]
+076wzoedxcp li /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/ul[1]/li[2]
+  [link]Details[/link]
+1qadsdrfms8 li /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/ul[1]/li[3]
+  [link]SuperFences[/link]
+09vbwx38s8m heading [h3] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[1]
+  Admonition icons
+0tsbdee318q p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[4]
+  [link]8.3.0[/link]
+0zxhvf7zs35 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[5]
+  Each of the supported admonition types has a distinct icon, which can be changed to any icon bundled with the theme, or even a [link]custom icon[/link]. Add the following lines to `mkdocs.yml`:
+02vtfzgaw8l code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[2]/pre[1]
+  theme:
+    icon:
+      admonition:
+        <type>: <icon>
+130ickkenai p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/details[1]/summary[1]
+  Expand to show alternate icon sets
+0jjlwgbam8m p [hidden] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/details[1]/div[1]/div[1]
+  [link]Octicons[/link] [link]FontAwesome[/link]
+0l713epqccz code [no-translate hidden] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/details[1]/div[1]/div[2]/div[1]/div[1]/pre[1]
+  theme:
+    icon:
+      admonition:
+        note: octicons/tag-16
+        abstract: octicons/checklist-16
+        info: octicons/info-16
+        tip: octicons/squirrel-16
+        success: octicons/check-16
+        question: octicons/question-16
+        warning: octicons/alert-16
+        failure: octicons/x-circle-16
+        danger: octicons/zap-16
+        bug: octicons/bug-16
+        example: octicons/beaker-16
+        quote: octicons/quote-16
+00ky6vhuklt code [no-translate hidden] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/details[1]/div[1]/div[2]/div[2]/div[1]/pre[1]
+  theme:
+    icon:
+      admonition:
+        note: fontawesome/solid/note-sticky
+        abstract: fontawesome/solid/book
+        info: fontawesome/solid/circle-info
+        tip: fontawesome/solid/bullhorn
+        success: fontawesome/solid/check
+        question: fontawesome/solid/circle-question
+        warning: fontawesome/solid/triangle-exclamation
+        failure: fontawesome/solid/bomb
+        danger: fontawesome/solid/skull
+        bug: fontawesome/solid/robot
+        example: fontawesome/solid/flask
+        quote: fontawesome/solid/quote-left
+1a524zggt8l heading [h2] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h2[2]
+  Usage
+1a44lk3hdw2 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[6]
+  Admonitions follow a simple syntax: a block starts with `!!!`, followed by a single keyword used as a [link]type qualifier[/link]. The content of the block follows on the next line, indented by four spaces:
+0zne4yhbvyo p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[3]#run[1]
+  Admonition
+025akq6zosw code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[3]/pre[1]
+  !!! note
+  
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod
+      nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor
+      massa, nec semper lorem quam in massa.
+1oblmswlb4s p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[4]/div[1]/p[1]
+  Note
+0ua0q3h4y1v p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[4]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+0m9vcwgchql heading [h3] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[2]
+  Changing the title
+10l2uowzi7i p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[7]
+  By default, the title will equal the type qualifier in titlecase. However, it can be changed by adding a quoted string containing valid Markdown (including links, formatting, ...) after the type qualifier:
+0jnbyowajtr p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[5]#run[1]
+  Admonition with custom title
+15usujyp3ss code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[5]/pre[1]
+  !!! note "Phasellus posuere in sem ut cursus"
+  
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod
+      nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor
+      massa, nec semper lorem quam in massa.
+2d0uwcjjvec p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[6]/div[1]/p[1]
+  Phasellus posuere in sem ut cursus
+1gegmma0zdt p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[6]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+255vh9ojy5b heading [h3] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[3]
+  Nested admonitions
+0m92o8i23rr p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[8]
+  You can also include nested admonitions in your documentation. To do this, you can use your existing admonitions and indent the desired ones:
+19fpr6xbjui p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[7]#run[1]
+  Nested Admonition
+1zy7dfyqq3i code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[7]/pre[1]
+  !!! note "Outer Note"
+  
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod
+      nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor
+      massa, nec semper lorem quam in massa.
+  
+      !!! note "Inner Note"
+  
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod
+          nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor
+          massa, nec semper lorem quam in massa.
+1yxsvr5s6f6 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[8]/div[1]/p[1]
+  Outer Note
+1ct7o7p2s3v p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[8]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+1114mzr8h7x p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[8]/div[1]/div[1]/p[1]
+  Inner Note
+0yb49ahc0je p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[8]/div[1]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+281aphaoqdy heading [h3] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[4]
+  Removing the title
+2d070jqvj4u p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[9]
+  Similar to [link]changing the title[/link], the icon and title can be omitted entirely by adding an empty string directly after the type qualifier. Note that this will not work for [link]collapsible blocks[/link]:
+0jaq2sacjkb p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[9]#run[1]
+  Admonition without title
+0hvsijlmnxt code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[9]/pre[1]
+  !!! note ""
+  
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod
+      nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor
+      massa, nec semper lorem quam in massa.
+0h7nv28z1n1 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[10]/div[1]/p[1]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+0e81g8f2sc5 heading [h3] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[5]
+  Collapsible blocks
+1yklw9e5ctk p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[10]
+  When [link]Details[/link] is enabled and an admonition block is started with `???` instead of `!!!`, the admonition is rendered as an expandable block with a small toggle on the right side:
+02a9q26zq3u p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[11]#run[1]
+  Admonition, collapsible
+2fhw9xlbmls code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[11]/pre[1]
+  ??? note
+  
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod
+      nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor
+      massa, nec semper lorem quam in massa.
+1zjmcn2866j p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[12]/details[1]/summary[1]
+  Note
+2gd1uptz402 p [hidden] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[12]/details[1]/p[1]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+0nm0a4q88r4 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[11]
+  Adding a `+` after the `???` token renders the block expanded:
+1wacip777zd p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[13]#run[1]
+  Admonition, collapsible and initially expanded
+08qyr048x89 code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[13]/pre[1]
+  ???+ note
+  
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod
+      nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor
+      massa, nec semper lorem quam in massa.
+11rsr66dd7m p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[14]/details[1]/summary[1]
+  Note
+05277c9e5pe p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[14]/details[1]/p[1]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+11v8fu1yku9 heading [h3] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[6]
+  Inline blocks
+1j5l1snmpy7 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[12]
+  Admonitions can also be rendered as inline blocks (e.g., for sidebars), placing them to the right using the `inline` + `end` modifiers, or to the left using only the `inline` modifier:
+0mxfjsz4uxj p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[1]
+  [link]inline end[/link] [link]inline[/link]
+1537vkpwehk p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[1]/div[1]/p[1]
+  Lorem ipsum
+1ojn6jkckgn p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[1]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+0hwhgh6x218 code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[1]/div[2]/pre[1]
+  !!! info inline end "Lorem ipsum"
+  
+      Lorem ipsum dolor sit amet, consectetur
+      adipiscing elit. Nulla et euismod nulla.
+      Curabitur feugiat, tortor non consequat
+      finibus, justo purus auctor massa, nec
+      semper lorem quam in massa.
+24pfp9hgby3 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[1]/p[1]
+  Use `inline end` to align to the right (left for rtl languages).
+0rhjx8g3fty p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[2]/div[1]/p[1]
+  Lorem ipsum
+1ha6ja9gq9m p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[2]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+1x29ps1i8lr code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[2]/div[2]/pre[1]
+  !!! info inline "Lorem ipsum"
+  
+      Lorem ipsum dolor sit amet, consectetur
+      adipiscing elit. Nulla et euismod nulla.
+      Curabitur feugiat, tortor non consequat
+      finibus, justo purus auctor massa, nec
+      semper lorem quam in massa.
+0k70cea8yzz p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[15]/div[2]/div[2]/p[1]
+  Use `inline` to align to the left (right for rtl languages).
+1i0yds577c1 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[13]
+  *Important*: admonitions that use the `inline` modifiers *must* be declared prior to the content block you want to place them beside. If there's insufficient space to render the admonition next to the block, the admonition will stretch to the full width of the viewport, e.g., on mobile viewports.
+14tt9bjekv1 heading [h3] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[7]
+  Supported types
+1q5kl9v9i7z p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[14]
+  Following is a list of type qualifiers provided by Material for MkDocs, whereas the default type, and thus fallback for unknown type qualifiers, is `note`[link]1[/link]:
+12y84h5aft9 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[1]
+  [link]`note`[/link]
+1vedgdbqwnr p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[1]/div[1]/p[1]
+  Note
+0llibacpsq1 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[1]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+1f9pdo7pp4t p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[2]
+  [link]`abstract`[/link]
+1hfejt6xb3s p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[2]/div[1]/p[1]
+  Abstract
+1fn3aw3on8z p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[2]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+12j8ia7k4h6 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[3]
+  [link]`info`[/link]
+1ir7ig2t5cb p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[3]/div[1]/p[1]
+  Info
+293enm1bacr p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[3]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+2g3el9fx7qy p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[4]
+  [link]`tip`[/link]
+1hlw6k63wg1 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[4]/div[1]/p[1]
+  Tip
+2dg5x7uq6j2 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[4]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+0fhs276m6jd p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[5]
+  [link]`success`[/link]
+0r5glcsz231 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[5]/div[1]/p[1]
+  Success
+0alnkzs9z1q p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[5]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+0i8cq5inshf p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[6]
+  [link]`question`[/link]
+272m6qmp1ov p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[6]/div[1]/p[1]
+  Question
+0mt8dyr7bl7 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[6]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+047eehekdnc p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[7]
+  [link]`warning`[/link]
+0ec8mhn5ldh p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[7]/div[1]/p[1]
+  Warning
+1s6bf53g6pf p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[7]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+0825hk2yqo2 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[8]
+  [link]`failure`[/link]
+25nb0ol3z6s p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[8]/div[1]/p[1]
+  Failure
+0xjac616ybc p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[8]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+28mvx0sh7ov p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[9]
+  [link]`danger`[/link]
+2adlynuvvc7 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[9]/div[1]/p[1]
+  Danger
+056mhottqm3 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[9]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+225q5klmxiv p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[10]
+  [link]`bug`[/link]
+1ky7e6oasdw p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[10]/div[1]/p[1]
+  Bug
+0s61139avmh p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[10]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+0ujy1jwo0qm p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[11]
+  [link]`example`[/link]
+1mae5fv9h3m p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[11]/div[1]/p[1]
+  Example
+0eqdny04fzf p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[11]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+0lidse8q3rt p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dt[12]
+  [link]`quote`[/link]
+2ge3u4vmt6h p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[12]/div[1]/p[1]
+  Quote
+0qauswjqno5 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/dl[1]/dd[12]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+0i2nk5d8m43 heading [h2] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h2[3]
+  Customization
+17o1qc01rk2 heading [h3] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[8]
+  Classic admonitions
+0h1jbg3x8eq p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[15]
+  Prior to version [link]8.5.6[/link], admonitions had a slightly different appearance:
+0kk7tymy6kg p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[16]/p[1]
+  Note
+20be7q0wi6q p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[16]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+22zbv878146 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[16]
+  If you want to restore this appearance, add the following CSS to an [link]additional style sheet[/link]:
+1m5uwndq3i1 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[17]/div[1]
+  [link]`docs/stylesheets/extra.css`[/link] [link]`mkdocs.yml`[/link]
+0w01ie0fjrj code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[17]/div[2]/div[1]/div[1]/pre[1]
+  .md-typeset .admonition,
+  .md-typeset details {
+    border-width: 0;
+    border-left-width: 4px;
+  }
+1fge9p1g7t2 code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[17]/div[2]/div[2]/div[1]/pre[1]
+  extra_css:
+    - stylesheets/extra.css
+2g9m2kig1he heading [h3] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/h3[9]
+  Custom admonitions
+027834a05ge p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[17]
+  If you want to add a custom admonition type, all you need is a color and an `*.svg` icon. Copy the icon's code from the [link]`.icons`[/link] folder and add the following CSS to an [link]additional style sheet[/link]:
+1n7hbi4wacx p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[18]/div[1]
+  [link]`docs/stylesheets/extra.css`[/link] [link]`mkdocs.yml`[/link]
+0c257t4lhl8 code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[18]/div[2]/div[1]/div[1]/pre[1]
+  :root {
+    --md-admonition-icon--pied-piper: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M244 246c-3.2-2-6.3-2.9-10.1-2.9-6.6 0-12.6 3.2-19.3 3.7l1.7 4.9zm135.9 197.9c-19 0-64.1 9.5-79.9 19.8l6.9 45.1c35.7 6.1 70.1 3.6 106-9.8-4.8-10-23.5-55.1-33-55.1zM340.8 177c6.6 2.8 11.5 9.2 22.7 22.1 2-1.4 7.5-5.2 7.5-8.6 0-4.9-11.8-13.2-13.2-23 11.2-5.7 25.2-6 37.6-8.9 68.1-16.4 116.3-52.9 146.8-116.7C548.3 29.3 554 16.1 554.6 2l-2 2.6c-28.4 50-33 63.2-81.3 100-31.9 24.4-69.2 40.2-106.6 54.6l-6.3-.3v-21.8c-19.6 1.6-19.7-14.6-31.6-23-18.7 20.6-31.6 40.8-58.9 51.1-12.7 4.8-19.6 10-25.9 21.8 34.9-16.4 91.2-13.5 98.8-10zM555.5 0l-.6 1.1-.3.9.6-.6zm-59.2 382.1c-33.9-56.9-75.3-118.4-150-115.5l-.3-6c-1.1-13.5 32.8 3.2 35.1-31l-14.4 7.2c-19.8-45.7-8.6-54.3-65.5-54.3-14.7 0-26.7 1.7-41.4 4.6 2.9 18.6 2.2 36.7-10.9 50.3l19.5 5.5c-1.7 3.2-2.9 6.3-2.9 9.8 0 21 42.8 2.9 42.8 33.6 0 18.4-36.8 60.1-54.9 60.1-8 0-53.7-50-53.4-60.1l.3-4.6 52.3-11.5c13-2.6 12.3-22.7-2.9-22.7-3.7 0-43.1 9.2-49.4 10.6-2-5.2-7.5-14.1-13.8-14.1-3.2 0-6.3 3.2-9.5 4-9.2 2.6-31 2.9-21.5 20.1L15.9 298.5c-5.5 1.1-8.9 6.3-8.9 11.8 0 6 5.5 10.9 11.5 10.9 8 0 131.3-28.4 147.4-32.2 2.6 3.2 4.6 6.3 7.8 8.6 20.1 14.4 59.8 85.9 76.4 85.9 24.1 0 58-22.4 71.3-41.9 3.2-4.3 6.9-7.5 12.4-6.9.6 13.8-31.6 34.2-33 43.7-1.4 10.2-1 35.2-.3 41.1 26.7 8.1 52-3.6 77.9-2.9 4.3-21 10.6-41.9 9.8-63.5l-.3-9.5c-1.4-34.2-10.9-38.5-34.8-58.6-1.1-1.1-2.6-2.6-3.7-4 2.2-1.4 1.1-1 4.6-1.7 88.5 0 56.3 183.6 111.5 229.9 33.1-15 72.5-27.9 103.5-47.2-29-25.6-52.6-45.7-72.7-79.9zm-196.2 46.1v27.2l11.8-3.4-2.9-23.8zm-68.7-150.4l24.1 61.2 21-13.8-31.3-50.9zm84.4 154.9l2 12.4c9-1.5 58.4-6.6 58.4-14.1 0-1.4-.6-3.2-.9-4.6-26.8 0-36.9 3.8-59.5 6.3z"/></svg>')
+  }
+  .md-typeset .admonition.pied-piper,
+  .md-typeset details.pied-piper {
+    border-color: rgb(43, 155, 70);
+  }
+  .md-typeset .pied-piper > .admonition-title,
+  .md-typeset .pied-piper > summary {
+    background-color: rgba(43, 155, 70, 0.1);
+  }
+  .md-typeset .pied-piper > .admonition-title::before,
+  .md-typeset .pied-piper > summary::before {
+    background-color: rgb(43, 155, 70);
+    -webkit-mask-image: var(--md-admonition-icon--pied-piper);
+            mask-image: var(--md-admonition-icon--pied-piper);
+  }
+0ebqw873bxk code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[18]/div[2]/div[2]/div[1]/pre[1]
+  extra_css:
+    - stylesheets/extra.css
+0to8w7jwl7d p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/p[18]
+  After applying the customization, you can use the custom admonition type:
+0xllupxwi72 p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[19]#run[1]
+  Admonition with custom type
+1eqzb82md66 code [no-translate] /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[19]/pre[1]
+  !!! pied-piper "Pied Piper"
+  
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et
+      euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo
+      purus auctor massa, nec semper lorem quam in massa.
+265ie637fph p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[20]/div[1]/p[1]
+  Pied Piper
+0uwx1ickmjx p /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[20]/div[1]/p[2]
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+1kn7v3t3njb li /html[1]/body[1]/div[3]/main[1]/div[1]/div[3]/article[1]/div[21]/ol[1]/li[1]/p[1]
+  Previously, some of the supported types defined more than one qualifier. For example, authors could use `summary` or `tldr` as alternative qualifiers to render an [link]`abstract`[/link] admonition. As this increased the size of the CSS that is shipped with Material for MkDocs, the additional type qualifiers are now all deprecated and will be removed in the next major version. This will also be mentioned in the upgrade guide.

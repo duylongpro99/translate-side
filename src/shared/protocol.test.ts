@@ -78,6 +78,26 @@ describe('Port protocol', () => {
     await expect(client.request('slow', {})).rejects.toMatchObject({ code: 'timeout' });
   });
 
+  it('rejects at once, without a dangling timer, when posting to a dead port throws', async () => {
+    const dead: PortLike = {
+      postMessage: () => {
+        throw new Error('Attempting to use a disconnected port object');
+      },
+      disconnect: () => undefined,
+      onMessage: { addListener: () => undefined },
+      onDisconnect: { addListener: () => undefined },
+    };
+    const client = createClient<TestApi>(dead, { timeoutMs: 10_000 });
+    const t0 = Date.now();
+    await expect(client.request('echo', { n: 1 })).rejects.toMatchObject({ code: 'disconnected' });
+    expect(Date.now() - t0).toBeLessThan(1000);
+  });
+
+  it('takes a per-request timeout', async () => {
+    const { client } = setup(10_000);
+    await expect(client.request('slow', {}, { timeoutMs: 20 })).rejects.toMatchObject({ code: 'timeout' });
+  });
+
   it('ignores messages that are not protocol messages', async () => {
     const { client, panel } = setup();
     panel.postMessage('hello?');

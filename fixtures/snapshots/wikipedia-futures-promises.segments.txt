@@ -1,0 +1,610 @@
+# via walk · 302 segments
+2chg5o6y7fc heading [h1] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/header[1]/h1[1]
+  Futures and promises
+260b66rb33q p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[1]/div[2]
+  Not to be confused with [link]Promise theory[/link].
+1k7f9e3r234 p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[1]/p[2]
+  In [link]computer science[/link], *futures*, *promises*, *delays*, and *deferreds* are constructs used for [link]synchronizing[/link] program [link]execution[/link] in some [link]concurrent programming languages[/link]. Each is an object that acts as a proxy for a result that is initially unknown, usually because the [link]computation[/link] of its value is not yet complete.
+08zq6pzcpms p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[1]/p[3]
+  The term *promise* was proposed in 1976 by [link]Daniel P. Friedman[/link] and David Wise,[link][1][/link] and Peter Hibbard called it *eventual*.[link][2][/link] A somewhat similar concept *future* was introduced in 1977 in a paper by [link]Henry Baker[/link] and [link]Carl Hewitt[/link].[link][3][/link]
+0ef5hrf58be p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[1]/p[4]
+  The terms *future*, *promise*, *delay*, and *deferred* are often used interchangeably, although there can be some differences in usage between *future* and *promise*. Specifically, when usage is distinguished, a future is a *read-only* placeholder view of a variable, while a promise is a writable, [link]single assignment[/link] container which sets the value of the future. Notably, a future may be defined without specifying which specific promise will set its value, and different possible promises may set the value of a given future, though this can be done only once for a given future. In other cases a future and a promise are created together and associated with each other: the future is the value, the promise is the function that sets the value – essentially the return value (future) of an asynchronous function (promise). Setting the value of a future is also called *resolving*, *fulfilling*, or *binding* it.
+0ipk6ty4h97 heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[2]/div[1]/h2[1]
+  Applications
+15x7jtohgob p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[2]/p[1]
+  Futures and promises originated in [link]functional programming[/link] and related paradigms (such as [link]logic programming[/link]) to decouple a value (a future) from how it was computed (a promise), allowing the computation to be done more flexibly, notably by parallelizing it. Later, it found use in [link]distributed computing[/link], in reducing the latency from communication round trips. Later still, it gained more use by allowing writing asynchronous programs in [link]direct style[/link], rather than in [link]continuation-passing style[/link].
+0drq5m2vxbn heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[3]/div[1]/h2[1]
+  Implicit vs. explicit
+20dx9b42036 p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[3]/p[1]
+  Use of futures may be *implicit* (any use of the future automatically obtains its value, as if it were an ordinary [link]reference[/link]) or *explicit* (the user must call a function to obtain the value, such as the `get` method of `java.util.concurrent.Future`in [link]Java[/link]). Obtaining the value of an explicit future can be called *stinging* or *forcing*. Explicit futures can be implemented as a library, whereas implicit futures are usually implemented as part of the language.
+1ijoi5slxtf p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[3]/p[2]
+  The original Baker and Hewitt paper described implicit futures, which are naturally supported in the [link]actor model[/link] of computation and pure [link]object-oriented programming[/link] languages like [link]Smalltalk[/link]. The Friedman and Wise paper described only explicit futures, probably reflecting the difficulty of efficiently implementing implicit futures on stock hardware. The difficulty is that stock hardware does not deal with futures for primitive data types like integers. For example, an add instruction does not know how to deal with `3 + future factorial(100000)`. In pure actor or object languages this problem can be solved by sending `future factorial(100000)` the message `+[3]`, which asks the future to add `3` to itself and return the result. Note that the [link]message passing[/link] approach works regardless of when `factorial(100000)` finishes computation and that no stinging/forcing is needed.
+05yjiz23u54 heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/div[1]/h2[1]
+  Promise pipelining
+00akyjhunwi p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/p[1]
+  The use of futures can dramatically reduce [link]latency[/link] in [link]distributed systems[/link]. For instance, futures enable *promise pipelining*,[link][4][/link][link][5][/link] as implemented in the languages [link]E[/link] and [link]Joule[/link], which was also called *call-stream*[link][6][/link] in the language [link]Argus[/link].
+228cmy58a82 p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/p[2]
+  Consider an expression involving conventional [link]remote procedure calls[/link], such as:
+1hzuzd9t7rg code [no-translate] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/pre[1]
+   t3 := ( x.a() ).c( y.b() )
+1cxi0npmrhl p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/p[3]
+  which could be expanded to
+13nfldpmsu1 code [no-translate] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/pre[2]
+   t1 := x.a();
+   t2 := y.b();
+   t3 := t1.c(t2);
+08nzldc3yoj p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/p[4]
+  Each statement needs a message to be sent and a reply received before the next statement can proceed. Suppose, for example, that `x`, `y`, `t1`, and `t2` are all located on the same remote machine. In this case, two complete network round-trips to that machine must take place before the third statement can begin to execute. The third statement will then cause yet another round-trip to the same remote machine.
+0mwsefoihlz p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/p[5]
+  Using futures, the above expression could be written
+0omfnqmnaek code [no-translate] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/pre[3]
+   t3 := (x <- a()) <- c(y <- b())
+01b6hwxge38 p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/p[6]
+  which could be expanded to
+0frtsgb8jc6 code [no-translate] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/pre[4]
+   t1 := x <- a();
+   t2 := y <- b();
+   t3 := t1 <- c(t2);
+17sk9pzn1iz p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/p[7]
+  The syntax used here is that of the language E, where `x <- a()` means to send the message `a()` asynchronously to `x`. All three variables are immediately assigned futures for their results, and execution proceeds to subsequent statements. Later attempts to resolve the value of `t3` may cause a delay; however, pipelining can reduce the number of round-trips needed. If, as in the prior example, `x`, `y`, `t1`, and `t2` are all located on the same remote machine, a pipelined implementation can compute `t3` with one round-trip instead of three. Because all three messages are destined for objects which are on the same remote machine, only one request need be sent and only one response need be received containing the result. The send `t1 <- c(t2)` would not block even if `t1` and `t2` were on different machines to each other, or to `x` or `y`.
+17v6esvp1tg p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/p[8]
+  Promise pipelining should be distinguished from parallel asynchronous message passing. In a system supporting parallel message passing but not pipelining, the message sends `x <- a()` and `y <- b()` in the above example could proceed in parallel, but the send of `t1 <- c(t2)` would have to wait until both `t1` and `t2` had been received, even when `x`, `y`, `t1`, and `t2` are on the same remote machine. The relative latency advantage of pipelining becomes even greater in more complicated situations involving many messages.
+1h1ln56kxir p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[4]/p[9]
+  Promise pipelining also should not be confused with [link]pipelined message processing[/link] in actor systems, where it is possible for an actor to specify and begin executing a behaviour for the next message before having completed processing of the current message.
+1amd5gs4g7q heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[5]/div[1]/h2[1]
+  Read-only views
+0cjpvfhqocp p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[5]/p[1]
+  In some programming languages such as [link]Oz[/link], [link]E[/link], and [link]AmbientTalk[/link], it is possible to obtain a *read-only view* of a future, which allows reading its value when resolved, but does not permit resolving it:
+0pe4zt45p05 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[5]/ul[1]/li[1]
+  In Oz, the `!!` operator is used to obtain a read-only view.
+1o5v4gk9p77 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[5]/ul[1]/li[2]
+  In E and AmbientTalk, a future is represented by a pair of values called a *promise/resolver pair*. The promise represents the read-only view, and the resolver is needed to set the future's value.
+09maez7kabz li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[5]/ul[1]/li[3]
+  In C++ (since [link]C++11[/link]) a `std::future<T>` provides a read-only view. The value is set directly by using a `std::promise<T>`, or set to the result of a function call using `std::packaged_task<R(Ts...)>` or the `std::async()` function. [link]C++26[/link] introduces a proper `std::execution::task<T, Env>`.
+0uotf4wklja li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[5]/ul[1]/li[4]
+  In the [link]Dojo Toolkit[/link]'s Deferred API as of version 1.5, a *consumer-only promise object* represents a read-only view.[link][7][/link]
+17atuznecgz li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[5]/ul[1]/li[5]
+  In [link]Alice ML[/link], futures provide a *read-only view*, whereas a promise contains both a future and the ability to resolve the future[link][8][/link][link][9][/link]
+08z0zfyde75 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[5]/ul[1]/li[6]
+  In [link].NET[/link] `System.Threading.Tasks.Task<T>` represents a read-only view. Resolving the value can be done via `System.Threading.Tasks.TaskCompletionSource<T>`.
+2d73925lje6 p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[5]/p[2]
+  Support for read-only views is consistent with the [link]principle of least privilege[/link], since it enables the ability to set the value to be restricted to [link]subjects[/link] that need to set it. In a system that also supports pipelining, the sender of an asynchronous message (with result) receives the read-only promise for the result, and the target of the message receives the resolver.
+04fsrkzheys heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[6]/div[1]/h2[1]
+  Thread-specific futures
+2e4s97wewqi p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[6]/p[1]
+  Some languages, such as [link]Alice ML[/link], define futures that are associated with a specific thread that computes the future's value.[link][9][/link] This computation can start either [link]eagerly[/link] when the future is created, or [link]lazily[/link] when its value is first needed. A lazy future is similar to a [link]thunk[/link], in the sense of a delayed computation.
+2f6gmluuzk6 p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[6]/p[2]
+  Alice ML also supports futures that can be resolved by any thread, and calls these *promises*.[link][8][/link] This use of *promise* is different from its use in E as described [link]above[/link]. In Alice, a promise is not a read-only view, and promise pipelining is unsupported. Instead, pipelining naturally happens for futures, including ones associated with promises.
+0u5ot5rwdlh heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[7]/div[1]/h2[1]
+  Blocking vs non-blocking semantics
+0mi32eg6map p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[7]/p[1]
+  If the value of a future is accessed asynchronously, for example by sending a message to it, or by explicitly waiting for it using a construct such as `when` in E, then there is no difficulty in delaying until the future is resolved before the message can be received or the wait completes. This is the only case to be considered in purely asynchronous systems such as pure actor languages.
+0uo9hfrmlb6 p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[7]/p[2]
+  However, in some systems it may also be possible to attempt to *immediately* or *synchronously* access a future's value. Then there is a design choice to be made:
+2enzlxiq24r li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[7]/ul[1]/li[1]
+  the access could block the current thread or process until the future is resolved (possibly with a timeout). This is the semantics of *dataflow variables* in the language [link]Oz[/link].
+0ml4d6ckm68 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[7]/ul[1]/li[2]
+  the attempted synchronous access could always signal an error, for example throwing an [link]exception[/link]. This is the semantics of remote promises in E.[link][10][/link]
+17t7s0cqi3m li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[7]/ul[1]/li[3]
+  potentially, the access could succeed if the future is already resolved, but signal an error if it is not. This would have the disadvantage of introducing nondeterminism and the potential for [link]race conditions[/link], and seems to be an uncommon design choice.
+16p6tijyhwa p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[7]/p[3]
+  As an example of the first possibility, in [link]C++11[/link], a thread that needs the value of a future can block until it is available by calling the `wait()` or `get()` member functions. A timeout can also be specified on the wait using the `wait_for()` or `wait_until()` member functions (in `std::condition_variable`) to avoid indefinite blocking. If the future arose from a call to `std::async()` then a blocking wait (without a timeout) may cause synchronous invocation of the function to compute the result on the waiting thread.
+076wou89eu9 heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[8]/div[1]/h2[1]
+  Related constructs
+1art1lnp6m4 p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[8]/p[1]
+  *Futures* are a particular case of the [link]synchronization primitive[/link] "[link]events[/link]", which can be completed only once. In general, events can be reset to initial empty state and, thus, completed as many times as desired.[link][11][/link]
+1n0458rvpkl p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[8]/p[2]
+  An *I-var* (as in the language [link]Id[/link]) is a future with blocking semantics as defined above. An *I-structure* is a [link]data structure[/link] containing I-vars. A related synchronization construct that can be set multiple times with different values is called an *M-var*. M-vars support atomic operations to *take* or *put* the current value, where taking the value also sets the M-var back to its initial *empty* state.[link][12][/link]
+0wcbhd3zm0y p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[8]/p[3]
+  A *concurrent logic variable*[*[link]citation needed[/link]*] is similar to a future, but is updated by [link]unification[/link], in the same way as *logic variables* in [link]logic programming[/link]. Thus it can be bound more than once to unifiable values, but cannot be set back to an empty or unresolved state. The dataflow variables of Oz act as concurrent logic variables, and also have blocking semantics as mentioned above.
+2ckeos3ghck p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[8]/p[4]
+  A *concurrent constraint variable* is a generalization of concurrent logic variables to support [link]constraint logic programming[/link]: the constraint may be *narrowed* multiple times, indicating smaller sets of possible values. Typically there is a way to specify a thunk that should run whenever the constraint is narrowed further; this is needed to support *constraint propagation*.
+0vbv4l2zoao heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[9]/div[1]/h2[1]
+  Relations between the expressiveness of different forms of future
+2e6eiqkkwe7 p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[9]/p[1]
+  Eager thread-specific futures can be straightforwardly implemented in non-thread-specific futures, by creating a thread to calculate the value at the same time as creating the future. In this case it is desirable to return a read-only view to the client, so that only the newly created thread is able to resolve this future.
+161bckom2ss p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[9]/p[2]
+  To implement implicit lazy thread-specific futures (as provided by Alice ML, for example) in terms in non-thread-specific futures, needs a mechanism to determine when the future's value is first needed (for example, the `WaitNeeded` construct in Oz[link][13][/link]). If all values are objects, then the ability to implement transparent forwarding objects is sufficient, since the first message sent to the forwarder indicates that the future's value is needed.
+1gqhbomohg5 p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[9]/p[3]
+  Non-thread-specific futures can be implemented in thread-specific futures, assuming that the system supports message passing, by having the resolving thread send a message to the future's own thread. However, this can be viewed as unneeded complexity. In programming languages based on threads, the most expressive approach seems to be to provide a mix of non-thread-specific futures, read-only views, and either a *WaitNeeded* construct, or support for transparent forwarding.
+08vha1jxxwr heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[10]/div[1]/h2[1]
+  Evaluation strategy
+13u3b4u0f00 p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[10]/div[2]
+  Further information: [link]Call by future[/link]
+0todtyzkjsu p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[10]/p[1]
+  The [link]evaluation strategy[/link] of futures, which may be termed *[link]call by future[/link]*, is non-deterministic: the value of a future will be evaluated at some time between when the future is created and when its value is used, but the precise time is not determined beforehand and can change from run to run. The computation can start as soon as the future is created ([link]eager evaluation[/link]) or only when the value is actually needed ([link]lazy evaluation[/link]), and may be suspended part-way through, or executed in one run. Once the value of a future is assigned, it is not recomputed on future accesses; this is like the [link]memoization[/link] used in [link]call by need[/link].
+2206juxo8yq p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[10]/p[2]
+  A *lazy future* is a future that deterministically has lazy evaluation semantics: the computation of the future's value starts when the value is first needed, as in call by need. Lazy futures are of use in languages which evaluation strategy is by default not lazy. For example, in [link]C++11[/link] such lazy futures can be created by passing the `std::launch::deferred` launch policy to `std::async()`, along with the function to compute the value.
+1nnj8nldfh0 heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[11]/div[1]/h2[1]
+  Semantics of futures in the actor model
+0wwtsw6pgig p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[11]/p[1]
+  In the actor model, an expression of the form `future <Expression>` is defined by how it responds to an `Eval` message with environment *E* and customer *C* as follows: The future expression responds to the `Eval` message by sending the customer *C* a newly created actor *F* (the proxy for the response of evaluating `<Expression>`) as a return value *concurrently* with sending `<Expression>` an `Eval` message with environment *E* and customer *C*. The default behavior of *F* is as follows:
+1y5zhv05xm9 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[11]/ul[1]/li[1]#run[1]
+  When *F* receives a request *R*, then it checks to see if it has already received a response (that can either be a return value or a thrown exception) from evaluating `<Expression>` proceeding as follows:
+08zd9le0juq li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[11]/ul[1]/li[1]/ol[1]/li[1]#run[1]
+  If it already has a response *V*, then
+0x9xt7dk9z9 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[11]/ul[1]/li[1]/ol[1]/li[1]/ul[1]/li[1]
+  If *V* is a return value, then it is sent the request *R*.
+0qe9nzmwrvy li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[11]/ul[1]/li[1]/ol[1]/li[1]/ul[1]/li[2]
+  If *V* is an exception, then it is thrown to the customer of the request *R*.
+29r6osufydr li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[11]/ul[1]/li[1]/ol[1]/li[2]
+  If it does not already have a response, then *R* is stored in the queue of requests inside the *F*.
+0pln3aqz832 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[11]/ul[1]/li[2]#run[1]
+  When *F* receives the response *V* from evaluating `<Expression>`, then *V* is stored in *F* and
+2ct1w18tsut li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[11]/ul[1]/li[2]/ul[1]/li[1]
+  If *V* is a return value, then all of the queued requests are sent to *V*.
+1qby0yeomof li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[11]/ul[1]/li[2]/ul[1]/li[2]
+  If *V* is an exception, then it is thrown to the customer of each of the queued requests.
+1nltnvezpyn p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[11]/p[2]
+  However, some futures can deal with requests in special ways to provide greater parallelism. For example, the expression `1 + future factorial(n)` can create a new future that will behave like the number `1+factorial(n)`. This trick does not always work. For example, the following conditional expression:
+1eitift8t7t p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[11]/dl[1]/dd[1]
+  `if m>future factorial(n) then print("bigger") else print("smaller")`
+0xvrxxdrxfu p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[11]/p[3]
+  suspends until the future for `factorial(n)` has responded to the request asking if `m` is greater than itself.
+0sg2zoeev9h heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[12]/div[1]/h2[1]
+  History
+1cu8iu06d1o p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[12]/p[1]
+  The *future* and/or *promise* constructs were first implemented in programming languages such as [link]MultiLisp[/link] and [link]Act 1[/link]. The use of logic variables for communication in [link]concurrent[/link] [link]logic programming[/link] languages was quite similar to futures. These began in *Prolog with Freeze* and *IC Prolog*, and became a true concurrency primitive with Relational Language, Concurrent [link]Prolog[/link], guarded [link]Horn clauses[/link] (GHC), [link]Parlog[/link], [link]Strand[/link], [link]Vulcan[/link], [link]Janus[/link], [link]Oz-Mozart[/link], [link]Flow Java[/link], and [link]Alice ML[/link]. The single-assignment *I-var* from [link]dataflow programming[/link] languages, originating in [link]Id[/link] and included in Reppy's *[link]Concurrent ML[/link]*, is much like the concurrent logic variable.
+1vr7premgei p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[12]/p[2]
+  The promise pipelining technique (using futures to overcome latency) was invented by [link]Barbara Liskov[/link] and [link]Liuba Shrira[/link] in 1988,[link][6][/link] and independently by [link]Mark S. Miller[/link], Dean Tribble and Rob Jellinghaus in the context of [link]Project Xanadu[/link] circa 1989.[link][14][/link]
+1eb1h640kq7 p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[12]/p[3]
+  The term *promise* was coined by Liskov and Shrira, although they referred to the pipelining mechanism by the name *call-stream*, which is now rarely used.
+1afqrs04q2w p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[12]/p[4]
+  Both the design described in Liskov and Shrira's paper, and the implementation of promise pipelining in Xanadu, had the limit that promise values were not [link]first-class[/link]: an argument to, or the value returned by a call or send could not directly be a promise (so the example of promise pipelining given earlier, which uses a promise for the result of one send as an argument to another, would not have been directly expressible in the call-stream design or in the Xanadu implementation). It seems that promises and call-streams were never implemented in any public release of Argus,[link][15][/link] the programming language used in the Liskov and Shrira paper. Argus development stopped around 1988.[link][16][/link] The Xanadu implementation of promise pipelining only became publicly available with the release of the source code for Udanax Gold[link][17][/link] in 1999, and was never explained in any published document.[link][18][/link] The later implementations in Joule and E support fully first-class promises and resolvers.
+2ap4nsytzwh p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[12]/p[5]
+  Several early actor languages, including the Act series,[link][19][/link][link][20][/link] supported both parallel message passing and pipelined message processing, but not promise pipelining. (Although it is technically possible to implement the last of these features in the first two, there is no evidence that the Act languages did so.)
+1znk0eo0mp7 p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[12]/p[6]
+  After 2000, a major revival of interest in futures and promises occurred, due to their use in [link]responsiveness[/link] of user interfaces, and in [link]web development[/link], due to the [link]request–response[/link] model of message-passing. Several mainstream languages now have language support for futures and promises, most notably popularized by `FutureTask` in Java 5 (announced 2004)[link][21][/link] and the [link]async/await[/link] constructions in .NET 4.5 (announced 2010, released 2012)[link][22][/link][link][23][/link] largely inspired by the *asynchronous workflows* of F#,[link][24][/link] which dates to 2007.[link][25][/link] This has subsequently been adopted by other languages, notably Dart (2014),[link][26][/link] Python (2015),[link][27][/link] Hack (HHVM), and drafts of ECMAScript 7 (JavaScript), Scala, and C++ (2011).
+0ulyjzqpnve heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/div[1]/h2[1]
+  List of implementations
+1lwtwsj9w8v p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/p[1]
+  Some programming languages are supporting futures, promises, concurrent logic variables, dataflow variables, or I-vars, either by direct language support or in the standard library.
+06niget8e8i heading [h3] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/div[1]/h3[1]
+  List of concepts related to futures and promises by programming language
+0i6f3h5itjo li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[1]
+  ABCL/f[link][28][/link]
+1vdb3qcs6et li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[2]
+  [link]Alice ML[/link]
+0tpja32l3b3 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[3]
+  [link]AmbientTalk[/link] (including first-class resolvers and read-only promises)
+1okqbm5wwyz li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[4]#run[1]
+  [link]C++[/link], starting with [link]C++11[/link] via `std::future` and `std::promise`
+04z8o3pb1eb li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[4]/ul[1]/li[1]
+  Compositional C++
+1bvz6kfammh li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[5]
+  [link]Crystal[/link]
+01lpvlut5sz li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[6]
+  [link]Dart[/link] (with `Future`/`Completer` classes[link][29][/link] and the keywords `await` and `async`[link][26][/link])
+2a960owt7my li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[7]
+  [link]Elm[/link] via the *Task* module[link][30][/link]
+1pg0b3mczll li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[8]
+  [link]Haskell[/link] via libraries `Control.Concurrent.Async` (I-vars) and `Control.Concurrent.MVar` (M-vars)
+1p3mc96rn4d li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[9]
+  [link]Id[/link] (I-vars and M-vars only)
+04ca3bfgzy6 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[10]
+  [link]Io[/link][link][31][/link]
+2csf2nmuukx li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[11]
+  [link]Java[/link] via `java.util.concurrent.Future` or `java.util.concurrent.CompletableFuture`
+19yto53xt6w li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[12]
+  [link]JavaScript[/link] as of [link]ECMAScript[/link] 2015,[link][32][/link] and via the keywords `async` and `await` since ECMAScript 2017[link][33][/link]
+0b7wg5uxb1p li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[13]
+  [link]Lucid[/link] (dataflow only)
+0e9cu7q9vjk li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[14]#run[1]
+  Some [link]Lisps[/link]
+0z61vssjhan li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[14]/ul[1]/li[1]
+  [link]Clojure[/link][link][34][/link]
+0yrolzggchp li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[14]/ul[1]/li[2]
+  [link]MultiLisp[/link]
+0ffm2nn009e li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[15]#run[1]
+  [link].NET[/link] via `System.Threading.Tasks.Task`
+1za2xgni66s li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[15]/ul[1]/li[1]
+  [link]C#[/link], since .NET Framework 4.5,[link][22][/link] via the keywords `async` and `await`[link][23][/link]
+1qpn55es3cz li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[16]
+  [link]Kotlin[/link], although `kotlin.native.concurrent.Future` is only usually used when writing Kotlin that is intended to run natively[link][35][/link]
+0tckbqkomlg li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[17]
+  [link]Nim[/link]
+09etmns7i0v li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[18]
+  [link]Oxygene[/link]
+294fsqjnl2a li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[19]
+  [link]Oz[/link] version 3[link][36][/link]
+20hfofbc5ey li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[20]
+  [link]Python[/link] concurrent.futures,[link][37][/link] since 3.2,[link][38][/link] as proposed by the PEP 3148,[link][39][/link] and Python 3.5 added `async` and `await`[link][40][/link]
+0q4dssgizee li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[21]
+  [link]R[/link] (promises for lazy evaluation, still single threaded)
+1tw8x2grs59 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[22]
+  [link]Racket[/link][link][41][/link]
+1x3m0rzwgb8 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[23]
+  [link]Raku[/link][link][42][/link]
+09j5jyzdyaq li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[24]
+  [link]Rust[/link] (future as `std::future::Future`, promise achieved via `.await`)[link][43][/link]
+26n9i0qtg9q li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[25]
+  [link]Scala[/link] via [link]scala.concurrent package[/link]
+0392rnge8ob li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[26]
+  [link]Scheme[/link]
+2adng7hyflk li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[27]
+  [link]Squeak[/link] [link]Smalltalk[/link]
+0bdk8hx2g9k li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[28]
+  [link]Strand[/link]
+0byyn10zvk5 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[29]
+  [link]Swift[/link] (only via third-party libraries)
+0m2xcdxk486 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[1]/li[30]
+  [link]Visual Basic[/link][*[link]clarification needed[/link]*] 11 (via the keywords *Async* and *Await*)[link][23][/link]
+1ym1bxtwd0k p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/p[1]
+  Languages also supporting promise pipelining include:
+0t3jmp7v9e1 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[2]/li[1]
+  [link]E[/link]
+0txtpnx0zcv li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[1]/ul[2]/li[2]
+  [link]Joule[/link]
+1wq1ix3i653 heading [h3] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/div[1]/h3[1]
+  List of library-based implementations of futures
+0f8k8wvxjmr li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[1]#run[1]
+  For [link]Common Lisp[/link]:
+0gnk8zbftpp li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[1]/ul[1]/li[1]
+  Blackbird[link][44][/link]
+1y40zxhz6ro li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[1]/ul[1]/li[2]
+  Eager Future2[link][45][/link]
+1iolv43wvny li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[1]/ul[1]/li[3]
+  lparallel[link][46][/link]
+1oyu7xx0gce li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[1]/ul[1]/li[4]
+  PCall[link][47][/link]
+2co48n0a024 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[2]#run[1]
+  For C++:
+1gi4hjxdhi6 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[2]/ul[1]/li[1]
+  [link]Boost library[/link],[link][48][/link] via `boost::thread`
+1vw80v4jni1 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[2]/ul[1]/li[2]
+  [link]Dlib[/link][link][49][/link]
+1j2ix5x0crd li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[2]/ul[1]/li[3]
+  Folly[link][50][/link]
+05v90l3i9rs li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[2]/ul[1]/li[4]
+  HPX[link][51][/link]
+0oygd4pypem li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[2]/ul[1]/li[5]
+  [link]POCO C++ Libraries[/link] (Active Results),[link][52][/link] via `Poco::Thread` and `Poco::Runnable`
+1u4u6ez77yk li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[2]/ul[1]/li[6]
+  [link]Qt[/link],[link][53][/link] via `::QFuture<T>`
+1oxui9d20d5 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[2]/ul[1]/li[7]
+  Seastar[link][54][/link]
+1exjmcmw7fb li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[2]/ul[1]/li[8]
+  [link][55][/link]
+1clq2rf4d2q li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[3]
+  For [link]C#[/link] and other [link].NET[/link] languages: The [link]Parallel Extensions[/link] library
+0h9v5aq18xa li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[4]
+  For [link]Groovy[/link]: GPars[link][56][/link]
+11whki9p1vr li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[5]#run[1]
+  For [link]JavaScript[/link]:
+0fp23eljkxz li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[5]/ul[1]/li[1]
+  Cujo.js'[link][57][/link] when.js[link][58][/link] provides promises conforming to the Promises/A+[link][59][/link] 1.1 specification
+0u7eyory1wm li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[5]/ul[1]/li[2]
+  The [link]Dojo Toolkit[/link] supplies promises[link][60][/link] and [link]Twisted[/link] style deferreds
+0iko87uwnk9 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[5]/ul[1]/li[3]
+  [link]MochiKit[/link][link][61][/link] inspired by [link]Twisted's Deferreds[/link]
+0wwqqbsy7dr li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[5]/ul[1]/li[4]
+  [link]jQuery's[/link] [link]Deferred Object[/link] is based on the [link]CommonJS Promises/A[/link] design.
+2c0dx8x5lkq li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[5]/ul[1]/li[5]
+  AngularJS[link][62][/link]
+1m2k53a5jo3 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[5]/ul[1]/li[6]
+  [link]node[/link]-promise[link][63][/link]
+2bx87xlm96n li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[5]/ul[1]/li[7]
+  Q, by Kris Kowal, conforms to Promises/A+ 1.1[link][64][/link]
+214lohtuwyd li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[5]/ul[1]/li[8]
+  RSVP.js, conforms to Promises/A+ 1.1[link][65][/link]
+22cu77bk8y1 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[5]/ul[1]/li[9]
+  YUI's[link][66][/link] promise class[link][67][/link] conforms to the Promises/A+ 1.0 specification.
+0cjr047uv0g li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[5]/ul[1]/li[10]
+  Bluebird, by Petka Antonov[link][68][/link]
+2crje206na6 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[5]/ul[1]/li[11]
+  The [link]Closure Library[/link]'s [link]promise[/link] package conforms to the Promises/A+ specification.
+23f7k2nxu0s li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[5]/ul[1]/li[12]
+  See [link]Promise/A+'s[/link] list for more implementations based on the Promise/A+ design.
+0xqtx69rdjj li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[6]#run[1]
+  For [link]Java[/link]:
+0wdv27umv7t li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[6]/ul[1]/li[1]
+  JDeferred, provides deferred-promise API and behavior similar to [link]jQuery[/link].Deferred object[link][69][/link]
+1v5xkumyab7 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[6]/ul[1]/li[2]
+  ParSeq[link][70][/link] provides task-promise API ideal for asynchronous pipelining and branching, maintained by [link]LinkedIn[/link]
+1qoeg3l97de li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[7]#run[1]
+  For [link]Lua[/link]:
+0zc3fcctz52 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[7]/ul[1]/li[1]
+  The cqueues module contains a Promise API.
+1wmqxmrejsq li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[8]
+  For [link]Objective-C[/link]: MAFuture,[link][71][/link][link][72][/link] RXPromise,[link][73][/link] ObjC-CollapsingFutures,[link][74][/link] PromiseKit,[link][75][/link] objc-promise,[link][76][/link] OAPromise,[link][77][/link]
+0n6ydt2bwys li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[9]
+  For [link]OCaml[/link]: Lazy module implements lazy explicit futures[link][78][/link]
+006jcvkksiu li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[10]
+  For [link]Perl[/link]: Future,[link][79][/link] Promises,[link][80][/link] Reflex,[link][81][/link] Promise::ES6,[link][82][/link] and Promise::XS[link][83][/link]
+2e9geg9w4je li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[11]
+  For [link]PHP[/link]: React/Promise[link][84][/link]
+1iaxf2h54qb li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[12]#run[1]
+  For [link]Python[/link]:
+0zpwbiuvyw3 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[12]/ul[1]/li[1]
+  Built-in implementation[link][85][/link]
+2cm2py7f2m1 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[12]/ul[1]/li[2]
+  pythonfutures[link][86][/link]
+2epips7789x li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[12]/ul[1]/li[3]
+  [link]Twisted's[/link] Deferreds[link][87][/link]
+0pg4ghcnkhh li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[13]#run[1]
+  For [link]R[/link]:
+29ftjs7w8ht li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[13]/ul[1]/li[1]
+  future, implements an extendable future API with lazy and eager synchronous and (multicore or distributed) asynchronous futures[link][88][/link][link][89][/link]
+0323oygcne8 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[14]#run[1]
+  For [link]Ruby[/link]:
+0vbl5bu3wl5 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[14]/ul[1]/li[1]
+  Concurrent Ruby[link][90][/link]
+1bx0kn1rxoa li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[14]/ul[1]/li[2]
+  Promise gem[link][91][/link]
+2aii66pgsym li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[14]/ul[1]/li[3]
+  libuv gem, implements promises[link][92][/link]
+2fdn818fujx li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[14]/ul[1]/li[4]
+  Celluloid gem, implements futures[link][93][/link]
+009c06i5ksf li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[14]/ul[1]/li[5]
+  future-resource[link][94][/link]
+2a2svm4wahc li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[15]#run[1]
+  For [link]Rust[/link]:
+0yornup4zie li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[15]/ul[1]/li[1]
+  futures-rs[link][95][/link]
+2aaz20eart0 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[16]#run[1]
+  For [link]Scala[/link]:
+1ivy17b4c15 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[16]/ul[1]/li[1]
+  [link]Twitter[/link]'s util library[link][96][/link]
+1uajnapcc17 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[17]#run[1]
+  For [link]Swift[/link]:
+1bhkd8hcx8v li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[17]/ul[1]/li[1]
+  Async framework, implements C#-style `async`/non-blocking `await`[link][97][/link]
+1q3adl2q1yn li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[17]/ul[1]/li[2]
+  FutureKit,[link][98][/link] implements a version for Apple GCD[link][99][/link]
+1za6l4nppcq li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[17]/ul[1]/li[3]
+  FutureLib, pure Swift 2 library implementing Scala-style futures and promises with TPL-style cancellation[link][100][/link]
+015pdhhw3u4 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[17]/ul[1]/li[4]
+  Deferred, pure Swift library inspired by OCaml's Deferred[link][101][/link]
+24ol61pi8a3 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[17]/ul[1]/li[5]
+  BrightFutures[link][102][/link]
+0bb0zl98l50 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[17]/ul[1]/li[6]
+  SwiftCoroutine[link][103][/link]
+0qkku5bwkyf li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[2]/ul[1]/li[18]
+  For [link]Tcl[/link]: tcl-promise[link][104][/link]
+0d7nmymstnu heading [h3] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[3]/div[1]/h3[1]
+  Coroutines
+2gaem23e54u p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[3]/p[1]
+  Futures can be implemented in [link]coroutines[/link][link][27][/link] or [link]generators[/link],[link][105][/link] resulting in the same evaluation strategy (e.g., [link]cooperative multitasking[/link] or lazy evaluation).
+1n5oz30ejcc heading [h3] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[4]/div[1]/h3[1]
+  Channels
+1jh1x783krn p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[4]/div[2]
+  Main article: [link]Channel (programming)[/link]
+1bs2bdxz1bc p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[13]/section[4]/p[1]
+  Futures can easily be implemented in [link]channels[/link]: a future is a one-element channel, and a promise is a process that sends to the channel, fulfilling the future.[link][106][/link][link][107][/link] This allows futures to be implemented in concurrent programming languages with support for channels, such as CSP and [link]Go[/link]. The resulting futures are explicit, as they must be accessed by reading from the channel, rather than only evaluation.
+0a37vv22cng heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[14]/div[1]/h2[1]
+  See also
+0mq61xfr7n4 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[14]/ul[1]/li[1]
+  [link]Async/await[/link]
+0baxohize0l li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[14]/ul[1]/li[2]
+  [link]Fiber (computer science)[/link]
+1hkxxhprqrv li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[14]/ul[1]/li[3]
+  [link]Futex[/link]
+1m6s0xiyj3u li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[14]/ul[1]/li[4]
+  [link]Pyramid of doom (programming)[/link], a design antipattern avoided by promises
+05s4alnj6m0 heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[1]/h2[1]
+  References
+18cc01v3gzq li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[1]
+  Friedman, Daniel; David Wise (1976). *The Impact of Applicative Programming on Multiprocessing*. International Conference on Parallel Processing. pp. 263–272.
+  Preliminary version of: Friedman, Daniel; Wise, David (April 1978). "Aspects of Applicative Programming for Parallel Processing". *IEEE Transactions on Computers*. *C-27* (4): 289–296. [link]doi[/link]:[link]10.1109/tc.1978.1675100[/link]. [link]S2CID[/link] [link]16333366[/link].
+0tdsal9w12r li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[2]
+  Hibbard, Peter (1976). *Parallel Processing Facilities*. New Directions in Algorithmic Languages, (ed.) Stephen A. Schuman, IRIA, 1976.
+1hj678b8m8m li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[3]
+  Henry Baker; Carl Hewitt (August 1977). [link]*The Incremental Garbage Collection of Processes*[/link]. Proceedings of the Symposium on Artificial Intelligence Programming Languages. ACM SIGPLAN Notices 12, 8. pp. 55–59. Archived from [link]the original[/link] on 4 July 2008. Retrieved 13 February 2015.
+005kwyy8sea li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[4]
+  [link]Promise Pipelining at erights.org[/link]
+21s724vg325 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[5]
+  [link]Promise Pipelining on the C2 wiki[/link]
+1fygt2cqdw9 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[6]
+  [link]1[/link] [link]2[/link] Barbara Liskov; Liuba Shrira (1988). "Promises: Linguistic Support for Efficient Asynchronous Procedure Calls in Distributed Systems". *Proceedings of the SIGPLAN '88 Conference on Programming Language Design and Implementation; Atlanta, Georgia, United States*. ACM. pp. 260–267. [link]doi[/link]:[link]10.1145/53990.54016[/link]. [link]ISBN[/link] [link]0-89791-269-1[/link]. Also published in *ACM SIGPLAN Notices* *23*(7).
+299y7x4r3yi li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[7]
+  [link]*Robust promises with Dojo deferred*[/link], Site Pen, 3 May 2010
+2fxs0h1jh5v li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[8]
+  [link]1[/link] [link]2[/link] [link]"Promise"[/link], *Alice Manual*, DE: Uni-SB, archived from [link]the original[/link] on 8 October 2008, retrieved 21 March 2007
+1d4cl9xxscc li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[9]
+  [link]1[/link] [link]2[/link] [link]"Future"[/link], *Alice manual*, DE: Uni-SB, archived from [link]the original[/link] on 6 October 2008, retrieved 21 March 2007
+22rlmafju72 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[10]
+  [link]*Promise*[/link], E rights
+2gercs4ms0l li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[11]
+  [link]500 lines or less, "A Web Crawler With asyncio Coroutines" by A. Jesse Jiryu Davis and Guido van Rossum[/link] says "implementation uses an asyncio.Event in place of the Future shown here. The difference is an Event can be reset, whereas a Future cannot transition from resolved back to pending."
+0oruvd7gp6d li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[12]
+  [link]*Control Concurrent MVar*[/link], Haskell, archived from [link]the original[/link] on 18 April 2009
+0qdos20qzn4 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[13]
+  [link]*WaitNeeded*[/link], Mozart Oz, archived from the original on 17 May 2013, retrieved 21 March 2007
+2czww7c7s50 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[14]
+  [link]*Promise*[/link], Sunless Sea, archived from [link]the original[/link] on 23 October 2007
+0el91f8s5lp li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[15]
+  [link]*Argus*[/link], MIT
+0l9x9f6wm65 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[16]
+  Liskov, Barbara (26 January 2021), [link]*Distributed computing and Argus*[/link], Oral history, IEEE GHN
+09huz8q8ulh li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[17]
+  [link]*Gold*[/link], Udanax, archived from [link]the original[/link] on 11 October 2008
+01tna5x2rqv li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[18]
+  [link]*Pipeline*[/link], E rights
+0zu4rc5floq li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[19]
+  Henry Lieberman (June 1981). "A Preview of Act 1". *MIT AI Memo 625*.
+1gqn7idonxw li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[20]
+  Henry Lieberman (June 1981). "Thinking About Lots of Things at Once without Getting Confused: Parallelism in Act 1". *MIT AI Memo 626*.
+0g4j2juzybw li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[21]
+  Goetz, Brian (23 November 2004). [link]"Concurrency in JDK 5.0"[/link]. *[link]IBM[/link]*.
+162khyhfi2u li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[22]
+  [link]1[/link] [link]2[/link] [link]"Async in 4.5: Worth the Await – .NET Blog – Site Home – MSDN Blogs"[/link]. Blogs.msdn.com. Retrieved 13 May 2014.
+119grqwzv0c li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[23]
+  [link]1[/link] [link]2[/link] [link]3[/link] [link]"Asynchronous Programming with Async and Await (C# and Visual Basic)"[/link]. Msdn.microsoft.com. Retrieved 13 May 2014.
+1mkx48emtuk li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[24]
+  Tomas Petricek (29 October 2010). [link]"Asynchronous C# and F# (I.): Simultaneous introduction"[/link].
+0owv39ba6v9 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[25]
+  Don Syme; Tomas Petricek; Dmitry Lomov (21 October 2010). [link]"The F# Asynchronous Programming Model, PADL 2011"[/link].
+11vd1r8q4mp li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[26]
+  [link]1[/link] [link]2[/link] Bracha, Gilad (October 2014). [link]"Dart Language Asynchrony Support: Phase 1"[/link].
+0w1xyg4jpcf li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[27]
+  [link]1[/link] [link]2[/link] [link]"PEP 0492 – Coroutines with async and await syntax"[/link].
+01bdihp0j5n li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[28]
+  Taura, Kenjiro; Matsuoka, Satoshi; Yonezawa, Akinori (1994). "ABCL/f: A Future-Based Polymorphic Typed Concurrent Object-Oriented Language – Its Design and Implementation". *Proceedings of the DIMACS workshop on Specification of Parallel Algorithms*. Dimacs Series in Discrete Mathematics and Theoretical Computer Science. Vol. 18. American Mathematical Society. pp. 275–292. [link]CiteSeerX[/link] [link]10.1.1.23.1161[/link].
+0adxg3onafz li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[29]
+  [link]"Dart SDK dart async Completer"[/link].
+23qjp2rtu1h li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[30]
+  [link]"Task"[/link].
+15386mvoa53 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[31]
+  Steve Dekorte (2005). [link]"Io, The Programming Language"[/link].
+06r7z2nvmpi li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[32]
+  [link]"Using promises"[/link]. Mozilla Developer Network. Retrieved 23 February 2021.
+0dx7wy4xzrk li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[33]
+  [link]"Making asynchronous programming easier with async and await"[/link]. *Mozilla Developer Network*. Retrieved 23 February 2021.
+1sxjhd3t4un li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[34]
+  Hickey, Rich (2009). [link]"changes.txt at 1.1.x from richhickey's clojure"[/link]. *[link]GitHub[/link]*.
+2f45070lz9u li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[35]
+  [link]"Future – Kotlin Programming Language"[/link].
+04017znrt5u li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[36]
+  Haridi, Seif; Franzen, Nils. [link]"Tutorial of Oz"[/link]. Mozart Global User Library. Archived from the original on 14 May 2011. Retrieved 12 April 2011.
+21bxtfpp3za li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[37]
+  [link]"concurrent.futures — Launching parallel tasks"[/link]. *Python documentation*. Retrieved 25 March 2026.
+1zl4cq8n4w0 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[38]
+  [link]Python 3.2 Release[/link]
+1zh0l123vxz li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[39]
+  [link]"PEP 3148 – futures - execute computations asynchronously | peps.python.org"[/link]. *Python Enhancement Proposals (PEPs)*. Retrieved 25 March 2026.
+2bn00xoxkrx li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[40]
+  [link]Python 3.5 Release[/link]
+08j87m9mdab li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[41]
+  [link]"Parallelism with Futures"[/link]. PLT. Retrieved 2 March 2012.
+2g67kyi5gyv li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[42]
+  [link]"class Promise"[/link]. raku.org. Retrieved 19 August 2022.
+1defruatlhe li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[43]
+  [link]"Future in std::future - Rust"[/link]. *doc.rust-lang.org*. Retrieved 16 December 2023.
+1yrkvf982t9 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[44]
+  [link]Common Lisp Blackbird[/link]
+201cdyclydl li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[45]
+  [link]Common Lisp Eager Future2[/link]
+02q3vfdxz4n li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[46]
+  [link]Lisp in parallel – A parallel programming library for Common Lisp[/link]
+1jsybw5bicx li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[47]
+  [link]Common Lisp PCall[/link]
+036lobl2p7t li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[48]
+  [link]"Chapter 30. Thread 4.0.0"[/link]. Retrieved 26 June 2013.
+1kygg42vk0s li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[49]
+  [link]"Dlib C++ Library #thread_pool"[/link]. Retrieved 26 June 2013.
+2dp2gvppxag li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[50]
+  [link]"GitHub – facebook/folly: An open-source C++ library developed and used at Facebook"[/link]. *[link]GitHub[/link]*. 8 January 2019.
+0m75cltg0xp li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[51]
+  [link]"HPX"[/link]. 10 February 2019.
+0o7ia1r986h li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[52]
+  [link]"Threads Slides of POCO"[/link] (PDF).
+1iywp82wek7 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[53]
+  [link]"QtCore 5.0: QFuture Class"[/link]. Qt Project. Archived from [link]the original[/link] on 1 June 2013. Retrieved 26 June 2013.
+2b4q2et9z7i li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[54]
+  [link]"Seastar"[/link]. Seastar project. Retrieved 22 August 2016.
+1n0auih7w5k li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[55]
+  [link]"stlab is the ongoing work of what was Adobe's Software Technology Lab. The Adobe Source Libraries (ASL), Platform Libraries, and new stlab libraries are hosted on github"[/link]. 31 January 2021.
+1gz4dg3vodk li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[56]
+  [link]Groovy GPars[/link] [link]Archived[/link] 12 January 2013 at the [link]Wayback Machine[/link]
+2absfaznsd0 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[57]
+  [link]Cujo.js[/link]
+2fpyrf5ggxs li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[58]
+  [link]JavaScript when.js[/link]
+14o39qsyrij li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[59]
+  [link]Promises/A+ specification[/link]
+286uuqjoxkr li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[60]
+  [link]promises[/link]
+17r5gucy65w li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[61]
+  [link]JavaScript MochKit.Async[/link]
+1flhyd6p5hn li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[62]
+  [link]JavaScript Angularjs[/link]
+0ru2d1p970j li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[63]
+  [link]JavaScript node-promise[/link]
+1qu8q557p16 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[64]
+  [link]"JavaScript Q"[/link]. Archived from [link]the original[/link] on 31 December 2018. Retrieved 8 April 2013.
+0okyekxk1dk li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[65]
+  [link]JavaScript RSVP.js[/link]
+1q0q9tbek5x li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[66]
+  [link]YUI JavaScript class library[/link]
+0hwu8lksnde li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[67]
+  [link]YUI JavaScript promise class[/link]
+1kdftubux7y li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[68]
+  [link]JavaScript Bluebird[/link]
+019b4xlbnkj li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[69]
+  [link]Java JDeferred[/link]
+0lahdwiktq1 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[70]
+  [link]Java ParSeq[/link]
+0n7rasvvaln li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[71]
+  [link]Objective-C MAFuture GitHub[/link]
+2gabe8gbnig li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[72]
+  [link]Objective-C MAFuture mikeash.com[/link]
+2brtnnxc80d li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[73]
+  [link]Objective-C RXPromise[/link]
+2g2ox4p0ju6 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[74]
+  [link]ObjC-CollapsingFutures[/link]
+0nxx0797d92 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[75]
+  [link]Objective-C PromiseKit[/link]
+1zotmf9vcsu li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[76]
+  [link]Objective-C objc-promise[/link]
+0y06h70deut li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[77]
+  [link]Objective-C OAPromise[/link]
+1ufrwzcjy9t li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[78]
+  [link]OCaml Lazy[/link]
+1zg4hbdchke li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[79]
+  [link]Perl Future[/link]
+28faulxh24e li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[80]
+  [link]Perl Promises[/link]
+0h6e9apqc31 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[81]
+  [link]Perl Reflex[/link]
+0l50o53omwc li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[82]
+  [link]Perl Promise::ES6[/link]
+0t0zukuffyh li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[83]
+  [link]"Promise::XS – Fast promises in Perl – metacpan.org"[/link]. *metacpan.org*. Retrieved 14 February 2021.
+1njw6clvzbf li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[84]
+  [link]PHP React/Promise[/link]
+0j42cn36rwz li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[85]
+  [link]Python built-in implementation[/link]
+0xd5n27wegg li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[86]
+  [link]pythonfutures[/link]
+1cxv7eozge9 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[87]
+  [link]"Deferred Reference"[/link]. *Twisted Documentation*. Twisted Matrix Labs. [link]Archived[/link] from the original on 25 June 2026.
+24pfd7wmkqi li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[88]
+  [link]R package future[/link]
+0ge0k89bwgh li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[89]
+  [link]future[/link]
+2ftlax0kj39 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[90]
+  [link]Concurrent Ruby[/link]
+0it6drdyqwm li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[91]
+  [link]Ruby Promise gem[/link]
+1085ww470m7 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[92]
+  [link]Ruby libuv[/link]
+1kt4kzp9hy6 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[93]
+  [link]"Ruby Celluloid gem"[/link]. Archived from [link]the original[/link] on 8 May 2013. Retrieved 19 February 2022.
+0jgtrc3tvh7 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[94]
+  [link]Ruby future-resource[/link]
+0mv4l6df6p7 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[95]
+  [link]futures-rs crate[/link]
+0n7g0btr1q2 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[96]
+  [link]Twitter's util library[/link]
+16ojumlfzrr li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[97]
+  [link]"Swift Async"[/link]. Archived from [link]the original[/link] on 31 December 2018. Retrieved 23 June 2014.
+0d2vks2gwkb li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[98]
+  [link]Swift FutureKit[/link]
+1vtq6wrixq7 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[99]
+  [link]Swift Apple GCD[/link]
+11ghu1aryv0 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[100]
+  [link]Swift FutureLib[/link]
+0orv2dd9ke3 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[101]
+  [link]bignerdranch/Deferred[/link]
+13cvj84lmz3 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[102]
+  [link]Thomvis/BrightFutures[/link]
+1asa3jajdo1 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[103]
+  [link]belozierov/SwiftCoroutine[/link]
+0jy9gvvobxy li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[104]
+  [link]tcl-promise[/link]
+100p90ybn2x li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[105]
+  [link]Does async/await solve a real problem?[/link]
+0ii021l23xs li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[106]
+  [link]"Go language patterns Futures"[/link]. Archived from [link]the original[/link] on 4 December 2020. Retrieved 9 February 2014.
+0somi3zcbpy li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[15]/div[2]/div[1]/ol[1]/li[107]
+  [link]"Go Language Patterns"[/link]. Archived from [link]the original[/link] on 11 November 2020. Retrieved 9 February 2014.
+1v64hv09vey heading [h2] /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[16]/div[1]/h2[1]
+  External links
+287d7jhost9 li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[16]/ul[1]/li[1]
+  [link]Concurrency patterns presentation[/link] given at [link]scaleconf[/link]
+1nki6irmkdi li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[16]/ul[1]/li[2]
+  [link]Future Value[/link] and [link]Promise Pipelining[/link] at the [link]Portland Pattern Repository[/link]
+1389ys2xjxa li /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[1]/section[16]/ul[1]/li[3]
+  [link]Easy Threading with Futures[/link] in [link]Python[/link]
+01ldgckqt5j p /html[1]/body[1]/div[3]/div[1]/div[3]/main[1]/div[3]/div[2]/div[2]
+  Retrieved from "[link]https://en.wikipedia.org/w/index.php?title=Futures_and_promises&oldid=1375119078[/link]"

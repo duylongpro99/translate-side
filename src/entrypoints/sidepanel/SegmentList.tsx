@@ -1,0 +1,123 @@
+import type { ComponentChildren } from 'preact';
+import type { Segment } from '@/engine/types';
+import { parseMarkup, type MarkupNode } from './markup.ts';
+
+// Original segments rendered by kind (plan M0-E7). Everything is rendered as text.
+
+function Markup({ nodes }: { nodes: MarkupNode[] }) {
+  return (
+    <>
+      {nodes.map((n, i) => {
+        switch (n.type) {
+          case 'text':
+            return n.text;
+          case 'code':
+            return <code key={i}>{n.text}</code>;
+          case 'em':
+            return (
+              <em key={i}>
+                <Markup nodes={n.children} />
+              </em>
+            );
+          case 'link':
+            // Shown as a link, not followed: the panel has no URL for it (markers carry none).
+            return (
+              <span key={i} class="seg__link">
+                <Markup nodes={n.children} />
+              </span>
+            );
+        }
+      })}
+    </>
+  );
+}
+
+function Text({ seg }: { seg: Segment }) {
+  return <Markup nodes={parseMarkup(seg.inlineMarkup)} />;
+}
+
+function Block({ seg }: { seg: Segment }) {
+  const common = { 'data-id': seg.id, 'data-kind': seg.kind, class: `seg seg--${seg.kind}${seg.hidden ? ' seg--hidden' : ''}` };
+  const hiddenNote = seg.hidden ? <span class="seg__note">hidden on the page (tab or collapsed section)</span> : null;
+  switch (seg.kind) {
+    case 'heading':
+      return (
+        <div {...common} role="heading" aria-level={seg.level ?? 2} data-level={seg.level ?? 2}>
+          <Text seg={seg} />
+          {hiddenNote}
+        </div>
+      );
+    case 'code':
+      return (
+        <figure {...common}>
+          <figcaption class="seg__label">
+            {seg.codeLang ? `${seg.codeLang} · ` : ''}code, kept as is{seg.hidden ? ' · hidden on the page' : ''}
+          </figcaption>
+          <pre>
+            <code>{seg.text}</code>
+          </pre>
+        </figure>
+      );
+    case 'li':
+      return (
+        <div {...common} role="listitem">
+          <Text seg={seg} />
+          {hiddenNote}
+        </div>
+      );
+    case 'quote':
+      return (
+        <blockquote {...common}>
+          <Text seg={seg} />
+          {hiddenNote}
+        </blockquote>
+      );
+    default:
+      return (
+        <p {...common}>
+          <Text seg={seg} />
+          {hiddenNote}
+        </p>
+      );
+  }
+}
+
+/** Consecutive table cells, grouped into rows by groupId. */
+function Table({ cells }: { cells: Segment[] }) {
+  const rows: Segment[][] = [];
+  for (const c of cells) {
+    const row = rows[rows.length - 1];
+    if (row && row[0]?.groupId === c.groupId) row.push(c);
+    else rows.push([c]);
+  }
+  return (
+    <div class="seg-table" role="table">
+      {rows.map((row) => (
+        <div class="seg-row" role="row" key={row[0]?.id} data-group={row[0]?.groupId}>
+          {row.map((c) => (
+            <div class={`seg seg--table-cell${c.hidden ? ' seg--hidden' : ''}`} role="cell" data-id={c.id} data-kind={c.kind} key={c.id}>
+              <Text seg={c} />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function SegmentList({ segments }: { segments: Segment[] }) {
+  const out: ComponentChildren[] = [];
+  for (let i = 0; i < segments.length; ) {
+    const seg = segments[i] as Segment;
+    if (seg.kind === 'table-cell') {
+      let j = i;
+      while (j < segments.length && segments[j]?.kind === 'table-cell') j++;
+      out.push(<Table key={seg.id} cells={segments.slice(i, j)} />);
+      i = j;
+    } else {
+      out.push(<Block key={seg.id} seg={seg} />);
+      i++;
+    }
+  }
+  return <div class="segments">{out}</div>;
+}

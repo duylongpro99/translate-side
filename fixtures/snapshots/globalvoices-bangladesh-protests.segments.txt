@@ -1,0 +1,81 @@
+# via walk · 40 segments
+10k6avgowwv heading [h2] /html[1]/body[1]/div[1]/main[1]/div[1]/div[1]/div[1]/h2[1]
+  [link]Bangladesh: Protests can change governments, but can they strengthen democracy?[/link]
+18vrcoygwpb p /html[1]/body[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]
+  After the election of new government, how much have the state's structures and institutions actually changed?
+28gwvt27h89 p /html[1]/body[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[1]/div[2]
+  Written (বাংলা) by[link]পান্থ রহমান রেজা (Pantha)[/link]
+0t63wninpy7 p /html[1]/body[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/div[2]/div[2]
+  Translated (English) by[link]Rezwan[/link]
+0fth7w58uz9 p /html[1]/body[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]#run[1]
+  Translation posted [link]24 September 2026[/link]
+2bm4wydgd3a p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[1]
+  People cheering in front of the Prime Minister's Office after Sheikh Hasina's resignation. [link]Image[/link] via Wikipedia by Md Joni Hossain. CC [link]BY-SA 4.0[/link].
+1v222cmt7yh p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[1]
+  *This post is part of Global Voices’ September 2026 Spotlight series, “**[link]Protest in Democracy[/link]**.” With this Spotlight, we seek to explore the many forms of protest, the tactics states use to delegitimize and suppress them, and the complex relationship between protest and democracy. You can support this coverage by donating* *[link]here[/link]**.*
+236xfmsoh1d p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[2]
+  On August 5, 2024, thousands of people filled the streets of Dhaka, Bangladesh, as the government that had ruled the country for over 15 years [link]collapsed[/link] amid [link]mass protests[/link] against authoritarianism and demands for accountability.
+1ahg6yv598w p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[3]
+  Weeks earlier, nobody could have imagined it. The day it happened, crowds filled the streets celebrating a government’s fall, celebrating a demand for accountability finally met.
+1twzskmzkiu p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[4]
+  Two years on, a different question follows that victory. Did the country only change a government, or could it also change the system that drove people to the streets in the first place?
+13n5g1o7mex p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[5]
+  The [link]July uprising[/link] started over [link]quota reform[/link] in government jobs, then grew into wider political and social anger. The Office of the United Nations High Commissioner for Human Rights (OHCHR) [link]counted[/link] roughly 1,400 deaths between July 1 and August 15, 2024. On August 5, [link]Sheikh Hasina[/link] [link]resigned[/link] as prime minister and fled the country.
+1v3f0pllqod p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[6]
+  The government fell, and that was the visible outcome. But people who marched in July [link]wanted more[/link]: reformed institutions, accountability, power structures rebuilt from the ground up.
+2btbo54b255 heading [h3] /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h3[1]
+  What the July revolutions promised
+1bbrp5rsi3o p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[7]
+  [link]Hasnat Abdullah[/link], one of the key student leaders of the movement, told BDNews24.com, an online news portal, that some of the structural changes discussed during the uprising have never materialized.
+0i16em1jzgx p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[8]
+  In [link]his words[/link]:
+13d7ikf8ukj quote /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/blockquote[1]/p[1]
+  People expected reforms across the judiciary, executive and every institution of the state. Instead, the same old structure that repeatedly allows authoritarianism to return has survived.
+16g4j62mhu0 p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[9]
+  Other observers push back on that assessment. Political analyst Kazi Mohammad Mahbubur Rahman put [link]it this way[/link] while talking to BDNews24.com:
+1dq9dk90gqf li /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/ul[1]/li[1]
+  [link]Translation[/link]
+2bg0l9qgslt li /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/ul[1]/li[2]
+  [link]Original Quote[/link]
+0g6lz2zbi15 quote /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/blockquote[1]/p[1]
+  The July uprising won Bangladesh freedom from ‘authoritarian rule,’ and ‘after years without one,’ people got to vote again in an election that brought a government to power democratically.
+0ehe69g78sk quote /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/blockquote[1]/p[2]
+  The election gives a message of democracy. But whether that democracy holds, depends on the works still ahead: keeping the process effective, keeping it active.
+2d1k19zgedm quote [hidden] /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/blockquote[2]/p[1]
+  জুলাই অভ্যুত্থানের মধ্য দিয়ে বাংলাদেশ ‘কর্তৃত্ববাদ থেকে মুক্তি’ পেয়েছে, ‘অনেক দিন পর’ মানুষ ভোট দিতে পেরেছে, একটি নির্বাচিত সরকার এসেছে।
+1fbkutms0u8 quote [hidden] /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/blockquote[2]/p[2]
+  নির্বাচনের মাধ্যমে গণতন্ত্রের একটা বার্তা আমরা পাচ্ছি, কিন্তু ভবিষ্যৎ বলে দেবে, এটা কতটা টেকসই হল। এখন গণতান্ত্রিক প্রক্রিয়া কার্যকর রাখা এবং এটা সক্রিয় করার ক্ষেত্রে কাজ করতে হবে।
+03pitwnd1ia p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[10]
+  Building a full democratic system takes time, he said. So the question after July isn’t only who holds power. It’s how much the rules of holding it have actually changed.
+1zp1h9pktod heading [h3] /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h3[2]
+  Reform, measured two years after
+141q5h10cgr p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[11]
+  Surveys measure the gap between what people expected and what they got.
+0wekfbzqiu9 p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[12]
+  [link]BRAC Institute of Governance and Development[/link] (BIGD)’s three-phase Pulse Surveys, run through 2024 and 2025, track a steady drop in optimism. In August 2024, 71 percent of respondents believed the country’s political direction was on the right track. By July 2025, that number had fallen to 42 percent. Meanwhile, 57 percent ranked police and judicial reform among the most urgent priorities; 38 percent pointed to electoral and constitutional reform instead.
+159scf4ecc4 p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[13]
+  Institutions mattered to these citizens as much as elections did, as much as the change in government itself. Whether those reforms hold is still an open question.
+22dkudorh2z p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[14]
+  Al Jazeera [link]reported[/link] in April 2026 that at least 23 of the 133 ordinances issued under the [link]interim government[/link] (August 2024 to February 2026) had been revoked or left to expire, covering human rights, judicial oversight, anti-corruption efforts, and police reform. Opposition parties and some analysts called it backtracking. The government calls it something else: a review process, [link]laws pulled back[/link] for amendment and re-introduction, not reforms canceled.
+05klk2xk60x p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[15]
+  The slow pace of state reform isn’t the only complaint. Opposition parties and human rights activists point to old political habits resurfacing under new names, according to [link]media reports[/link]. Contract-based appointments have [link]crept back[/link] into key institutions. The controversial [link]Rapid Action Battalion[/link], dissolved amid accusations of abuse, has a successor called [link]SRB[/link]. Critics ask the obvious question: does [link]renaming a problem[/link] solve it?
+1umnvohpklf p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[16]
+  Cyber laws and the right to freedom of speech are a [link]newer fight[/link]. State [link]control over online speech[/link] marked the 2024 protests, including Facebook blackouts and internet shutdowns, according to the OHCHR [link]report[/link]. The government [link]defends[/link] its proposed amendments to the Cyber Security Act as necessary to fight online crime, misinformation, and AI-generated content. Critics hear something else: the old machinery for silencing dissent, rebuilt.
+206w333hgiu p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[17]
+  The fate of [link]the July Charter[/link], signed by major political parties including the ruling [link]Bangladesh Nationalist Party[/link] (BNP), raises the same question. It promised structural reform across state institutions: checks and balances, judicial independence, the electoral system, the police, anti-corruption measures. Two years later, political parties [link]still disagree[/link] on how far those reforms should go, and how fast.
+23k46v7cuwc p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/p[1]
+  A female protester holding sign reading মানবে না হার এই গণজোয়ার (“This mass wave won't give up”). [link]Image[/link] via Wikipedia by Wasiul Bahar. [link]CC BY-SA 4.0[/link].
+0jrg051x0io heading [h3] /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h3[3]
+  What comes after the protests?
+26t6rik8fbb p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[18]
+  A protest can topple a government quickly. However, rebuilding institutions, rewriting laws, redistributing power — that work takes years, not weeks. A new democratic government is visible upfront. But a functioning democracy shows up somewhere else: in institutions, in accountability, in checks and balances, in civil rights people can actually exercise.
+1yua6e3wycr p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[19]
+  [link]July 2024 uprising[/link] proved that protest can remove political power. Two years later, the test is different: How much of what people expected from that protest [link]now exists[/link] in practice?
+0n28djptzge p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[20]
+  Hasnat Abdullah’s question isn't just for the movement’s leaders. It belongs to the people who carried the injured to hospitals, who handed out food and water, who backed the protests from wherever they were.
+0ozf28s9k6s p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[21]
+  The government changed. Anyone can see that. Whether July’s promises took root in the institutions and power structures underneath it, that [link]accounting isn’t finished[/link].
+0tmdc4wvyxb p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[3]/div[2]/div[1]/div[2]
+  Written (বাংলা) by[link]পান্থ রহমান রেজা (Pantha)[/link]
+21d10uykyrz p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[3]/div[2]/div[2]/div[2]
+  Translated (English) by[link]Rezwan[/link]

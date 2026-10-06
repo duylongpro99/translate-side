@@ -4,7 +4,7 @@
 import { browser } from 'wxt/browser';
 import { extractPage } from '@/extract';
 import type { InjectOutcome } from '@/shared/inject';
-import { CONTENT_PORT_NAME, PROTOCOL_VERSION, ProtocolError, serve, type ContentApi } from '@/shared/protocol';
+import { CONTENT_PORT_NAME, CONTENT_PORT_PREFIX, PROTOCOL_VERSION, ProtocolError, serve, type ContentApi } from '@/shared/protocol';
 
 declare global {
   // Set by the first injection into this page's isolated world.
@@ -23,7 +23,11 @@ export default defineContentScript({
 
     const docId = crypto.randomUUID();
     browser.runtime.onConnect.addListener((port) => {
-      if (port.name !== CONTENT_PORT_NAME) return;
+      if (port.name !== CONTENT_PORT_NAME) {
+        // A panel of another version: hang up so it fails fast (it can't speak our messages).
+        if (port.name.startsWith(CONTENT_PORT_PREFIX)) port.disconnect();
+        return;
+      }
       serve<ContentApi>(port, {
         hello: ({ v }) => {
           if (v !== PROTOCOL_VERSION) {

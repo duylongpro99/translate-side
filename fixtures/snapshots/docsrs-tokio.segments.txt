@@ -1,0 +1,352 @@
+# via walk · 150 segments
+16t1whyefk4 heading [h1] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/div[1]/h1[1]
+  Crate tokio
+03kvirosdlm p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[1]
+  A runtime for writing reliable network applications without compromising speed.
+1ul3ks0f33t p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[2]
+  Tokio is an event-driven, non-blocking I/O platform for writing asynchronous applications with the Rust programming language. At a high level, it provides a few major components:
+16yy0u0e177 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[1]/li[1]
+  Tools for [link]working with asynchronous tasks[/link], including [link]synchronization primitives and channels[/link] and [link]timeouts, sleeps, and intervals[/link].
+225raen8eqr li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[1]/li[2]
+  APIs for [link]performing asynchronous I/O[/link], including [link]TCP and UDP[/link] sockets, [link]filesystem[/link] operations, and [link]process[/link] and [link]signal[/link] management.
+0326og839ui li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[1]/li[3]
+  A [link]runtime[/link] for executing asynchronous code, including a task scheduler, an I/O driver backed by the operating system’s event queue (`epoll`, `kqueue`, `IOCP`, etc…), and a high performance timer.
+0yaaeqlnc1c p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[3]
+  Guide level documentation is found on the [link]website[/link].
+1iy9g8rfasg heading [h2] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h2[1]
+  A Tour of Tokio
+0gsyb702en9 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[4]
+  Tokio consists of a number of modules that provide a range of functionality essential for implementing asynchronous applications in Rust. In this section, we will take a brief tour of Tokio, summarizing the major APIs and their uses.
+0kxi3q4xqkd p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[5]
+  The easiest way to get started is to enable all features. Do this by enabling the `full` feature flag:
+0em0yy3gh55 code [no-translate lang=toml] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/div[1]/pre[1]
+  tokio = { version = "1", features = ["full"] }
+0pbxj228g51 heading [h4] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h4[1]
+  Authoring applications
+0jp7kenufgi p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[6]
+  Tokio is great for writing applications and most users in this case shouldn’t worry too much about what features they should pick. If you’re unsure, we suggest going with `full` to ensure that you don’t run into any road blocks while you’re building your application.
+1rzonf32727 heading [h5] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h5[1]
+  Example
+23vx2vec0f2 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[7]
+  This example shows the quickest way to get started with Tokio.
+2fvibqnf8fv code [no-translate lang=toml] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/div[2]/pre[1]
+  tokio = { version = "1", features = ["full"] }
+126lf7yzvej heading [h4] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h4[2]
+  Authoring libraries
+0w8wzbxufm0 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[8]
+  As a library author your goal should be to provide the lightest weight crate that is based on Tokio. To achieve this you should ensure that you only enable the features you need. This allows users to pick up your crate without having to enable unnecessary features.
+29xzlyh2xg4 heading [h5] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h5[2]
+  Example
+0dhf8nverqm p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[9]
+  This example shows how you may want to import features for a library that just needs to `tokio::spawn` and use a `TcpStream`.
+1smyful6zd0 code [no-translate lang=toml] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/div[3]/pre[1]
+  tokio = { version = "1", features = ["rt", "net"] }
+0l5ojjn197s heading [h3] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h3[1]
+  Working With Tasks
+24bpywlc0bj p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[10]
+  Asynchronous programs in Rust are based around lightweight, non-blocking units of execution called [link]*tasks*[/link]. The [link]`tokio::task`[/link] module provides important tools for working with tasks:
+2fnbdw6ns91 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[2]/li[1]
+  The [link]`spawn`[/link] function and [link]`JoinHandle`[/link] type, for scheduling a new task on the Tokio runtime and awaiting the output of a spawned task, respectively,
+0zp5cjcjf1w li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[2]/li[2]
+  Functions for [link]running blocking operations[/link] in an asynchronous task context.
+1qb9vdws64m p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[11]
+  The [link]`tokio::task`[/link] module is present only when the “rt” feature flag is enabled.
+0b02bgx2i3a p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[12]
+  The [link]`tokio::sync`[/link] module contains synchronization primitives to use when needing to communicate or share data. These include:
+1rd7hdg2jqr li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[3]/li[1]
+  channels ([link]`oneshot`[/link], [link]`mpsc`[/link], [link]`watch`[/link], and [link]`broadcast`[/link]), for sending values between tasks,
+2cwmq7vgwm5 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[3]/li[2]
+  a non-blocking [link]`Mutex`[/link], for controlling access to a shared, mutable value,
+13y1ttuhw7i li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[3]/li[3]
+  an asynchronous [link]`Barrier`[/link] type, for multiple tasks to synchronize before beginning a computation.
+11p0c2t05hr p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[13]
+  The `tokio::sync` module is present only when the “sync” feature flag is enabled.
+2ahfkfuogov p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[14]
+  The [link]`tokio::time`[/link] module provides utilities for tracking time and scheduling work. This includes functions for setting [link]timeouts[/link] for tasks, [link]sleeping[/link] work to run in the future, or [link]repeating an operation at an interval[/link].
+021yxo2iweh p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[15]
+  In order to use `tokio::time`, the “time” feature flag must be enabled.
+0di28vtilgb p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[16]
+  Finally, Tokio provides a *runtime* for executing asynchronous tasks. Most applications can use the [link]`#[tokio::main]`[/link] macro to run their code on the Tokio runtime. However, this macro provides only basic configuration options. As an alternative, the [link]`tokio::runtime`[/link] module provides more powerful APIs for configuring and managing runtimes. You should use that module if the `#[tokio::main]` macro doesn’t provide the functionality you need.
+0r3bwd654cm p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[17]
+  Using the runtime requires the “rt” or “rt-multi-thread” feature flags, to enable the current-thread [link]single-threaded scheduler[/link] and the [link]multi-thread scheduler[/link], respectively. See the [link]`runtime` module documentation[/link] for details. In addition, the “macros” feature flag enables the `#[tokio::main]` and `#[tokio::test]` attributes.
+0aco9lg4g8a heading [h3] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h3[2]
+  CPU-bound tasks and blocking code
+0e8ggmbmsyf p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[18]
+  Tokio is able to concurrently run many tasks on a few threads by repeatedly swapping the currently running task on each thread. However, this kind of swapping can only happen at `.await` points, so code that spends a long time without reaching an `.await` will prevent other tasks from running. To combat this, Tokio provides two kinds of threads: Core threads and blocking threads.
+2936th49m75 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[19]
+  The core threads are where all asynchronous code runs, and Tokio will by default spawn one for each CPU core. You can use the environment variable `TOKIO_WORKER_THREADS` to override the default value.
+22tjf7e5wcc p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[20]
+  The blocking threads are spawned on demand, can be used to run blocking code that would otherwise block other tasks from running and are kept alive when not used for a certain amount of time which can be configured with [link]`thread_keep_alive`[/link]. Since it is not possible for Tokio to swap out blocking tasks, like it can do with asynchronous code, the upper limit on the number of blocking threads is very large. These limits can be configured on the [link]`Builder`[/link].
+15gpsw5cynq p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[21]
+  To spawn a blocking task, you should use the [link]`spawn_blocking`[/link] function.
+0ao6gadpb83 code [no-translate] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/div[4]/pre[1]
+  #[tokio::main]
+  async fn main() {
+      // This is running on a core thread.
+  
+      let blocking_task = tokio::task::spawn_blocking(|| {
+          // This is running on a blocking thread.
+          // Blocking here is ok.
+      });
+  
+      // We can wait for the blocking task like this:
+      // If the blocking task panics, the unwrap below will propagate the
+      // panic.
+      blocking_task.await.unwrap();
+  }
+1n7ub3taq4h p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[22]
+  If your code is CPU-bound and you wish to limit the number of threads used to run it, you should use a separate thread pool dedicated to CPU bound tasks. For example, you could consider using the [link]rayon[/link] library for CPU-bound tasks. It is also possible to create an extra Tokio runtime dedicated to CPU-bound tasks, but if you do this, you should be careful that the extra runtime runs *only* CPU-bound tasks, as IO-bound tasks on that runtime will behave poorly.
+119yfufg4lb p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[23]
+  Hint: If using rayon, you can use a [link]`oneshot`[/link] channel to send the result back to Tokio when the rayon task finishes.
+28klokkep1v heading [h3] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h3[3]
+  Asynchronous IO
+02jfn2k1yic p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[24]
+  As well as scheduling and running tasks, Tokio provides everything you need to perform input and output asynchronously.
+2a45hu7gyub p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[25]
+  The [link]`tokio::io`[/link] module provides Tokio’s asynchronous core I/O primitives, the [link]`AsyncRead`[/link], [link]`AsyncWrite`[/link], and [link]`AsyncBufRead`[/link] traits. In addition, when the “io-util” feature flag is enabled, it also provides combinators and functions for working with these traits, forming as an asynchronous counterpart to [link]`std::io`[/link].
+0i1d8x5wnoy p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[26]
+  Tokio also includes APIs for performing various kinds of I/O and interacting with the operating system asynchronously. These include:
+208u1xmbps8 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[4]/li[1]
+  [link]`tokio::net`[/link], which contains non-blocking versions of [link]TCP[/link], [link]UDP[/link], and [link]Unix Domain Sockets[/link] (enabled by the “net” feature flag),
+1f7zuyvpxwa li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[4]/li[2]
+  [link]`tokio::fs`[/link], similar to [link]`std::fs`[/link] but for performing filesystem I/O asynchronously (enabled by the “fs” feature flag),
+0cnnh7mqnq7 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[4]/li[3]
+  [link]`tokio::signal`[/link], for asynchronously handling Unix and Windows OS signals (enabled by the “signal” feature flag),
+03f50p8eaet li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[4]/li[4]
+  [link]`tokio::process`[/link], for spawning and managing child processes (enabled by the “process” feature flag).
+06k14ez78n4 heading [h2] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h2[2]
+  Examples
+0sv7macygrn p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[27]
+  A simple TCP echo server:
+26uex74r6iu code [no-translate] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/div[5]/pre[1]
+  use tokio::net::TcpListener;
+  use tokio::io::{AsyncReadExt, AsyncWriteExt};
+  
+  #[tokio::main]
+  async fn main() -> Result<(), Box<dyn std::error::Error>> {
+      let listener = TcpListener::bind("127.0.0.1:8080").await?;
+  
+      loop {
+          let (mut socket, _) = listener.accept().await?;
+  
+          tokio::spawn(async move {
+              let mut buf = [0; 1024];
+  
+              // In a loop, read data from the socket and write the data back.
+              loop {
+                  let n = match socket.read(&mut buf).await {
+                      // socket closed
+                      Ok(0) => return,
+                      Ok(n) => n,
+                      Err(e) => {
+                          eprintln!("failed to read from socket; err = {:?}", e);
+                          return;
+                      }
+                  };
+  
+                  // Write the data back
+                  if let Err(e) = socket.write_all(&buf[0..n]).await {
+                      eprintln!("failed to write to socket; err = {:?}", e);
+                      return;
+                  }
+              }
+          });
+      }
+  }
+218d0dcca8c heading [h2] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h2[3]
+  Feature flags
+0unyt5nlgxb p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[28]
+  Tokio uses a set of [link]feature flags[/link] to reduce the amount of compiled code. It is possible to just enable certain features over others. By default, Tokio does not enable any features but allows one to enable a subset for their use case. Below is a list of the available feature flags. You may also notice above each function, struct and trait there is listed one or more feature flags that are required for that item to be used. If you are new to Tokio it is recommended that you use the `full` feature flag which will enable all public APIs. Beware though that this will pull in many extra dependencies that you may not need.
+0uby39l17zx li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[1]
+  `full`: Enables all features listed below except `test-util` and unstable features.
+0pawgx2fhbz li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[2]
+  `rt`: Enables `tokio::spawn`, the current-thread scheduler, and non-scheduler utilities.
+2axcwd0xs4z li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[3]
+  `rt-multi-thread`: Enables the heavier, multi-threaded, work-stealing scheduler.
+17hhawc8gol li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[4]
+  `io-util`: Enables the IO based `Ext` traits.
+04pqevrx00t li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[5]
+  `io-std`: Enable `Stdout`, `Stdin` and `Stderr` types.
+13o0gukvcyz li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[6]
+  `net`: Enables `tokio::net` types such as `TcpStream`, `UnixStream` and `UdpSocket`, as well as (on Unix-like systems) `AsyncFd` and (on FreeBSD) `PollAio`.
+0uni06xjje8 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[7]
+  `time`: Enables `tokio::time` types and allows the schedulers to enable the built-in timer.
+154qczwc184 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[8]
+  `process`: Enables `tokio::process` types.
+24dd1gqvhvi li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[9]
+  `macros`: Enables `#[tokio::main]` and `#[tokio::test]` macros.
+1oo4m0di7f4 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[10]
+  `sync`: Enables all `tokio::sync` types.
+0mnh76ydo60 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[11]
+  `signal`: Enables all `tokio::signal` types.
+1yn0x6hhbc6 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[12]
+  `fs`: Enables `tokio::fs` types.
+0k5067zaw83 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[13]
+  `test-util`: Enables testing based infrastructure for the Tokio runtime.
+25inaqk2qbn li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[5]/li[14]
+  `parking_lot`: As a potential optimization, use the [link]`parking_lot`[/link] crate’s synchronization primitives internally. Also, this dependency is necessary to construct some of our primitives in a `const` context. `MSRV` may increase according to the [link]`parking_lot`[/link] release in use.
+070zx06lrvn p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[29]
+  *Note: `AsyncRead` and `AsyncWrite` traits do not require any features and are always available.*
+2eqc0locu40 heading [h3] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h3[4]
+  Unstable features
+12gize2x3dg p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[30]
+  Some feature flags are only available when specifying the `tokio_unstable` flag:
+18yundthovn li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[6]/li[1]
+  `tracing`: Enables tracing events.
+0q7h9lbw2jz li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[6]/li[2]
+  `schedule-latency`: Allows measurement of task scheduling latencies.
+2bsshwm4y7x li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[6]/li[3]
+  `io-uring`: Enables `io-uring` (Linux only).
+0kyfbld6m6e li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[6]/li[4]
+  `taskdump`: Enables `taskdump` (Linux only).
+02mrw4kt71z p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[31]
+  Likewise, this flag enables access to unstable APIs.
+1663cfylhky p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[32]
+  This flag enables *unstable* features. The public API of these features may break in 1.x releases. To enable these features, the `--cfg tokio_unstable` argument must be passed to `rustc` when compiling. This serves to explicitly opt-in to features which may break semver conventions, since Cargo [link]does not yet directly support such opt-ins[/link].
+05sxzzqwc8e p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[33]
+  You can specify it in your project’s `.cargo/config.toml` file:
+1zcl4vu6mns code [no-translate lang=toml] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/div[6]/pre[1]
+  [build]
+  rustflags = ["--cfg", "tokio_unstable"]
+1kbquwu1jp9 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/div[7]
+  The `[build]` section does *not* go in a `Cargo.toml` file. Instead it must be placed in the Cargo config file `.cargo/config.toml`.
+0otoxgickxi p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[34]
+  Alternatively, you can specify it with an environment variable:
+1umzjcyubch code [no-translate lang=sh] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/div[8]/pre[1]
+  ## Many *nix shells:
+  export RUSTFLAGS="--cfg tokio_unstable"
+  cargo build
+1y953c6ommt code [no-translate lang=powershell] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/div[9]/pre[1]
+  ## Windows PowerShell:
+  $Env:RUSTFLAGS="--cfg tokio_unstable"
+  cargo build
+06k0a1wlroq heading [h2] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h2[4]
+  Supported platforms
+1owtueu3acb p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[35]
+  Tokio currently guarantees support for the following platforms:
+0n304ljtnh7 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[7]/li[1]
+  Linux
+0o9c3owmjvl li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[7]/li[2]
+  Windows
+00vs1r2qkt3 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[7]/li[3]
+  Android (API level 21)
+1wcgayv0yv5 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[7]/li[4]
+  macOS
+0jkftonosq9 li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[7]/li[5]
+  iOS
+0isrzhldcst li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[7]/li[6]
+  FreeBSD
+25u7uuoofps p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[36]
+  Tokio will continue to support these platforms in the future. However, future releases may change requirements such as the minimum required libc version on Linux, the API level on Android, or the supported FreeBSD release.
+09ugpj4h44v p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[37]
+  Beyond the above platforms, Tokio is intended to work on all platforms supported by the mio crate. You can find a longer list [link]in mio’s documentation[/link]. However, these additional platforms may become unsupported in the future.
+05yzufjmve8 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[38]
+  Note that Wine is considered to be a different platform from Windows. See mio’s documentation for more information on Wine support.
+1wgtussp37h heading [h3] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h3[5]
+  `WASM` support
+1nxcq9i3ppz p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[39]
+  Tokio has some limited support for the `WASM` platform. Without the `tokio_unstable` flag, the following features are supported:
+175viju6o8e li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[8]/li[1]
+  `sync`
+0e98cn867iy li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[8]/li[2]
+  `macros`
+0sihzvu1qhl li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[8]/li[3]
+  `io-util`
+02ux42meo6l li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[8]/li[4]
+  `rt`
+1yuvithuzzg li /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/ul[8]/li[5]
+  `time`
+00xv7ihww6s p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[40]
+  Enabling any other feature (including `full`) will cause a compilation failure.
+0b8t37fcjfl p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[41]
+  The `time` module will only work on `WASM` platforms that have support for timers (e.g. wasm32-wasi). The timing functions will panic if used on a `WASM` platform that does not support timers.
+0pdkzzguc01 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[42]
+  Note also that if the runtime becomes indefinitely idle, it will panic immediately instead of blocking forever. On platforms that don’t support time, this means that the runtime can never be idle in any way.
+1krt9q5ux4s heading [h3] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/h3[6]
+  Unstable `WASM` support
+19zqtghumuw p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[43]
+  Tokio also has unstable support for some additional `WASM` features. This requires the use of the `tokio_unstable` flag.
+1s8udoe2yql p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/details[1]/div[1]/p[44]
+  Using this flag enables the use of `tokio::net` on the wasm32-wasi target. However, not all methods are available on the networking types as `WASI` currently does not support the creation of new sockets from within `WASM`. Because of this, sockets must currently be created via the `FromRawFd` trait.
+282t1j42m4f heading [h2] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/h2[1]
+  Re-exports
+28fqqxvkuy7 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[1]/dt[1]
+  `pub use task::spawn;``rt`
+1y5ty75i0wa heading [h2] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/h2[2]
+  Modules
+049g8gar7kz p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[1]
+  [link]doc[/link]`docsrs` and Unix
+19e8pv3xlfv p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[1]
+  Types which are documented locally in the Tokio crate, but does not actually live here.
+08mvq1sw4yp p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[2]
+  [link]fs[/link]`fs`
+06vumld20qz p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[2]
+  Asynchronous file utilities.
+177varbrlhq p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[3]
+  [link]io[/link]
+1ugjw2ju9p1 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[3]
+  Traits, helpers, and type definitions for asynchronous I/O functionality.
+0jcqwuhkwtj p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[4]
+  [link]net[/link]
+0zut2ahepjx p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[4]
+  TCP/UDP/Unix bindings for `tokio`.
+0zhli9515qa p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[5]
+  [link]process[/link]`process`
+2fu5ct2y4cy p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[5]
+  An implementation of asynchronous process management for Tokio.
+0cuhijpoh1q p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[6]
+  [link]runtime[/link]`rt`
+12hxo4hq8t0 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[6]
+  The Tokio runtime.
+1nq7si0orpp p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[7]
+  [link]signal[/link]`signal`
+1idnpy9z59g p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[7]
+  Asynchronous signal handling for Tokio.
+048o4tojc6y p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[8]
+  [link]stream[/link]
+0ltucibnpx0 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[8]
+  Due to the `Stream` trait’s inclusion in `std` landing later than Tokio’s 1.0 release, most of the Tokio stream utilities have been moved into the [link]`tokio-stream`[/link] crate.
+043tdigxswm p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[9]
+  [link]sync[/link]`sync`
+1qjydtzt1vw p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[9]
+  Synchronization primitives for use in asynchronous contexts.
+0z521c26wqc p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[10]
+  [link]task[/link]`rt`
+1m43o68mwmg p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[10]
+  Asynchronous green-threads.
+1ub5awgrk3x p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[11]
+  [link]time[/link]`time`
+0q39gui1x3i p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[11]
+  Utilities for tracking time.
+0y4ah7dnqdv heading [h2] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/h2[3]
+  Macros
+0fsa40ipk8x p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[1]
+  [link]join[/link]`macros`
+19i09e8hpv3 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dd[1]
+  Waits on multiple concurrent branches, returning when *all* branches complete.
+1tei6h9kq40 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[2]
+  [link]pin[/link]
+2eacjnh4zsc p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dd[2]
+  Pins a value on the stack.
+100oae68zv1 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[3]
+  [link]select[/link]`macros`
+0pk6ck45adx p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dd[3]
+  Waits on multiple concurrent branches, returning when the *first* branch completes, cancelling the remaining branches.
+1weiwjl5wyo p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[4]
+  [link]task_local[/link]`rt`
+0ve3kfpv19d p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dd[4]
+  Declares a new task-local key of type [link]`tokio::task::LocalKey`[/link].
+0bpulzd1rif p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[5]
+  [link]try_join[/link]`macros`
+1d1hqokmt4a p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dd[5]
+  Waits on multiple concurrent branches, returning when *all* branches complete with `Ok(_)` or on the first `Err(_)`.
+0guy6vmq1b1 heading [h2] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/h2[4]
+  Attribute Macros
+22p8hmbbskx p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[4]/dt[1]
+  [link]main[/link]`macros` and `rt`
+0vyojr635ja p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[4]/dd[1]
+  Marks async function to be executed by the selected runtime. This macro helps set up a `Runtime` without requiring the user to use [link]Runtime[/link] or [link]Builder[/link] directly.
+042ae76s4lb p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[4]/dt[2]
+  [link]test[/link]`macros` and `rt`
+2e8lx9ysk4l p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[4]/dd[2]
+  Marks async function to be executed by runtime, suitable to test environment. This macro helps set up a `Runtime` without requiring the user to use [link]Runtime[/link] or [link]Builder[/link] directly.

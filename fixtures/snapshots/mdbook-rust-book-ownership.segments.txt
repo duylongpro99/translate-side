@@ -1,0 +1,366 @@
+# via walk · 116 segments
+0bfwpm5e6m5 heading [h2] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/h2[1]
+  [link]What Is Ownership?[/link]
+2cl717cirzz p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[1]
+  *Ownership* is a set of rules that govern how a Rust program manages memory. All programs have to manage the way they use a computer’s memory while running. Some languages have garbage collection that regularly looks for no-longer-used memory as the program runs; in other languages, the programmer must explicitly allocate and free the memory. Rust uses a third approach: Memory is managed through a system of ownership with a set of rules that the compiler checks. If any of the rules are violated, the program won’t compile. None of the features of ownership will slow down your program while it’s running.
+07jqfkvzaza p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[2]
+  Because ownership is a new concept for many programmers, it does take some time to get used to. The good news is that the more experienced you become with Rust and the rules of the ownership system, the easier you’ll find it to naturally develop code that is safe and efficient. Keep at it!
+22bmfkvv8b3 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[3]
+  When you understand ownership, you’ll have a solid foundation for understanding the features that make Rust unique. In this chapter, you’ll learn ownership by working through some examples that focus on a very common data structure: strings.
+0v5lc1maln3 heading [h3] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/section[1]/h3[1]
+  [link]The Stack and the Heap[/link]
+1xm6hfgh5w9 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/section[1]/p[1]
+  Many programming languages don’t require you to think about the stack and the heap very often. But in a systems programming language like Rust, whether a value is on the stack or the heap affects how the language behaves and why you have to make certain decisions. Parts of ownership will be described in relation to the stack and the heap later in this chapter, so here is a brief explanation in preparation.
+2dvtsknyls1 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/section[1]/p[2]
+  Both the stack and the heap are parts of memory available to your code to use at runtime, but they are structured in different ways. The stack stores values in the order it gets them and removes the values in the opposite order. This is referred to as *last in, first out (LIFO)*. Think of a stack of plates: When you add more plates, you put them on top of the pile, and when you need a plate, you take one off the top. Adding or removing plates from the middle or bottom wouldn’t work as well! Adding data is called *pushing onto the stack*, and removing data is called *popping off the stack*. All data stored on the stack must have a known, fixed size. Data with an unknown size at compile time or a size that might change must be stored on the heap instead.
+0gx45g98z18 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/section[1]/p[3]
+  The heap is less organized: When you put data on the heap, you request a certain amount of space. The memory allocator finds an empty spot in the heap that is big enough, marks it as being in use, and returns a *pointer*, which is the address of that location. This process is called *allocating on the heap* and is sometimes abbreviated as just *allocating* (pushing values onto the stack is not considered allocating). Because the pointer to the heap is a known, fixed size, you can store the pointer on the stack, but when you want the actual data, you must follow the pointer. Think of being seated at a restaurant. When you enter, you state the number of people in your group, and the host finds an empty table that fits everyone and leads you there. If someone in your group comes late, they can ask where you’ve been seated to find you.
+1tewnc7vhev p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/section[1]/p[4]
+  Pushing to the stack is faster than allocating on the heap because the allocator never has to search for a place to store new data; that location is always at the top of the stack. Comparatively, allocating space on the heap requires more work because the allocator must first find a big enough space to hold the data and then perform bookkeeping to prepare for the next allocation.
+1dbq9ecalia p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/section[1]/p[5]
+  Accessing data in the heap is generally slower than accessing data on the stack because you have to follow a pointer to get there. Contemporary processors are faster if they jump around less in memory. Continuing the analogy, consider a server at a restaurant taking orders from many tables. It’s most efficient to get all the orders at one table before moving on to the next table. Taking an order from table A, then an order from table B, then one from A again, and then one from B again would be a much slower process. By the same token, a processor can usually do its job better if it works on data that’s close to other data (as it is on the stack) rather than farther away (as it can be on the heap).
+07drk6gzs14 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/section[1]/p[6]
+  When your code calls a function, the values passed into the function (including, potentially, pointers to data on the heap) and the function’s local variables get pushed onto the stack. When the function is over, those values get popped off the stack.
+0virsozcbly p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/section[1]/p[7]
+  Keeping track of what parts of code are using what data on the heap, minimizing the amount of duplicate data on the heap, and cleaning up unused data on the heap so that you don’t run out of space are all problems that ownership addresses. Once you understand ownership, you won’t need to think about the stack and the heap very often. But knowing that the main purpose of ownership is to manage heap data can help explain why it works the way it does.
+0zo4w53zhvq heading [h3] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/h3[1]
+  [link]Ownership Rules[/link]
+20cv6t0pw5e p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[4]
+  First, let’s take a look at the ownership rules. Keep these rules in mind as we work through the examples that illustrate them:
+2dvgkswk1ga li /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/ul[1]/li[1]
+  Each value in Rust has an *owner*.
+122nonvihf7 li /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/ul[1]/li[2]
+  There can only be one owner at a time.
+100d40e7ni6 li /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/ul[1]/li[3]
+  When the owner goes out of scope, the value will be dropped.
+0lc7ai2s0b3 heading [h3] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/h3[2]
+  [link]Variable Scope[/link]
+0nbtfisgurl p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[5]
+  Now that we’re past basic Rust syntax, we won’t include all the `fn main() {` code in the examples, so if you’re following along, make sure to put the following examples inside a `main` function manually. As a result, our examples will be a bit more concise, letting us focus on the actual details rather than boilerplate code.
+21aupiifbwi p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[6]
+  As a first example of ownership, we’ll look at the scope of some variables. A *scope* is the range within a program for which an item is valid. Take the following variable:
+214sbwfe163 code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/pre[1]
+  #![allow(unused)]
+  fn main() {
+  let s = "hello";
+  }
+115vmn3bhzt p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[7]
+  The variable `s` refers to a string literal, where the value of the string is hardcoded into the text of our program. The variable is valid from the point at which it’s declared until the end of the current scope. Listing 4-1 shows a program with comments annotating where the variable `s` would be valid.
+1siskagy34y code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/figure[1]/pre[1]
+  fn main() {
+      {                      // s is not valid here, since it's not yet declared
+          let s = "hello";   // s is valid from this point forward
+  
+          // do stuff with s
+      }                      // this scope is now over, and s is no longer valid
+  }
+26a4hgfhqen caption /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/figure[1]/figcaption[1]
+  [link]Listing 4-1[/link]: A variable and the scope in which it is valid
+20ua5uslug3 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[8]
+  In other words, there are two important points in time here:
+122kzr5k8rr li /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/ul[2]/li[1]
+  When `s` comes *into* scope, it is valid.
+0r9mu1y0upc li /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/ul[2]/li[2]
+  It remains valid until it goes *out of* scope.
+1safqd1y50s p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[9]
+  At this point, the relationship between scopes and when variables are valid is similar to that in other programming languages. Now we’ll build on top of this understanding by introducing the `String` type.
+2aaq4jml0mx heading [h3] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/h3[3]
+  [link]The `String` Type[/link]
+0nwp9ldbpw0 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[10]
+  To illustrate the rules of ownership, we need a data type that is more complex than those we covered in the [link]“Data Types”[/link] section of Chapter 3. The types covered previously are of a known size, can be stored on the stack and popped off the stack when their scope is over, and can be quickly and trivially copied to make a new, independent instance if another part of code needs to use the same value in a different scope. But we want to look at data that is stored on the heap and explore how Rust knows when to clean up that data, and the `String` type is a great example.
+066gjl00zfr p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[11]
+  We’ll concentrate on the parts of `String` that relate to ownership. These aspects also apply to other complex data types, whether they are provided by the standard library or created by you. We’ll discuss non-ownership aspects of `String` in [link]Chapter 8[/link].
+2ddm72znrtt p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[12]
+  We’ve already seen string literals, where a string value is hardcoded into our program. String literals are convenient, but they aren’t suitable for every situation in which we may want to use text. One reason is that they’re immutable. Another is that not every string value can be known when we write our code: For example, what if we want to take user input and store it? It is for these situations that Rust has the `String` type. This type manages data allocated on the heap and as such is able to store an amount of text that is unknown to us at compile time. You can create a `String` from a string literal using the `from` function, like so:
+20yi5x9mszf code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/pre[2]
+  #![allow(unused)]
+  fn main() {
+  let s = String::from("hello");
+  }
+1doboh27eqn p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[13]
+  The double colon `::` operator allows us to namespace this particular `from` function under the `String` type rather than using some sort of name like `string_from`. We’ll discuss this syntax more in the [link]“Methods”[/link] section of Chapter 5, and when we talk about namespacing with modules in [link]“Paths for Referring to an Item in the Module Tree”[/link] in Chapter 7.
+1fdhckc1dlc p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[14]
+  This kind of string *can* be mutated:
+0a5njou6fke code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/pre[3]
+  fn main() {
+      let mut s = String::from("hello");
+  
+      s.push_str(", world!"); // push_str() appends a literal to a String
+  
+      println!("{s}"); // this will print `hello, world!`
+  }
+1pv3dzhuvif p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[15]
+  So, what’s the difference here? Why can `String` be mutated but literals cannot? The difference is in how these two types deal with memory.
+03zt6lq2ri8 heading [h3] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/h3[4]
+  [link]Memory and Allocation[/link]
+1n41fvrvjkv p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[16]
+  In the case of a string literal, we know the contents at compile time, so the text is hardcoded directly into the final executable. This is why string literals are fast and efficient. But these properties only come from the string literal’s immutability. Unfortunately, we can’t put a blob of memory into the binary for each piece of text whose size is unknown at compile time and whose size might change while running the program.
+0thw3i0jsdt p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[17]
+  With the `String` type, in order to support a mutable, growable piece of text, we need to allocate an amount of memory on the heap, unknown at compile time, to hold the contents. This means:
+1rnl11p5a3f li /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/ul[3]/li[1]
+  The memory must be requested from the memory allocator at runtime.
+1ac99g76isy li /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/ul[3]/li[2]
+  We need a way of returning this memory to the allocator when we’re done with our `String`.
+1o94mi6laf4 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[18]
+  That first part is done by us: When we call `String::from`, its implementation requests the memory it needs. This is pretty much universal in programming languages.
+1rkckxgoxq6 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[19]
+  However, the second part is different. In languages with a *garbage collector (GC)*, the GC keeps track of and cleans up memory that isn’t being used anymore, and we don’t need to think about it. In most languages without a GC, it’s our responsibility to identify when memory is no longer being used and to call code to explicitly free it, just as we did to request it. Doing this correctly has historically been a difficult programming problem. If we forget, we’ll waste memory. If we do it too early, we’ll have an invalid variable. If we do it twice, that’s a bug too. We need to pair exactly one `allocate` with exactly one `free`.
+0trao3r7h7h p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[20]
+  Rust takes a different path: The memory is automatically returned once the variable that owns it goes out of scope. Here’s a version of our scope example from Listing 4-1 using a `String` instead of a string literal:
+124f3o79p31 code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/pre[4]
+  fn main() {
+      {
+          let s = String::from("hello"); // s is valid from this point forward
+  
+          // do stuff with s
+      }                                  // this scope is now over, and s is no
+                                         // longer valid
+  }
+0e6d9rfhk24 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[21]
+  There is a natural point at which we can return the memory our `String` needs to the allocator: when `s` goes out of scope. When a variable goes out of scope, Rust calls a special function for us. This function is called `drop`, and it’s where the author of `String` can put the code to return the memory. Rust calls `drop` automatically at the closing curly bracket.
+02l37t8l7fk p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/section[2]/p[1]
+  Note: In C++, this pattern of deallocating resources at the end of an item’s lifetime is sometimes called *Resource Acquisition Is Initialization (RAII)*. The `drop` function in Rust will be familiar to you if you’ve used RAII patterns.
+23s9gwx2shv p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[22]
+  This pattern has a profound impact on the way Rust code is written. It may seem simple right now, but the behavior of code can be unexpected in more complicated situations when we want to have multiple variables use the data we’ve allocated on the heap. Let’s explore some of those situations now.
+156ciah75cr heading [h4] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/h4[1]
+  [link]Variables and Data Interacting with Move[/link]
+1azvirsmq2e p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[24]
+  Multiple variables can interact with the same data in different ways in Rust. Listing 4-2 shows an example using an integer.
+06u54pgf5wg code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/figure[2]/pre[1]
+  fn main() {
+      let x = 5;
+      let y = x;
+  }
+2637kkeaj41 caption /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/figure[2]/figcaption[1]
+  [link]Listing 4-2[/link]: Assigning the integer value of variable `x` to `y`
+0rq52qh8ofq p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[25]
+  We can probably guess what this is doing: “Bind the value `5` to `x`; then, make a copy of the value in `x` and bind it to `y`.” We now have two variables, `x` and `y`, and both equal `5`. This is indeed what is happening, because integers are simple values with a known, fixed size, and these two `5` values are pushed onto the stack.
+28vemf5jryd p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[26]
+  Now let’s look at the `String` version:
+1upd7wyjxc5 code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/pre[5]
+  fn main() {
+      let s1 = String::from("hello");
+      let s2 = s1;
+  }
+0lg0jb4fycc p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[27]
+  This looks very similar, so we might assume that the way it works would be the same: That is, the second line would make a copy of the value in `s1` and bind it to `s2`. But this isn’t quite what happens.
+0uql0ud8yc0 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[28]
+  Take a look at Figure 4-1 to see what is happening to `String` under the covers. A `String` is made up of three parts, shown on the left: a pointer to the memory that holds the contents of the string, a length, and a capacity. This group of data is stored on the stack. On the right is the memory on the heap that holds the contents.
+2bxr7tbwk4t p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[30]
+  Figure 4-1: The representation in memory of a `String` holding the value `"hello"` bound to `s1`
+1b4q4d6p0j5 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[31]
+  The length is how much memory, in bytes, the contents of the `String` are currently using. The capacity is the total amount of memory, in bytes, that the `String` has received from the allocator. The difference between length and capacity matters, but not in this context, so for now, it’s fine to ignore the capacity.
+0hrxija9qxf p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[32]
+  When we assign `s1` to `s2`, the `String` data is copied, meaning we copy the pointer, the length, and the capacity that are on the stack. We do not copy the data on the heap that the pointer refers to. In other words, the data representation in memory looks like Figure 4-2.
+27lhfj4tmaa p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[34]
+  Figure 4-2: The representation in memory of the variable `s2` that has a copy of the pointer, length, and capacity of `s1`
+1e5n3ay9100 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[35]
+  The representation does *not* look like Figure 4-3, which is what memory would look like if Rust instead copied the heap data as well. If Rust did this, the operation `s2 = s1` could be very expensive in terms of runtime performance if the data on the heap were large.
+1mgd0wvwsaw p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[37]
+  Figure 4-3: Another possibility for what `s2 = s1` might do if Rust copied the heap data as well
+1foqyyb6gk8 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[38]
+  Earlier, we said that when a variable goes out of scope, Rust automatically calls the `drop` function and cleans up the heap memory for that variable. But Figure 4-2 shows both data pointers pointing to the same location. This is a problem: When `s2` and `s1` go out of scope, they will both try to free the same memory. This is known as a *double free* error and is one of the memory safety bugs we mentioned previously. Freeing memory twice can lead to memory corruption, which can potentially lead to security vulnerabilities.
+0nmwskn5uni p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[39]
+  To ensure memory safety, after the line `let s2 = s1;`, Rust considers `s1` as no longer valid. Therefore, Rust doesn’t need to free anything when `s1` goes out of scope. Check out what happens when you try to use `s1` after `s2` is created; it won’t work:
+02sxpxj3kg8 code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/pre[6]
+  fn main() {
+      let s1 = String::from("hello");
+      let s2 = s1;
+  
+      println!("{s1}, world!");
+  }
+0jacsy9nwgx p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[40]
+  You’ll get an error like this because Rust prevents you from using the invalidated reference:
+0ibizyznnx1 code [no-translate lang=console] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/pre[7]
+  $ cargo run
+     Compiling ownership v0.1.0 (file:///projects/ownership)
+  error[E0382]: borrow of moved value: `s1`
+   --> src/main.rs:5:16
+    |
+  2 |     let s1 = String::from("hello");
+    |         -- move occurs because `s1` has type `String`, which does not implement the `Copy` trait
+  3 |     let s2 = s1;
+    |              -- value moved here
+  4 |
+  5 |     println!("{s1}, world!");
+    |                ^^ value borrowed here after move
+    |
+  help: consider cloning the value if the performance cost is acceptable
+    |
+  3 |     let s2 = s1.clone();
+    |                ++++++++
+  
+  For more information about this error, try `rustc --explain E0382`.
+  error: could not compile `ownership` (bin "ownership") due to 1 previous error
+1tn53tipy3i p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[41]
+  If you’ve heard the terms *shallow copy* and *deep copy* while working with other languages, the concept of copying the pointer, length, and capacity without copying the data probably sounds like making a shallow copy. But because Rust also invalidates the first variable, instead of being called a shallow copy, it’s known as a *move*. In this example, we would say that `s1` was *moved* into `s2`. So, what actually happens is shown in Figure 4-4.
+11257slekjv p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[43]
+  Figure 4-4: The representation in memory after `s1` has been invalidated
+0bc6j69txc2 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[44]
+  That solves our problem! With only `s2` valid, when it goes out of scope it alone will free the memory, and we’re done.
+1ggfa73xu4q p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[45]
+  In addition, there’s a design choice that’s implied by this: Rust will never automatically create “deep” copies of your data. Therefore, any *automatic* copying can be assumed to be inexpensive in terms of runtime performance.
+1u4wjzadfli heading [h4] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/h4[2]
+  [link]Scope and Assignment[/link]
+2dahuzkt5k5 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[46]
+  The inverse of this is true for the relationship between scoping, ownership, and memory being freed via the `drop` function as well. When you assign a completely new value to an existing variable, Rust will call `drop` and free the original value’s memory immediately. Consider this code, for example:
+2gatr59c2rl code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/pre[8]
+  fn main() {
+      let mut s = String::from("hello");
+      s = String::from("ahoy");
+  
+      println!("{s}, world!");
+  }
+0u2x8fd3kop p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[47]
+  We initially declare a variable `s` and bind it to a `String` with the value `"hello"`. Then, we immediately create a new `String` with the value `"ahoy"` and assign it to `s`. At this point, nothing is referring to the original value on the heap at all. Figure 4-5 illustrates the stack and heap data now:
+0eha3dh5gbz p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[49]
+  Figure 4-5: The representation in memory after the initial value has been replaced in its entirety
+0vigjd36soi p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[50]
+  The original string thus immediately goes out of scope. Rust will run the `drop` function on it and its memory will be freed right away. When we print the value at the end, it will be `"ahoy, world!"`.
+2f8x2lduhes heading [h4] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/h4[3]
+  [link]Variables and Data Interacting with Clone[/link]
+2erucd2qf0c p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[52]
+  If we *do* want to deeply copy the heap data of the `String`, not just the stack data, we can use a common method called `clone`. We’ll discuss method syntax in Chapter 5, but because methods are a common feature in many programming languages, you’ve probably seen them before.
+03pgmf57d3s p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[53]
+  Here’s an example of the `clone` method in action:
+29e5u6anq4k code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/pre[9]
+  fn main() {
+      let s1 = String::from("hello");
+      let s2 = s1.clone();
+  
+      println!("s1 = {s1}, s2 = {s2}");
+  }
+03xlijvpw9b p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[54]
+  This works just fine and explicitly produces the behavior shown in Figure 4-3, where the heap data *does* get copied.
+16lr9rgtafa p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[55]
+  When you see a call to `clone`, you know that some arbitrary code is being executed and that code may be expensive. It’s a visual indicator that something different is going on.
+0l5hkt5igsc heading [h4] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/h4[4]
+  [link]Stack-Only Data: Copy[/link]
+0usp1tpse5k p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[56]
+  There’s another wrinkle we haven’t talked about yet. This code using integers—part of which was shown in Listing 4-2—works and is valid:
+1aeprjyz1hl code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/pre[10]
+  fn main() {
+      let x = 5;
+      let y = x;
+  
+      println!("x = {x}, y = {y}");
+  }
+14657zabdgn p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[57]
+  But this code seems to contradict what we just learned: We don’t have a call to `clone`, but `x` is still valid and wasn’t moved into `y`.
+2cc37cu9tzf p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[58]
+  The reason is that types such as integers that have a known size at compile time are stored entirely on the stack, so copies of the actual values are quick to make. That means there’s no reason we would want to prevent `x` from being valid after we create the variable `y`. In other words, there’s no difference between deep and shallow copying here, so calling `clone` wouldn’t do anything different from the usual shallow copying, and we can leave it out.
+1hnnd1j4dod p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[59]
+  Rust has a special annotation called the `Copy` trait that we can place on types that are stored on the stack, as integers are (we’ll talk more about traits in [link]Chapter 10[/link]). If a type implements the `Copy` trait, variables that use it do not move, but rather are trivially copied, making them still valid after assignment to another variable.
+0rcpo36xesd p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[60]
+  Rust won’t let us annotate a type with `Copy` if the type, or any of its parts, has implemented the `Drop` trait. If the type needs something special to happen when the value goes out of scope and we add the `Copy` annotation to that type, we’ll get a compile-time error. To learn about how to add the `Copy` annotation to your type to implement the trait, see [link]“Derivable Traits”[/link] in Appendix C.
+1cz2vksl890 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[61]
+  So, what types implement the `Copy` trait? You can check the documentation for the given type to be sure, but as a general rule, any group of simple scalar values can implement `Copy`, and nothing that requires allocation or is some form of resource can implement `Copy`. Here are some of the types that implement `Copy`:
+0cz8ce2rwyg li /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/ul[4]/li[1]
+  All the integer types, such as `u32`.
+0d53wwp46ow li /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/ul[4]/li[2]
+  The Boolean type, `bool`, with values `true` and `false`.
+18py93abhwe li /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/ul[4]/li[3]
+  All the floating-point types, such as `f64`.
+1f5n1inmh4y li /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/ul[4]/li[4]
+  The character type, `char`.
+0rhaqgprsfj li /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/ul[4]/li[5]
+  Tuples, if they only contain types that also implement `Copy`. For example, `(i32, i32)` implements `Copy`, but `(i32, String)` does not.
+17ahk5xfpmw heading [h3] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/h3[5]
+  [link]Ownership and Functions[/link]
+1vqye3gnkk8 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[62]
+  The mechanics of passing a value to a function are similar to those when assigning a value to a variable. Passing a variable to a function will move or copy, just as assignment does. Listing 4-3 has an example with some annotations showing where variables go into and out of scope.
+1k6db5est1h p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/figure[3]#run[1]
+  Filename: src/main.rs
+1oji94affkn code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/figure[3]/pre[1]
+  fn main() {
+      let s = String::from("hello");  // s comes into scope
+  
+      takes_ownership(s);             // s's value moves into the function...
+                                      // ... and so is no longer valid here
+  
+      let x = 5;                      // x comes into scope
+  
+      makes_copy(x);                  // Because i32 implements the Copy trait,
+                                      // x does NOT move into the function,
+                                      // so it's okay to use x afterward.
+  
+  } // Here, x goes out of scope, then s. However, because s's value was moved,
+    // nothing special happens.
+  
+  fn takes_ownership(some_string: String) { // some_string comes into scope
+      println!("{some_string}");
+  } // Here, some_string goes out of scope and `drop` is called. The backing
+    // memory is freed.
+  
+  fn makes_copy(some_integer: i32) { // some_integer comes into scope
+      println!("{some_integer}");
+  } // Here, some_integer goes out of scope. Nothing special happens.
+0raj07tjvg4 caption /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/figure[3]/figcaption[1]
+  [link]Listing 4-3[/link]: Functions with ownership and scope annotated
+1jombec4cfh p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[63]
+  If we tried to use `s` after the call to `takes_ownership`, Rust would throw a compile-time error. These static checks protect us from mistakes. Try adding code to `main` that uses `s` and `x` to see where you can use them and where the ownership rules prevent you from doing so.
+20v9njcjezm heading [h3] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/h3[6]
+  [link]Return Values and Scope[/link]
+0fm68xkp2rv p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[64]
+  Returning values can also transfer ownership. Listing 4-4 shows an example of a function that returns some value, with similar annotations as those in Listing 4-3.
+0mb1ra03nfr p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/figure[4]#run[1]
+  Filename: src/main.rs
+01qf4vabqyr code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/figure[4]/pre[1]
+  fn main() {
+      let s1 = gives_ownership();        // gives_ownership moves its return
+                                         // value into s1
+  
+      let s2 = String::from("hello");    // s2 comes into scope
+  
+      let s3 = takes_and_gives_back(s2); // s2 is moved into
+                                         // takes_and_gives_back, which also
+                                         // moves its return value into s3
+  } // Here, s3 goes out of scope and is dropped. s2 was moved, so nothing
+    // happens. s1 goes out of scope and is dropped.
+  
+  fn gives_ownership() -> String {       // gives_ownership will move its
+                                         // return value into the function
+                                         // that calls it
+  
+      let some_string = String::from("yours"); // some_string comes into scope
+  
+      some_string                        // some_string is returned and
+                                         // moves out to the calling
+                                         // function
+  }
+  
+  // This function takes a String and returns a String.
+  fn takes_and_gives_back(a_string: String) -> String {
+      // a_string comes into
+      // scope
+  
+      a_string  // a_string is returned and moves out to the calling function
+  }
+1bz6o228y1a caption /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/figure[4]/figcaption[1]
+  [link]Listing 4-4[/link]: Transferring ownership of return values
+1g8oyy4cqg0 p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[65]
+  The ownership of a variable follows the same pattern every time: Assigning a value to another variable moves it. When a variable that includes data on the heap goes out of scope, the value will be cleaned up by `drop` unless ownership of the data has been moved to another variable.
+23bfol5qdov p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[66]
+  While this works, taking ownership and then returning ownership with every function is a bit tedious. What if we want to let a function use a value but not take ownership? It’s quite annoying that anything we pass in also needs to be passed back if we want to use it again, in addition to any data resulting from the body of the function that we might want to return as well.
+05ulctm8qej p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[67]
+  Rust does let us return multiple values using a tuple, as shown in Listing 4-5.
+0fiianre2uv p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/figure[5]#run[1]
+  Filename: src/main.rs
+0lzyylb6pvc code [no-translate lang=rust] /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/figure[5]/pre[1]
+  fn main() {
+      let s1 = String::from("hello");
+  
+      let (s2, len) = calculate_length(s1);
+  
+      println!("The length of '{s2}' is {len}.");
+  }
+  
+  fn calculate_length(s: String) -> (String, usize) {
+      let length = s.len(); // len() returns the length of a String
+  
+      (s, length)
+  }
+0ootd0lq2vk caption /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/figure[5]/figcaption[1]
+  [link]Listing 4-5[/link]: Returning ownership of parameters
+1bbqtsvvich p /html[1]/body[1]/div[2]/div[1]/div[1]/div[4]/main[1]/p[68]
+  But this is too much ceremony and a lot of work for a concept that should be common. Luckily for us, Rust has a feature for using a value without transferring ownership: references.

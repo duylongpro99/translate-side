@@ -17,7 +17,7 @@ are under permissive or CC licenses: see `ATTRIBUTION.md` (authors, history link
 | `twir-671` | Newsletter issue (This Week in Rust) | CC-BY-SA-4.0 |
 | `globalvoices-bangladesh-protests` | News article (Global Voices, WordPress) | CC-BY-3.0 (text) |
 
-`manifest.json` also holds per fixture: the source URL, the final URL, the capture time, the generator, and
+`manifest.json` also holds per fixture: the source URL, the final URL, the capture time, the file size in bytes, the generator, and
 `contentSelector`, a hand-picked CSS selector for the real content root used as ground truth by `spikes/s3/`.
 
 How they were made (`spikes/s3/capture.mjs`): headless Chrome 154, page load + 3 s, scroll to the bottom to trigger lazy

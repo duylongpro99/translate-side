@@ -27,7 +27,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     let html = fs.readFileSync(f, 'utf8').replace(/^(<!DOCTYPE html>)?<!-- fixture-attribution:[\s\S]*?-->\n?/i, '$1');
     const note = `<!-- fixture-attribution: "${m.title}" — ${m.finalUrl} — by ${a.authors} — license ${a.license} — modified: see ATTRIBUTION.md -->\n`;
     html = /^<!DOCTYPE html>/i.test(html) ? html.replace(/^<!DOCTYPE html>/i, (d) => d + note) : note + html;
-    fs.writeFileSync(f, html); m.bytes = html.length;
+    fs.writeFileSync(f, html); m.bytes = Buffer.byteLength(html);
   }
   fs.writeFileSync(`${DIR}/manifest.json`, JSON.stringify(M, null, 2) + '\n');
   fs.writeFileSync(`${DIR}/ATTRIBUTION.md`, md);

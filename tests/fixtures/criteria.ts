@@ -8,7 +8,7 @@ import type { Segment } from '@/engine/types';
 import { extractPage } from '@/extract';
 import { LANDMARK_NOISE } from '@/extract/clean';
 import { composeDocument } from '@/extract/compose';
-import { codeText } from '@/segment/segmenter';
+import { CODE_BLOCK, codeText } from '@/segment/segmenter';
 import { FIXTURES, loadFixture, manifest } from './load.ts';
 
 export interface NoiseItem {
@@ -81,7 +81,7 @@ export function measure(slug: string): FixtureReport {
 }
 
 /**
- * Truth: every `pre` in the fixture's hand-picked content root (manifest `contentSelector`), on
+ * Truth: every code block (`pre`, and code-editor surfaces) in the fixture's hand-picked content root (manifest `contentSelector`), on
  * the shadow-composed page, minus landmark/hidden chrome. A block is intact when a code segment
  * has its exact text, and the same characters as the block's textContent apart from whitespace
  * (`<br>` line breaks have no text, so textContent alone can't check newlines).
@@ -95,7 +95,7 @@ function codeBlocks(slug: string, segs: Segment[]) {
   truthRoot.querySelectorAll(LANDMARK_NOISE).forEach((e) => e.remove());
   const pool = segs.filter((s) => s.kind === 'code');
   let intact = 0;
-  const pres = [...truthRoot.querySelectorAll('pre')].filter((p) => !p.parentElement?.closest('pre'));
+  const pres = [...truthRoot.querySelectorAll(CODE_BLOCK)].filter((p) => !p.parentElement?.closest(CODE_BLOCK));
   for (const pre of pres) {
     const exact = codeText(pre);
     const loose = squash(pre.textContent ?? '');

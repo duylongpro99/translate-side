@@ -20,7 +20,7 @@ export interface Segment {
    * A block made of loose inline content inside a container ends in `#run[k]`.
    */
   domPath: string;
-  /** False for code blocks: kept as-is, never sent for translation (DESIGN.md §4.1). */
+  /** False for code blocks (kept as-is, DESIGN.md §4.1) and for table cells with no letters or digits. */
   translate: boolean;
   /** 1–6, for `heading`. */
   level?: number;

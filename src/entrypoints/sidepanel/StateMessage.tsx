@@ -39,6 +39,7 @@ export function StateMessage({ view, onRetry }: { view: Exclude<PanelView, { kin
         <div class="state" data-state="empty">
           <p class="state__title">Couldn't find the main text</p>
           <p>This page has no article or docs content that Translate Side can find.</p>
+          <p class="state__hint">Translating a passage you select (right-click → Translate in side panel) comes in a later version.</p>
         </div>
       );
     case 'error':

@@ -95,7 +95,12 @@ describe('code blocks', () => {
   });
 
   it('treats a block-level <code> outside <pre> as a code block', () => {
-    expect(brief('<code><div>line 1</div><div>line 2</div></code>')).toEqual([['code', 'line 1line 2']]);
+    expect(brief('<code><div>line 1</div><div>line 2</div></code>')).toEqual([['code', 'line 1\nline 2']]);
+  });
+
+  it('treats code-editor surfaces (CodeMirror) as code blocks, one line per div', () => {
+    const s = seg('<div class="cm-editor"><div class="cm-content" contenteditable="true" role="textbox"><div class="cm-line">const a = 1;</div><div class="cm-line">  f(a);</div></div></div>');
+    expect(s.map((x) => [x.kind, x.text, x.translate])).toEqual([['code', 'const a = 1;\n  f(a);', false]]);
   });
 
   it('marks everything else translatable', () => {
@@ -120,6 +125,14 @@ describe('tables', () => {
     expect(first).toBe(second);
     expect(a).not.toBe(h1);
     expect(seg('<p>no table</p>')[0]?.groupId).toBeUndefined();
+  });
+
+  it('keeps symbol-only cells so rows stay aligned, without translating them', () => {
+    const s = seg('<table><tr><td>JSX-style</td><td><code>{/* ... */}</code></td></tr></table>');
+    expect(s.map((x) => [x.text, x.translate])).toEqual([
+      ['JSX-style', true],
+      ['{/* ... */}', false],
+    ]);
   });
 });
 

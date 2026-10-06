@@ -1,0 +1,729 @@
+# via walk · 203 segments
+20egjiog7av heading [h1] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/header[1]/h1[1]
+  Code blocks
+0b9ob9aoas9 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[1]
+  Code blocks within documentation are super-powered 💪.
+0k3tz08zabc heading [h2] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[1]
+  Code title
+0fits6pkg9t p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[2]
+  You can add a title to the code block by adding a `title` key after the language (leave a space between them).
+01c58o4bjnc code [no-translate lang=md] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[1]/div[1]/pre[1]
+  ```jsx title="/src/components/HelloCodeTitle.js"
+  function HelloCodeTitle(props) {
+    return <h1>Hello, {props.name}</h1>;
+  }
+  ```
+1k2ji66r9pw p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[2]/div[2]/div[1]/div[1]
+  /src/components/HelloCodeTitle.js
+0k02jd6liim code [no-translate lang=jsx] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[2]/div[2]/div[1]/div[2]/pre[1]
+  function HelloCodeTitle(props) {
+    return <h1>Hello, {props.name}</h1>;
+  }
+1emjun2d20b heading [h2] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[2]
+  Syntax highlighting
+0swerkfhkqx p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[3]
+  Code blocks are text blocks wrapped around by strings of 3 backticks. You may check out [link]this reference[/link] for the specifications of MDX.
+17pubz06z13 code [no-translate lang=md] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[3]/div[1]/pre[1]
+  ```js
+  console.log('Every repo must come with a mascot.');
+  ```
+0popd4lul4g p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[4]
+  Use the matching language meta string for your code block, and Docusaurus will pick up syntax highlighting automatically, powered by [link]Prism React Renderer[/link].
+2ci6ceul32n code [no-translate lang=js] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[4]/div[2]/div[1]/div[1]/pre[1]
+  console.log('Every repo must come with a mascot.');
+17sv9xto1o4 heading [h3] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[1]
+  Theming
+0mt5p9f2hen p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[5]
+  By default, the Prism [link]syntax highlighting theme[/link] we use is [link]Palenight[/link]. You can change this to another theme by passing `theme` field in `prism` as `themeConfig` in your docusaurus.config.js.
+1wk46pdhssj p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[6]
+  For example, if you prefer to use the `dracula` highlighting theme:
+1giznx6abpj p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[5]/div[1]
+  docusaurus.config.js
+2bvlsy8toxb code [no-translate lang=js] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[5]/div[2]/pre[1]
+  import {themes as prismThemes} from 'prism-react-renderer';
+  
+  export default {
+    themeConfig: {
+      prism: {
+        theme: prismThemes.dracula,
+      },
+    },
+  };
+0n7hw2ntbpd p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[7]
+  Because a Prism theme is just a JS object, you can also write your own theme if you are not satisfied with the default. Docusaurus enhances the `github` and `vsDark` themes to provide richer highlight, and you can check our implementations for the [link]light[/link] and [link]dark[/link] code block themes.
+0sbcb495bav heading [h3] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[2]
+  Supported Languages
+1gvu66x1o7l p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[8]
+  By default, Docusaurus comes with a subset of [link]commonly used languages[/link].
+11kfqnoermo p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[6]/div[1]
+  warning
+11r2zc2box4 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[6]/div[2]/p[1]
+  Some popular languages like Java, C#, or PHP are not enabled by default.
+1qesdsouw3x p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[9]
+  To add syntax highlighting for any of the other [link]Prism-supported languages[/link], define it in an array of additional languages.
+15yux0xjmmg p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[7]/div[1]
+  note
+1dubayf0m87 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[7]/div[2]/p[1]
+  Each additional language has to be a valid Prism component name. For example, Prism would map the *language* `cs` to `csharp`, but only `prism-csharp.js` exists as a *component*, so you need to use `additionalLanguages: ['csharp']`. You can look into `node_modules/prismjs/components` to find all components (languages) available.
+0yhrqjm3jhs p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[10]
+  For example, if you want to add highlighting for the PowerShell language:
+1o287g3uixx p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[8]/div[1]
+  docusaurus.config.js
+1ljwjuxoduv code [no-translate lang=js] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[8]/div[2]/pre[1]
+  export default {
+    // ...
+    themeConfig: {
+      prism: {
+        additionalLanguages: ['powershell'],
+      },
+      // ...
+    },
+  };
+05bxxmczhc1 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[11]
+  After adding `additionalLanguages`, restart Docusaurus.
+0kkx79cpr4g p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[12]
+  If you want to add highlighting for languages not yet supported by Prism, you can swizzle `prism-include-languages`:
+0bi59sew0f3 li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/ul[1]/li[1]
+  npm
+1p86jkv9e48 li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/ul[1]/li[2]
+  Yarn
+146ijrpxsyu li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/ul[1]/li[3]
+  pnpm
+10x8izo0ugz li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/ul[1]/li[4]
+  Bun
+22fp0ta4z5b code [no-translate lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/div[1]/div[1]/div[1]/div[1]/pre[1]
+  npm run swizzle @docusaurus/theme-classic prism-include-languages
+1om0kiyszev code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/div[1]/div[2]/div[1]/div[1]/pre[1]
+  yarn swizzle @docusaurus/theme-classic prism-include-languages
+1vv5ks0iaio code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/div[1]/div[3]/div[1]/div[1]/pre[1]
+  pnpm run swizzle @docusaurus/theme-classic prism-include-languages
+1ib9l0nqc5b code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[9]/div[1]/div[4]/div[1]/div[1]/pre[1]
+  bun run swizzle @docusaurus/theme-classic prism-include-languages
+19wut705r56 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[13]
+  It will produce `prism-include-languages.js` in your `src/theme` folder. You can add highlighting support for custom languages by editing `prism-include-languages.js`:
+0p0jy2s7wnk p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[10]/div[1]
+  src/theme/prism-include-languages.js
+23ptlebaiq8 code [no-translate lang=js] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[10]/div[2]/pre[1]
+  const prismIncludeLanguages = (Prism) => {
+    // ...
+  
+    additionalLanguages.forEach((lang) => {
+      require(`prismjs/components/prism-${lang}`);
+    });
+  
+    require('/path/to/your/prism-language-definition');
+  
+    // ...
+  };
+0j0vs5cbvsy p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[14]
+  You can refer to [link]Prism's official language definitions[/link] when you are writing your own language definitions.
+138o0fh9uo4 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[15]
+  When adding a custom language definition, you do not need to add the language to the `additionalLanguages` config array, since Docusaurus only looks up the `additionalLanguages` strings in languages that Prism provides. Adding the language import in `prism-include-languages.js` is sufficient.
+0n7644v8wiy heading [h2] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[3]
+  Line highlighting
+21l29rgxrmv heading [h3] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[3]
+  Highlighting with comments
+04ahs1512fk p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[16]
+  You can use comments with `highlight-next-line`, `highlight-start`, and `highlight-end` to select which lines are highlighted.
+2d6c9ev0f06 code [no-translate lang=md] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[11]/div[1]/pre[1]
+  ```js
+  function HighlightSomeText(highlight) {
+    if (highlight) {
+      // highlight-next-line
+      return 'This text is highlighted!';
+    }
+  
+    return 'Nothing highlighted';
+  }
+  
+  function HighlightMoreText(highlight) {
+    // highlight-start
+    if (highlight) {
+      return 'This range is highlighted!';
+    }
+    // highlight-end
+  
+    return 'Nothing highlighted';
+  }
+  ```
+1q2us1jmfb3 code [no-translate lang=js] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[12]/div[2]/div[1]/div[1]/pre[1]
+  function HighlightSomeText(highlight) {
+    if (highlight) {
+      return 'This text is highlighted!';
+    }
+  
+    return 'Nothing highlighted';
+  }
+  
+  function HighlightMoreText(highlight) {
+    if (highlight) {
+      return 'This range is highlighted!';
+    }
+  
+    return 'Nothing highlighted';
+  }
+2b27zqnyaru p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[17]
+  Supported commenting syntax:
+08ah3imz706 table-cell [group=row-0xc8sd2z5da] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/thead[1]/tr[1]/th[1]
+  Style
+0hme0lhmzcg table-cell [group=row-0xc8sd2z5da] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/thead[1]/tr[1]/th[2]
+  Syntax
+00zp77zfy0g table-cell [group=row-0t43y0cxqe8] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[1]/td[1]
+  C-style
+01waeuubb5q table-cell [group=row-0t43y0cxqe8] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[1]/td[2]
+  `/* ... */` and `// ...`
+0173d13p04x table-cell [group=row-2520gj2m3kv] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[2]/td[1]
+  JSX-style
+1b4yyoucqie table-cell [no-translate group=row-2520gj2m3kv] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[2]/td[2]
+  `{/* ... */}`
+1sisfh1c3uf table-cell [group=row-1fs6z9bx96j] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[3]/td[1]
+  Bash-style
+0efmn9msyyz table-cell [no-translate group=row-1fs6z9bx96j] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[3]/td[2]
+  `# ...`
+0gv3wu7fevg table-cell [group=row-1wgnr5qlnje] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[4]/td[1]
+  HTML-style
+06qg0c50xvn table-cell [no-translate group=row-1wgnr5qlnje] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[1]/tbody[1]/tr[4]/td[2]
+  `<!-- ... -->`
+1popbpzbsit p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[18]
+  We will do our best to infer which set of comment styles to use based on the language, and default to allowing *all* comment styles. If there's a comment style that is not currently supported, we are open to adding them! Pull requests welcome. Note that different comment styles have no semantic difference, only their content does.
+1d8z4r32bdt p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[19]
+  You can set your own background color for highlighted code line in your `src/css/custom.css` which will better fit to your selected syntax highlighting theme. The color given below works for the default highlighting theme (Palenight), so if you are using another theme, you will have to tweak the color accordingly.
+12rw638ihu7 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[13]/div[1]
+  /src/css/custom.css
+1jv55ip3jol code [no-translate lang=css] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[13]/div[2]/pre[1]
+  :root {
+    --docusaurus-highlighted-code-line-bg: rgb(72, 77, 91);
+  }
+  
+  /* If you have a different syntax highlighting theme for dark mode. */
+  [data-theme='dark'] {
+    /* Color which works with dark mode syntax highlighting theme */
+    --docusaurus-highlighted-code-line-bg: rgb(100, 100, 100);
+  }
+2crq6rr0n56 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[20]
+  If you also need to style the highlighted code line in some other way, you can target on `theme-code-block-highlighted-line` CSS class.
+2cpvdvtiwx8 heading [h3] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[4]
+  Highlighting with metadata string
+1qmp6u1iu81 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[21]
+  You can also specify highlighted line ranges within the language meta string (leave a space after the language). To highlight multiple lines, separate the line numbers by commas or use the range syntax to select a chunk of lines. This feature uses the `parse-number-range` library and you can find [link]more syntax[/link] on their project details.
+1r539x3es2q code [no-translate lang=md] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[14]/div[1]/pre[1]
+  ```jsx {1,4-6,11}
+  import React from 'react';
+  
+  function MyComponent(props) {
+    if (props.isBar) {
+      return <div>Bar</div>;
+    }
+  
+    return <div>Foo</div>;
+  }
+  
+  export default MyComponent;
+  ```
+0qe80yz4mip code [no-translate lang=jsx] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[15]/div[2]/div[1]/div[1]/pre[1]
+  import React from 'react';
+  
+  function MyComponent(props) {
+    if (props.isBar) {
+      return <div>Bar</div>;
+    }
+  
+    return <div>Foo</div>;
+  }
+  
+  export default MyComponent;
+0u0yvc42zrp p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[16]/div[1]
+  prefer comments
+1yswjkvh0px p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[16]/div[2]/p[1]
+  Prefer highlighting with comments where you can. By inlining highlight in the code, you don't have to manually count the lines if your code block becomes long. If you add/remove lines, you also don't have to offset your line ranges.
+1igvoyxxza3 code [no-translate lang=diff] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[16]/div[2]/div[1]/div[1]/pre[1]
+  - ```jsx {3}
+  + ```jsx {4}
+    function HighlightSomeText(highlight) {
+      if (highlight) {
+  +     console.log('Highlighted text found');
+        return 'This text is highlighted!';
+      }
+  
+      return 'Nothing highlighted';
+    }
+    ```
+17be71s18gp p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[16]/div[2]/p[2]
+  Below, we will introduce how the magic comment system can be extended to define custom directives and their functionalities. The magic comments would only be parsed if a highlight metastring is not present.
+0pingcqk22f heading [h3] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[5]
+  Custom magic comments
+0smp5mfrhiy p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[22]
+  `// highlight-next-line` and `// highlight-start` etc. are called "magic comments", because they will be parsed and removed, and their purposes are to add metadata to the next line, or the section that the pair of start- and end-comments enclose.
+1fd48ghdwmk p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[23]
+  You can declare custom magic comments through theme config. For example, you can register another magic comment that adds a `code-block-error-line` class name:
+2bcgbwb5pgf li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[17]/ul[1]/li[1]
+  docusaurus.config.js
+2dzd069ugwl li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[17]/ul[1]/li[2]
+  src/css/custom.css
+1jbcl4k2ncn li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[17]/ul[1]/li[3]
+  myDoc.md
+1vnm0hkr2r9 code [no-translate lang=js] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[17]/div[1]/div[1]/div[1]/div[1]/pre[1]
+  export default {
+    themeConfig: {
+      prism: {
+        magicComments: [
+          // Remember to extend the default highlight class name as well!
+          {
+            className: 'theme-code-block-highlighted-line',
+            line: 'highlight-next-line',
+            block: {start: 'highlight-start', end: 'highlight-end'},
+          },
+          {
+            className: 'code-block-error-line',
+            line: 'This will error',
+          },
+        ],
+      },
+    },
+  };
+0j7n8bephfq code [no-translate hidden lang=css] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[17]/div[1]/div[2]/div[1]/div[1]/pre[1]
+  .code-block-error-line {
+    background-color: #ff000020;
+    display: block;
+    margin: 0 calc(-1 * var(--ifm-pre-padding));
+    padding: 0 var(--ifm-pre-padding);
+    border-left: 3px solid #ff000080;
+  }
+2390jv0t0pu code [no-translate hidden lang=md] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[17]/div[1]/div[3]/div[1]/div[1]/pre[1]
+  In JavaScript, trying to access properties on `null` will error.
+  
+  ```js
+  const name = null;
+  // This will error
+  console.log(name.toUpperCase());
+  // Uncaught TypeError: Cannot read properties of null (reading 'toUpperCase')
+  ```
+08xrbnxpoik p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[18]/div[2]/p[1]
+  In JavaScript, trying to access properties on `null` will error.
+0gkg6u5x3gv code [no-translate lang=js] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[18]/div[2]/div[1]/div[1]/pre[1]
+  const name = null;
+  console.log(name.toUpperCase());
+  // Uncaught TypeError: Cannot read properties of null (reading 'toUpperCase')
+0vex1tx5yfl p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[24]
+  If you use number ranges in metastring (the `{1,3-4}` syntax), Docusaurus will apply the *first `magicComments` entry*'s class name. This, by default, is `theme-code-block-highlighted-line`, but if you change the `magicComments` config and use a different entry as the first one, the meaning of the metastring range will change as well.
+0f7dj6hl2rk p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[25]
+  You can disable the default line highlighting comments with `magicComments: []`. If there's no magic comment config, but Docusaurus encounters a code block containing a metastring range, it will error because there will be no class name to apply—the highlighting class name, after all, is just a magic comment entry.
+1ba0irvtx33 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[26]
+  Every magic comment entry will contain three keys: `className` (required), `line`, which applies to the directly next line, or `block` (containing `start` and `end`), which applies to the entire block enclosed by the two comments.
+1s7cqxe7kny p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[27]
+  Using CSS to target the class can already do a lot, but you can unlock the full potential of this feature through [link]swizzling[/link].
+2320e4dbqb9 li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/ul[1]/li[1]
+  npm
+0yduiolflv4 li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/ul[1]/li[2]
+  Yarn
+0xc9f4pi29f li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/ul[1]/li[3]
+  pnpm
+1cruth2z85h li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/ul[1]/li[4]
+  Bun
+0cuvf18rjcq code [no-translate lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/div[1]/div[1]/div[1]/div[1]/pre[1]
+  npm run swizzle @docusaurus/theme-classic CodeBlock/Line
+24aj95xy5o2 code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/div[1]/div[2]/div[1]/div[1]/pre[1]
+  yarn swizzle @docusaurus/theme-classic CodeBlock/Line
+07ncklelqut code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/div[1]/div[3]/div[1]/div[1]/pre[1]
+  pnpm run swizzle @docusaurus/theme-classic CodeBlock/Line
+0vxgpxeh15f code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[19]/div[1]/div[4]/div[1]/div[1]/pre[1]
+  bun run swizzle @docusaurus/theme-classic CodeBlock/Line
+0iedjs0n0u1 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[28]
+  The `Line` component will receive the list of class names, based on which you can conditionally render different markup.
+01t7ky23ncd heading [h2] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[4]
+  Line numbering
+0c1atwzzvxg p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[29]
+  You can enable line numbering for your code block by using `showLineNumbers` key within the language meta string (don't forget to add space directly before the key).
+2dsf4lnchxh code [no-translate lang=md] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[20]/div[1]/pre[1]
+  ```jsx showLineNumbers
+  import React from 'react';
+  
+  export default function MyComponent(props) {
+    return <div>Foo</div>;
+  }
+  ```
+0uxacdhmoxl code [no-translate lang=jsx] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[21]/div[2]/div[1]/div[1]/pre[1]
+  import React from 'react';
+  
+  export default function MyComponent(props) {
+    return <div>Foo</div>;
+  }
+2e3m6hn722c p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[30]
+  By default, the counter starts at line number 1. It's possible to pass a custom counter start value to split large code blocks for readability:
+00mrpiywanr code [no-translate lang=md] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[22]/div[1]/pre[1]
+  ```jsx showLineNumbers=3
+  export default function MyComponent(props) {
+    return <div>Foo</div>;
+  }
+  ```
+2fhaalfxoze code [no-translate lang=jsx] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[23]/div[2]/div[1]/div[1]/pre[1]
+  export default function MyComponent(props) {
+    return <div>Foo</div>;
+  }
+0mrgy6e6np4 heading [h2] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[5]
+  Interactive code editor
+0vcnzxk0w4v p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[31]
+  (Powered by [link]React Live[/link])
+2c328ioc8q7 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[32]
+  You can create an interactive coding editor with the `@docusaurus/theme-live-codeblock` plugin. First, add the plugin to your package.
+1rdjnwntfw0 li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/ul[1]/li[1]
+  npm
+268ijjbq015 li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/ul[1]/li[2]
+  Yarn
+0l4jcb3jigp li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/ul[1]/li[3]
+  pnpm
+1e6mpogz3dd li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/ul[1]/li[4]
+  Bun
+22j6l9sgazy code [no-translate lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/div[1]/div[1]/div[1]/div[1]/pre[1]
+  npm install --save @docusaurus/theme-live-codeblock
+0hfnh5uk4fr code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/div[1]/div[2]/div[1]/div[1]/pre[1]
+  yarn add @docusaurus/theme-live-codeblock
+1uxfx0zr1u8 code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/div[1]/div[3]/div[1]/div[1]/pre[1]
+  pnpm add @docusaurus/theme-live-codeblock
+1ccbg5bynhz code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[24]/div[1]/div[4]/div[1]/div[1]/pre[1]
+  bun add @docusaurus/theme-live-codeblock
+0cvlsufw3cz p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[33]
+  You will also need to add the plugin to your `docusaurus.config.js`.
+0maudj7klhi code [no-translate lang=js] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[25]/div[1]/pre[1]
+  export default {
+    // ...
+    themes: ['@docusaurus/theme-live-codeblock'],
+    // ...
+  };
+08fqo95kzdo p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[34]
+  To use the plugin, create a code block with `live` attached to the language meta string.
+1fxs6f0jopq code [no-translate lang=md] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[26]/div[1]/pre[1]
+  ```jsx live
+  function Clock(props) {
+    const [date, setDate] = useState(new Date());
+  
+    useEffect(() => {
+      const id = setInterval(() => {
+        setDate(new Date());
+      }, 1000);
+      return () => clearInterval(id);
+    }, []);
+  
+    return <h2>It is {date.toLocaleTimeString()}.</h2>;
+  }
+  ```
+1stm2emqflx p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[35]
+  The code block will be rendered as an interactive editor. Changes to the code will reflect on the result panel live.
+1b1ibstirqf code [no-translate lang=tsx] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[27]/div[2]/div[1]/div[2]/pre[1]
+  function Clock(props) {
+    const [date, setDate] = useState(new Date());
+  
+    useEffect(() => {
+      const id = setInterval(() => {
+        setDate(new Date());
+      }, 1000);
+      return () => clearInterval(id);
+    }, []);
+  
+    return <h2>It is {date.toLocaleTimeString()}.</h2>;
+  }
+0czvjuw4i2y heading [h2] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[27]/div[2]/div[1]/div[4]/div[1]/h2[1]
+  It is 8:56:41 PM.
+12qia0colqf heading [h3] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[6]
+  Imports
+2arsjiecacu p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[28]/div[1]
+  react-live and imports
+1mm3qhk9yyh p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[28]/div[2]/p[1]
+  It is not possible to import components directly from the react-live code editor, you have to define available imports upfront.
+24m6bjk5kpz p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[36]
+  By default, all React imports are available. If you need more imports available, swizzle the react-live scope:
+0sglznaaiip li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/ul[1]/li[1]
+  npm
+0jk5upxttxo li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/ul[1]/li[2]
+  Yarn
+0iouny6vnfb li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/ul[1]/li[3]
+  pnpm
+06hobnsznwm li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/ul[1]/li[4]
+  Bun
+03e4av5qw4g code [no-translate lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/div[1]/div[1]/div[1]/div[1]/pre[1]
+  npm run swizzle @docusaurus/theme-live-codeblock ReactLiveScope -- --eject
+1tg9v1q466w code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/div[1]/div[2]/div[1]/div[1]/pre[1]
+  yarn swizzle @docusaurus/theme-live-codeblock ReactLiveScope --eject
+1pr5z6xrctq code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/div[1]/div[3]/div[1]/div[1]/pre[1]
+  pnpm run swizzle @docusaurus/theme-live-codeblock ReactLiveScope --eject
+159f6ounxye code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[29]/div[1]/div[4]/div[1]/div[1]/pre[1]
+  bun run swizzle @docusaurus/theme-live-codeblock ReactLiveScope --eject
+15o6zf1qnm7 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[30]/div[1]
+  src/theme/ReactLiveScope/index.js
+1frczw73las code [no-translate lang=jsx] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[30]/div[2]/pre[1]
+  import React from 'react';
+  
+  const ButtonExample = (props) => (
+    <button
+      {...props}
+      style={{
+        backgroundColor: 'white',
+        color: 'black',
+        border: 'solid red',
+        borderRadius: 20,
+        padding: 10,
+        cursor: 'pointer',
+        ...props.style,
+      }}
+    />
+  );
+  
+  // Add react-live imports you need here
+  const ReactLiveScope = {
+    React,
+    ...React,
+    ButtonExample,
+  };
+  
+  export default ReactLiveScope;
+21al3k7kbts p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[37]
+  The `ButtonExample` component is now available to use:
+1fn1s033hvq code [no-translate lang=tsx] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[31]/div[2]/div[1]/div[2]/pre[1]
+  function MyPlayground(props) {
+    return (
+      <div>
+        <ButtonExample onClick={() => alert('hey!')}>Click me</ButtonExample>
+      </div>
+    );
+  }
+0532mbec096 heading [h3] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[7]
+  Imperative Rendering (noInline)
+2ff29zhlv26 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[38]
+  The `noInline` option should be used to avoid errors when your code spans multiple components or variables.
+0mruvm0y52v code [no-translate lang=md] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[32]/div[1]/pre[1]
+  ```jsx live noInline
+  const project = 'Docusaurus';
+  
+  const Greeting = () => <p>Hello {project}!</p>;
+  
+  render(<Greeting />);
+  ```
+0d0v80w4dm9 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[39]
+  Unlike an ordinary interactive code block, when using `noInline` React Live won't wrap your code in an inline function to render it.
+08hj8ch7w0u p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[40]
+  You will need to explicitly call `render()` at the end of your code to display the output.
+23w13ndixga code [no-translate lang=tsx] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[33]/div[2]/div[1]/div[2]/pre[1]
+  const project = "Docusaurus";
+  
+  const Greeting = () => (
+    <p>Hello {project}!</p>
+  );
+  
+  render(
+    <Greeting />
+  );
+16g0pnd1uuk p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[33]/div[2]/div[1]/div[4]/div[1]/p[1]
+  Hello Docusaurus!
+266ytrb6deb heading [h2] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[6]
+  Using JSX markup in code blocks
+06o9moaardv p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[41]
+  Code block in Markdown always preserves its content as plain text, meaning you can't do something like:
+0hnfr3afmcz code [no-translate lang=ts] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[34]/div[1]/pre[1]
+  type EditUrlFunction = (params: {
+    // This doesn't turn into a link (for good reason!)
+    version: <a href="/docs/versioning">Version</a>;
+    versionDocsDirPath: string;
+    docPath: string;
+    permalink: string;
+    locale: string;
+  }) => string | undefined;
+1p9h67ghylj p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[42]
+  If you want to embed HTML markup such as anchor links or bold type, you can use the `<pre>` tag, `<code>` tag, or `<CodeBlock>` component.
+16pl8cxacwe code [no-translate lang=jsx] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[35]/div[1]/pre[1]
+  <pre>
+    <b>Input: </b>1 2 3 4{'\n'}
+    <b>Output: </b>"366300745"{'\n'}
+  </pre>
+1rj8l4z45kp code [no-translate] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[36]/div[2]/pre[1]
+  Input: 1 2 3 4
+  Output: "366300745"
+1s7ejakhhj9 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[37]/div[1]
+  MDX is whitespace insensitive
+143y13e8arf p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[37]/div[2]/p[1]
+  MDX is in line with JSX behavior: line break characters, even when inside `<pre>`, are turned into spaces. You have to explicitly write the new line character for it to be printed out.
+15z588rzjvr p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[38]/div[1]
+  warning
+24u3axa3hzo p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[38]/div[2]/p[1]
+  Syntax highlighting only works on plain strings. Docusaurus will not attempt to parse code block content containing JSX children.
+0otnbjyx3kp heading [h2] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[7]
+  Multi-language support code blocks
+19tf26cgexw p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[43]
+  With MDX, you can easily create interactive components within your documentation, for example, to display code in multiple programming languages and switch between them using a tabs component.
+08ap97szy3p p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[44]
+  Instead of implementing a dedicated component for multi-language support code blocks, we've implemented a general-purpose [link]`<Tabs>`[/link] component in the classic theme so that you can use it for other non-code scenarios as well.
+1136e6drjl8 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[45]
+  The following example is how you can have multi-language code tabs in your docs. Note that the empty lines above and below each language block are *intentional*. This is a [link]current limitation of MDX[/link]: you have to leave empty lines around Markdown syntax for the MDX parser to know that it's Markdown syntax and not JSX.
+1h4ihjk7o1s code [no-translate lang=jsx] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[39]/div[1]/pre[1]
+  import Tabs from '@theme/Tabs';
+  import TabItem from '@theme/TabItem';
+  
+  <Tabs>
+  <TabItem value="js" label="JavaScript">
+  
+  ```js
+  function helloWorld() {
+    console.log('Hello, world!');
+  }
+  ```
+  
+  </TabItem>
+  <TabItem value="py" label="Python">
+  
+  ```py
+  def hello_world():
+    print("Hello, world!")
+  ```
+  
+  </TabItem>
+  <TabItem value="java" label="Java">
+  
+  ```java
+  class HelloWorld {
+    public static void main(String args[]) {
+      System.out.println("Hello, World");
+    }
+  }
+  ```
+  
+  </TabItem>
+  </Tabs>
+0gls0ilcjwo p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[46]
+  And you will get the following:
+1p7xsnga458 li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[40]/div[2]/div[1]/ul[1]/li[1]
+  JavaScript
+01f1jh78pb2 li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[40]/div[2]/div[1]/ul[1]/li[2]
+  Python
+0hvjvy0lijn li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[40]/div[2]/div[1]/ul[1]/li[3]
+  Java
+1c0cq3c6z2j code [no-translate lang=js] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[40]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/pre[1]
+  function helloWorld() {
+    console.log('Hello, world!');
+  }
+07e4pz08ve9 code [no-translate hidden lang=py] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[40]/div[2]/div[1]/div[1]/div[2]/div[1]/div[1]/pre[1]
+  def hello_world():
+    print("Hello, world!")
+29hwtufnd64 code [no-translate hidden lang=java] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[40]/div[2]/div[1]/div[1]/div[3]/div[1]/div[1]/pre[1]
+  class HelloWorld {
+    public static void main(String args[]) {
+      System.out.println("Hello, World");
+    }
+  }
+1zz8xj2yhzx p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[47]
+  If you have multiple of these multi-language code tabs, and you want to sync the selection across the tab instances, refer to the [link]Syncing tab choices section[/link].
+02agnutbb5e heading [h3] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h3[8]
+  Docusaurus npm2yarn remark plugin
+0dsxif2rtvl p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[48]
+  Displaying CLI commands in both npm and Yarn is a very common need, for example:
+2awx9gxr7dx li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/ul[1]/li[1]
+  npm
+27n314sgzcp li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/ul[1]/li[2]
+  Yarn
+2fm7adujdmt li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/ul[1]/li[3]
+  pnpm
+0ckn023p8gu li /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/ul[1]/li[4]
+  Bun
+082hrjht69v code [no-translate lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/div[1]/div[1]/div[1]/div[1]/pre[1]
+  npm install @docusaurus/remark-plugin-npm2yarn
+1fgbb0ru3f9 code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/div[1]/div[2]/div[1]/div[1]/pre[1]
+  yarn add @docusaurus/remark-plugin-npm2yarn
+00pyxe9xok6 code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/div[1]/div[3]/div[1]/div[1]/pre[1]
+  pnpm add @docusaurus/remark-plugin-npm2yarn
+1yns93ah500 code [no-translate hidden lang=bash] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[41]/div[1]/div[4]/div[1]/div[1]/pre[1]
+  bun add @docusaurus/remark-plugin-npm2yarn
+16ijdqmcuo9 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[49]
+  Docusaurus provides such a utility out of the box, freeing you from using the `Tabs` component every time. To enable this feature, first install the `@docusaurus/remark-plugin-npm2yarn` package as above, and then in `docusaurus.config.js`, for the plugins where you need this feature (doc, blog, pages, etc.), register it in the `remarkPlugins` option. (See [link]Docs configuration[/link] for more details on configuration format)
+24qqnrw97n9 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[42]/div[1]
+  docusaurus.config.js
+113juvo4unj code [no-translate lang=js] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[42]/div[2]/pre[1]
+  export default {
+    // ...
+    presets: [
+      [
+        '@docusaurus/preset-classic',
+        {
+          docs: {
+            remarkPlugins: [
+              [require('@docusaurus/remark-plugin-npm2yarn'), {sync: true}],
+            ],
+          },
+          pages: {
+            remarkPlugins: [require('@docusaurus/remark-plugin-npm2yarn')],
+          },
+          blog: {
+            remarkPlugins: [
+              [
+                require('@docusaurus/remark-plugin-npm2yarn'),
+                {converters: ['pnpm']},
+              ],
+            ],
+            // ...
+          },
+        },
+      ],
+    ],
+  };
+0vnl71ywtdh p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[50]
+  And then use it by adding the `npm2yarn` key to the code block:
+13ebigiwv98 code [no-translate lang=md] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[43]/div[1]/pre[1]
+  ```bash npm2yarn
+  npm install @docusaurus/remark-plugin-npm2yarn
+  ```
+23cdq0w6mbh heading [h4] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h4[1]
+  Configuration
+1qoejbbp8c6 table-cell [group=row-2dcaex3d6pf] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/thead[1]/tr[1]/th[1]
+  Option
+1hbioscey26 table-cell [group=row-2dcaex3d6pf] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/thead[1]/tr[1]/th[2]
+  Type
+1bim3tp2btx table-cell [group=row-2dcaex3d6pf] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/thead[1]/tr[1]/th[3]
+  Default
+0bfeozlga1s table-cell [group=row-2dcaex3d6pf] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/thead[1]/tr[1]/th[4]
+  Description
+1plgoz9bc6d table-cell [group=row-0f3vauoi7rj] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[1]/td[1]
+  `sync`
+0z92fikxy3w table-cell [group=row-0f3vauoi7rj] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[1]/td[2]
+  `boolean`
+1dlthygmbrs table-cell [group=row-0f3vauoi7rj] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[1]/td[3]
+  `false`
+0cgwfzkauxg table-cell [group=row-0f3vauoi7rj] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[1]/td[4]
+  Whether to sync the selected converter across all code blocks.
+0v5qtsoy3ag table-cell [group=row-2gh5lw0kvu8] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[2]/td[1]
+  `converters`
+0isof5t3vo3 table-cell [group=row-2gh5lw0kvu8] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[2]/td[2]
+  `array`
+0t7u1u7tcmb table-cell [group=row-2gh5lw0kvu8] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[2]/td[3]
+  `'yarn'`, `'pnpm'`
+21bln7iz827 table-cell [group=row-2gh5lw0kvu8] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/table[2]/tbody[1]/tr[2]/td[4]
+  The list of converters to use. The order of the converters is important, as the first converter will be used as the default choice.
+1awxj0noocx heading [h2] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/h2[8]
+  Usage in JSX
+2el8ppjvocr p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[51]
+  Outside of Markdown, you can use the `@theme/CodeBlock` component to get the same output.
+131fob2yjl0 code [no-translate lang=jsx] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[44]/div[1]/pre[1]
+  import CodeBlock from '@theme/CodeBlock';
+  
+  export default function MyReactPage() {
+    return (
+      <div>
+        <CodeBlock
+          language="jsx"
+          title="/src/components/HelloCodeTitle.js"
+          showLineNumbers>
+          {`function HelloCodeTitle(props) {
+    return <h1>Hello, {props.name}</h1>;
+  }`}
+        </CodeBlock>
+      </div>
+    );
+  }
+0h545vvva3q p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[45]/div[2]/div[1]/div[1]
+  /src/components/HelloCodeTitle.js
+1nrjv62dz60 code [no-translate lang=jsx] /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/div[45]/div[2]/div[1]/div[2]/pre[1]
+  function HelloCodeTitle(props) {
+  return <h1>Hello, {props.name}</h1>;
+  }
+22u4q3ymvjl p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[52]
+  The props accepted are `language`, `title` and `showLineNumbers`, in the same way as you write Markdown code blocks.
+27aah3j4w01 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[53]
+  Although discouraged, you can also pass in a `metastring` prop like `metastring='{1-2} title="/src/components/HelloCodeTitle.js" showLineNumbers'`, which is how Markdown code blocks are handled under the hood. However, we recommend you [link]use comments for highlighting lines[/link].
+04b3jl2bnm8 p /html[1]/body[1]/div[1]/div[3]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/article[1]/div[2]/p[54]
+  As [link]previously stated[/link], syntax highlighting is only applied when the children is a simple string.
