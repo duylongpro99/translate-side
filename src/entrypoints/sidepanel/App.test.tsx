@@ -3,17 +3,20 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Segment } from '@/engine/types';
-import { App } from './App.tsx';
+import { App, type TranslatorProps } from './App.tsx';
+import type { Jobs, JobView, SegState } from './jobs.ts';
+import { parseMarkup, plainText } from './markup.ts';
 import type { PanelController, PanelView } from './controller.ts';
 
 function fakeController(view: PanelView) {
-  let listener: ((v: PanelView) => void) | undefined;
+  let listener: ((v: PanelView, tabId: number | undefined) => void) | undefined;
   const c = {
     view,
+    tabId: undefined as number | undefined,
     retried: 0,
-    subscribe(fn: (v: PanelView) => void) {
+    subscribe(fn: (v: PanelView, tabId: number | undefined) => void) {
       listener = fn;
-      fn(c.view);
+      fn(c.view, c.tabId);
       return () => undefined;
     },
     retry() {
@@ -21,7 +24,7 @@ function fakeController(view: PanelView) {
     },
     push(v: PanelView) {
       c.view = v;
-      act(() => listener?.(v));
+      act(() => listener?.(v, c.tabId));
     },
   };
   return c;
@@ -41,7 +44,8 @@ const mount = (view: PanelView) => {
 
 const seg = (s: Partial<Segment> & Pick<Segment, 'kind' | 'inlineMarkup'>): Segment => ({
   id: `id-${Math.random().toString(36).slice(2)}`,
-  text: s.inlineMarkup,
+  // What the segmenter would give as plain text: the markup without its markers.
+  text: plainText(parseMarkup(s.inlineMarkup)),
   domPath: '/x',
   translate: s.kind !== 'code',
   ...s,
@@ -130,5 +134,122 @@ describe('segments by kind', () => {
     const dev = root.querySelector('[data-testid=dev-view]');
     expect(dev?.querySelectorAll('tbody tr')).toHaveLength(segments.length);
     expect(dev?.textContent).toContain(segments[0]?.id);
+  });
+});
+
+describe('translation in the panel (plan M1-E10)', () => {
+  const p1 = seg({ kind: 'p', inlineMarkup: 'Read [link]the docs[/link].' });
+  const p2 = seg({ kind: 'p', inlineMarkup: 'Second' });
+  const p3 = seg({ kind: 'p', inlineMarkup: 'Third' });
+  // The page's own text has the stars (no <em>): plain text and markup are the same.
+  const lit = seg({ kind: 'p', inlineMarkup: '2 * 3 * 4', text: '2 * 3 * 4' });
+  const code = seg({ kind: 'code', inlineMarkup: 'x = 1' });
+  const segments = [p1, p2, p3, lit, code];
+
+  function fakeJobs(view: JobView) {
+    let listener: ((tabId: number) => void) | undefined;
+    const calls: string[] = [];
+    const j = {
+      view,
+      docOf: () => 'd',
+      get: () => j.view,
+      subscribe(fn: (tabId: number) => void) {
+        listener = fn;
+        return () => undefined;
+      },
+      async push(v: JobView) {
+        j.view = v;
+        await act(async () => {
+          listener?.(7);
+          await new Promise((r) => setTimeout(r, 30));
+        });
+      },
+    };
+    const translator: TranslatorProps = {
+      jobs: j as unknown as Jobs,
+      actions: () => ({
+        cancel: () => calls.push('cancel'),
+        resume: () => calls.push('resume'),
+        openOptions: () => calls.push('options'),
+        grantAccess: () => calls.push('grant'),
+      }),
+    };
+    return { j, translator, calls };
+  }
+
+  const jobView = (segs: [Segment, SegState][], patch: Partial<JobView> = {}): JobView => ({
+    status: 'running',
+    paused: false,
+    model: 'gemini-3.5-flash-lite',
+    targetLang: 'vi',
+    segments,
+    segs: new Map(segs.map(([s, st]) => [s.id, st])),
+    counts: { total: 4, final: segs.filter(([, s]) => s.status === 'final').length, failed: segs.filter(([, s]) => s.status === 'failed').length },
+    usage: { input: 1000, cachedInput: 0, output: 800 },
+    cost: 0.0023,
+    startedAt: 1,
+    ...patch,
+  });
+
+  function mountJob(view: JobView) {
+    const f = fakeJobs(view);
+    const c = fakeController({ kind: 'ready', docId: 'd', result: { ok: true, via: 'walk', url: 'https://x/', title: 'Page', segments } });
+    c.tabId = 7;
+    act(() => render(<App controller={c as unknown as PanelController} translator={f.translator} />, root));
+    return f;
+  }
+  const block = (s: Segment) => root.querySelector(`[data-id="${s.id}"]`);
+
+  it('streams: original dimmed while pending, the preview while streaming, then the final', async () => {
+    const f = mountJob(jobView([[p1, { status: 'pending' }], [p2, { status: 'streaming', text: 'Thứ h' }], [p3, { status: 'pending' }], [lit, { status: 'pending' }]]));
+    expect(block(p1)?.getAttribute('data-status')).toBe('pending');
+    expect(block(p1)?.textContent).toBe('Read the docs.');
+    expect(block(p2)?.getAttribute('data-status')).toBe('streaming');
+    expect(block(p2)?.textContent).toBe('Thứ h');
+    expect(block(code)?.getAttribute('data-status')).toBe('kept');
+    expect(root.querySelector('[data-testid=job]')?.textContent).toContain('Translating into Vietnamese… 0 of 4');
+    await f.j.push(jobView([[p1, { status: 'final', text: 'Đọc [link]tài liệu[/link].', revision: 1, attempt: 1 }], [p2, { status: 'final', text: 'Thứ hai', revision: 1 }], [p3, { status: 'pending' }], [lit, { status: 'pending' }]]));
+    expect(block(p1)?.getAttribute('data-status')).toBe('final');
+    expect(block(p1)?.querySelector('.seg__link')?.textContent).toBe('tài liệu');
+    expect(block(p2)?.textContent).toBe('Thứ hai');
+  });
+
+  it('renders model output as text only, and literal markers of the page stay literal (NB6)', () => {
+    mountJob(jobView([[p1, { status: 'final', text: '<img src=x onerror=alert(1)> *đậm*', revision: 1 }], [lit, { status: 'final', text: '2 * 3 * 4', revision: 1 }]]));
+    expect(root.querySelector('img')).toBeNull();
+    expect(block(p1)?.textContent).toBe('<img src=x onerror=alert(1)> *đậm*');
+    expect(block(p1)?.querySelector('em')).toBeNull();
+    expect(block(lit)?.textContent).toBe('2 * 3 * 4');
+    expect(block(lit)?.querySelector('em')).toBeNull();
+  });
+
+  it('shows a failed segment as its original with the reason', () => {
+    mountJob(jobView([[p3, { status: 'failed', error: { kind: 'rate_limit', message: '429' } }]]));
+    expect(block(p3)?.getAttribute('data-status')).toBe('failed');
+    expect(block(p3)?.textContent).toContain('Third');
+    expect(block(p3)?.textContent).toContain('Not translated: the provider is busy');
+  });
+
+  it('Cancel while running; the cost readout; Translate the rest after a cancel', async () => {
+    const f = mountJob(jobView([]));
+    expect(root.querySelector('[data-testid=job-cost]')?.textContent).toBe('$0.0023');
+    act(() => (root.querySelector('[data-testid=job] button') as HTMLButtonElement).click());
+    expect(f.calls).toEqual(['cancel']);
+    await f.j.push(jobView([[p1, { status: 'final', text: 'x', revision: 1 }]], { status: 'cancelled' }));
+    expect(root.querySelector('[data-testid=job]')?.textContent).toContain('Cancelled · 1 of 4 translated');
+    act(() => (root.querySelector('[data-testid=job] button') as HTMLButtonElement).click());
+    expect(f.calls).toEqual(['cancel', 'resume']);
+    await f.j.push(jobView([], { status: 'done', counts: { total: 4, final: 4, failed: 0 }, endedAt: 14_201, cost: 0.0072 }));
+    expect(root.querySelector('[data-testid=job]')?.textContent).toContain('Vietnamese · 4 of 4 · 14.2 s');
+    expect(root.querySelector('[data-testid=job-cost]')?.textContent).toBe('$0.0072');
+  });
+
+  it('a stopped job offers the fix: settings for the key, Grant access for the host permission', async () => {
+    const f = mountJob(jobView([], { status: 'stopped', stopError: { kind: 'auth', message: 'Add your Gemini API key in settings' } }));
+    expect(root.querySelector('[data-testid=job]')?.textContent).toContain('Add your Gemini API key in settings');
+    act(() => (root.querySelector('[data-testid=job] button') as HTMLButtonElement).click());
+    await f.j.push(jobView([], { status: 'stopped', stopError: { kind: 'cors', cause: 'permission', message: 'No access to generativelanguage.googleapis.com' } }));
+    act(() => (root.querySelector('[data-testid=job] button') as HTMLButtonElement).click());
+    expect(f.calls).toEqual(['options', 'grant']);
   });
 });

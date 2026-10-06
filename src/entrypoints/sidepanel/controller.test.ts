@@ -331,3 +331,64 @@ describe('PanelController', () => {
     expect(w.connects).toEqual([10]);
   });
 });
+
+describe('PanelController session hooks (plan M1-E8)', () => {
+  function recorder() {
+    const log: string[] = [];
+    const hooks = {
+      ready: (tabId: number, docId: string) => log.push(`ready ${tabId} ${docId}`),
+      gone: (tabId: number) => log.push(`gone ${tabId}`),
+      closed: (tabId: number) => log.push(`closed ${tabId}`),
+      active: (tabId: number | undefined) => log.push(`active ${tabId}`),
+    };
+    return { log, hooks };
+  }
+
+  it('reports ready per document, gone on a navigation, and the new document after re-injection', async () => {
+    const w = fakeWorld();
+    const { log, hooks } = recorder();
+    w.pages[10] = { docId: 'd1', result: ok(1) };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    await started(w, { hooks });
+    await wait();
+    expect(log).toEqual(['active 10', 'ready 10 d1']);
+    w.pages[10] = { docId: 'd2', result: ok(2) };
+    w.contentEnds[10]?.disconnect();
+    await wait();
+    expect(log.at(-1)).toBe('gone 10');
+    w.setAccess(10, { status: 'ready' });
+    await wait();
+    expect(log.at(-1)).toBe('ready 10 d2');
+  });
+
+  it('reports the active tab on a switch, and closed when the tab goes', async () => {
+    const w = fakeWorld();
+    const { log, hooks } = recorder();
+    w.pages[10] = { docId: 'a', result: ok(1) };
+    w.pages[20] = { docId: 'b', result: ok(1) };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    w.store[accessKey(20)] = { status: 'ready', at: 0 };
+    await started(w, { hooks });
+    await wait();
+    w.fire('activated', { tabId: 20, windowId: 1 });
+    await wait();
+    // Switching away does not end tab 10's document (its job pauses, D14; it is not cancelled).
+    expect(log).toEqual(['active 10', 'ready 10 a', 'active 20', 'ready 20 b']);
+    w.fire('removed', 20);
+    expect(log.slice(4)).toEqual(['gone 20', 'closed 20', 'active undefined']);
+  });
+
+  it('reports gone when the grant is lost and when a tab moves to another window', async () => {
+    const w = fakeWorld();
+    const { log, hooks } = recorder();
+    w.pages[10] = { docId: 'd1', result: ok(1) };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    await started(w, { hooks });
+    await wait();
+    w.setAccess(10, { status: 'lost', reason: 'no-grant' });
+    await wait();
+    expect(log).toContain('gone 10');
+    w.fire('detached', 10, { oldWindowId: 1 });
+    expect(log.at(-2)).toBe('closed 10');
+  });
+});

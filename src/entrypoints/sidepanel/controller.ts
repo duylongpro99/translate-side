@@ -59,6 +59,23 @@ export interface ControllerOptions {
   helloTimeoutMs?: number;
   /** After the page has loaded, how long to wait for the worker's re-injection before "lost". */
   lostAfterMs?: number;
+  /** Job lifecycle (plan M1-E8): what the page's translation job follows. */
+  hooks?: SessionHooks;
+}
+
+/** The panel's view of a tab's document, for the job that translates it (sidepanel/jobs.ts). */
+export interface SessionHooks {
+  /** The document's segments were read (a new document, or the same one read again). */
+  ready?(tabId: number, docId: string, result: Extract<ExtractResult, { ok: true }>): void;
+  /**
+   * The connection to the document ended: a navigation or reload, a lost grant, a re-read.
+   * Its job must stop.
+   */
+  gone?(tabId: number): void;
+  /** The tab closed or moved to another window: its job is forgotten. */
+  closed?(tabId: number): void;
+  /** The window's active tab (pause on tab switch, D14). */
+  active?(tabId: number | undefined): void;
 }
 
 export class PanelController {
@@ -77,6 +94,11 @@ export class PanelController {
     this.listeners.add(fn);
     fn(this.view, this.activeTabId);
     return () => this.listeners.delete(fn);
+  }
+
+  /** The window's active tab. */
+  get tabId(): number | undefined {
+    return this.activeTabId;
   }
 
   get view(): PanelView {
@@ -119,6 +141,7 @@ export class PanelController {
 
   private setActive(tabId: number): void {
     this.activeTabId = tabId;
+    this.opts.hooks?.active?.(tabId);
     this.emit();
     void this.refresh(tabId);
   }
@@ -207,6 +230,7 @@ export class PanelController {
     s.port = port;
     s.client = client;
     port.onDisconnect.addListener(() => {
+      if (s.generation === generation) this.opts.hooks?.gone?.(tabId);
       if (s.generation === generation && (s.view.kind === 'ready' || s.pageLoading)) this.awaitReinjection(tabId, s, generation);
     });
     try {
@@ -225,7 +249,10 @@ export class PanelController {
     try {
       const result = await client.request('extract', {});
       if (s.generation !== generation) return;
-      if (result.ok) this.setView(tabId, { kind: 'ready', result, docId: s.docId ?? '' });
+      if (result.ok) {
+        this.setView(tabId, { kind: 'ready', result, docId: s.docId ?? '' });
+        this.opts.hooks?.ready?.(tabId, s.docId ?? '', result);
+      }
       else if (result.reason === 'denylisted') this.setView(tabId, { kind: 'blocked', reason: 'denylisted' });
       else this.setView(tabId, { kind: 'empty', url: result.url });
     } catch (err) {
@@ -284,6 +311,7 @@ export class PanelController {
   private disconnect(tabId: number): void {
     const s = this.sessions.get(tabId);
     if (!s?.port) return;
+    this.opts.hooks?.gone?.(tabId);
     s.generation++;
     delete s.docId;
     try {
@@ -297,10 +325,12 @@ export class PanelController {
 
   private drop(tabId: number): void {
     this.disconnect(tabId);
+    this.opts.hooks?.closed?.(tabId);
     clearTimeout(this.sessions.get(tabId)?.lostTimer);
     this.sessions.delete(tabId);
     if (tabId === this.activeTabId) {
       this.activeTabId = undefined;
+      this.opts.hooks?.active?.(undefined);
       this.emit();
     }
   }

@@ -9,6 +9,7 @@
   --code-bg: #f3f3f5;
   --accent: #2459c9;
   --hidden: #8a6d00;
+  --danger: #b3261e;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -19,6 +20,7 @@
     --code-bg: #1b1b1f;
     --accent: #8ab0ff;
     --hidden: #d6b44a;
+    --danger: #ff8a80;
   }
 }
 body {
@@ -207,4 +209,53 @@ body {
 .dev__path {
   color: var(--muted);
   word-break: break-all;
+}
+
+/* Translation job (plan M1-E10) */
+.job {
+  position: sticky;
+  top: 41px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+  background: Canvas;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.85rem;
+  color: var(--muted);
+  z-index: 1;
+}
+.job__text {
+  flex: 1;
+  min-width: 0;
+}
+.job--stopped .job__text {
+  color: var(--danger);
+}
+.job__cost {
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+.job__button {
+  font: inherit;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+}
+/* A translatable block before its text arrives: the original, dimmed. */
+.seg--pending,
+.seg--failed {
+  color: var(--muted);
+}
+.seg--streaming {
+  border-left: 2px solid var(--accent);
+  margin-left: -10px;
+  padding-left: 8px;
+}
+.seg__note--failed {
+  color: var(--danger);
 }

@@ -2,13 +2,57 @@ import { useEffect, useState } from 'preact/hooks';
 import { browser } from 'wxt/browser';
 import type { PanelController, PanelView } from './controller.ts';
 import { DevView } from './DevView.tsx';
+import { JobBar, type JobActions } from './JobBar.tsx';
+import type { Jobs, JobView } from './jobs.ts';
 import { SegmentList } from './SegmentList.tsx';
 import { StateMessage } from './StateMessage.tsx';
 
-export function App({ controller }: { controller: PanelController }) {
+/** What the panel needs from the translation side (translator.ts). Absent: the original only (M0). */
+export interface TranslatorProps {
+  jobs: Jobs;
+  actions(tabId: number): JobActions;
+}
+
+const nextFrame = (fn: () => void) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 16));
+
+/**
+ * The active tab's job, if it belongs to the document on screen. Updates are batched per frame:
+ * a stream emits an event per text delta.
+ */
+function useJob(jobs: Jobs | undefined, tabId: number | undefined, docId: string | undefined): JobView | undefined {
+  const read = () => (jobs && tabId !== undefined && docId !== undefined && jobs.docOf(tabId) === docId ? jobs.get(tabId) : undefined);
+  const [job, setJob] = useState<JobView | undefined>(read);
+  useEffect(() => {
+    setJob(read());
+    if (!jobs) return;
+    let scheduled = false;
+    const unsubscribe = jobs.subscribe((id) => {
+      if (id !== tabId || scheduled) return;
+      scheduled = true;
+      nextFrame(() => {
+        scheduled = false;
+        setJob(read());
+      });
+    });
+    return unsubscribe;
+    // read() closes over exactly these three.
+  }, [jobs, tabId, docId]);
+  return job;
+}
+
+export function App({ controller, translator }: { controller: PanelController; translator?: TranslatorProps }) {
   const [view, setView] = useState<PanelView>(controller.view);
+  const [tabId, setTabId] = useState<number | undefined>(controller.tabId);
   const [dev, setDev] = useState(false);
-  useEffect(() => controller.subscribe(setView), [controller]);
+  useEffect(
+    () =>
+      controller.subscribe((v, t) => {
+        setView(v);
+        setTabId(t);
+      }),
+    [controller],
+  );
+  const job = useJob(translator?.jobs, tabId, view.kind === 'ready' ? view.docId : undefined);
 
   const openOptions = () => {
     void browser.runtime.openOptionsPage();
@@ -41,10 +85,14 @@ export function App({ controller }: { controller: PanelController }) {
         <DevView segments={view.result.segments} via={view.result.via} docId={view.docId} />
       ) : (
         <>
-          <p class="panel__meta" data-testid="panel-ready">
-            Original text · {view.result.segments.length} blocks
-          </p>
-          <SegmentList segments={view.result.segments} />
+          {job && translator && tabId !== undefined ? (
+            <JobBar job={job} actions={translator.actions(tabId)} />
+          ) : (
+            <p class="panel__meta" data-testid="panel-ready">
+              Original text · {view.result.segments.length} blocks
+            </p>
+          )}
+          <SegmentList segments={view.result.segments} states={job?.segs} />
         </>
       )}
     </main>

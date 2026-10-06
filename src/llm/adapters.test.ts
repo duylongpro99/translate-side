@@ -528,4 +528,25 @@ describe('createClient / createAdapter', () => {
     expect(() => createAdapter('chrome-builtin')).toThrow(/M4/);
     expect(createClient(connection(), 'm').model).toBe('m');
   });
+
+  it('loads the SDK lazily: a client streams through the adapter it imports on first use (review N5)', async () => {
+    const f = mockFetch([{ status: 200, body: openaiStream({ text: ['Xin ', 'chào'] }), headers: { 'content-type': 'text/event-stream' } }]);
+    const client = createClient(connection(), 'm', { fetch: f.fetch });
+    expect(f.requests).toHaveLength(0);
+    const events = await collect(client.stream(request('m')));
+    expect(events.filter((e) => e.type === 'text').map((e) => (e as { delta: string }).delta).join('')).toBe('Xin chào');
+    expect(events.at(-1)).toEqual({ type: 'done', stopReason: 'end' });
+    expect(f.requests).toHaveLength(1);
+  });
+
+  it('a request aborted while the SDK loads throws the abort reason, without a request', async () => {
+    const f = mockFetch([{ status: 200, body: openaiStream({ text: ['x'] }) }]);
+    const ac = new AbortController();
+    const stream = createClient(connection(), 'm', { fetch: f.fetch }).stream(request('m', { signal: ac.signal }));
+    const it = stream[Symbol.asyncIterator]();
+    const first = it.next();
+    ac.abort(new Error('cancelled'));
+    await expect(first).rejects.toThrow('cancelled');
+    expect(f.requests).toHaveLength(0);
+  });
 });
