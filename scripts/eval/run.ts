@@ -3,13 +3,18 @@
 // <slug>.output.json (source + translation per segment), calls.jsonl (every request/response),
 // summary.json and summary.md (tokens, wall time and cost per document, segment loss, repairs).
 // Run: pnpm run eval -- [--provider gemini|anthropic] [--model id] [--docs a,b] [--mock]
-//      [--set fixtures|eval] [--probe-nonce] [--chunk-tokens n] [--concurrency n] [--target vi] [--price in,cached,out]
+//      [--set fixtures|eval] [--strategy single-pass|contextual] [--probe-nonce] [--chunk-tokens n]
+//      [--concurrency n] [--target vi] [--price in,cached,out]
+// `contextual` (plan M2) adds the brief call: <slug>.brief.json holds the parsed brief (or null),
+// calls.jsonl tags each call with its role, and summary.json records the strategy and the prompt
+// versions so the comparison report (pnpm run eval:report) can tell runs apart.
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
 import type { LLMClient, ResolvedConnection, StopReason } from '@/llm/types';
-import { chunkLimits, chunkSegments, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, toWire, renderSystemPrompt, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, type EngineEvent, type Segment, type TranslationJob } from '@/engine/index';
+import { ANALYZE_PROMPT_ID, chunkLimits, chunkSegments, contextual, CONTEXTUAL_ID, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, SINGLE_PASS_ID, toWire, renderSystemPrompt, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, type DocumentBrief, type EngineEvent, type Segment, type TranslationJob } from '@/engine/index';
+import type { ModelRole } from '@/llm/types';
 import { costUsd, priceFor } from './pricing.ts';
 import { EVAL_SLUGS } from './docs.ts';
 import { listPassageIds, loadPassage } from './passages.ts';
@@ -26,6 +31,7 @@ const { values: opt } = parseArgs({
     docs: { type: 'string' },
     // `eval`: the M2-E8 passages in eval/passages instead of fixtures/docs.
     set: { type: 'string', default: 'fixtures' },
+    strategy: { type: 'string', default: 'single-pass' },
     out: { type: 'string' },
     mock: { type: 'boolean', default: false },
     'probe-nonce': { type: 'boolean', default: false },
@@ -46,6 +52,8 @@ interface FixtureDoc {
 
 interface CallRecord {
   doc: string;
+  /** Absent for the nonce probe's direct calls (translate). */
+  role?: ModelRole;
   n: number;
   ms: number;
   system: string;
@@ -68,6 +76,14 @@ function connection(): { client: LLMClient; label: string } {
       reasoningReserveTokens: 0,
       async *stream(req) {
         const user = req.messages.map((m) => m.content).join('\n');
+        if (user.startsWith('<document>')) {
+          // The brief call (contextual).
+          const brief = JSON.stringify({ language: 'en', genre: 'mock genre', audience: 'mock audience', purpose: 'mock purpose', tone: 'mock tone', glossary: [] });
+          yield { type: 'text', delta: brief };
+          yield { type: 'usage', input: Math.ceil(user.length / 3.5), output: Math.ceil(brief.length / 3.5) };
+          yield { type: 'done', stopReason: 'end' };
+          return;
+        }
         const out = user.replace(/<seg id="(\d+)"( n="[^"]*")?>([\s\S]*?)<\/seg>(?=\n<seg id=|$)/g, (_m, id: string, n: string | undefined, body: string) => `<seg id="${id}"${n ?? ''}>vi:${body}</seg>`);
         yield { type: 'text', delta: out };
         yield { type: 'usage', input: Math.ceil(user.length / 3.5), output: Math.ceil(out.length / 3.5) };
@@ -87,12 +103,12 @@ function connection(): { client: LLMClient; label: string } {
 }
 
 /** Records every call of the wrapped client, so the nonce rate and the repairs can be read back. */
-function recording(inner: LLMClient, calls: CallRecord[], doc: () => string): LLMClient {
+function recording(inner: LLMClient, calls: CallRecord[], doc: () => string, role?: ModelRole): LLMClient {
   return {
     model: inner.model,
     reasoningReserveTokens: inner.reasoningReserveTokens,
     async *stream(req) {
-      const rec: CallRecord = { doc: doc(), n: calls.length + 1, ms: 0, system: req.system, maxOutputTokens: req.maxOutputTokens, user: req.messages.map((m) => m.content).join('\n'), text: '' };
+      const rec: CallRecord = { doc: doc(), ...(role === undefined ? {} : { role }), n: calls.length + 1, ms: 0, system: req.system, maxOutputTokens: req.maxOutputTokens, user: req.messages.map((m) => m.content).join('\n'), text: '' };
       calls.push(rec);
       const t0 = Date.now();
       try {
@@ -116,7 +132,10 @@ const sleep = (ms: number, signal: AbortSignal): Promise<void> =>
     signal.addEventListener('abort', () => (clearTimeout(timer), reject(signal.reason)), { once: true });
   });
 
-const STRATEGY = 'single-pass';
+const STRATEGY = opt.strategy as string;
+if (STRATEGY !== SINGLE_PASS_ID && STRATEGY !== CONTEXTUAL_ID) throw new Error('--strategy expects single-pass or contextual');
+/** The prompt versions this run sends (summary.json; the report labels runs by them). */
+const PROMPTS = STRATEGY === CONTEXTUAL_ID ? { translate: TRANSLATE_PROMPT_ID, analyze: ANALYZE_PROMPT_ID } : { translate: TRANSLATE_PROMPT_ID };
 const evalSet = opt.set === 'eval';
 if (!evalSet && opt.set !== 'fixtures') throw new Error('--set expects fixtures or eval');
 const slugs = opt.docs ? opt.docs.split(',') : evalSet ? listPassageIds(ROOT) : [...EVAL_SLUGS];
@@ -133,7 +152,8 @@ fs.mkdirSync(outDir, { recursive: true });
 
 const calls: CallRecord[] = [];
 let current = '';
-const engine = createEngine({ llm: () => recording(baseClient, calls, () => current), now: Date.now, sleep, strategies: [singlePass], prompts: createDefaultPromptRegistry() });
+// One recording client per role, as the shell routes them (analyze defaults to translate, §4.3.1).
+const engine = createEngine({ llm: (role) => recording(baseClient, calls, () => current, role), now: Date.now, sleep, strategies: [singlePass, contextual], prompts: createDefaultPromptRegistry() });
 const chunkTokens = Number(opt['chunk-tokens']);
 
 interface DocResult {
@@ -153,6 +173,8 @@ interface DocResult {
   firstFinalMs: number | null;
   costUsd: number | null;
   errors: string[];
+  /** Contextual only: did the brief parse, the brief call's wall time and tokens (included in the totals above). */
+  brief?: { ok: boolean; ms: number | null; input: number; output: number };
 }
 
 async function runDoc(slug: string): Promise<DocResult> {
@@ -160,7 +182,7 @@ async function runDoc(slug: string): Promise<DocResult> {
   current = slug;
   const callsBefore = calls.length;
   const job: TranslationJob = {
-    doc: { url: doc.url, title: doc.title, sourceLang: doc.lang, targetLang: opt.target as string, outline: [], segments: doc.segments },
+    doc: { url: doc.url, title: doc.title, sourceLang: doc.lang, targetLang: opt.target as string, outline: doc.segments.filter((s) => s.kind === 'heading').map((s) => s.text), segments: doc.segments },
     priority: [],
     strategy: STRATEGY,
     options: { style: 'natural', glossary: [], maxConcurrency: Number(opt.concurrency), chunkTokens },
@@ -168,6 +190,8 @@ async function runDoc(slug: string): Promise<DocResult> {
   const finals = new Map<string, { text: string; attempt: number }>();
   const failed = new Map<string, string>();
   const usage = { input: 0, cachedInput: 0, output: 0 };
+  const analyzeUsage = { input: 0, output: 0 };
+  let brief: DocumentBrief | null = null;
   let firstFinalMs: number | null = null;
   const t0 = Date.now();
   for await (const e of engine.translate(job, new AbortController().signal) as AsyncIterable<EngineEvent>) {
@@ -178,7 +202,13 @@ async function runDoc(slug: string): Promise<DocResult> {
     } else if (e.type === 'segment.failed') {
       failed.set(e.id, `${e.error.kind}: ${e.error.message}`);
       finals.delete(e.id);
+    } else if (e.type === 'artifact' && e.kind === 'brief') {
+      brief = e.data as DocumentBrief;
     } else if (e.type === 'usage') {
+      if (e.role === 'analyze') {
+        analyzeUsage.input += e.input;
+        analyzeUsage.output += e.output;
+      }
       usage.input += e.input;
       usage.cachedInput += e.cachedInput ?? 0;
       usage.output += e.output;
@@ -186,6 +216,8 @@ async function runDoc(slug: string): Promise<DocResult> {
   }
   const wallMs = Date.now() - t0;
   const want = doc.segments.filter((s) => s.translate);
+  const analyzeCall = calls.slice(callsBefore).find((c) => c.role === 'analyze');
+  if (STRATEGY === CONTEXTUAL_ID) fs.writeFileSync(path.join(outDir, `${slug}.brief.json`), `${JSON.stringify(brief, null, 1)}\n`);
   fs.writeFileSync(
     path.join(outDir, `${slug}.output.json`),
     `${JSON.stringify(
@@ -208,6 +240,7 @@ async function runDoc(slug: string): Promise<DocResult> {
     firstFinalMs,
     costUsd: price ? costUsd(price, usage) : null,
     errors: [...new Set(failed.values())],
+    ...(STRATEGY === CONTEXTUAL_ID ? { brief: { ok: brief !== null, ms: analyzeCall?.ms ?? null, ...analyzeUsage } } : {}),
   };
 }
 
@@ -263,7 +296,7 @@ const sum = (f: (r: DocResult) => number): number => results.reduce((n, r) => n 
 const total = { translatable: sum((r) => r.translatable), lost: sum((r) => r.lost), failed: sum((r) => r.failed), repaired: sum((r) => r.repaired), calls: sum((r) => r.calls), input: sum((r) => r.input), cachedInput: sum((r) => r.cachedInput), output: sum((r) => r.output), wallMs: sum((r) => r.wallMs), costUsd: price ? sum((r) => r.costUsd ?? 0) : null };
 // chars/3.5 check (tokens.ts): characters per token as the provider counted them, over the
 // translation calls (system + user text in, answer text out). Nonce probes are left out.
-const counted = calls.filter((c) => !c.doc.endsWith('#nonce') && c.usage !== undefined);
+const counted = calls.filter((c) => !c.doc.endsWith('#nonce') && c.role !== 'analyze' && c.usage !== undefined);
 const charsIn = counted.reduce((n, c) => n + c.system.length + c.user.length, 0);
 const tokensIn = counted.reduce((n, c) => n + (c.usage?.input ?? 0), 0);
 const charsOut = counted.reduce((n, c) => n + c.text.length, 0);
@@ -316,19 +349,22 @@ for (const slug of slugs) {
   }
 }
 const nonce = probes.length ? { echoed: probes.reduce((n, p) => n + p.echoed, 0), opens: probes.reduce((n, p) => n + p.opens, 0), perDoc: probes } : null;
-const summary = { run: stamp, set: opt.set, strategy: STRATEGY, prompt: TRANSLATE_PROMPT_ID, label, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
+const briefs = results.flatMap((r) => (r.brief ? [r.brief] : []));
+const briefTotals = briefs.length ? { docs: briefs.length, ok: briefs.filter((b) => b.ok).length, input: briefs.reduce((n, b) => n + b.input, 0), output: briefs.reduce((n, b) => n + b.output, 0), costUsd: price ? costUsd(price, { input: briefs.reduce((n, b) => n + b.input, 0), cachedInput: 0, output: briefs.reduce((n, b) => n + b.output, 0) }) : null } : null;
+const summary = { run: stamp, set: opt.set, strategy: STRATEGY, prompt: TRANSLATE_PROMPT_ID, prompts: PROMPTS, label, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
 fs.writeFileSync(path.join(outDir, 'summary.json'), `${JSON.stringify(summary, null, 1)}\n`);
 const money = (n: number | null): string => (n === null ? 'n/a' : `$${n.toFixed(5)}`);
 const md = [
   `# Eval run ${stamp}`,
   '',
-  `Model \`${label}\`, target \`${opt.target}\`, chunk ${chunkTokens} tokens, ${opt.concurrency} in flight. ${price && !price.verified ? 'Price is an UNVERIFIED placeholder (scripts/eval/pricing.ts).' : ''}`,
+  `Strategy \`${STRATEGY}\` (${Object.values(PROMPTS).join(', ')}), model \`${label}\`, target \`${opt.target}\`, chunk ${chunkTokens} tokens, ${opt.concurrency} in flight. ${price && !price.verified ? 'Price is an UNVERIFIED placeholder (scripts/eval/pricing.ts).' : ''}`,
   '',
   '| doc | segments | lost | repaired | calls | input | cached | output | wall s | first final s | cost |',
   '|---|---|---|---|---|---|---|---|---|---|---|',
   ...results.map((r) => `| ${r.slug} | ${r.translatable} | ${r.lost} | ${r.repaired} | ${r.calls} | ${r.input} | ${r.cachedInput} | ${r.output} | ${(r.wallMs / 1000).toFixed(1)} | ${r.firstFinalMs === null ? '–' : (r.firstFinalMs / 1000).toFixed(1)} | ${money(r.costUsd)} |`),
   `| **total** | ${total.translatable} | ${total.lost} | ${total.repaired} | ${total.calls} | ${total.input} | ${total.cachedInput} | ${total.output} | ${(total.wallMs / 1000).toFixed(1)} | | ${money(total.costUsd)} |`,
   '',
+  ...(briefTotals ? [`Brief (${ANALYZE_PROMPT_ID}): parsed for ${briefTotals.ok}/${briefTotals.docs} docs; ${briefTotals.input} in / ${briefTotals.output} out tokens, ${money(briefTotals.costUsd)} (in the totals above). Per doc: ${results.map((r) => `${r.slug} ${r.brief?.ok ? 'ok' : 'none'} ${r.brief?.ms === null || r.brief === undefined ? '–' : `${(r.brief.ms / 1000).toFixed(1)}s`}`).join(', ')}.`] : []),
   `Characters per token (provider-counted; the engine assumes ${CHARS_PER_TOKEN}): input ${charsPerToken.input?.toFixed(2) ?? '–'}, output ${charsPerToken.output?.toFixed(2) ?? '–'} over ${charsPerToken.calls} calls.`,
   `S2 thresholds on ${thresholds.chunks} chunks / ${thresholds.segments} segments: ${thresholds.chunksWithFixes} chunks with parser fixes ${JSON.stringify(thresholds.fixKinds)}, ${thresholds.rerequested} re-requested, ${thresholds.merged} flagged merged; length ratio vs chunk median: max ${thresholds.maxRatio.toFixed(2)}, over 1.2/1.4/${MERGE_FACTOR}: ${Object.values(thresholds.over).join('/')}; ${MAX_TAG}-char tag hold-back: ${thresholds.partialTag} partial tags; highest answer/max_tokens ${thresholds.maxBudgetUse.toFixed(2)}.`,
   nonce ? `Nonce copy: ${nonce.echoed}/${nonce.opens} opening tags carried the nonce (${nonce.opens ? ((100 * nonce.echoed) / nonce.opens).toFixed(1) : '–'}%).` : 'Nonce probe not run (--probe-nonce).',

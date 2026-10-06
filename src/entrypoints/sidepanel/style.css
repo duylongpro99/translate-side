@@ -262,3 +262,42 @@ body {
 .seg__note--failed {
   color: var(--danger);
 }
+
+/* About this document (plan M2-E1) */
+.about {
+  margin: 8px 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.about__summary {
+  padding: 8px 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.about__list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0 10px 10px;
+  font-size: 0.9rem;
+}
+.about__list dt {
+  color: var(--muted);
+}
+.about__list dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.about__terms {
+  margin: 0;
+  padding-left: 1.1em;
+}
+.about__term {
+  font-weight: 600;
+}
+.about__note {
+  color: var(--muted);
+}

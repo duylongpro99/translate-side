@@ -2,7 +2,8 @@
 // is translated at once (DESIGN.md §3 "starts translating at once"), its job stops when the page
 // goes away, and settings changes restart a job that was waiting for them.
 import type { browser } from 'wxt/browser';
-import { GEMINI_CONNECTION, GEMINI_ORIGIN, readPreferences, secretKey, sourceLanguage, type Preferences } from '@/shared/settings';
+import { chromeLanguageDetector, detectionSample, detectSourceLanguage, MIXED_LANGUAGE_DETECTION, sameLanguage, segmentsInLanguage, type LanguageDetectorPort } from '@/shared/language';
+import { GEMINI_CONNECTION, GEMINI_ORIGIN, readPreferences, secretKey, type Preferences } from '@/shared/settings';
 import type { SessionHooks } from './controller.ts';
 import type { JobActions } from './JobBar.tsx';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
@@ -18,17 +19,35 @@ export interface Translator {
   watch(activeTab: () => number | undefined): () => void;
 }
 
-export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}): Translator {
-  const jobs = new Jobs({ translateClient: () => translateClient(api), ...deps });
+export interface TranslatorOptions {
+  /** The language-detection port (plan M2-E5); default Chrome's LanguageDetector when the browser has one. */
+  detector?: LanguageDetectorPort | undefined;
+  /** Per-segment detection for mixed-language pages; default MIXED_LANGUAGE_DETECTION (off). */
+  mixedLanguage?: boolean;
+}
 
-  const docFor = (prefs: Preferences, url: string, title: string, pageLang: string | undefined, segments: JobDoc['segments']): JobDoc => ({
-    url,
-    title,
-    ...(pageLang === undefined ? {} : { pageLang }),
-    sourceLang: sourceLanguage(prefs, pageLang),
-    targetLang: prefs.targetLang,
-    segments,
-  });
+export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, options: TranslatorOptions = {}): Translator {
+  const jobs = new Jobs({ translateClient: () => translateClient(api), ...deps });
+  const detector = 'detector' in options ? options.detector : chromeLanguageDetector();
+  const mixed = options.mixedLanguage ?? MIXED_LANGUAGE_DETECTION;
+
+  /**
+   * The job document for a page under these preferences: its source language from the detection
+   * chain (src/shared/language.ts), and whether it is already in the target language (skip, no
+   * model call). With per-segment detection on, the segments already in the target language are
+   * kept as they are, and the page is skipped only when nothing else is left.
+   */
+  const docFor = async (prefs: Preferences, url: string, title: string, pageLang: string | undefined, segments: JobDoc['segments']): Promise<{ doc: JobDoc; skip: boolean }> => {
+    const detection = await detectSourceLanguage({ override: prefs.sourceLang === 'auto' ? undefined : prefs.sourceLang, sample: detectionSample(segments), pageLang }, detector);
+    const base = { url, title, ...(pageLang === undefined ? {} : { pageLang }), sourceLang: detection.lang, targetLang: prefs.targetLang, detection, segments };
+    if (!mixed) return { doc: base, skip: sameLanguage(detection.lang, prefs.targetLang) };
+    const keep = await segmentsInLanguage(segments, prefs.targetLang, detector);
+    const left = segments.some((s) => s.translate && !keep.has(s.id));
+    return { doc: keep.size ? { ...base, keep } : base, skip: !left && segments.some((s) => s.translate) };
+  };
+
+  const begin = (tabId: number, docId: string, prepared: { doc: JobDoc; skip: boolean }, opts?: { keepCost?: boolean }) =>
+    prepared.skip ? jobs.skip(tabId, docId, prepared.doc) : jobs.start(tabId, docId, prepared.doc, opts);
 
   /** The document each tab's session holds now: a job starts only for a page that is still there. */
   const live = new Map<number, string>();
@@ -37,10 +56,12 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}): Tra
   const hooks: SessionHooks = {
     ready(tabId, docId, result) {
       live.set(tabId, docId);
-      void readPreferences(api).then((prefs) => {
-        // The page may have gone, or the tab closed, while the settings were read (review E-R1).
-        if (isLive(tabId, docId)) void jobs.start(tabId, docId, docFor(prefs, result.url, result.title, result.lang, result.segments));
-      });
+      void readPreferences(api)
+        .then((prefs) => docFor(prefs, result.url, result.title, result.lang, result.segments))
+        .then((prepared) => {
+          // The page may have gone, or the tab closed, while the settings were read (review E-R1).
+          if (isLive(tabId, docId)) void begin(tabId, docId, prepared);
+        });
     },
     gone: (tabId) => {
       live.delete(tabId);
@@ -84,12 +105,13 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}): Tra
       const tabId = activeTab();
       const current = tabId === undefined ? undefined : jobs.docFor(tabId);
       if (tabId === undefined || current === undefined) return;
-      void readPreferences(api).then((prefs) => {
-        const { doc, docId } = current;
-        const next = docFor(prefs, doc.url, doc.title, doc.pageLang, doc.segments);
-        if (next.targetLang === doc.targetLang && next.sourceLang === doc.sourceLang) return;
-        if (isLive(tabId, docId) && jobs.docOf(tabId) === docId) void jobs.start(tabId, docId, next, { keepCost: true });
-      });
+      const { doc, docId } = current;
+      void readPreferences(api)
+        .then((prefs) => docFor(prefs, doc.url, doc.title, doc.pageLang, doc.segments))
+        .then((next) => {
+          if (next.doc.targetLang === doc.targetLang && next.doc.sourceLang === doc.sourceLang) return;
+          if (isLive(tabId, docId) && jobs.docOf(tabId) === docId) void begin(tabId, docId, next, { keepCost: true });
+        });
     };
     const onPagehide = () => jobs.cancelAll();
     api.storage.local.onChanged.addListener(onLocal);

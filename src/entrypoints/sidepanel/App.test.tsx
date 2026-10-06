@@ -182,6 +182,7 @@ describe('translation in the panel (plan M1-E10)', () => {
     paused: false,
     model: 'gemini-3.5-flash-lite',
     targetLang: 'vi',
+    sourceLang: 'en',
     segments,
     segs: new Map(segs.map(([s, st]) => [s.id, st])),
     counts: { total: 4, final: segs.filter(([, s]) => s.status === 'final').length, failed: segs.filter(([, s]) => s.status === 'failed').length },
@@ -245,6 +246,47 @@ describe('translation in the panel (plan M1-E10)', () => {
     await f.j.push(jobView([], { status: 'done', counts: { total: 4, final: 4, failed: 0 }, endedAt: 14_201, cost: 0.0072 }));
     expect(root.querySelector('[data-testid=job]')?.textContent).toContain('Vietnamese · 4 of 4 · 14.2 s');
     expect(root.querySelector('[data-testid=job-cost]')?.textContent).toBe('$0.0072');
+  });
+
+  it('About this document: collapsed, shows genre, audience, purpose, tone and key terms as text (plan M2 §2)', async () => {
+    const f = mountJob(jobView([]));
+    expect(root.querySelector('[data-testid=about]')).toBeNull();
+    const brief = {
+      genre: 'technical blog post',
+      audience: 'Rust developers',
+      purpose: 'explain lazy futures',
+      tone: '<b>dry</b>',
+      glossary: [
+        { term: 'future', rendering: 'future', note: 'keep English' },
+        { term: 'executor', rendering: 'bộ thực thi' },
+      ],
+    };
+    await f.j.push(jobView([], { brief, sourceLang: 'en' }));
+    const about = root.querySelector('[data-testid=about]') as HTMLDetailsElement;
+    expect(about.open).toBe(false);
+    expect(about.querySelector('summary')?.textContent).toBe('About this document');
+    const field = (k: string) => about.querySelector(`[data-field=${k}]`)?.textContent;
+    expect(field('genre')).toBe('technical blog post');
+    expect(field('audience')).toBe('Rust developers');
+    expect(field('purpose')).toBe('explain lazy futures');
+    expect(field('tone')).toBe('<b>dry</b>');
+    expect(about.querySelector('b')).toBeNull();
+    expect([...about.querySelectorAll('[data-field=glossary] li')].map((li) => li.textContent)).toEqual(['future · keep English', 'executor → bộ thực thi']);
+    expect(about.textContent).toContain('LanguageEnglish');
+    // Empty fields are left out.
+    await f.j.push(jobView([], { brief: { ...brief, audience: '', glossary: [] }, sourceLang: '' }));
+    expect(field('audience')).toBeUndefined();
+    expect(root.querySelector('[data-field=glossary]')).toBeNull();
+    expect(root.querySelector('[data-testid=about]')?.textContent).not.toContain('Language');
+  });
+
+  it('a page already in the target language shows the skip note and Translate anyway (plan M2 criterion 6)', () => {
+    const f = mountJob(jobView([], { status: 'skipped', counts: { total: 0, final: 0, failed: 0 }, detection: { lang: 'vi', via: 'detector', confidence: 0.98 }, cost: undefined }));
+    const note = root.querySelector('[data-testid=job-skipped]')?.textContent;
+    expect(note).toBe('This page is already in Vietnamese, so it was not translated (language detection on this device).');
+    expect(block(p1)?.textContent).toBe('Read the docs.');
+    act(() => (root.querySelector('[data-testid=job] button') as HTMLButtonElement).click());
+    expect(f.calls).toEqual(['resume']);
   });
 
   it('a stopped job offers the fix: settings for the key, Grant access for the host permission', async () => {

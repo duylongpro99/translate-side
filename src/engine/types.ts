@@ -163,6 +163,12 @@ export interface Strategy {
 
 /** The analyze stage's output (§5.7 step 1). */
 export interface DocumentBrief {
+  /**
+   * The document's language as the model read it (BCP 47): the last link of the source-language
+   * chain (plan M2 §5), used when the shell could not tell. Absent when the model gave none.
+   */
+  language?: string;
+  /** Empty when the model gave none; the parser drops a brief with no field at all. */
   genre: string;
   audience: string;
   purpose: string;

@@ -8,9 +8,10 @@
 // - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
-import { createDefaultPromptRegistry, createEngine, singlePass, type EngineEvent, type Segment, type TranslationEngine, type TranslationJob } from '@/engine/index';
+import { contextual, createDefaultPromptRegistry, createEngine, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type Segment, type StrategyId, type TranslationEngine, type TranslationJob } from '@/engine/index';
 import type { LLMClient, LLMError, LLMErrorKind, NormalizedRequest } from '@/llm/types';
 import { costUsd, type UsageTotals } from '@/shared/cost';
+import type { Detection } from '@/shared/language';
 import type { ModelProfile } from '@/shared/settings';
 
 export type SegStatus = 'pending' | 'streaming' | 'final' | 'failed';
@@ -31,7 +32,16 @@ export type JobStatus =
   | 'done'
   | 'cancelled'
   /** A failure that every further request would hit too (bad key, no allowance, no access): the job stopped itself. */
-  | 'stopped';
+  | 'stopped'
+  /** The page is already in the target language (plan M2-E5): nothing was sent. `resume` translates it anyway. */
+  | 'skipped';
+
+/**
+ * The strategy the panel runs: `contextual`, so the brief exists for "About this document" (plan
+ * M2 §2). Whether it stays the default is decided at the end of M2 (plan §9); `single-pass` is one
+ * line away.
+ */
+export const PANEL_STRATEGY: StrategyId = contextual.id;
 
 export interface JobView {
   status: JobStatus;
@@ -39,6 +49,12 @@ export interface JobView {
   paused: boolean;
   model: string;
   targetLang: string;
+  /** The source language the job uses: the detection chain's, or the brief's when that was silent; "" if unknown. */
+  sourceLang: string;
+  /** How the source language was found (shell side); absent in jobs built without detection. */
+  detection?: Detection;
+  /** The document brief (analyze stage), for "About this document". Absent until it arrives, or when there is none. */
+  brief?: DocumentBrief;
   /** Every segment of the page, in page order (code blocks included: they are shown as is). */
   segments: readonly Segment[];
   /**
@@ -181,8 +197,10 @@ export interface JobDeps {
   translateClient: () => Promise<ClientResult>;
   now?: () => number;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
-  /** Test seam: the engine to run (default: single-pass over the given client). */
+  /** Test seam: the engine to run (default: single-pass and contextual over the given client). */
   engine?: (client: LLMClient) => TranslationEngine;
+  /** Test seam: the strategy jobs run (default PANEL_STRATEGY). */
+  strategy?: StrategyId;
 }
 
 export interface JobDoc {
@@ -192,6 +210,10 @@ export interface JobDoc {
   pageLang?: string;
   sourceLang: string;
   targetLang: string;
+  /** The detection chain's answer (src/shared/language.ts). */
+  detection?: Detection;
+  /** Per-segment detection (flag): translatable segments already in the target language, kept as they are. */
+  keep?: ReadonlySet<string>;
   segments: Segment[];
 }
 
@@ -272,7 +294,9 @@ export class Jobs {
     const abandoned = costFrom && costFrom.view.status === 'running' ? costFrom.inflight : 0;
     if (prev?.view.status === 'running') prev.controller.abort(new DOMException('replaced', 'AbortError'));
 
-    const translatable = doc.segments.filter((s) => s.translate);
+    // Segments already in the target language (per-segment detection) are shown as is, like code.
+    const segments = doc.keep?.size ? doc.segments.map((s) => (s.translate && doc.keep?.has(s.id) ? { ...s, translate: false } : s)) : doc.segments;
+    const translatable = segments.filter((s) => s.translate);
     const segs = new Map<string, SegState>();
     for (const s of translatable) {
       const old = keep?.segs.get(s.id);
@@ -294,7 +318,10 @@ export class Jobs {
         paused: !gate.open,
         model: keep?.view.model ?? '',
         targetLang: doc.targetLang,
-        segments: doc.segments,
+        sourceLang: doc.sourceLang,
+        ...(doc.detection ? { detection: doc.detection } : {}),
+        ...(keep?.view.brief ? { brief: keep.view.brief } : {}),
+        segments,
         segs,
         counts: count(segs),
         usage: costFrom ? { ...costFrom.view.usage } : { input: 0, cachedInput: 0, output: 0 },
@@ -334,12 +361,12 @@ export class Jobs {
         title: doc.title,
         sourceLang: doc.sourceLang,
         targetLang: doc.targetLang,
-        outline: doc.segments.filter((s) => s.kind === 'heading').map((s) => s.text),
+        outline: segments.filter((s) => s.kind === 'heading').map((s) => s.text),
         // Already-final segments are not sent again (resume). Code blocks ride along; the engine skips them.
-        segments: doc.segments.filter((s) => !s.translate || todo.has(s.id)),
+        segments: segments.filter((s) => !s.translate || todo.has(s.id)),
       },
       priority: [],
-      strategy: singlePass.id,
+      strategy: this.deps.strategy ?? PANEL_STRATEGY,
       options: { style: 'natural', glossary: [], maxConcurrency: profile.maxConcurrency, chunkTokens: profile.chunkTokens },
     };
     try {
@@ -353,6 +380,45 @@ export class Jobs {
       // A cancel throws the abort reason; anything else is an engine bug (it degrades rather than throws).
       this.finish(tabId, job, signal.aborted ? 'cancelled' : 'stopped', signal.aborted ? undefined : { kind: 'unknown', message: err instanceof Error ? err.message : String(err), raw: err });
     }
+  }
+
+  /**
+   * The page is already in the target language (plan M2 criterion 6): a job that sends nothing,
+   * shown as a note. A running job of the tab is replaced. `resume` translates it anyway.
+   */
+  skip(tabId: number, docId: string, doc: JobDoc): void {
+    const prev = this.jobs.get(tabId);
+    if (prev?.view.status === 'running') prev.controller.abort(new DOMException('replaced', 'AbortError'));
+    const segs = new Map<string, SegState>();
+    const keepCost = prev?.docId === docId ? prev : undefined;
+    const now = this.now();
+    const job: Job = {
+      docId,
+      doc,
+      segs,
+      controller: new AbortController(),
+      gate: new Gate(),
+      inflight: 0,
+      run: (prev?.run ?? 0) + 1,
+      view: {
+        status: 'skipped',
+        paused: false,
+        model: '',
+        targetLang: doc.targetLang,
+        sourceLang: doc.sourceLang,
+        ...(doc.detection ? { detection: doc.detection } : {}),
+        segments: doc.segments,
+        segs,
+        counts: { total: 0, final: 0, failed: 0 },
+        usage: keepCost ? { ...keepCost.view.usage } : { input: 0, cachedInput: 0, output: 0 },
+        cost: keepCost?.view.cost,
+        unmetered: keepCost?.view.unmetered ?? 0,
+        startedAt: now,
+        endedAt: now,
+      },
+    };
+    this.jobs.set(tabId, job);
+    this.emit(tabId, job.view);
   }
 
   /** Translates what the tab's job left (cancelled, failed or stopped segments) for the same document. */
@@ -389,13 +455,14 @@ export class Jobs {
 
   private defaultEngine(client: LLMClient): TranslationEngine {
     return createEngine({
+      // §4.3.1: an unset analyze route defaults to translate (settings.ts resolveProfile).
       llm: (role) => {
-        if (role !== 'translate') throw new Error(`no model profile is routed for the ${role} role yet`);
+        if (role === 'review') throw new Error(`no model profile is routed for the ${role} role yet`);
         return client;
       },
       now: this.now,
       sleep: this.deps.sleep ?? abortableSleep,
-      strategies: [singlePass],
+      strategies: [singlePass, contextual],
       prompts: createDefaultPromptRegistry(),
     });
   }
@@ -420,6 +487,15 @@ export class Jobs {
           job.controller.abort(new DOMException('stopped', 'AbortError'));
           this.finish(tabId, job, 'stopped', event.error);
         }
+        return;
+      }
+      case 'artifact': {
+        // The engine's brief is already normalized; checked again because the view renders it.
+        if (event.kind !== 'brief' || job.view.status !== 'running') return;
+        const brief = normalizeBrief(event.data);
+        if (!brief) return;
+        const sourceLang = job.view.sourceLang || brief.language || '';
+        this.patch(tabId, job, { brief, sourceLang });
         return;
       }
       case 'usage': {

@@ -93,4 +93,104 @@ describe('translator wiring (plan M1-E8)', () => {
     expect(t.jobs.get(1)?.targetLang).toBe('ja');
     stop();
   });
+
+  describe('source language and same-language skip (plan M2-E5)', () => {
+    const detector = (lang: string, confidence = 0.95) => ({ detect: async () => [{ detectedLanguage: lang, confidence }] });
+    const counting = () => {
+      const c = { resolved: 0 };
+      const resolve = () => {
+        c.resolved++;
+        return client()();
+      };
+      return Object.assign(c, { resolve });
+    };
+    async function ready(t: ReturnType<typeof createTranslator>, f: ReturnType<typeof fakeApi>, page: Ready = result) {
+      const hooks = t.hooks as Required<SessionHooks>;
+      hooks.active(1);
+      hooks.ready(1, 'd', page);
+      f.answer();
+      await settle(50);
+      return t.jobs.get(1);
+    }
+
+    it('skips a page the detector reads as the target language: nothing resolved, nothing sent', async () => {
+      const f = fakeApi();
+      const c = counting();
+      const t = createTranslator(f.api, { translateClient: c.resolve }, { detector: detector('vi') });
+      const v = await ready(t, f);
+      expect(v?.status).toBe('skipped');
+      expect(v?.detection).toEqual({ lang: 'vi', via: 'detector', confidence: 0.95 });
+      expect(c.resolved).toBe(0);
+    });
+
+    it('the detector beats a wrong <html lang>, both ways', async () => {
+      const f1 = fakeApi();
+      const t1 = createTranslator(f1.api, { translateClient: client() }, { detector: detector('en') });
+      const v1 = await ready(t1, f1, { ...result, lang: 'vi' } as Ready);
+      expect(v1?.status).toBe('done');
+      expect(v1?.sourceLang).toBe('en');
+      const f2 = fakeApi();
+      const t2 = createTranslator(f2.api, { translateClient: client() }, { detector: detector('vi') });
+      expect((await ready(t2, f2, { ...result, lang: 'en' } as Ready))?.status).toBe('skipped');
+    });
+
+    it('without a detector, <html lang> decides; an unknown language is translated', async () => {
+      const f1 = fakeApi();
+      const t1 = createTranslator(f1.api, { translateClient: client() }, { detector: undefined });
+      const v1 = await ready(t1, f1, { ...result, lang: 'vi-VN' } as Ready);
+      expect(v1?.status).toBe('skipped');
+      expect(v1?.detection?.via).toBe('html-lang');
+      const f2 = fakeApi();
+      const t2 = createTranslator(f2.api, { translateClient: client() }, { detector: undefined });
+      const noLang = { ...result } as Ready & { lang?: string };
+      delete noLang.lang;
+      const v2 = await ready(t2, f2, noLang);
+      expect(v2?.status).toBe('done');
+      expect(v2?.detection).toEqual({ lang: '', via: 'unknown' });
+    });
+
+    it('a target-language change un-skips the page; Translate anyway (resume) translates it', async () => {
+      const f = fakeApi();
+      const t = createTranslator(f.api, { translateClient: client() }, { detector: detector('vi') });
+      const stop = t.watch(() => 1);
+      expect((await ready(t, f))?.status).toBe('skipped');
+      f.setPrefs({ targetLang: 'ja', sourceLang: 'auto' });
+      f.answer();
+      await settle(50);
+      expect(t.jobs.get(1)?.status).toBe('done');
+      expect(t.jobs.get(1)?.sourceLang).toBe('vi');
+      stop();
+
+      const g = fakeApi();
+      const u = createTranslator(g.api, { translateClient: client() }, { detector: detector('vi') });
+      await ready(u, g);
+      u.actions(1).resume();
+      await settle(50);
+      expect(u.jobs.get(1)?.status).toBe('done');
+      expect(u.jobs.get(1)?.counts.final).toBe(segments.length);
+    });
+
+    it('per-segment detection is off by default, and keeps target-language segments when on', async () => {
+      const viText = 'Đây là một đoạn văn tiếng Việt đủ dài để nhận diện.';
+      const page = { ...result, segments: [...segments, { ...segments[0], id: 'vi1', text: viText, inlineMarkup: viText }] } as Ready;
+      const perSeg = { detect: async (text: string) => [{ detectedLanguage: text === viText ? 'vi' : 'en', confidence: 0.9 }] };
+      const f1 = fakeApi();
+      const off = createTranslator(f1.api, { translateClient: client() }, { detector: perSeg });
+      const vOff = await ready(off, f1, page);
+      expect(vOff?.counts.total).toBe(segments.length + 1);
+      expect(vOff?.segments.find((s) => s.id === 'vi1')?.translate).toBe(true);
+
+      const f2 = fakeApi();
+      const on = createTranslator(f2.api, { translateClient: client() }, { detector: perSeg, mixedLanguage: true });
+      const v = await ready(on, f2, page);
+      expect(v?.status).toBe('done');
+      expect(v?.counts.total).toBe(segments.length);
+      expect(v?.segments.find((s) => s.id === 'vi1')?.translate).toBe(false);
+
+      // Everything already in the target language: skipped.
+      const f3 = fakeApi();
+      const all = createTranslator(f3.api, { translateClient: client() }, { detector: detector('vi'), mixedLanguage: true });
+      expect((await ready(all, f3))?.status).toBe('skipped');
+    });
+  });
 });

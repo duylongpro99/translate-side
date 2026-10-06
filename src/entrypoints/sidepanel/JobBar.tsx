@@ -78,6 +78,22 @@ export function JobBar({ job, actions }: { job: JobView; actions: JobActions }) 
           </button>
         </div>
       );
+    case 'skipped': {
+      // Plan M2 criterion 6: nothing was sent; say why, and offer the way out if detection was wrong.
+      const how =
+        job.detection?.via === 'override' ? 'your source-language setting' : job.detection?.via === 'html-lang' ? "the page's language tag" : 'language detection on this device';
+      return (
+        <div {...attrs} role="status">
+          <span class="job__text" data-testid="job-skipped">
+            This page is already in {into}, so it was not translated ({how}).
+          </span>
+          {cost}
+          <button type="button" class="job__button" onClick={actions.resume}>
+            Translate anyway
+          </button>
+        </div>
+      );
+    }
     case 'stopped': {
       const error = job.stopError;
       const fix =

@@ -128,10 +128,11 @@ async function until(cond: () => boolean, ms = 2000) {
   }
 }
 
+// The M1 lifecycle tests count requests: they run single-pass (no brief call). Contextual is below.
 describe('Jobs (plan M1-E8)', () => {
   it('translates a page with 2 chunks in flight, shows every final, and prices the usage', async () => {
     const t = instrumented(translatorClient(undefined, { model: GEMINI_PROFILE.model }));
-    const jobs = new Jobs({ translateClient: ok(t.client) });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(t.client) });
     jobs.setActive(1);
     let previews = 0;
     jobs.subscribe((_, v) => (previews += [...(v?.segs.values() ?? [])].filter((s) => s.status === 'streaming').length));
@@ -153,7 +154,7 @@ describe('Jobs (plan M1-E8)', () => {
 
   it('cancel stops the requests, keeps the finals, and drops the previews', async () => {
     const t = instrumented(translatorClient(), { hold: true });
-    const jobs = new Jobs({ translateClient: ok(t.client) });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(t.client) });
     jobs.setActive(1);
     const run = jobs.start(1, 'd', doc(30));
     await until(() => t.active === 2);
@@ -178,7 +179,7 @@ describe('Jobs (plan M1-E8)', () => {
   it('resume translates only what is left, and the cost adds up across runs', async () => {
     const t = instrumented(translatorClient(), { hold: true });
     let current = t.client;
-    const jobs = new Jobs({ translateClient: () => ok(current)() });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: () => ok(current)() });
     jobs.setActive(1);
     const run = jobs.start(1, 'd', doc(30));
     await until(() => t.active === 2);
@@ -210,7 +211,7 @@ describe('Jobs (plan M1-E8)', () => {
     const b = instrumented(translatorClient(), { hold: true });
     const clients: Record<number, LLMClient> = { 1: a.client, 2: b.client };
     let next = 1;
-    const jobs = new Jobs({ translateClient: () => ok(clients[next++] as LLMClient)() });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: () => ok(clients[next++] as LLMClient)() });
     jobs.setActive(1);
     const runA = jobs.start(1, 'a', doc(30));
     await until(() => a.active === 2);
@@ -246,7 +247,7 @@ describe('Jobs (plan M1-E8)', () => {
 
   it('a cancelled background job stops waiting at the gate', async () => {
     const t = instrumented(translatorClient());
-    const jobs = new Jobs({ translateClient: ok(t.client) });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(t.client) });
     jobs.setActive(5);
     const run = jobs.start(1, 'd', doc(5));
     await settle(20);
@@ -267,7 +268,7 @@ describe('Jobs (plan M1-E8)', () => {
         yield { type: 'error', error: { kind: 'auth', status: 401, message: 'Key invalid or missing' } };
       },
     };
-    const jobs = new Jobs({ translateClient: ok(bad) });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(bad) });
     jobs.setActive(1);
     await jobs.start(1, 'd', doc(30));
     const v = jobs.get(1) as JobView;
@@ -277,7 +278,7 @@ describe('Jobs (plan M1-E8)', () => {
   });
 
   it('stops before any request when there is no key or no access', async () => {
-    const jobs = new Jobs({ translateClient: () => Promise.resolve({ ok: false, error: { kind: 'cors', cause: 'permission', message: 'No access to x' } }) });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: () => Promise.resolve({ ok: false, error: { kind: 'cors', cause: 'permission', message: 'No access to x' } }) });
     jobs.setActive(1);
     await jobs.start(1, 'd', doc(3));
     expect(jobs.get(1)).toMatchObject({ status: 'stopped', stopError: { kind: 'cors', cause: 'permission' } });
@@ -296,7 +297,7 @@ describe('Jobs (plan M1-E8)', () => {
         yield { type: 'usage', input: 1000, output: 500 } as EngineEvent;
       },
     });
-    const jobs = new Jobs({ translateClient: ok(translatorClient()), engine: engine as never });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(translatorClient()), engine: engine as never });
     jobs.setActive(1);
     await jobs.start(1, 'd', doc(3));
     const v = jobs.get(1) as JobView;
@@ -309,7 +310,7 @@ describe('Jobs (plan M1-E8)', () => {
 
   it('counts the requests a cancel cut off before their usage arrived; one still waiting at the gate is not one (review E-T2)', async () => {
     const t = instrumented(translatorClient(), { hold: true });
-    const jobs = new Jobs({ translateClient: ok(t.client) });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(t.client) });
     jobs.setActive(1);
     const run = jobs.start(1, 'd', doc(30));
     await until(() => t.active === 2);
@@ -319,7 +320,7 @@ describe('Jobs (plan M1-E8)', () => {
     // No usage at all yet, but the readout exists, so it can say what it leaves out.
     expect(jobs.get(1)?.cost).toBe(0);
 
-    const bg = new Jobs({ translateClient: ok(instrumented(translatorClient()).client) });
+    const bg = new Jobs({ strategy: 'single-pass', translateClient: ok(instrumented(translatorClient()).client) });
     bg.setActive(5);
     const waiting = bg.start(1, 'd', doc(5));
     await settle(20);
@@ -330,7 +331,7 @@ describe('Jobs (plan M1-E8)', () => {
 
   it('a restart in other languages keeps the earlier runs in the page cost (review E-R3)', async () => {
     const t = instrumented(translatorClient(), { hold: true });
-    const jobs = new Jobs({ translateClient: ok(t.client) });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(t.client) });
     jobs.setActive(1);
     const first = jobs.start(1, 'd', doc(30));
     await until(() => t.active === 2);
@@ -358,7 +359,7 @@ describe('Jobs (plan M1-E8)', () => {
 
   it('a new document in the tab replaces its job; drop forgets it', async () => {
     const t = instrumented(translatorClient(), { hold: true });
-    const jobs = new Jobs({ translateClient: ok(t.client) });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(t.client) });
     jobs.setActive(1);
     const first = jobs.start(1, 'd1', doc(30));
     await until(() => t.active === 2);
@@ -379,5 +380,85 @@ describe('failureText (basic status, §4.3.5)', () => {
     expect(failureText({ kind: 'unknown', message: BUDGET_MESSAGE })).not.toBe(BUDGET_MESSAGE);
     expect(failureText({ kind: 'rate_limit', message: '429' })).toMatch(/busy/);
     expect(failureText({ kind: 'quota', message: 'credits' })).toMatch(/allowance.*credits/);
+  });
+});
+
+describe('Jobs: contextual (plan M2-E1) and same-language skip (M2-E5)', () => {
+  const BRIEF = { language: 'de', genre: 'blog post', audience: 'developers', purpose: 'explain', tone: 'dry', glossary: [{ term: 'future', rendering: 'future' }] };
+  const isAnalyze = (req: NormalizedRequest) => req.system.startsWith('You prepare a translator');
+  /** Answers the brief call with `brief` and every translate call with `vi:<source>`. */
+  const both = (brief: string) => translatorClient((lines, _n, req) => (isAnalyze(req) ? brief : renderLines(lines, (src) => `vi:${src}`)), { model: GEMINI_PROFILE.model });
+
+  it('runs contextual by default: the brief lands in the view, its usage in the cost, its language when the job had none', async () => {
+    const client = both(JSON.stringify(BRIEF));
+    const jobs = new Jobs({ translateClient: ok(client) });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', { ...doc(3), sourceLang: '' });
+    const v = jobs.get(1) as JobView;
+    expect(v.status).toBe('done');
+    expect(v.brief).toEqual(BRIEF);
+    expect(v.sourceLang).toBe('de');
+    expect(v.counts).toEqual({ total: 3, final: 3, failed: 0 });
+    expect(client.requests.filter(isAnalyze)).toHaveLength(1);
+    // Every request is metered: the brief call's usage is in the page total.
+    const expected = client.requests.reduce((n, r) => n + 10 * Math.max(1, wireLines(r.messages[0]?.content ?? '').length), 0);
+    expect(v.usage.input).toBe(expected);
+    expect(expected).toBeGreaterThan(10 * 3);
+  });
+
+  it('keeps a known source language, and goes on without a brief when the answer is unusable', async () => {
+    const jobs = new Jobs({ translateClient: ok(both('Sorry, no JSON today.')) });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(2));
+    const v = jobs.get(1) as JobView;
+    expect(v.status).toBe('done');
+    expect(v.brief).toBeUndefined();
+    expect(v.sourceLang).toBe('en');
+    expect(v.counts).toEqual({ total: 2, final: 2, failed: 0 });
+  });
+
+  it('skip: no client is resolved and nothing is sent; resume translates anyway', async () => {
+    const client = both(JSON.stringify(BRIEF));
+    let resolved = 0;
+    const jobs = new Jobs({ translateClient: () => (resolved++, ok(client)()) });
+    jobs.setActive(1);
+    const d = { ...doc(2), sourceLang: 'vi', detection: { lang: 'vi', via: 'detector' as const, confidence: 0.97 } };
+    jobs.skip(1, 'd', d);
+    const v = jobs.get(1) as JobView;
+    expect(v.status).toBe('skipped');
+    expect(v.detection).toEqual(d.detection);
+    expect(resolved).toBe(0);
+    expect(client.requests).toHaveLength(0);
+    await jobs.resume(1);
+    expect(jobs.get(1)?.status).toBe('done');
+    expect(jobs.get(1)?.counts).toEqual({ total: 2, final: 2, failed: 0 });
+  });
+
+  it('skip replaces a running job of the tab', async () => {
+    const t = instrumented(both(JSON.stringify(BRIEF)), { hold: true });
+    const jobs = new Jobs({ translateClient: ok(t.client) });
+    jobs.setActive(1);
+    const running = jobs.start(1, 'd', doc(4));
+    await until(() => t.active > 0);
+    jobs.skip(1, 'e', doc(1));
+    t.releaseAll();
+    await running;
+    expect(jobs.get(1)?.status).toBe('skipped');
+    expect(jobs.docOf(1)).toBe('e');
+    expect(t.signals.every((s) => s.aborted)).toBe(true);
+  });
+
+  it('per-segment detection: kept segments are not sent and are shown as is', async () => {
+    const client = both(JSON.stringify(BRIEF));
+    const jobs = new Jobs({ translateClient: ok(client) });
+    jobs.setActive(1);
+    const d = { ...doc(3), keep: new Set(['s1']) };
+    await jobs.start(1, 'd', d);
+    const v = jobs.get(1) as JobView;
+    expect(v.counts).toEqual({ total: 2, final: 2, failed: 0 });
+    expect(v.segments.find((s) => s.id === 's1')?.translate).toBe(false);
+    const sent = client.requests.filter((r) => !isAnalyze(r)).flatMap((r) => wireLines(r.messages[0]?.content ?? '').map((l) => l.source));
+    expect(sent.some((src) => src.startsWith('P1 '))).toBe(false);
+    expect(sent.some((src) => src.startsWith('P0 '))).toBe(true);
   });
 });

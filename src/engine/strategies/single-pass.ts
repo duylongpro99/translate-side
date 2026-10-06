@@ -91,7 +91,7 @@ export function translateRequest(client: Pick<LLMClient, 'model' | 'reasoningRes
   };
 }
 
-const chunkStage = defineStage<TranslationJob, ChunkWork[]>({
+export const chunkStage = defineStage<TranslationJob, ChunkWork[]>({
   id: 'chunk',
   scope: 'document',
   async *run(job) {
@@ -100,57 +100,65 @@ const chunkStage = defineStage<TranslationJob, ChunkWork[]>({
   },
 });
 
-const translateStage = defineStage<ChunkWork, ChunkOutcome>({
-  id: 'translate',
-  scope: 'chunk',
-  role: 'translate',
-  promptId: TRANSLATE_PROMPT_ID,
-  async *run(work, ctx) {
-    const outcome: ChunkOutcome = { index: work.chunk.index, ids: work.chunk.segments.map((s) => s.id), final: [], failed: [] };
-    if (ctx.budget.exhausted()) {
-      const error: LLMError = { kind: 'unknown', message: BUDGET_MESSAGE };
-      for (const id of outcome.ids) {
-        outcome.failed.push(id);
-        yield { type: 'segment.failed', id, error };
+/**
+ * The translate stage, its finals marked as `strategyId`'s (strategies that extend this one,
+ * like `contextual`, reuse it). The source language is the job's, or, when the shell could not
+ * tell it, the one the brief read (plan M2 §5: the last link of the detection chain).
+ */
+export function createTranslateStage(strategyId: string): AnyStage {
+  return defineStage<ChunkWork, ChunkOutcome>({
+    id: 'translate',
+    scope: 'chunk',
+    role: 'translate',
+    promptId: TRANSLATE_PROMPT_ID,
+    async *run(work, ctx) {
+      const outcome: ChunkOutcome = { index: work.chunk.index, ids: work.chunk.segments.map((s) => s.id), final: [], failed: [] };
+      if (ctx.budget.exhausted()) {
+        const error: LLMError = { kind: 'unknown', message: BUDGET_MESSAGE };
+        for (const id of outcome.ids) {
+          outcome.failed.push(id);
+          yield { type: 'segment.failed', id, error };
+        }
+        yield outcome;
+        return;
       }
+      const client = ctx.llm('translate');
+      const prompt = ctx.prompts.get(TRANSLATE_PROMPT_ID);
+      const sourceLang = work.doc.sourceLang.trim() || (ctx.memory.brief?.language ?? '');
+      const system = renderSystemPrompt((vars) => prompt.render(vars), { sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
+      const call: ChunkCall = (wire) => client.stream(translateRequest(client, system, wire, ctx.signal));
+      const gen = translateChunk(toWire(work.chunk.segments), call, {
+        producedBy: { strategy: strategyId, stage: 'translate', model: client.model },
+        revision: REVISION,
+        role: 'translate',
+      });
+      const shown = new Set<string>();
+      for (;;) {
+        const next = await gen.next();
+        if (next.done) {
+          outcome.report = next.value;
+          break;
+        }
+        const event: EngineEvent = next.value;
+        if (event.type === 'segment.final') shown.add(event.id);
+        else if (event.type === 'segment.failed') {
+          outcome.failed.push(event.id);
+          // A segment failed after an earlier attempt was shown: the repair plan re-requested it,
+          // so that text could not be trusted (translate-chunk.ts). It is not a "last good
+          // revision" (§5.6): drop it from memory, where the engine recorded the final before this
+          // event (it never records a `failed`). Only this strategy's revision: a later stage's
+          // failure must keep the draft.
+          if (shown.has(event.id) && ctx.memory.translated.get(event.id)?.revision === REVISION) ctx.memory.translated.delete(event.id);
+        }
+        yield event;
+      }
+      outcome.final = outcome.ids.filter((id) => shown.has(id) && !outcome.failed.includes(id));
       yield outcome;
-      return;
-    }
-    const client = ctx.llm('translate');
-    const prompt = ctx.prompts.get(TRANSLATE_PROMPT_ID);
-    const system = renderSystemPrompt((vars) => prompt.render(vars), { sourceLang: work.doc.sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
-    const call: ChunkCall = (wire) => client.stream(translateRequest(client, system, wire, ctx.signal));
-    const gen = translateChunk(toWire(work.chunk.segments), call, {
-      producedBy: { strategy: SINGLE_PASS_ID, stage: 'translate', model: client.model },
-      revision: REVISION,
-      role: 'translate',
-    });
-    const shown = new Set<string>();
-    for (;;) {
-      const next = await gen.next();
-      if (next.done) {
-        outcome.report = next.value;
-        break;
-      }
-      const event: EngineEvent = next.value;
-      if (event.type === 'segment.final') shown.add(event.id);
-      else if (event.type === 'segment.failed') {
-        outcome.failed.push(event.id);
-        // A segment failed after an earlier attempt was shown: the repair plan re-requested it,
-        // so that text could not be trusted (translate-chunk.ts). It is not a "last good
-        // revision" (§5.6): drop it from memory, where the engine recorded the final before this
-        // event (it never records a `failed`). Only this strategy's revision: a later stage's
-        // failure must keep the draft.
-        if (shown.has(event.id) && ctx.memory.translated.get(event.id)?.revision === REVISION) ctx.memory.translated.delete(event.id);
-      }
-      yield event;
-    }
-    outcome.final = outcome.ids.filter((id) => shown.has(id) && !outcome.failed.includes(id));
-    yield outcome;
-  },
-});
+    },
+  });
+}
 
-const checkStage = defineStage<ChunkOutcome[], CheckSummary>({
+export const checkStage = defineStage<ChunkOutcome[], CheckSummary>({
   id: 'check',
   scope: 'document',
   async *run(outcomes) {
@@ -179,7 +187,7 @@ export function translatable(segments: readonly Segment[]): string[] {
 }
 
 /** The stages in order, for tests and strategies that extend this one (refine, later). */
-export const SINGLE_PASS_STAGES: readonly AnyStage[] = [chunkStage, translateStage, checkStage];
+export const SINGLE_PASS_STAGES: readonly AnyStage[] = [chunkStage, createTranslateStage(SINGLE_PASS_ID), checkStage];
 
 export const singlePass: Strategy = defineStrategy({ id: SINGLE_PASS_ID, version: SINGLE_PASS_VERSION, stages: SINGLE_PASS_STAGES });
 

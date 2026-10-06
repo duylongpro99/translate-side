@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { browser } from 'wxt/browser';
 import type { PanelController, PanelView } from './controller.ts';
+import { AboutDocument } from './AboutDocument.tsx';
 import { DevView } from './DevView.tsx';
 import { JobBar, type JobActions } from './JobBar.tsx';
 import type { Jobs, JobView } from './jobs.ts';
@@ -92,7 +93,8 @@ export function App({ controller, translator }: { controller: PanelController; t
               Original text · {view.result.segments.length} blocks
             </p>
           )}
-          <SegmentList segments={view.result.segments} states={job?.segs} />
+          {job?.brief ? <AboutDocument brief={job.brief} sourceLang={job.sourceLang} /> : null}
+          <SegmentList segments={job?.segments ?? view.result.segments} states={job?.segs} />
         </>
       )}
     </main>

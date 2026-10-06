@@ -52,18 +52,19 @@ export const GEMINI_PROFILE: ModelProfile = {
   pricing: { inPerM: 0.3, cachedInPerM: 0.03, outPerM: 2.5 },
 };
 
-/** §4.3.1 Routing, stubbed: `translate` is the only role M1 resolves (analyze/review are M2+). */
-export const ROUTING = { translate: GEMINI_PROFILE.id } as const;
+/** §4.3.1 Routing, stubbed: `analyze` is unset, so it defaults to `translate` (§4.3.1); `review` is M7. */
+export const ROUTING: { translate: string; analyze?: string } = { translate: GEMINI_PROFILE.id };
 
 const PROFILES = new Map([[GEMINI_PROFILE.id, GEMINI_PROFILE]]);
 const CONNECTIONS = new Map([[GEMINI_CONNECTION.id, GEMINI_CONNECTION]]);
 
 /** §4.3.5 Resolve, M1 stub: no site overrides and no tab override yet. */
 export function resolveProfile(role: ModelRole): { profile: ModelProfile; connection: ProviderConnection } {
-  if (role !== 'translate') throw new Error(`no model profile is routed for the ${role} role yet`);
-  const profile = PROFILES.get(ROUTING.translate);
+  if (role === 'review') throw new Error(`no model profile is routed for the ${role} role yet`);
+  const id = role === 'analyze' ? (ROUTING.analyze ?? ROUTING.translate) : ROUTING.translate;
+  const profile = PROFILES.get(id);
   const connection = profile && CONNECTIONS.get(profile.connectionId);
-  if (!profile || !connection) throw new Error('the translate route points at no profile');
+  if (!profile || !connection) throw new Error(`the ${role} route points at no profile`);
   return { profile, connection };
 }
 
@@ -121,7 +122,7 @@ export async function resolveConnection(api: Browser, connection: ProviderConnec
 export interface Preferences {
   /** BCP 47 code, e.g. "vi". */
   targetLang: string;
-  /** "auto" = the page's `lang`, else unknown; otherwise a code that overrides it. */
+  /** "auto" = detected (src/shared/language.ts: LanguageDetector, then the page's `lang`); otherwise a code that overrides it. */
   sourceLang: 'auto' | (string & {});
 }
 
@@ -144,12 +145,6 @@ export async function readPreferences(api: Browser): Promise<Preferences> {
 
 export async function savePreferences(api: Browser, prefs: Preferences): Promise<void> {
   await api.storage.sync.set({ [PREFS_KEY]: prefs });
-}
-
-/** The job's source language: the override, else the page's `lang`, else "" (the prompt says "the source language"). */
-export function sourceLanguage(prefs: Preferences, pageLang: string | undefined): string {
-  if (prefs.sourceLang !== 'auto') return prefs.sourceLang;
-  return pageLang?.trim() ?? '';
 }
 
 /** Languages offered in options v0. A curated list; any BCP 47 code works in the prompt. */

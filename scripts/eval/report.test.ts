@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { judgeSystemPrompt, judgeUserPrompt } from './judge-core';
 import { renderReport } from './report-core';
-import type { Run, RunSummary } from './runs';
+import { runLabel, type Run, type RunSummary } from './runs';
 import { renderHumanSheet, renderPassageBlock } from './sheet-core';
 import { parseHumanSheet } from './scores';
 import { parsePassage } from './passages';
@@ -32,6 +32,11 @@ describe('renderReport', () => {
     expect(md).toContain('| judge vs human (mean abs. diff · bias · within 1 · pairs) | – | 0.50 · +0.50 · 100% · 2 |');
     expect(md).toContain('## human overall by category');
     expect(md).toContain('| docs (1) | 3.00 | 4.00 (+1.00) |');
+  });
+  it('labels a run by strategy, its prompt versions (translate first) and model', () => {
+    expect(runLabel(summary())).toBe('single-pass / translate@1 / x');
+    expect(runLabel(summary({ strategy: 'single-pass', prompt: 'translate@1', prompts: { translate: 'translate@1' } }))).toBe('single-pass / translate@1 / x');
+    expect(runLabel(summary({ strategy: 'contextual', prompt: 'translate@1', prompts: { translate: 'translate@1', analyze: 'analyze@1' } }))).toBe('contextual / translate@1+analyze@1 / x');
   });
   it('warns with passage and dimension for each skipped human value', () => {
     const withIssue = run({ humanIssues: [{ id: 'p1', dimension: 'tone', value: '9' }] });

@@ -18,6 +18,8 @@ export interface RunSummary {
   set?: string;
   strategy?: string;
   prompt?: string;
+  /** Every prompt version the run sent, by role (M2 Phase B on); `prompt` is the translate one. */
+  prompts?: Record<string, string>;
   label: string;
   model: string;
   target: string;
@@ -61,7 +63,12 @@ export function loadRun(dir: string): Run {
   return { dir, summary, outputs, human: read2?.scores, humanIssues: read2?.issues ?? [], judge: judge === undefined ? undefined : (JSON.parse(judge) as JudgeFile) };
 }
 
-/** `strategy / prompt / model`: what a report column is called. Runs from before M2 have no strategy field: single-pass. */
+/**
+ * `strategy / prompt / model`: what a report column is called. Runs from before M2 have no strategy
+ * field: single-pass. Prompts other than the translate one follow it (`translate@1+analyze@1`).
+ */
 export function runLabel(s: RunSummary): string {
-  return `${s.strategy ?? 'single-pass'} / ${s.prompt ?? 'translate@1'} / ${s.model}`;
+  const translate = s.prompt ?? 'translate@1';
+  const others = Object.values(s.prompts ?? {}).filter((p) => p !== translate);
+  return `${s.strategy ?? 'single-pass'} / ${[translate, ...others].join('+')} / ${s.model}`;
 }

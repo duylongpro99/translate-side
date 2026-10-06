@@ -15,7 +15,6 @@ import {
   saveApiKey,
   savePreferences,
   secretKey,
-  sourceLanguage,
 } from './settings.ts';
 
 type Api = Parameters<typeof readApiKey>[0];
@@ -58,9 +57,11 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
     expect(costUsd(undefined, u)).toBeUndefined();
   });
 
-  it('routes only the translate role (stub)', () => {
+  it('routes translate, and analyze to the translate profile (stub)', () => {
     expect(resolveProfile('translate').profile).toBe(GEMINI_PROFILE);
-    expect(() => resolveProfile('analyze')).toThrow(/analyze/);
+    // §4.3.1: an unset analyze route defaults to translate.
+    expect(resolveProfile('analyze').profile).toBe(GEMINI_PROFILE);
+    expect(() => resolveProfile('review')).toThrow(/review/);
   });
 
   it('stores the key trimmed in storage.local under secret:<connectionId>, never in sync', async () => {
@@ -92,15 +93,12 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
     expect(conn?.quirks).not.toBe(GEMINI_CONNECTION.quirks);
   });
 
-  it('defaults the target to the browser language and the source to the page; the override wins', async () => {
+  it('defaults the target to the browser language and the source to auto; a saved override is read back', async () => {
     const { api, sync } = fakeApi({ ui: 'vi-VN' });
     expect(await readPreferences(api)).toEqual({ targetLang: 'vi', sourceLang: 'auto' });
     await savePreferences(api, { targetLang: 'ja', sourceLang: 'de' });
     expect(sync.data).toEqual({ prefs: { targetLang: 'ja', sourceLang: 'de' } });
     expect(await readPreferences(api)).toEqual({ targetLang: 'ja', sourceLang: 'de' });
-    expect(sourceLanguage({ targetLang: 'vi', sourceLang: 'auto' }, 'en-US')).toBe('en-US');
-    expect(sourceLanguage({ targetLang: 'vi', sourceLang: 'auto' }, undefined)).toBe('');
-    expect(sourceLanguage({ targetLang: 'vi', sourceLang: 'fr' }, 'en')).toBe('fr');
   });
 
   it('formats the cost readout', () => {
