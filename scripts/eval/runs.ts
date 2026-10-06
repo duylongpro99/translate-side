@@ -1,7 +1,7 @@
 // A finished harness run on disk (`pnpm run eval`, or a copy under eval/runs/): what the sheet, judge and report read.
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseHumanSheet, type ScoreSet, type Scores } from './scores.ts';
+import { readHumanSheet, type ScoreSet, type Scores, type SheetIssue } from './scores.ts';
 
 export interface OutputItem {
   id: string;
@@ -40,6 +40,8 @@ export interface Run {
   summary: RunSummary;
   outputs: Record<string, OutputItem[]>;
   human: ScoreSet | undefined;
+  /** Filled-in sheet values that were skipped as unusable. */
+  humanIssues?: SheetIssue[];
   judge: JudgeFile | undefined;
 }
 
@@ -55,7 +57,8 @@ export function loadRun(dir: string): Run {
   const read = (name: string): string | undefined => (fs.existsSync(path.join(dir, name)) ? fs.readFileSync(path.join(dir, name), 'utf8') : undefined);
   const sheet = read(HUMAN_SHEET);
   const judge = read(JUDGE_FILE);
-  return { dir, summary, outputs, human: sheet === undefined ? undefined : parseHumanSheet(sheet), judge: judge === undefined ? undefined : (JSON.parse(judge) as JudgeFile) };
+  const read2 = sheet === undefined ? undefined : readHumanSheet(sheet);
+  return { dir, summary, outputs, human: read2?.scores, humanIssues: read2?.issues ?? [], judge: judge === undefined ? undefined : (JSON.parse(judge) as JudgeFile) };
 }
 
 /** `strategy / prompt / model`: what a report column is called. Runs from before M2 have no strategy field: single-pass. */

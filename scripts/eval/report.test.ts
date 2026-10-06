@@ -33,6 +33,10 @@ describe('renderReport', () => {
     expect(md).toContain('## human overall by category');
     expect(md).toContain('| docs (1) | 3.00 | 4.00 (+1.00) |');
   });
+  it('warns with passage and dimension for each skipped human value', () => {
+    const withIssue = run({ humanIssues: [{ id: 'p1', dimension: 'tone', value: '9' }] });
+    expect(renderReport({ runs: [withIssue], categories })).toContain('- p1 tone: "9"');
+  });
   it('refuses an empty list', () => {
     expect(() => renderReport({ runs: [], categories })).toThrow();
   });

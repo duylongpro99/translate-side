@@ -15,25 +15,38 @@ export function toScore(v: unknown): number | undefined {
 
 const DIM_RE = DIMENSIONS.join('|');
 
-/** `## <id>` sections holding lines like `fidelity: 4`. Anything else in the file is ignored. */
-export function parseHumanSheet(md: string): ScoreSet {
-  const out: ScoreSet = {};
-  let current: Scores | undefined;
+/** A filled-in sheet line the parser could not use (not a number from 1 to 5). Empty lines are skips, not issues. */
+export interface SheetIssue {
+  id: string;
+  dimension: Dimension;
+  value: string;
+}
+
+/** `## <id>` sections holding lines like `fidelity: 4`. Anything else in the file is ignored; unusable values are listed in `issues`. */
+export function readHumanSheet(md: string): { scores: ScoreSet; issues: SheetIssue[] } {
+  const scores: ScoreSet = {};
+  const issues: SheetIssue[] = [];
+  let id: string | undefined;
   const line = new RegExp(`^\\s*(${DIM_RE})\\s*[:=]\\s*(.*)$`, 'i');
   for (const l of md.replace(/\r\n/g, '\n').split('\n')) {
     const h = /^##\s+(\S+)/.exec(l);
     if (h) {
-      current = {};
-      out[h[1] as string] = current;
+      id = h[1] as string;
+      scores[id] = {};
       continue;
     }
     const m = line.exec(l);
-    if (!m || !current) continue;
-    const s = toScore(/^\s*([0-9]+(?:\.[0-9]+)?)/.exec(m[2] as string)?.[1]);
-    if (s !== undefined) current[(m[1] as string).toLowerCase() as Dimension] = s;
+    if (!m || id === undefined) continue;
+    const dimension = (m[1] as string).toLowerCase() as Dimension;
+    const raw = (m[2] as string).trim();
+    const s = toScore(/^\s*([0-9]+(?:\.[0-9]+)?)/.exec(raw)?.[1]);
+    if (s !== undefined) (scores[id] as Scores)[dimension] = s;
+    else if (raw !== '') issues.push({ id, dimension, value: raw });
   }
-  return out;
+  return { scores, issues };
 }
+
+export const parseHumanSheet = (md: string): ScoreSet => readHumanSheet(md).scores;
 
 export interface JudgeReply {
   scores: Scores;

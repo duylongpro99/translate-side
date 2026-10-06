@@ -55,3 +55,16 @@ describe('aggregate and agreement', () => {
     expect(agreement({}, human).pairs).toBe(0);
   });
 });
+
+describe('readHumanSheet', () => {
+  it('names each filled-in value it skipped, and not the empty lines', async () => {
+    const { readHumanSheet } = await import('./scores');
+    const { scores, issues } = readHumanSheet('## a\nfidelity: 9\nnaturalness: abc\ntone: 5.5\nterminology: 4\nnotes: x\n## b\nfidelity: \ntone: 3\n');
+    expect(scores).toEqual({ a: { terminology: 4 }, b: { tone: 3 } });
+    expect(issues).toEqual([
+      { id: 'a', dimension: 'fidelity', value: '9' },
+      { id: 'a', dimension: 'naturalness', value: 'abc' },
+      { id: 'a', dimension: 'tone', value: '5.5' },
+    ]);
+  });
+});

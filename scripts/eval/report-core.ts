@@ -75,5 +75,10 @@ export function renderReport({ runs, categories }: ReportInput): string {
   }
   const unscored = runs.map((r) => (r.human && aggregate(r.human).overall !== undefined ? '' : `- ${runLabel(r.summary)}: no human scores yet (fill in ${r.dir}/human-scores.md)`)).filter(Boolean);
   if (unscored.length) lines.push('', ...unscored);
+  for (const r of runs) {
+    if (!r.humanIssues?.length) continue;
+    lines.push('', `Warning: ${r.humanIssues.length} human score(s) in ${runLabel(r.summary)} were skipped (a score is a number from 1 to 5):`);
+    for (const i of r.humanIssues) lines.push(`- ${i.id} ${i.dimension}: "${i.value}"`);
+  }
   return `${lines.join('\n')}\n`;
 }
