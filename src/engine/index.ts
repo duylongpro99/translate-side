@@ -10,6 +10,25 @@ export { DEFAULT_RETRY_POLICY, decideRetry, withRetry, type RetryDecision, type 
 export { createBudget, maxOutputTokens } from './budget.ts';
 export { createWorkingMemory } from './memory.ts';
 export { createPromptRegistry, definePrompt } from './prompts/registry.ts';
+export { PROMPTS, createDefaultPromptRegistry } from './prompts/index.ts';
+export { STYLE_LABELS, TRANSLATE_PROMPT_ID, languageLabel, translateV1 } from './prompts/translate.ts';
+export {
+  BUDGET_MESSAGE,
+  SINGLE_PASS_CACHE_KEY,
+  SINGLE_PASS_ID,
+  SINGLE_PASS_STAGES,
+  SINGLE_PASS_VERSION,
+  TRANSLATE_TEMPERATURE,
+  UNCHECKED_MESSAGE,
+  callBudget,
+  renderSystemPrompt,
+  singlePass,
+  translatable,
+  type CheckSummary,
+  type ChunkOutcome,
+  type ChunkWork,
+  type SystemPromptVars,
+} from './strategies/single-pass.ts';
 export type * from './types.ts';
 export { estimateTokens, CHARS_PER_TOKEN } from './tokens.ts';
 export { DEFAULT_CHUNK_TOKENS, chunkLimits, chunkSegments, type Chunk, type ChunkLimits } from './chunker.ts';

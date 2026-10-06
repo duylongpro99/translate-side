@@ -69,7 +69,8 @@ export async function* runStages(
   let current = input;
   for (const stage of stages) {
     ctx.signal.throwIfAborted();
-    yield { type: 'stage', stage: stage.id, status: 'start' };
+    // The prompt a stage uses is part of the cache key (§5.5): it rides on the start event.
+    yield { type: 'stage', stage: stage.id, status: 'start', ...(stage.promptId === undefined ? {} : { info: { promptId: stage.promptId } }) };
     current = yield* (stage.scope === 'document' ? runWhole(stage, current, ctx) : runEach(stage, current, ctx, options.concurrency));
     yield { type: 'stage', stage: stage.id, status: 'done' };
   }
