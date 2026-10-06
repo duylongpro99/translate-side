@@ -240,7 +240,37 @@ const V1_CASES: Case[] = [
     expect(plan(r).truncated).toEqual([3]);
     expect(plan(r).rerequest).toEqual([3]);
   }],
-  ['v1 refusal stop: unclosed text is accepted, the rest missing', '<seg id="1">A', (r) => expect(plan(r).rerequest).toEqual([2, 3]), { stop: 'refusal' }],
+  // Review F1: S2 accepts an unclosed segment only on `end`; every other stop is a cut.
+  ['v1 refusal stop: the open segment is cut, not kept', '<seg id="1">A.</seg><seg id="2">Half of a sen', (r) => {
+    expect(r.cut).toEqual({ id: 2, text: 'Half of a sen' });
+    expect(r.segs.has(2)).toBe(false);
+    expect(plan(r).rerequest).toEqual([2, 3]);
+  }, { stop: 'refusal' }],
+  ['v1 other stop: the open segment is cut, not kept', '<seg id="1">A.</seg><seg id="2">Half of a sen', (r) => {
+    expect(r.cut).toEqual({ id: 2, text: 'Half of a sen' });
+    expect(plan(r).rerequest).toEqual([2, 3]);
+  }, { stop: 'other' }],
+  ['v2 refusal stop with a close-in-text: cut, not ended at that close', '<seg id="1">A</seg><seg id="2">B</seg><seg id="3">See </seg> here', (r) => {
+    expect(r.cut).toEqual({ id: 3, text: 'See </seg> here' });
+    expect(plan(r).rerequest).toEqual([3]);
+  }, { grammar: 'v2', stop: 'refusal' }],
+  // Review F3: the open id at a cut is checked like a closed one.
+  ['v1 cut under an unknown id after an implicit close: ambiguous, whole chunk', '<seg id="1">First half <seg id="9">rest', (r) => {
+    expect(r.cut).toBeNull();
+    expect(view(r).kinds).toEqual(['implicit-close', 'unknown']);
+    expect(plan(r).ambiguous).toBe(true);
+    expect(plan(r).rerequest).toEqual([1, 2, 3]);
+  }, { stop: 'max_tokens' }],
+  ['v1 cut under a duplicate id: ambiguous, whole chunk', '<seg id="1">A</seg><seg id="2">B</seg><seg id="1">C', (r) => {
+    expect(r.cut).toBeNull();
+    expect(view(r).segs).toEqual({ 1: 'A', 2: 'B' });
+    expect(view(r).kinds).toEqual(['dup']);
+    expect(plan(r).rerequest).toEqual([1, 2, 3]);
+  }, { stop: 'max_tokens' }],
+  ['v2 cut under an unknown id: ambiguous, whole chunk', '<seg id="1">A</seg><seg id="7">B', (r) => {
+    expect(r.cut).toBeNull();
+    expect(plan(r).ambiguous).toBe(true);
+  }, { grammar: 'v2', stop: 'max_tokens' }],
 ];
 
 // M1-E3: the per-chunk nonce on chunks with literal tags (v2).

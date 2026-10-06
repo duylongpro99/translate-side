@@ -11,9 +11,10 @@
 //          (close-in-text). An OPEN inside a segment is text (open-in-text).
 //   Both   text outside segments is stray; a partial tag left at the end is stray, never segment
 //          text; dup id: first wins; unknown id: dropped; out of order: accepted (reorder); end
-//          inside a segment: `cut` on max_tokens, else accepted (unclosed-end), except that a v2
-//          segment with a close-in-text and no later close ends at that close (the rest is stray
-//          and the close-in-text fix is withdrawn).
+//          inside a segment: `cut` on any stop other than `end` (max_tokens, refusal, other), else
+//          accepted (unclosed-end), except that a v2 segment with a close-in-text and no later close
+//          ends at that close (the rest is stray and the close-in-text fix is withdrawn). The open
+//          id at a cut is checked like a closed one: unknown or duplicate is flagged (ambiguous).
 //
 // The per-chunk nonce (S2 "Literal tags in the source", form settled here, M1-E3): v2 chunks are
 // sent as `<seg id="N" n="NONCE">`. The first OPEN of the output decides whether the model copied
@@ -59,7 +60,7 @@ export interface ParseResult {
   segs: ReadonlyMap<number, string>;
   /** Expected ids with no segment (the cut one excluded), in chunk order. */
   missing: number[];
-  /** The segment open when a `max_tokens` stop came, with its partial text. */
+  /** The expected, not yet accepted segment open when a stop other than `end` came, with its partial text. */
   cut: { id: number; text: string } | null;
   fixes: Fix[];
   /** Text outside segments. */
@@ -177,8 +178,13 @@ export class SegParser {
     if (open !== null) {
       this.#open = null;
       const lc = open.lastClose;
-      if (stopReason === 'max_tokens') {
-        if (open.id !== null) {
+      if (stopReason !== 'end') {
+        // A cut segment gets the same id checks as a closed one: an unknown or duplicate id makes
+        // the chunk ambiguous, so a segment closed implicitly before it is not kept truncated.
+        // A bad id was already flagged at the open.
+        if (open.id !== null && !this.#expected.has(open.id)) this.#fix('unknown', { id: open.id });
+        else if (open.id !== null && this.#done.has(open.id)) this.#fix('dup', { id: open.id });
+        else if (open.id !== null) {
           this.#cut = { id: open.id, text: open.text };
           this.#fix('cut', { id: open.id });
         }

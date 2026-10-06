@@ -73,14 +73,19 @@ export function chunkSegments(segments: readonly Segment[], limits: ChunkLimits 
   };
   for (const unit of units(segments)) {
     if (current.length > 0) {
-      if (unit.heading && size >= limits.minTokens) cut([]);
-      else if (size + unit.tokens > limits.maxTokens) {
-        // Headings at the end of the chunk move to the next one, with the content they introduce.
-        let k = current.length;
-        while (k > 0 && current[k - 1]?.heading === true) k--;
+      // Headings at the end of the chunk move to the next one, with the content they introduce.
+      let k = current.length;
+      while (k > 0 && current[k - 1]?.heading === true) k--;
+      const carry = k > 0 ? current.slice(k) : [];
+      const carried = carry.reduce((n, u) => n + u.tokens, 0);
+      if (unit.heading) {
+        // Cut once the content before the trailing headings has the minimum size.
+        if (k > 0 && size - carried >= limits.minTokens) {
+          current = current.slice(0, k);
+          cut(carry);
+        }
+      } else if (size + unit.tokens > limits.maxTokens) {
         // Only when the carried headings and this unit fit together; otherwise cut before the unit.
-        const carry = k > 0 ? current.slice(k) : [];
-        const carried = carry.reduce((n, u) => n + u.tokens, 0);
         if (carry.length > 0 && carried + unit.tokens <= limits.maxTokens) {
           current = current.slice(0, k);
           cut(carry);

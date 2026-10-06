@@ -29,6 +29,24 @@ function checkInvariants(input: Segment[], chunks: Chunk[], lim = limits): void 
     const first = chunks[i]?.segments[0];
     if (prev?.groupId !== undefined) expect(first?.groupId).not.toBe(prev.groupId);
   }
+  // A chunk ends with headings only when they and the next unit together would exceed the maximum.
+  const unitTokens = (segs: Segment[]): number => {
+    const g = segs[0]?.groupId;
+    let n = 0;
+    for (const s of segs) {
+      if (s !== segs[0] && (g === undefined || s.groupId !== g)) break;
+      n += estimateTokens(s.inlineMarkup);
+    }
+    return n;
+  };
+  for (let i = 0; i + 1 < chunks.length; i++) {
+    const segs = chunks[i]?.segments ?? [];
+    let k = segs.length;
+    while (k > 0 && segs[k - 1]?.kind === 'heading') k--;
+    if (k === segs.length || k === 0) continue;
+    const trailing = segs.slice(k).reduce((n, s) => n + estimateTokens(s.inlineMarkup), 0);
+    expect(trailing + unitTokens(chunks[i + 1]?.segments ?? []), `chunk ${i} ends with a heading`).toBeGreaterThan(lim.maxTokens);
+  }
   // Over the maximum only when the chunk is one unit (a single segment or a single group).
   for (const c of chunks) {
     if (c.tokens > lim.maxTokens) {
@@ -98,6 +116,22 @@ describe('chunkSegments', () => {
     const input = [seg(760), h(5, 2), h(5, 3), seg(760)];
     const chunks = chunkSegments(input);
     expect(ids(chunks)).toEqual([[input[0]?.id], input.slice(1).map((s) => s.id)]);
+  });
+
+  // Review T-B1: two headings around the minimum used to leave the first one at the chunk's end.
+  it('does not leave a heading at the end when a second heading cuts (two headings around the minimum)', () => {
+    const input = [seg(786), h(20), h(20), seg(200)];
+    const chunks = chunkSegments(input);
+    // 786 tokens of content before the headings < 800: no cut at all.
+    expect(ids(chunks)).toEqual([input.map((s) => s.id)]);
+    checkInvariants(input, chunks);
+  });
+
+  it('cuts before a run of headings once the content before them has the minimum size', () => {
+    const input = [seg(810), h(20), h(20), seg(200)];
+    const chunks = chunkSegments(input);
+    expect(ids(chunks)).toEqual([[input[0]?.id], input.slice(1).map((s) => s.id)]);
+    checkInvariants(input, chunks);
   });
 
   it('keeps a table row (groupId) together even across the maximum', () => {

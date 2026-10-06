@@ -28,6 +28,25 @@ async function* play(output: string, stopReason: StopReason): AsyncGenerator<Nor
 const limits = chunkLimits(DEFAULT_CHUNK_TOKENS);
 
 describe('fixture chunks', () => {
+  // Review T-B1 (twir-671 at chunkTokens 800 ended a chunk with a heading whose section was next).
+  it.each(slugs)('%s: no chunk ends with a heading the next chunk could carry (sizes 800 and 1,500)', (slug) => {
+    for (const lim of [chunkLimits(800), limits]) {
+      const chunks = chunkSegments(segmentsOf(slug), lim);
+      for (const c of chunks.slice(0, -1)) {
+        const segs = c.segments;
+        let k = segs.length;
+        while (k > 0 && segs[k - 1]?.kind === 'heading') k--;
+        if (k === segs.length || k === 0) continue;
+        const next = chunks[c.index + 1]?.segments ?? [];
+        const head = next[0];
+        const unit = head?.groupId === undefined ? [head] : next.filter((s, i) => next.slice(0, i + 1).every((x) => x.groupId === head.groupId));
+        const tokens = [...segs.slice(k), ...unit].reduce((n, s) => n + (s === undefined ? 0 : estimateTokens(s.inlineMarkup)), 0);
+        expect(tokens, `${slug} chunk ${c.index} at ${lim.maxTokens}`).toBeGreaterThan(lim.maxTokens);
+      }
+    }
+  });
+
+
   it.each(slugs)('%s: chunked to DESIGN size, no segment lost after repair', async (slug) => {
     const segments = segmentsOf(slug);
     const chunks = chunkSegments(segments, limits);
