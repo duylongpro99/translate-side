@@ -19,6 +19,9 @@ are under permissive or CC licenses: see `ATTRIBUTION.md` (authors, history link
 
 `manifest.json` also holds per fixture: the source URL, the final URL, the capture time, the file size in bytes, the generator, and
 `contentSelector`, a hand-picked CSS selector for the real content root used as ground truth by `spikes/s3/`.
+`codeBlocks` is the hand-checked number of code blocks in that root, and `codeExcluded` names
+blocks deliberately left out of it (with the reason); the criterion #2 test asserts its computed
+truth against them. Re-check both by hand after a re-capture (`capture.mjs` keeps them).
 
 How they were made (`spikes/s3/capture.mjs`): headless Chrome 154, page load + 3 s, scroll to the bottom to trigger lazy
 content, then `document.documentElement.getHTML({ shadowRoots })` over every open shadow root. After that,

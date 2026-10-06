@@ -81,6 +81,11 @@ describe('inline markers', () => {
     expect(s?.inlineMarkup).toBe('Text anchor end');
   });
 
+  it('puts a space between an element marked as its own box and the element it touches', () => {
+    const [s] = seg('<p><span data-ts-box>Written by</span><a href="/a" data-ts-box>Ana</a>.</p>');
+    expect(s?.inlineMarkup).toBe('Written by [link]Ana[/link].');
+  });
+
   it('turns <br> into a newline and collapses other whitespace', () => {
     const [s] = seg('<p>Line one<br>\n   line   two</p>');
     expect(s?.text).toBe('Line one\nline two');
@@ -125,6 +130,13 @@ describe('tables', () => {
     expect(first).toBe(second);
     expect(a).not.toBe(h1);
     expect(seg('<p>no table</p>')[0]?.groupId).toBeUndefined();
+  });
+
+  it('keeps the row groupId on lists and quotes inside a cell', () => {
+    const s = seg('<table><tr><td>Option</td><td><ul><li>one</li><li>two</li></ul><blockquote>q</blockquote></td></tr></table>');
+    expect(s.map((x) => x.kind)).toEqual(['table-cell', 'li', 'li', 'quote']);
+    expect(new Set(s.map((x) => x.groupId)).size).toBe(1);
+    expect(s[0]?.groupId).toBeDefined();
   });
 
   it('keeps symbol-only cells so rows stay aligned, without translating them', () => {

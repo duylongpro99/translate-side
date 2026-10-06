@@ -12,6 +12,10 @@ export interface FixtureMeta {
   slug: string;
   finalUrl: string;
   contentSelector: string;
+  /** Hand-checked number of code blocks in the content root (S3 `results.md`, re-checked for M0-E8). */
+  codeBlocks: number;
+  /** Code blocks in the content root that are deliberately not counted, and why. */
+  codeExcluded?: { selector: string; why: string };
   generator: string;
 }
 

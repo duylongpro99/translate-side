@@ -48,6 +48,15 @@ export function findMainContent(doc: Document, composed: Composed): MainContent 
 function runReadability(doc: Document, body: Element): Element | null {
   const work = doc.implementation.createHTMLDocument(doc.title);
   work.body.replaceWith(work.importNode(body, true));
+  // Readability drops hidden subtrees; the tab panels and details content kept hidden (S3) go
+  // in visible. Every element inside is marked HIDDEN_ATTR, since Readability may unwrap the
+  // panel itself (a div holding one p becomes the p), so their segments still come out hidden.
+  for (const el of work.querySelectorAll<HTMLElement>(`[${HIDDEN_ATTR}]`)) {
+    el.removeAttribute('hidden');
+    el.removeAttribute('aria-hidden');
+    if (el.style.display === 'none') el.style.removeProperty('display');
+    for (const d of el.querySelectorAll('*')) d.setAttribute(HIDDEN_ATTR, '');
+  }
   try {
     // serializer: keep the element (and its data-ts-i attributes) rather than an HTML string.
     const parsed = new Readability<Element>(work, { charThreshold: READABILITY_MIN_CHARS, serializer: (el) => el as Element }).parse();

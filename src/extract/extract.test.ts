@@ -42,6 +42,11 @@ describe('extraction policy (decision S3)', () => {
     expect(texts(segs)).toEqual(['Section', LONG.trim()]);
   });
 
+  it('removes a paywall box, but not an article body wrapped in a paywall class', () => {
+    expect(texts(segmentsOf(`<main><p>${LONG}</p><div class="paywall-prompt"><p>Subscribe to keep reading</p></div></main>`))).toEqual([LONG.trim()]);
+    expect(texts(segmentsOf(`<main><div class="paywall-content"><p>${LONG}</p><p>Second paragraph.</p></div></main>`))).toEqual([LONG.trim(), 'Second paragraph.']);
+  });
+
   it('applies per-generator rules only for that generator', () => {
     const body = `<main><p class="prevnext">Previous article</p><p>${LONG}</p></main>`;
     expect(texts(segmentsOf(body, 'https://go.dev/blog/x'))).toEqual([LONG.trim()]);
@@ -86,6 +91,13 @@ describe('extraction policy (decision S3)', () => {
     const again = extractPage(doc);
     const all = JSON.stringify([result, again]);
     for (const secret of ['hunter2', 'typed-secret', 'draft secret', 'opt secret']) expect(all).not.toContain(secret);
+  });
+
+  it('keeps the text of glued elements apart when each renders as its own box', () => {
+    const segs = segmentsOf(`<main><p>${LONG}</p>
+      <div class="byline"><span style="display:inline-block">Written by</span><a href="/a">Ana</a></div>
+      <p><b>un</b><i>glued</i> stays glued</p></main>`);
+    expect(texts(segs).slice(1)).toEqual(['Written by Ana', 'unglued stays glued']);
   });
 
   it('reports title, url and lang', () => {
@@ -136,6 +148,17 @@ describe('shadow DOM and hidden content (decision S3)', () => {
       ['first', false],
       ['second', true],
     ]);
+  });
+
+  it('keeps hidden tab panels on the Readability path too', () => {
+    const { result } = extract(`<div class="post"><p>${LONG}</p><p>${LONG}</p>
+      <div role="tablist"></div><div role="tabpanel"><p>Install it with npm, the default package manager.</p></div>
+      <div role="tabpanel" hidden><p>Install it with yarn, if your project already uses it.</p></div>
+      <div role="tabpanel" aria-hidden="true" style="display:none"><p>Install it with pnpm, for a shared store.</p></div></div>`);
+    expect(result).toMatchObject({ ok: true, via: 'readability' });
+    if (!result.ok) return;
+    const hidden = Object.fromEntries(result.segments.filter((s) => s.text.startsWith('Install')).map((s) => [s.text.split(' ')[3], s.hidden ?? false]));
+    expect(hidden).toEqual({ 'npm,': false, 'yarn,': true, 'pnpm,': true });
   });
 
   it('drops hidden elements that are not tab panels', () => {

@@ -28,8 +28,6 @@ export const GENERIC_NOISE = [
   '.sr-only',
   '.visually-hidden',
   '.screen-reader-text', // visually hidden helper text
-  '[class*=paywall i]',
-  '[data-testid=paywall]', // paywall boxes
   '[class*=editsection i]',
   'a[href*="action=edit"]', // edit-this-section links
 ];
@@ -39,7 +37,8 @@ export type Generator = 'Docusaurus' | 'MDN' | 'rustdoc' | 'MediaWiki' | 'WordPr
 /** S: per-generator cleanup selectors. */
 export const GENERATOR_NOISE: Record<Generator, string[]> = {
   Docusaurus: ['.theme-doc-version-badge', '[class*=browserWindowHeader]', '[class*=playgroundHeader]'],
-  MDN: ['.baseline-indicator', '.bc-toolbar', '.article-footer'],
+  // Code-example headers (language label, copy button) and the compat table's icon legend.
+  MDN: ['.baseline-indicator', '.bc-toolbar', '.article-footer', '.code-example > .example-header', '.bc-legend'],
   rustdoc: ['rustdoc-toolbar', '.main-heading .sub-heading', 'summary.hideme'],
   MediaWiki: [
     '.catlinks',
@@ -71,6 +70,15 @@ export function detectGenerator(doc: Document): Generator | null {
   return null;
 }
 
+/**
+ * Paywall boxes ("Subscribe to keep reading"). Matched loosely by class, so only a small box is
+ * removed: some news CMSs wrap the article body itself in `.paywall-content`.
+ */
+const PAYWALL = '[class*=paywall i], [data-testid=paywall]';
+const PAYWALL_MAX_CHARS = 500;
+const isPaywallBox = (el: Element) =>
+  !el.querySelector('main, article, [role=main]') && (el.textContent ?? '').replace(/\s+/g, ' ').trim().length < PAYWALL_MAX_CHARS;
+
 /** Permalink anchors whose text has no letters or digits (¶, §, #, zero-width space). */
 const isGlyphAnchor = (a: Element) => (a.getAttribute('href') ?? '').startsWith('#') && !/[\p{L}\p{N}]/u.test(a.textContent ?? '');
 
@@ -78,6 +86,7 @@ const isGlyphAnchor = (a: Element) => (a.getAttribute('href') ?? '').startsWith(
 export function stripInContent(root: Element, generator: Generator | null): void {
   const selectors = [...GENERIC_NOISE, ...(generator ? GENERATOR_NOISE[generator] : [])];
   root.querySelectorAll(selectors.join(', ')).forEach((e) => e.remove());
+  root.querySelectorAll(PAYWALL).forEach((e) => isPaywallBox(e) && e.remove());
   root.querySelectorAll('a').forEach((a) => isGlyphAnchor(a) && a.remove());
 }
 

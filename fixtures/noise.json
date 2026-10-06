@@ -94,6 +94,21 @@
     {
       "text": "This page was last modified on Sep 1, 2026 by MDN contributors .",
       "kind": "meta"
+    },
+    {
+      "text": "js",
+      "kind": "ui",
+      "note": "code-example language label (mdn-code-example shadow header); added in review of M0-E5"
+    },
+    {
+      "text": "Tip: you can click/tap on a cell for more information.",
+      "kind": "ui",
+      "note": "compat table legend; added in review of M0-E5"
+    },
+    {
+      "text": "Full support",
+      "kind": "ui",
+      "note": "compat table legend; added in review of M0-E5"
     }
   ],
   "docsrs-tokio": [

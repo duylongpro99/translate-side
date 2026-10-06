@@ -3,6 +3,7 @@
 // item is part of the item); inline formatting becomes light markers; code blocks are kept
 // verbatim and never translated; table cells of a row share a groupId.
 import type { Segment, SegmentKind } from '@/engine/types';
+import { BOX_ATTR } from '@/extract/compose';
 import { hashId } from './hash.ts';
 
 export interface SegmentOptions {
@@ -75,12 +76,14 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
       return;
     }
     let next = ctx;
+    // Blocks inside a table cell keep the row's groupId (ROADMAP §8 item 12).
+    const row = ctx.groupId ? { groupId: ctx.groupId } : {};
     switch (tag) {
       case 'li':
-        next = { kind: 'li' };
+        next = { kind: 'li', ...row };
         break;
       case 'blockquote':
-        next = { kind: 'quote' };
+        next = { kind: 'quote', ...row };
         break;
       case 'td':
       case 'th': {
@@ -90,7 +93,7 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
       }
       case 'figcaption':
       case 'caption':
-        next = { kind: 'caption' };
+        next = { kind: 'caption', ...row };
         break;
     }
     visitContainer(el, next);
@@ -178,6 +181,12 @@ function inlineRaw(node: Node, inEmphasis: boolean): { text: string; markup: str
   }
   if (isLink) markup = wrap(markup, '[link]', '[/link]');
   else if (isEmphasis) markup = wrap(markup, '*', '*');
+  // Its own box on screen (compose.ts): keep its text apart from the elements it touches.
+  if (el.hasAttribute(BOX_ATTR)) {
+    const before = el.previousSibling?.nodeType === 1 ? ' ' : '';
+    const after = el.nextSibling?.nodeType === 1 ? ' ' : '';
+    return { text: before + text + after, markup: before + markup + after };
+  }
   return { text, markup };
 }
 

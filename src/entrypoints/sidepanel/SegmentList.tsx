@@ -82,7 +82,17 @@ function Block({ seg }: { seg: Segment }) {
   }
 }
 
-/** Consecutive table cells, grouped into rows by groupId. */
+/**
+ * The table a row segment belongs to: its domPath up to the last table step. Blocks inside a cell
+ * (a list, a quote) carry the row's groupId too. Undefined outside tables.
+ */
+function tableOf(seg: Segment): string | undefined {
+  if (!seg.groupId) return undefined;
+  const steps = seg.domPath.match(/^.*\/table\[\d+\]/);
+  return steps?.[0] ?? '';
+}
+
+/** Consecutive segments of one table, grouped into rows by groupId. */
 function Table({ cells }: { cells: Segment[] }) {
   const rows: Segment[][] = [];
   for (const c of cells) {
@@ -109,9 +119,10 @@ export function SegmentList({ segments }: { segments: Segment[] }) {
   const out: ComponentChildren[] = [];
   for (let i = 0; i < segments.length; ) {
     const seg = segments[i] as Segment;
-    if (seg.kind === 'table-cell') {
+    const table = tableOf(seg);
+    if (table !== undefined) {
       let j = i;
-      while (j < segments.length && segments[j]?.kind === 'table-cell') j++;
+      while (j < segments.length && tableOf(segments[j] as Segment) === table) j++;
       out.push(<Table key={seg.id} cells={segments.slice(i, j)} />);
       i = j;
     } else {

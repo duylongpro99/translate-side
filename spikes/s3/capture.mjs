@@ -33,7 +33,7 @@ for (const site of sites) {
   const base = D.createElement('base'); base.href = s.finalUrl; D.head.prepend(base);
   s.html = dom.serialize();
   fs.writeFileSync(`${OUT}/${site.slug}.html`, s.html);
-  manifest[site.slug] = { ...site, finalUrl: s.finalUrl, title: s.title, capturedAt: new Date().toISOString(), bytes: Buffer.byteLength(s.html), openShadowRoots: s.openShadowRoots, contentFound: s.contentFound, scrubbed: true };
+  manifest[site.slug] = { ...manifest[site.slug], ...site, finalUrl: s.finalUrl, title: s.title, capturedAt: new Date().toISOString(), bytes: Buffer.byteLength(s.html), openShadowRoots: s.openShadowRoots, contentFound: s.contentFound, scrubbed: true };
   console.log(site.slug, s.title.slice(0, 60), s.html.length, 'shadowRoots=' + s.openShadowRoots, 'contentFound=' + s.contentFound);
   await p.close();
 }

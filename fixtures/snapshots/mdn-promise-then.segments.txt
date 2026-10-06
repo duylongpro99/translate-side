@@ -1,4 +1,4 @@
-# via walk · 96 segments
+# via walk · 82 segments
 028opcnzrju heading [h1] /html[1]/body[1]/div[2]/div[1]/main[1]/div[1]/h1[1]
   Promise.prototype.then()
 0esic8ebkor p /html[1]/body[1]/div[2]/div[1]/main[1]/div[1]/section[1]/p[1]
@@ -18,8 +18,6 @@
   });
 2gi5s58mpdq heading [h2] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[2]/h2[1]
   [link]Syntax[/link]
-1ixwm92slne p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[2]/mdn-code-example[1]/#shadow-root/div[1]/div[1]
-  js
 17aynqln0w8 code [no-translate] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[2]/mdn-code-example[1]/#shadow-root/div[1]/pre[1]
   then(onFulfilled)
   then(onFulfilled, onRejected)
@@ -71,8 +69,6 @@
   For more information about the `onRejected` handler, see the [link]`catch()`[/link] reference.
 0njzkafnwmc p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[5]/p[3]
   `then()` returns a new promise object but mutates the promise object it's called on, appending the handlers to an internal list if the promise is pending. Therefore the handler is retained by the original promise for as long as that promise remains pending and reachable. For example, the following example will eventually run out of memory even though the returned promise is not retained:
-0858pvav2ii p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[5]/mdn-code-example[1]/#shadow-root/div[1]/div[1]
-  js
 1h3mn0fgy0d code [no-translate] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[5]/mdn-code-example[1]/#shadow-root/div[1]/pre[1]
   const pendingPromise = new Promise(() => {});
   while (true) {
@@ -88,8 +84,6 @@
   [link]Examples[/link]
 1l3w6opvxuy heading [h3] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[7]/h3[1]
   [link]Using the then() method[/link]
-0e7kv4j08aq p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[7]/mdn-code-example[1]/#shadow-root/div[1]/div[1]
-  js
 0ysuyyq0nsv code [no-translate] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[7]/mdn-code-example[1]/#shadow-root/div[1]/pre[1]
   const p1 = new Promise((resolve, reject) => {
     resolve("Success!");
@@ -107,8 +101,6 @@
   );
 0bf942joor8 heading [h3] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[8]/h3[1]
   [link]Having a non-function as either parameter[/link]
-1by2j0i64hp p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[8]/mdn-code-example[1]/#shadow-root/div[1]/div[1]
-  js
 0t670wxr571 code [no-translate] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[8]/mdn-code-example[1]/#shadow-root/div[1]/pre[1]
   Promise.resolve(1).then(2).then(console.log); // 1
   Promise.reject(new Error("failed")).then(2, 2).then(console.log, console.log); // Error: failed
@@ -118,8 +110,6 @@
   The `then` method returns a new `Promise`, which allows for method chaining.
 0l1m3a8il66 p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[2]
   If the function passed as handler to `then` returns a `Promise`, an equivalent `Promise` will be exposed to the subsequent `then` in the method chain. The below snippet simulates asynchronous code with the `setTimeout` function.
-0qgmjqdnwd5 p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[1]/#shadow-root/div[1]/div[1]
-  js
 0tthyjx1640 code [no-translate] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[1]/#shadow-root/div[1]/pre[1]
   Promise.resolve("foo")
     // 1. Receive "foo", concatenate "bar" to it, and resolve that to the next then
@@ -161,8 +151,6 @@
   // foobarbaz
 0hwy36bgaf8 p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[3]
   The value returned from `then()` is resolved in the same way as [link]`Promise.resolve()`[/link]. This means [link]thenable objects[/link] are supported, and if the return value is not a promise, it's implicitly wrapped in a `Promise` and then resolved.
-26dlet7sz0d p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[2]/#shadow-root/div[1]/div[1]
-  js
 1z3pvq0pf04 code [no-translate] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[2]/#shadow-root/div[1]/pre[1]
   const p2 = new Promise((resolve, reject) => {
     resolve(1);
@@ -180,8 +168,6 @@
   });
 08kx5h129qj p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[4]
   A `then` call returns a promise that eventually rejects if the function throws an error or returns a rejected Promise.
-0ddvu53trqq p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[3]/#shadow-root/div[1]/div[1]
-  js
 14hxqsddjkm code [no-translate] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[3]/#shadow-root/div[1]/pre[1]
   Promise.resolve()
     .then(() => {
@@ -198,8 +184,6 @@
     );
 2dysga1hehp p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[5]
   In practice, it is often desirable to [link]`catch()`[/link] rejected promises rather than `then()`'s two-case syntax, as demonstrated below.
-119qtp9c2rn p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[4]/#shadow-root/div[1]/div[1]
-  js
 08n8wvxz0av code [no-translate] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[4]/#shadow-root/div[1]/pre[1]
   Promise.resolve()
     .then(() => {
@@ -214,8 +198,6 @@
     });
 2fvbpxu65em p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[6]
   In all other cases, the returned promise eventually fulfills. In the following example, the first `then()` returns `42` wrapped in a fulfilled Promise, even though the previous Promise in the chain was rejected.
-1t09kyun0na p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[5]/#shadow-root/div[1]/div[1]
-  js
 1nk4nrcnzwi code [no-translate] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[5]/#shadow-root/div[1]/pre[1]
   Promise.reject(new Error("Oh no!"))
     .then(
@@ -225,8 +207,6 @@
     .then((solution) => console.log(`Resolved with ${solution}`)); // Fulfilled with 42
 2cwpes0rztp p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[7]
   If `onFulfilled` returns a promise, the return value of `then` will be fulfilled/rejected based on the eventual state of that promise.
-1vs83jbkyib p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[6]/#shadow-root/div[1]/div[1]
-  js
 1e035x2ytvj code [no-translate] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[6]/#shadow-root/div[1]/pre[1]
   function resolveLater(resolve, reject) {
     setTimeout(() => {
@@ -265,8 +245,6 @@
   );
 0hz460ddayb p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/p[8]
   You can use chaining to implement one function with a Promise-based API on top of another such function.
-0oel8l19y6q p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[7]/#shadow-root/div[1]/div[1]
-  js
 11h6rlfy4d2 code [no-translate] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[9]/mdn-code-example[7]/#shadow-root/div[1]/pre[1]
   function fetchCurrentData() {
     // The fetch() API returns a Promise. This function
@@ -289,8 +267,6 @@
   [link]Asynchronicity of then()[/link]
 064u6cxq2u2 p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[10]/p[1]
   The following is an example to demonstrate the asynchronicity of the `then` method.
-1scmb91ppav p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[10]/mdn-code-example[1]/#shadow-root/div[1]/div[1]
-  js
 0bcyfmkr62z code [no-translate] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[10]/mdn-code-example[1]/#shadow-root/div[1]/pre[1]
   // Using a resolved promise 'resolvedProm' for example,
   // the function call 'resolvedProm.then(...)' returns a new promise immediately,
@@ -361,10 +337,6 @@
   Node.js
 1e98lxs5459 table-cell [group=row-2c5lw7i221m] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/figure[1]/figure[1]/table[1]/tbody[1]/tr[1]/th[1]/div[1]
   `then()`
-081fkktj0wn p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/section[1]/p[1]
-  Tip: you can click/tap on a cell for more information.
-1je6499y7sq p /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[12]/mdn-compat-table-lazy[1]/#shadow-root/mdn-compat-table[1]/#shadow-root/section[1]/dl[1]/div[1]/dd[1]
-  Full support
 1dcjqtr4b3x heading [h2] /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[13]/h2[1]
   [link]See also[/link]
 2cdg0m5fw84 li /html[1]/body[1]/div[2]/div[1]/main[1]/div[2]/section[13]/ul[1]/li[1]

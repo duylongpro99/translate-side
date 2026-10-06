@@ -6,6 +6,12 @@
 export const INDEX_ATTR = 'data-ts-i';
 /** On an element that is not visible but kept: an inactive tab panel or closed `details` content. */
 export const HIDDEN_ATTR = 'data-ts-hidden';
+/**
+ * On an element that touches a sibling element with no whitespace between them, but renders as
+ * its own box (inline-block, a flex or grid item): its text is visually apart, so the segmenter
+ * puts a space around it. E.g. a byline label and the author link in a flex row.
+ */
+export const BOX_ATTR = 'data-ts-box';
 
 /**
  * Tab panels, by role or by known markup without a role: pymdownx.tabbed (MkDocs Material) hides
@@ -70,6 +76,7 @@ function copyChild(node: Node, into: Element, live: Element[], inHidden: boolean
   }
   const copy = copyElement(el, live, hidden);
   if (hidden && !inHidden) copy.setAttribute(HIDDEN_ATTR, '');
+  if (isSeparateBox(el)) copy.setAttribute(BOX_ATTR, '');
   into.appendChild(copy);
 }
 
@@ -81,6 +88,14 @@ function isKeptHidden(el: Element, inClosedDetails: boolean): boolean {
   if (inClosedDetails && el.localName !== 'summary') return true;
   if (!el.matches(TAB_PANEL)) return false;
   return el.hasAttribute('hidden') || el.getAttribute('aria-hidden') === 'true' || !isVisible(el);
+}
+
+/** Only checked where it matters: elements glued to a sibling element, outside code. */
+function isSeparateBox(el: Element): boolean {
+  if (!(el.previousSibling?.nodeType === 1 || el.nextSibling?.nodeType === 1)) return false;
+  if (el.closest('pre, code')) return false;
+  const display = el.ownerDocument.defaultView?.getComputedStyle(el).display ?? 'inline';
+  return display !== 'inline' && display !== 'contents' && display !== 'none' && display !== '';
 }
 
 /**

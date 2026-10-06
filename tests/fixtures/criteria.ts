@@ -6,7 +6,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Segment } from '@/engine/types';
 import { extractPage } from '@/extract';
-import { LANDMARK_NOISE } from '@/extract/clean';
 import { composeDocument } from '@/extract/compose';
 import { CODE_BLOCK, codeText } from '@/segment/segmenter';
 import { FIXTURES, loadFixture, manifest } from './load.ts';
@@ -81,10 +80,13 @@ export function measure(slug: string): FixtureReport {
 }
 
 /**
- * Truth: every code block (`pre`, and code-editor surfaces) in the fixture's hand-picked content root (manifest `contentSelector`), on
- * the shadow-composed page, minus landmark/hidden chrome. A block is intact when a code segment
- * has its exact text, and the same characters as the block's textContent apart from whitespace
- * (`<br>` line breaks have no text, so textContent alone can't check newlines).
+ * Truth: every code block (`pre`, and code-editor surfaces) in the fixture's hand-picked content
+ * root (manifest `contentSelector`) on the shadow-composed page, minus the manifest's documented
+ * `codeExcluded` blocks. None of the extractor's cleanup rules apply, and the count must equal the
+ * hand-checked manifest `codeBlocks`, so the truth does not lean on the extractor. A block is
+ * intact when a code segment has its exact text, and the same characters as the block's
+ * textContent apart from whitespace (`<br>` line breaks have no text, so textContent alone can't
+ * check newlines).
  */
 function codeBlocks(slug: string, segs: Segment[]) {
   const meta = manifest[slug];
@@ -92,10 +94,11 @@ function codeBlocks(slug: string, segs: Segment[]) {
   const composed = composeDocument(loadFixture(slug));
   const truthRoot = composed.root.querySelector(meta.contentSelector);
   if (!truthRoot) throw new Error(`${slug}: contentSelector not found`);
-  truthRoot.querySelectorAll(LANDMARK_NOISE).forEach((e) => e.remove());
+  const excluded = meta.codeExcluded ? new Set(truthRoot.querySelectorAll(meta.codeExcluded.selector)) : new Set<Element>();
   const pool = segs.filter((s) => s.kind === 'code');
   let intact = 0;
-  const pres = [...truthRoot.querySelectorAll(CODE_BLOCK)].filter((p) => !p.parentElement?.closest(CODE_BLOCK));
+  const pres = [...truthRoot.querySelectorAll(CODE_BLOCK)].filter((p) => !p.parentElement?.closest(CODE_BLOCK) && !excluded.has(p));
+  if (pres.length !== meta.codeBlocks) throw new Error(`${slug}: ${pres.length} code blocks found, hand count is ${meta.codeBlocks}`);
   for (const pre of pres) {
     const exact = codeText(pre);
     const loose = squash(pre.textContent ?? '');

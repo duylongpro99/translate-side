@@ -108,6 +108,18 @@ describe('segments by kind', () => {
     expect(root.textContent).toContain('<img src=x onerror=alert(1)>');
   });
 
+  it('keeps two adjacent tables apart, and a list in a cell in its row', () => {
+    const cells = [
+      seg({ kind: 'table-cell', inlineMarkup: 'A', groupId: 'r1', domPath: '/table[1]/tr[1]/td[1]' }),
+      seg({ kind: 'li', inlineMarkup: 'A-item', groupId: 'r1', domPath: '/table[1]/tr[1]/td[2]/ul[1]/li[1]' }),
+      seg({ kind: 'table-cell', inlineMarkup: 'B', groupId: 'r2', domPath: '/table[2]/tr[1]/td[1]' }),
+    ];
+    mount({ kind: 'ready', docId: 'd', result: { ok: true, via: 'walk', url: 'https://x/', title: 'Page', segments: cells } });
+    const tables = [...root.querySelectorAll('.seg-table')];
+    expect(tables.map((t) => t.textContent)).toEqual(['AA-item', 'B']);
+    expect(tables[0]?.querySelectorAll('.seg-row')).toHaveLength(1);
+  });
+
   it('has a dev segment view with ids in dev builds', () => {
     mount({ kind: 'ready', docId: 'doc12345', result: { ok: true, via: 'walk', url: 'https://x/', title: 'Page', segments } });
     expect(import.meta.env.DEV).toBe(true);
