@@ -15,7 +15,7 @@
 
 import type { LLMError, ModelRole, NormalizedEvent, StopReason } from '../../llm/types.ts';
 import type { EngineEvent } from '../types.ts';
-import { planRepair, type RepairPlan } from './repair.ts';
+import { planRepair, type RepairPlan, type RepairRule } from './repair.ts';
 import { SegParser, type ParseResult } from './seg-parser.ts';
 import { toWire, type WireChunk, type WireSegment } from './wire.ts';
 
@@ -28,6 +28,8 @@ export interface TranslateChunkOptions {
   revision: number;
   role: ModelRole;
   mergeFactor?: number;
+  /** Test seam (repair.ts): rules to switch off in a mutation check. */
+  disable?: readonly RepairRule[];
 }
 
 export interface CallReport {
@@ -93,7 +95,10 @@ async function* runCall(
   const result = parser.end(stopReason);
   yield* pending.splice(0);
   const source = new Map(chunk.segments.map((e) => [e.n, e.segment.inlineMarkup]));
-  const plan = planRepair(result, source, options.mergeFactor === undefined ? {} : { mergeFactor: options.mergeFactor });
+  const plan = planRepair(result, source, {
+    ...(options.mergeFactor === undefined ? {} : { mergeFactor: options.mergeFactor }),
+    ...(options.disable === undefined ? {} : { disable: options.disable }),
+  });
   const bad = new Set(plan.rerequest);
   const accepted = new Map<number, string>();
   for (const [n, text] of result.segs) if (!bad.has(n)) accepted.set(n, text.trim());

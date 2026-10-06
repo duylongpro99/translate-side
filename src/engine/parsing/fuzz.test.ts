@@ -16,7 +16,7 @@
 import { describe, expect, it } from 'vitest';
 import type { NormalizedEvent, StopReason } from '../../llm/types.ts';
 import type { EngineEvent, Segment } from '../types.ts';
-import { deltaSizes, lcg, simulateOutput, type Fault } from './faults.ts';
+import { deltaSizes, lcg, simulateOutput, type Fault, type SimulatedOutput } from './faults.ts';
 import { translateChunk, type ChunkCall, type TranslateChunkOptions } from './translate-chunk.ts';
 import { toWire, type WireChunk } from './wire.ts';
 
@@ -59,11 +59,15 @@ const openIds = (text: string): number[] =>
     const g = /\bid\s*=\s*(?:"(\d+)"|'(\d+)'|(\d+))/i.exec(m[1] ?? '');
     return g === null ? [] : [Number(g[1] ?? g[2] ?? g[3])];
   });
-function declaredLimit(chunk: WireChunk, n: number, faults: readonly Fault[]): 'L1' | 'L2' | null {
+// A limit counts only when (a) the fault that opens it hit segment n itself (`hit`, faults.ts),
+// (b) the source shape is there, and (c) the wrong text has the shape S2 declares: L1 ends with
+// another segment's translation (its tail was accepted as n), L2 is the wrong copy of n.
+function declaredLimit(chunk: WireChunk, n: number, hit: SimulatedOutput['hit'], got: string): 'L1' | 'L2' | null {
   const others = chunk.segments.filter((e) => e.n !== n).map((e) => e.segment.inlineMarkup);
   const adjacent = others.some((t) => [...t.matchAll(/<\s*\/\s*seg\s*>\s*(<\s*seg(\s[^<>]*)?>)/gi)].some((m) => openIds(m[1] ?? '').includes(n)));
-  if (adjacent && (faults.includes('drop') || faults.includes('merge'))) return 'L1';
-  if (others.some((t) => openIds(t).includes(n)) && (faults.includes('swallow-dup') || faults.includes('dup'))) return 'L2';
+  const tail = others.some((t) => got !== '' && translateText(t).trim().endsWith(got));
+  if (adjacent && (hit.drop?.has(n) === true || hit.merge?.has(n) === true) && tail) return 'L1';
+  if (others.some((t) => openIds(t).includes(n)) && (hit['swallow-dup']?.has(n) === true || hit.dup?.has(n) === true) && got === 'garbage') return 'L2';
   return null;
 }
 
@@ -125,8 +129,8 @@ interface FuzzResult {
   violations: string[];
 }
 
-async function fuzz(iterations: number, seed: number, mergeFactor?: number): Promise<FuzzResult> {
-  const options: TranslateChunkOptions = { producedBy: { strategy: 's', stage: 'translate', model: 'm' }, revision: 1, role: 'translate', ...(mergeFactor === undefined ? {} : { mergeFactor }) };
+async function fuzz(iterations: number, seed: number, mutation: Pick<TranslateChunkOptions, 'mergeFactor' | 'disable'> = {}): Promise<FuzzResult> {
+  const options: TranslateChunkOptions = { producedBy: { strategy: 's', stage: 'translate', model: 'm' }, revision: 1, role: 'translate', ...mutation };
   const rng = lcg(seed);
   const stats = newStats();
   const violations: string[] = [];
@@ -164,7 +168,7 @@ async function fuzz(iterations: number, seed: number, mergeFactor?: number): Pro
         }
       } else if (got !== translateText(e.segment.inlineMarkup).trim()) {
         // A merge in the repair answer is the same S2 limit as in the first one.
-        const limit = chunk.grammar === 'v2' && !copyNonce ? declaredLimit(chunk, e.n, first.faults) : null;
+        const limit = chunk.grammar === 'v2' && !copyNonce ? declaredLimit(chunk, e.n, first.hit, got) : null;
         if (first.tainted.has(e.n) || (faultyRepair && repairFaults[0] === 'merge')) stats.taintedWrong++;
         else if (limit === 'L1') stats.wrongLimitL1++;
         else if (limit === 'L2') stats.wrongLimitL2++;
@@ -188,6 +192,7 @@ describe(`parser fuzz (${ITERATIONS} chunks, seed ${SEED})`, () => {
     // The wrong-text exemption stays small. The nonce limit is S2's declared one and not bounded:
     // the random chunks make the L shapes common on purpose.
     expect(stats.taintedWrong).toBeLessThan(stats.segments / 200);
+    expect(stats.wrongLimitL1 + stats.wrongLimitL2).toBeLessThan(stats.segments / 1000);
   }, 60_000);
 
   it('holds on seeds 1–12 too (1,000 chunks each)', async () => {
@@ -195,6 +200,7 @@ describe(`parser fuzz (${ITERATIONS} chunks, seed ${SEED})`, () => {
       const { stats, violations } = await fuzz(1000, seed);
       expect(violations.slice(0, 3), `seed ${seed}`).toEqual([]);
       expect(stats.taintedWrong, `seed ${seed}`).toBeLessThan(stats.segments / 200);
+      expect(stats.wrongLimitL1 + stats.wrongLimitL2, `seed ${seed}`).toBeLessThan(stats.segments / 1000);
     }
   }, 60_000);
 
@@ -206,7 +212,17 @@ describe(`parser fuzz (${ITERATIONS} chunks, seed ${SEED})`, () => {
   }, 60_000);
 
   it('catches the loss when the merge rule is removed (mutation check)', async () => {
-    const { stats } = await fuzz(500, SEED, Number.POSITIVE_INFINITY);
+    const { stats } = await fuzz(500, SEED, { mergeFactor: Number.POSITIVE_INFINITY });
     expect(stats.silentWrong).toBeGreaterThan(0);
+  }, 60_000);
+
+  // The no-nonce rules (M1-D8, M1-D10, tag count): each one, switched off, lets a wrong text through
+  // or loses a segment that the full policy catches (B reviewer round 4 NB, tester round 4).
+  it.each(['swallowed-dup-plain', 'tag-mismatch'] as const)('catches the loss when the %s rule is removed (mutation check)', async (rule) => {
+    const full = await fuzz(3000, SEED);
+    const { stats, violations } = await fuzz(3000, SEED, { disable: [rule] });
+    expect(full.violations).toEqual([]);
+    expect(violations.length, rule).toBeGreaterThan(0);
+    expect(stats.silentWrong + stats.lostCleanRepair, rule).toBeGreaterThan(0);
   }, 60_000);
 });

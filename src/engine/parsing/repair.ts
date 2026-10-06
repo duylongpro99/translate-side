@@ -45,9 +45,19 @@ function openCount(text: string, id: number): number {
   return n;
 }
 
+/** Repair rules a test can switch off, to prove the fuzz catches their absence (mutation checks). */
+export type RepairRule = 'swallowed-dup' | 'swallowed-dup-plain' | 'tag-mismatch';
+
+export interface PlanOptions {
+  mergeFactor?: number;
+  /** Test seam: skip these rules. Never set in production. */
+  disable?: readonly RepairRule[];
+}
+
 /** `source`: every id of the request, with the text sent for it. */
-export function planRepair(res: ParseResult, source: ReadonlyMap<number, string>, options: { mergeFactor?: number } = {}): RepairPlan {
+export function planRepair(res: ParseResult, source: ReadonlyMap<number, string>, options: PlanOptions = {}): RepairPlan {
   const mergeFactor = options.mergeFactor ?? MERGE_FACTOR;
+  const off = (rule: RepairRule): boolean => options.disable?.includes(rule) === true;
   const ids = [...source.keys()].sort((a, b) => a - b);
   const present = [...res.segs.keys()].filter((id) => source.has(id));
   const out = (id: number): string => res.segs.get(id) ?? '';
@@ -73,15 +83,15 @@ export function planRepair(res: ParseResult, source: ReadonlyMap<number, string>
       ? [f.id]
       : [],
   );
-  const tagMismatch = present.filter((id) => literalTagCount(src(id)) !== literalTagCount(out(id)));
+  const tagMismatch = off('tag-mismatch') ? [] : present.filter((id) => literalTagCount(src(id)) !== literalTagCount(out(id)));
   // Decision M1-D8 (b): in nonce mode, an OPEN with the nonce swallowed as text whose id also came
   // as a segment is a duplicate in disguise (found by fuzzing).
-  const swallowedDup = res.fixes.some((f) => f.kind === 'open-in-text' && f.detail?.startsWith('nonce:') === true && res.segs.has(Number(f.detail.slice(6))));
+  const swallowedDup = !off('swallowed-dup') && res.fixes.some((f) => f.kind === 'open-in-text' && f.detail?.startsWith('nonce:') === true && res.segs.has(Number(f.detail.slice(6))));
   // Decision M1-D10: the same without the nonce copied, when the swallowing segment holds more
   // OPENs with that id than its source, so the OPEN was the model's (found by fuzzing). Compared
   // per id, not as a total tag count: an emptied segment whose source holds another literal tag
   // has equal totals (review T-B6). A source that holds the same tag as text is kept.
-  const swallowedDupPlain = res.fixes.some((f) => {
+  const swallowedDupPlain = !off('swallowed-dup-plain') && res.fixes.some((f) => {
     if (f.kind !== 'open-in-text' || typeof f.id !== 'number' || f.detail?.startsWith('open:') !== true) return false;
     const j = Number(f.detail.slice(5));
     return res.segs.has(j) && openCount(out(f.id), j) > openCount(src(f.id), j);

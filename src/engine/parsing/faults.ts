@@ -41,6 +41,8 @@ export interface SimulatedOutput {
    * away or reordered after it), or an unclosed segment followed by stray text.
    */
   tainted: Set<number>;
+  /** Per fault, the segment ids it hit (the segment it dropped, merged away, duplicated, emptied…). */
+  hit: Partial<Record<Fault, Set<number>>>;
 }
 
 /** Park–Miller LCG in (0, 1). */
@@ -93,6 +95,13 @@ export function simulateOutput(
       ? [...options.faults]
       : Array.from({ length: options.faults ?? 0 }, () => FAULTS[pickIndex(FAULTS.length)] as Fault);
   const tainted = new Set<number>();
+  const hit: Partial<Record<Fault, Set<number>>> = {};
+  const mark = (fault: Fault, ...pieceList: (Piece | undefined)[]): void => {
+    for (const piece of pieceList) {
+      const id = piece === undefined ? undefined : idOf(piece.open);
+      if (id !== undefined) (hit[fault] ??= new Set()).add(id);
+    }
+  };
   let stopReason: StopReason = 'end';
   let prefix = '';
   let suffix = '';
@@ -102,11 +111,15 @@ export function simulateOutput(
     const p = pieces[i];
     switch (fault) {
       case 'drop':
-        if (pieces.length > 1) pieces.splice(i, 1);
+        if (pieces.length > 1) {
+          mark('drop', p);
+          pieces.splice(i, 1);
+        }
         break;
       case 'merge': {
         const q = pieces[i + 1];
         if (p !== undefined && q !== undefined) {
+          mark('merge', p, q);
           p.text = `${p.text} ${q.text}`;
           // -1: a piece with no id (bad-id junk), which no rule can see as a merge.
           p.absorbed = idOf(q.open) ?? -1;
@@ -142,14 +155,21 @@ export function simulateOutput(
         suffix = '\n```';
         break;
       case 'empty':
-        if (p !== undefined) p.text = '';
+        if (p !== undefined) {
+          mark('empty', p);
+          p.text = '';
+        }
         break;
       case 'dup':
-        if (p !== undefined) pieces.splice(i + 1, 0, { ...p, text: 'garbage', wrong: true });
+        if (p !== undefined) {
+          mark('dup', p);
+          pieces.splice(i + 1, 0, { ...p, text: 'garbage', wrong: true });
+        }
         break;
       case 'swallow-dup': {
         const q = pieces[i + 1];
         if (p !== undefined && q !== undefined) {
+          mark('swallow-dup', p, q);
           p.close = '';
           pieces.splice(i + 2, 0, { ...q, text: 'garbage', wrong: true });
         }
@@ -222,5 +242,5 @@ export function simulateOutput(
     const median = others.length > 0 ? (others[Math.floor((others.length - 1) / 2)] ?? 1) : 1;
     if (ratio(p) <= MERGE_FACTOR * median * MERGE_MARGIN) tainted.add(n);
   }
-  return { output, stopReason, faults, tainted };
+  return { output, stopReason, faults, tainted, hit };
 }
