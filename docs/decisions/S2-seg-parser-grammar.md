@@ -600,6 +600,7 @@ Found by the M1-E12 fuzz tests; the engine port (`src/engine/parsing/`) implemen
   re-requested.
 - **M1-D9.** Rule 5: every stop reason other than `end` counts as a cut, and a cut segment with a `close-in-text`
   stays `cut` (see rule 5 above).
-- **M1-D10.** The same as M1-D8 (b) on a v2 chunk where the nonce was not copied: an OPEN read as text inside segment
-  i, whose id also arrives as its own segment, makes the chunk ambiguous when segment i holds more tag-shaped strings
-  than its source. A source that holds the tag as text has equal counts and is kept.
+- **M1-D10.** The same as M1-D8 (b) for any other OPEN on a v2 chunk (the nonce not copied, or an OPEN without the
+  nonce in nonce mode): an OPEN read as text inside segment i, whose id also arrives as its own segment, makes the
+  chunk ambiguous when segment i holds more OPENs with that id than its source. A source that holds the same tag as
+  text has equal counts and is kept.
