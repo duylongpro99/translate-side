@@ -47,7 +47,7 @@ side panel page. Answering them now is cheap. Answering them after M1 means rewr
 | UI framework (Preact or Svelte) | M0-E1 | Preact: smaller learning surface with TS, easy signals for streaming state. Pick once. |
 | Engine host | S1 | **Side panel page** (ROADMAP §8 item 2). It lives as long as a translation is needed, so no suspension or resume machinery. Choose the worker only if S1 shows keepalive is trivially reliable. |
 | `<seg>` grammar and repair policy | S2 | Strict `<seg id="N">` with lenient fallback; retry only missing segments; treat `max_tokens` cut as "re-request open segment". |
-| Extraction policy | S3 | Readability first; "poor result" heuristic (text ratio, lost `pre` count) triggers the `main`/`article`/`[role=main]` walk. |
+| Extraction policy | S3 | Decided (S3): `main`/`article`/`[role=main]` walk first, with generic + per-site cleanup selectors; Readability as the fallback when the walk finds no container or too little text; then the selection hint. |
 | Ollama 403 classification | S4 | `403` + auth `none` + localhost → `cors` (ROADMAP §8 item 5). |
 | Navigation and permissions | S5 | Allowlisting a site requests an optional host permission for re-injection; "auto-open" becomes "auto-translate when the panel is already open" (§8 item 6). |
 | `minimum_chrome_version` | S5, S8 | 138, with features gated by availability checks rather than version (§8 item 18). |

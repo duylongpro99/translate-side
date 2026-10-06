@@ -148,7 +148,7 @@ mid-page failures. The panel host removes that whole class of problem (finding 6
 
 ## Proposed spec changes
 
-Not applied; the user decides. Exact edits proposed for `DESIGN.md`:
+**Applied in b10a1c0** (user decision 2026-10-05). Exact edits for `DESIGN.md`:
 
 1. **§4 diagram** (lines 88–101).
    - Old: the "Service worker (orchestrator)" box holds "job queue/priority, chunker, prompt builder, provider

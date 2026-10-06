@@ -247,7 +247,7 @@ when the panel is already open"; `minimum_chrome_version` 138.
 
 ## Proposed spec changes
 
-Not applied; the user decides.
+**Changes 1–6 applied in 0ccbf24** (user decisions 2026-10-05). **Change 7: pending the manual checklist** (rows 5/6).
 
 1. **DESIGN.md §7, line 716.**
    - Old: "site rules (auto-open / never translate)"

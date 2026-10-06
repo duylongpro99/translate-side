@@ -343,6 +343,8 @@ reverse: Readability first, walk as the fallback.
 
 ## Proposed spec changes
 
+**Applied in 1802f7f** (user decisions 2026-10-05), with D13's generic + per-site selectors in M0-E5 and criterion #1. The M0 plan §5 extraction-policy row was updated to match in a follow-up commit.
+
 1. **DESIGN §4.1 item 1.**
    - Old: "Runs Readability on a cloned DOM. If the result is poor (too little text compared with the page), it falls
      back to walking `main`/`article`/`[role=main]`."

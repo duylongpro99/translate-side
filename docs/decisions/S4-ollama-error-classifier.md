@@ -283,6 +283,8 @@ Rows 1, 4 and 6 are **additions** that change DESIGN §4.3.5 / §4.2.1, so they 
 
 ## Proposed spec changes
 
+**Applied in b8c5ddf** (user decisions 2026-10-05).
+
 1. **DESIGN §4.2.1** `LLMError.kind`:
    - old: `"auth" | "rate_limit" | "overloaded" | "context_length" | "bad_request" | "model_not_found" | "network" | "cors" | "unknown"`
    - new: the same plus `| "quota"`, with the comment `// valid key, but no allowance: 402 plan/credits, OpenAI 429 insufficient_quota, Anthropic 400 credit balance`,

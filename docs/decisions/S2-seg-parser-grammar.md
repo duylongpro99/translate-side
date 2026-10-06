@@ -541,6 +541,8 @@ Plan default: "Strict `<seg id="N">` with lenient fallback; retry only missing s
 
 ## Proposed spec changes
 
+**Applied in b24fdb8** (user decision 2026-10-05, option C). The "Also consider" items under change 4 are not applied; they stay suggestions for M1.
+
 1. **DESIGN §5.7 Step 3**, after "If that happens, retry just that segment.", add: "The parser grammar and repair policy
    are fixed by S2 (`docs/decisions/S2-seg-parser-grammar.md`). Tags are parsed leniently (quoting and case drift
    accepted), and every close tag closes. Chunks whose source holds literal `<seg`/`</seg>` text are detected before
