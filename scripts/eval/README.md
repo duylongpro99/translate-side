@@ -8,7 +8,7 @@ pnpm run eval -- [options]           # fixtures/docs/*.json → eval-results/<st
 ```
 
 Options: `--provider gemini|anthropic` (default gemini; key from `.env`: `GEMINI_API_KEY` / `ANTHROPIC_API_KEY`), `--model id`,
-`--docs a,b` (default: the five in `scripts/eval/docs.ts`), `--mock` (offline echo model, no key), `--probe-nonce`
+`--docs a,b` (default: the five in `scripts/eval/docs.ts`), `--set fixtures|eval` (`eval`: the M2-E8 passages in `eval/passages`, see `eval/README.md`; also adds `eval:sheet`, `eval:judge`, `eval:report`), `--mock` (offline echo model, no key), `--probe-nonce`
 (sends every chunk as a nonce chunk and counts echoed nonces, M1-D11), `--chunk-tokens n` (1500), `--concurrency n` (2),
 `--target vi`, `--price in,cached,out` (USD per million tokens; otherwise `pricing.ts`; the Gemini entry is an unverified placeholder),
 `--out dir`.

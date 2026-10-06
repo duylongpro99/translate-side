@@ -3,7 +3,7 @@
 // <slug>.output.json (source + translation per segment), calls.jsonl (every request/response),
 // summary.json and summary.md (tokens, wall time and cost per document, segment loss, repairs).
 // Run: pnpm run eval -- [--provider gemini|anthropic] [--model id] [--docs a,b] [--mock]
-//      [--probe-nonce] [--chunk-tokens n] [--concurrency n] [--target vi] [--price in,cached,out]
+//      [--set fixtures|eval] [--probe-nonce] [--chunk-tokens n] [--concurrency n] [--target vi] [--price in,cached,out]
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
@@ -12,6 +12,7 @@ import type { LLMClient, ResolvedConnection, StopReason } from '@/llm/types';
 import { chunkLimits, chunkSegments, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, toWire, renderSystemPrompt, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, type EngineEvent, type Segment, type TranslationJob } from '@/engine/index';
 import { costUsd, priceFor } from './pricing.ts';
 import { EVAL_SLUGS } from './docs.ts';
+import { listPassageIds, loadPassage } from './passages.ts';
 
 const ROOT = path.resolve(process.cwd());
 const DOCS = path.join(ROOT, 'fixtures/docs');
@@ -23,6 +24,8 @@ const { values: opt } = parseArgs({
     provider: { type: 'string', default: 'gemini' },
     model: { type: 'string' },
     docs: { type: 'string' },
+    // `eval`: the M2-E8 passages in eval/passages instead of fixtures/docs.
+    set: { type: 'string', default: 'fixtures' },
     out: { type: 'string' },
     mock: { type: 'boolean', default: false },
     'probe-nonce': { type: 'boolean', default: false },
@@ -113,7 +116,15 @@ const sleep = (ms: number, signal: AbortSignal): Promise<void> =>
     signal.addEventListener('abort', () => (clearTimeout(timer), reject(signal.reason)), { once: true });
   });
 
-const slugs = opt.docs ? opt.docs.split(',') : [...EVAL_SLUGS];
+const STRATEGY = 'single-pass';
+const evalSet = opt.set === 'eval';
+if (!evalSet && opt.set !== 'fixtures') throw new Error('--set expects fixtures or eval');
+const slugs = opt.docs ? opt.docs.split(',') : evalSet ? listPassageIds(ROOT) : [...EVAL_SLUGS];
+function loadDoc(slug: string): FixtureDoc {
+  if (!evalSet) return JSON.parse(fs.readFileSync(path.join(DOCS, `${slug}.json`), 'utf8')) as FixtureDoc;
+  const p = loadPassage(ROOT, slug);
+  return { slug, url: p.meta.url, title: p.meta.title, lang: p.lang, segments: p.segments };
+}
 const { client: baseClient, label } = connection();
 const price = priceFor(baseClient.model, opt.price);
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -145,13 +156,13 @@ interface DocResult {
 }
 
 async function runDoc(slug: string): Promise<DocResult> {
-  const doc = JSON.parse(fs.readFileSync(path.join(DOCS, `${slug}.json`), 'utf8')) as FixtureDoc;
+  const doc = loadDoc(slug);
   current = slug;
   const callsBefore = calls.length;
   const job: TranslationJob = {
     doc: { url: doc.url, title: doc.title, sourceLang: doc.lang, targetLang: opt.target as string, outline: [], segments: doc.segments },
     priority: [],
-    strategy: 'single-pass',
+    strategy: STRATEGY,
     options: { style: 'natural', glossary: [], maxConcurrency: Number(opt.concurrency), chunkTokens },
   };
   const finals = new Map<string, { text: string; attempt: number }>();
@@ -210,7 +221,7 @@ interface NonceProbe {
 
 /** The nonce-copy rate (M1-D11): every chunk is sent as a v2 chunk with a nonce; count the echoes. */
 async function probeNonce(slug: string): Promise<NonceProbe> {
-  const doc = JSON.parse(fs.readFileSync(path.join(DOCS, `${slug}.json`), 'utf8')) as FixtureDoc;
+  const doc = loadDoc(slug);
   current = `${slug}#nonce`;
   const prompt = createDefaultPromptRegistry().get(TRANSLATE_PROMPT_ID);
   const system = renderSystemPrompt((vars) => prompt.render(vars), { sourceLang: doc.lang, targetLang: opt.target as string, style: 'natural' });
@@ -278,7 +289,7 @@ interface ThresholdStats {
 }
 const thresholds: ThresholdStats = { chunks: 0, segments: 0, chunksWithFixes: 0, fixKinds: {}, rerequested: 0, merged: 0, maxRatio: 0, over: { '1.2': 0, '1.4': 0, [String(MERGE_FACTOR)]: 0 }, maxBudgetUse: 0, partialTag: 0 };
 for (const slug of slugs) {
-  const doc = JSON.parse(fs.readFileSync(path.join(DOCS, `${slug}.json`), 'utf8')) as FixtureDoc;
+  const doc = loadDoc(slug);
   for (const chunk of chunkSegments(doc.segments, chunkLimits(chunkTokens))) {
     const wire = toWire(chunk.segments);
     const call = calls.find((c) => c.doc === slug && c.user === formatWire(wire));
@@ -305,7 +316,7 @@ for (const slug of slugs) {
   }
 }
 const nonce = probes.length ? { echoed: probes.reduce((n, p) => n + p.echoed, 0), opens: probes.reduce((n, p) => n + p.opens, 0), perDoc: probes } : null;
-const summary = { run: stamp, label, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
+const summary = { run: stamp, set: opt.set, strategy: STRATEGY, prompt: TRANSLATE_PROMPT_ID, label, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
 fs.writeFileSync(path.join(outDir, 'summary.json'), `${JSON.stringify(summary, null, 1)}\n`);
 const money = (n: number | null): string => (n === null ? 'n/a' : `$${n.toFixed(5)}`);
 const md = [

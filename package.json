@@ -24,7 +24,10 @@
     "check:engine": "node scripts/check-engine-boundary.mjs",
     "engine:node": "node scripts/engine-node-run.mts",
     "eval": "node scripts/eval.mjs",
-    "eval:capture": "node scripts/eval-capture.mjs"
+    "eval:capture": "node scripts/eval-capture.mjs",
+    "eval:sheet": "node scripts/eval-sheet.mjs",
+    "eval:judge": "node scripts/eval-judge.mjs",
+    "eval:report": "node scripts/eval-report.mjs"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",

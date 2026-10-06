@@ -1,0 +1,65 @@
+[
+ {
+  "id": "1yxo68wlon5",
+  "kind": "heading",
+  "translate": true,
+  "source": "Introduction",
+  "text": "Giới thiệu",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1xw8rlw8z18",
+  "kind": "p",
+  "translate": true,
+  "source": "Gofmt is a tool that automatically formats Go source code.",
+  "text": "Gofmt là một công cụ tự động định dạng mã nguồn Go.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0bf6g25p64s",
+  "kind": "p",
+  "translate": true,
+  "source": "Gofmt'd code is:",
+  "text": "Mã nguồn được định dạng bởi Gofmt sẽ:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0fqfolsk90d",
+  "kind": "li",
+  "translate": true,
+  "source": "easier to *write*: never worry about minor formatting concerns while hacking away,",
+  "text": "dễ *viết* hơn: không bao giờ phải bận tâm về những vấn đề định dạng vụn vặt khi đang say sưa viết mã,",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "194pgkd0o9p",
+  "kind": "li",
+  "translate": true,
+  "source": "easier to *read*: when all code looks the same you need not mentally convert others' formatting style into something you can understand.",
+  "text": "dễ *đọc* hơn: khi mọi mã nguồn đều trông giống nhau, bạn không cần phải tốn công chuyển đổi phong cách định dạng của người khác sang kiểu mà bạn có thể hiểu được.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "141lqbldtvs",
+  "kind": "li",
+  "translate": true,
+  "source": "easier to *maintain*: mechanical changes to the source don't cause unrelated changes to the file's formatting; diffs show only the real changes.",
+  "text": "dễ *bảo trì* hơn: các thay đổi cơ học đối với mã nguồn không gây ra những thay đổi không liên quan đến định dạng của tệp; các bản diff chỉ hiển thị những thay đổi thực tế.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "08cj75l01u6",
+  "kind": "li",
+  "translate": true,
+  "source": "*uncontroversial*: never have a debate about spacing or brace position ever again!",
+  "text": "*không còn gì để bàn cãi*: không bao giờ phải tranh luận về khoảng trắng hay vị trí dấu ngoặc nhọn nữa!",
+  "attempt": 1,
+  "error": null
+ }
+]

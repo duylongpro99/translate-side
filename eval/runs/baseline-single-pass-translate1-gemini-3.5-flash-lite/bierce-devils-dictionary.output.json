@@ -1,0 +1,65 @@
+[
+ {
+  "id": "166ht4rmz33",
+  "kind": "li",
+  "translate": true,
+  "source": "BORE, n. A person who talks when you wish him to listen.",
+  "text": "KẺ LẮM CHUYỆN, d.t. Kẻ nói chuyện khi bạn muốn hắn lắng nghe.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1xd8xgva97s",
+  "kind": "li",
+  "translate": true,
+  "source": "CYNIC, n. A blackguard whose faulty vision sees things as they are, not as they ought to be. Hence the custom among the Scythians of plucking out a cynic's eyes to improve his vision.",
+  "text": "KẺ HOÀI NGHI, d.t. Một tên khốn có tầm nhìn lệch lạc, nhìn sự việc đúng như bản chất của chúng chứ không phải như lẽ ra chúng phải thế. Thế nên người Scythia mới có tục lệ khoét mắt kẻ hoài nghi để giúp hắn nhìn rõ hơn.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "03rqjx1ka0g",
+  "kind": "li",
+  "translate": true,
+  "source": "DIPLOMACY, n. The patriotic art of lying for one's country.",
+  "text": "NGOẠI GIAO, d.t. Nghệ thuật ái quốc là nói dối vì đất nước mình.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0oc8to838pe",
+  "kind": "li",
+  "translate": true,
+  "source": "HAPPINESS, n. An agreeable sensation arising from contemplating the misery of another.",
+  "text": "HẠNH PHÚC, d.t. Cảm giác dễ chịu phát sinh khi ngắm nhìn sự bất hạnh của kẻ khác.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1mrgvl0anzi",
+  "kind": "li",
+  "translate": true,
+  "source": "LAWYER, n. One skilled in circumvention of the law.",
+  "text": "LUẬT SƯ, d.t. Người thành thạo việc lách luật.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "24yarsiu2xo",
+  "kind": "li",
+  "translate": true,
+  "source": "POLITICS, n. A strife of interests masquerading as a contest of principles. The conduct of public affairs for private advantage.",
+  "text": "CHÍNH TRỊ, d.t. Một cuộc tranh giành lợi ích nhưng khoác áo tranh đấu vì nguyên tắc. Việc điều hành công việc chung vì tư lợi.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1bwgzq81ab3",
+  "kind": "li",
+  "translate": true,
+  "source": "POLITICIAN, n. An eel in the fundamental mud upon which the superstructure of organized society is reared. When he wriggles he mistakes the agitation of his tail for the trembling of the edifice.",
+  "text": "CHÍNH TRỊ GIA, d.t. Một con lươn nằm trong thứ bùn tơi xốp nền tảng làm nên kiến trúc thượng tầng của xã hội có tổ chức. Khi quẫy đuôi, hắn cứ tưởng sự rung lắc của cái đuôi chính là cơn chấn động của cả tòa nhà.",
+  "attempt": 1,
+  "error": null
+ }
+]

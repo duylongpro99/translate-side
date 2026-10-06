@@ -1,0 +1,65 @@
+[
+ {
+  "id": "20o0342pxnh",
+  "kind": "heading",
+  "translate": true,
+  "source": "To `panic!` or Not to `panic!`",
+  "text": "Nên hay không nên dùng `panic!`?",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "15n88qxv8et",
+  "kind": "p",
+  "translate": true,
+  "source": "So, how do you decide when you should call `panic!` and when you should return `Result`? When code panics, there’s no way to recover. You could call `panic!` for any error situation, whether there’s a possible way to recover or not, but then you’re making the decision that a situation is unrecoverable on behalf of the calling code. When you choose to return a `Result` value, you give the calling code options. The calling code could choose to attempt to recover in a way that’s appropriate for its situation, or it could decide that an `Err` value in this case is unrecoverable, so it can call `panic!` and turn your recoverable error into an unrecoverable one. Therefore, returning `Result` is a good default choice when you’re defining a function that might fail.",
+  "text": "Vậy, làm sao để quyết định khi nào nên gọi `panic!` và khi nào nên trả về `Result`? Khi mã lệnh gặp lỗi nghiêm trọng (panic), không có cách nào để khôi phục. Bạn có thể gọi `panic!` cho mọi tình huống lỗi, dù có cách khôi phục được hay không, nhưng khi đó bạn đang thay mặt mã gọi hàm để quyết định rằng tình huống đó là không thể cứu vãn. Khi bạn chọn trả về một giá trị `Result`, bạn đang trao quyền lựa chọn cho mã gọi hàm. Mã gọi hàm có thể chọn cách khôi phục phù hợp với hoàn cảnh của nó, hoặc nó có thể quyết định rằng một giá trị `Err` trong trường hợp này là không thể cứu vãn, và thế là nó có thể gọi `panic!` để biến lỗi có thể khôi phục của bạn thành lỗi không thể khôi phục. Do đó, trả về `Result` là lựa chọn mặc định tốt khi bạn đang định nghĩa một hàm có thể gặp lỗi.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1ngmc4zu142",
+  "kind": "p",
+  "translate": true,
+  "source": "In situations such as examples, prototype code, and tests, it’s more appropriate to write code that panics instead of returning a `Result`.",
+  "text": "Trong các tình huống như viết ví dụ, mã nguyên mẫu (prototype code) và các bài kiểm thử (test), việc viết mã lệnh gây panic thay vì trả về `Result` sẽ thích hợp hơn.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1fbatmdrzlh",
+  "kind": "heading",
+  "translate": true,
+  "source": "Examples, Prototype Code, and Tests",
+  "text": "Ví dụ, Mã nguyên mẫu và Bài kiểm thử",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "14lsom27aen",
+  "kind": "p",
+  "translate": true,
+  "source": "When you’re writing an example to illustrate some concept, also including robust error-handling code can make the example less clear. In examples, it’s understood that a call to a method like `unwrap` that could panic is meant as a placeholder for the way you’d want your application to handle errors, which can differ based on what the rest of your code is doing.",
+  "text": "Khi bạn viết một ví dụ để minh họa cho một khái niệm nào đó, việc chèn thêm mã xử lý lỗi cồng kềnh có thể làm ví dụ kém phần dễ hiểu. Trong các ví dụ, mọi người đều ngầm hiểu rằng việc gọi một phương thức có thể gây panic như `unwrap` chỉ đóng vai trò là phần giữ chỗ cho cách mà bạn muốn ứng dụng của mình xử lý lỗi sau này — vốn có thể thay đổi tùy thuộc vào những gì phần còn lại của mã nguồn đang làm.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1rhhe9r1t38",
+  "kind": "p",
+  "translate": true,
+  "source": "Similarly, the `unwrap` and `expect` methods are very handy when you’re prototyping and you’re not yet ready to decide how to handle errors. They leave clear markers in your code for when you’re ready to make your program more robust.",
+  "text": "Tương tự, các phương thức `unwrap` và `expect` rất tiện dụng khi bạn đang làm nguyên mẫu (prototyping) và chưa sẵn sàng quyết định cách xử lý lỗi. Chúng để lại các dấu hiệu rõ ràng trong mã nguồn để bạn nhận biết khi nào mình đã sẵn sàng làm cho chương trình trở nên chỉn chu hơn.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0x5p18jqg9l",
+  "kind": "p",
+  "translate": true,
+  "source": "If a method call fails in a test, you’d want the whole test to fail, even if that method isn’t the functionality under test. Because `panic!` is how a test is marked as a failure, calling `unwrap` or `expect` is exactly what should happen.",
+  "text": "Nếu một lời gọi phương thức thất bại trong bài kiểm thử, bạn sẽ muốn toàn bộ bài kiểm thử đó thất bại, ngay cả khi phương thức đó không phải là tính năng đang được kiểm thử. Vì `panic!` chính là cách đánh dấu một bài kiểm thử là thất bại, nên việc gọi `unwrap` hay `expect` hoàn toàn là điều nên làm.",
+  "attempt": 1,
+  "error": null
+ }
+]

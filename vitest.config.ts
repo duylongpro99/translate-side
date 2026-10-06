@@ -16,7 +16,7 @@ export default defineConfig({
         plugins: [WxtVitest()],
         test: {
           name: 'shell',
-          include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}'],
+          include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}', 'scripts/eval/**/*.test.ts'],
           exclude: [ENGINE_TESTS],
           environment: 'node',
         },

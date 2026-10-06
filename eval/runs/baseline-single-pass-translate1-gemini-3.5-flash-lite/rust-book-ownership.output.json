@@ -1,0 +1,38 @@
+[
+ {
+  "id": "290z7eonnjm",
+  "kind": "heading",
+  "translate": true,
+  "source": "What Is Ownership?",
+  "text": "Ownership (Quyền sở hữu) là gì?",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1sdya33glmh",
+  "kind": "p",
+  "translate": true,
+  "source": "*Ownership* is a set of rules that govern how a Rust program manages memory. All programs have to manage the way they use a computer’s memory while running. Some languages have garbage collection that regularly looks for no-longer-used memory as the program runs; in other languages, the programmer must explicitly allocate and free the memory. Rust uses a third approach: Memory is managed through a system of ownership with a set of rules that the compiler checks. If any of the rules are violated, the program won’t compile. None of the features of ownership will slow down your program while it’s running.",
+  "text": "*Ownership* là tập hợp các quy tắc quản lý cách một chương trình Rust quản lý bộ nhớ. Tất cả các chương trình đều phải quản lý cách chúng sử dụng bộ nhớ máy tính trong khi chạy. Một số ngôn ngữ có tính năng dọn rác (garbage collection) thường xuyên tìm kiếm bộ nhớ không còn được sử dụng khi chương trình chạy; ở các ngôn ngữ khác, lập trình viên phải tự cấp phát và giải phóng bộ nhớ một cách tường minh. Rust sử dụng cách tiếp cận thứ ba: Bộ nhớ được quản lý thông qua một hệ thống quyền sở hữu với một tập hợp các quy tắc do trình biên dịch kiểm tra. Nếu vi phạm bất kỳ quy tắc nào, chương trình sẽ không thể biên dịch. Không có tính năng nào của quyền sở hữu làm chậm chương trình của bạn trong quá trình chạy.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1li3tfxihd2",
+  "kind": "p",
+  "translate": true,
+  "source": "Because ownership is a new concept for many programmers, it does take some time to get used to. The good news is that the more experienced you become with Rust and the rules of the ownership system, the easier you’ll find it to naturally develop code that is safe and efficient. Keep at it!",
+  "text": "Vì ownership là một khái niệm mới đối với nhiều lập trình viên, nên bạn sẽ cần một chút thời gian để làm quen. Tin vui là càng có nhiều kinh nghiệm với Rust và các quy tắc của hệ thống ownership, bạn sẽ càng thấy dễ dàng hơn trong việc tự nhiên viết ra mã nguồn vừa an toàn vừa hiệu quả. Cố gắng lên nhé!",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "19uc709qsu2",
+  "kind": "quote",
+  "translate": true,
+  "source": "Both the stack and the heap are parts of memory available to your code to use at runtime, but they are structured in different ways. The stack stores values in the order it gets them and removes the values in the opposite order. This is referred to as *last in, first out (LIFO)*. Think of a stack of plates: When you add more plates, you put them on top of the pile, and when you need a plate, you take one off the top. Adding or removing plates from the middle or bottom wouldn’t work as well!",
+  "text": "Cả stack (ngăn xếp) và heap (vùng nhớ động) đều là các phần bộ nhớ sẵn có để mã nguồn của bạn sử dụng tại thời điểm chạy, nhưng chúng có cấu trúc khác nhau. Stack lưu trữ các giá trị theo thứ tự nhận được và xóa các giá trị theo thứ tự ngược lại. Điều này được gọi là *vào sau, ra trước (last in, first out - LIFO)*. Hãy tưởng tượng một chồng đĩa: Khi bạn thêm đĩa, bạn đặt chúng lên đỉnh chồng, và khi cần một đĩa, bạn lấy nó ra từ phía trên cùng. Việc thêm hoặc lấy đĩa ở giữa hay ở đáy sẽ không khả thi bằng!",
+  "attempt": 1,
+  "error": null
+ }
+]
