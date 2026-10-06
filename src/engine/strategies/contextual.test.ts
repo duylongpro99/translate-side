@@ -278,6 +278,50 @@ describe('contextual: the brief runs beside the first chunk (plan §8, M2-D6)', 
     expect(translate.requests).toHaveLength(1);
   });
 
+  it('no model routed for analyze, several chunks: every chunk is translated, none waits forever', async () => {
+    const translate = translatorClient();
+    const engine = createEngine({
+      llm: (r) => {
+        if (r === 'analyze') throw new Error('no model profile is routed for the analyze role');
+        return translate;
+      },
+      now: () => 0,
+      sleep: fakeSleep(),
+      strategies: [contextual],
+      prompts: createDefaultPromptRegistry(),
+      random: () => 0,
+    });
+    const events = await collect(engine.translate(longJob(), new AbortController().signal));
+    expect(artifacts(events)).toEqual([]);
+    noFailures(events);
+    expect(translate.requests).toHaveLength(LONG_CHUNKS);
+    expect(finals(events).map((e) => e.id).sort()).toEqual(['p0', 'p1', 'p2', 'p3']);
+    expect(events.at(-1)).toEqual({ type: 'done' });
+  });
+
+  it('maxConcurrency 1, several chunks: chunk 1 goes out, chunk 2 waits for the brief, then the rest follow', async () => {
+    for (const answer of [JSON.stringify(BRIEF), null]) {
+      const held = heldAnalyze();
+      const translate = translatorClient();
+      const engine = createEngine({ llm: (r) => (r === 'analyze' ? held.client : translate), now: () => 0, sleep: fakeSleep(), strategies: [contextual], prompts: createDefaultPromptRegistry(), random: () => 0 });
+      const j = longJob();
+      const events: EngineEvent[] = [];
+      const done = (async () => {
+        for await (const e of engine.translate({ ...j, options: { ...j.options, maxConcurrency: 1 } }, new AbortController().signal)) events.push(e);
+      })();
+      await ticks();
+      expect(held.state.started).toBe(1);
+      expect(translate.requests).toHaveLength(1);
+      expect(finals(events).map((e) => e.id)).toEqual(['p0']);
+      held.release(answer);
+      await done;
+      expect(translate.requests).toHaveLength(LONG_CHUNKS);
+      expect(finals(events).map((e) => e.id)).toEqual(['p0', 'p1', 'p2', 'p3']);
+      expect(artifacts(events)).toHaveLength(answer === null ? 0 : 1);
+      expect(events.at(-1)).toEqual({ type: 'done' });
+    }
+  });
+
   it('records which chunks had the brief: not the first, every later one; all when the job brought it', async () => {
     const outcomes = async (seed?: typeof BRIEF) => {
       const ctx: StageContext = {
