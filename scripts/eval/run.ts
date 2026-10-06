@@ -8,8 +8,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
-import type { LLMClient, ResolvedConnection } from '@/llm/types';
-import { chunkLimits, chunkSegments, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, toWire, callBudget, renderSystemPrompt, TRANSLATE_PROMPT_ID, type EngineEvent, type Segment, type TranslationJob } from '@/engine/index';
+import type { LLMClient, ResolvedConnection, StopReason } from '@/llm/types';
+import { chunkLimits, chunkSegments, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, toWire, callBudget, renderSystemPrompt, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, type EngineEvent, type Segment, type TranslationJob } from '@/engine/index';
 import { costUsd, priceFor } from './pricing.ts';
 import { EVAL_SLUGS } from './docs.ts';
 
@@ -45,6 +45,8 @@ interface CallRecord {
   doc: string;
   n: number;
   ms: number;
+  system: string;
+  maxOutputTokens: number;
   user: string;
   text: string;
   usage?: { input: number; output: number; cachedInput?: number } | undefined;
@@ -87,7 +89,7 @@ function recording(inner: LLMClient, calls: CallRecord[], doc: () => string): LL
     model: inner.model,
     reasoningReserveTokens: inner.reasoningReserveTokens,
     async *stream(req) {
-      const rec: CallRecord = { doc: doc(), n: calls.length + 1, ms: 0, user: req.messages.map((m) => m.content).join('\n'), text: '' };
+      const rec: CallRecord = { doc: doc(), n: calls.length + 1, ms: 0, system: req.system, maxOutputTokens: req.maxOutputTokens, user: req.messages.map((m) => m.content).join('\n'), text: '' };
       calls.push(rec);
       const t0 = Date.now();
       try {
@@ -248,8 +250,62 @@ if (opt['probe-nonce']) {
 fs.writeFileSync(path.join(outDir, 'calls.jsonl'), calls.map((c) => JSON.stringify(c)).join('\n') + '\n');
 const sum = (f: (r: DocResult) => number): number => results.reduce((n, r) => n + f(r), 0);
 const total = { translatable: sum((r) => r.translatable), lost: sum((r) => r.lost), failed: sum((r) => r.failed), repaired: sum((r) => r.repaired), calls: sum((r) => r.calls), input: sum((r) => r.input), cachedInput: sum((r) => r.cachedInput), output: sum((r) => r.output), wallMs: sum((r) => r.wallMs), costUsd: price ? sum((r) => r.costUsd ?? 0) : null };
+// chars/3.5 check (tokens.ts): characters per token as the provider counted them, over the
+// translation calls (system + user text in, answer text out). Nonce probes are left out.
+const counted = calls.filter((c) => !c.doc.endsWith('#nonce') && c.usage !== undefined);
+const charsIn = counted.reduce((n, c) => n + c.system.length + c.user.length, 0);
+const tokensIn = counted.reduce((n, c) => n + (c.usage?.input ?? 0), 0);
+const charsOut = counted.reduce((n, c) => n + c.text.length, 0);
+const tokensOut = counted.reduce((n, c) => n + (c.usage?.output ?? 0), 0);
+const charsPerToken = { calls: counted.length, input: tokensIn ? charsIn / tokensIn : null, output: tokensOut ? charsOut / tokensOut : null, assumed: CHARS_PER_TOKEN };
+// S2 threshold replay (S2 record, M1-E3 "before freezing any threshold"): the model's first answers
+// to the real chunks, parsed and planned as the engine does. Healthy answers should show no fixes
+// and no re-request; the length ratios say how far the merge factor is from real answers.
+interface ThresholdStats {
+  chunks: number;
+  segments: number;
+  chunksWithFixes: number;
+  fixKinds: Record<string, number>;
+  rerequested: number;
+  merged: number;
+  /** Highest (output ÷ source characters) ÷ chunk median, and how many segments exceed 1.2 / 1.4 / MERGE_FACTOR of it. */
+  maxRatio: number;
+  over: { '1.2': number; '1.4': number; [k: string]: number };
+  /** Highest answer tokens ÷ the call's max_tokens (§5.7 formula). */
+  maxBudgetUse: number;
+  /** Segments of MAX_TAG characters or more that end inside an open tag (the hold-back): fixes `partial-tag`. */
+  partialTag: number;
+}
+const thresholds: ThresholdStats = { chunks: 0, segments: 0, chunksWithFixes: 0, fixKinds: {}, rerequested: 0, merged: 0, maxRatio: 0, over: { '1.2': 0, '1.4': 0, [String(MERGE_FACTOR)]: 0 }, maxBudgetUse: 0, partialTag: 0 };
+for (const slug of slugs) {
+  const doc = JSON.parse(fs.readFileSync(path.join(DOCS, `${slug}.json`), 'utf8')) as FixtureDoc;
+  for (const chunk of chunkSegments(doc.segments, chunkLimits(chunkTokens))) {
+    const wire = toWire(chunk.segments);
+    const call = calls.find((c) => c.doc === slug && c.user === formatWire(wire));
+    if (call === undefined) continue;
+    const res = parseOutput(call.text, wire.segments.map((e) => e.n), (call.stop as StopReason | undefined) ?? 'other', { grammar: wire.grammar, ...(wire.nonce === undefined ? {} : { nonce: wire.nonce }) });
+    const source = new Map(wire.segments.map((e) => [e.n, e.segment.inlineMarkup]));
+    const plan = planRepair(res, source);
+    thresholds.chunks++;
+    thresholds.segments += wire.segments.length;
+    if (res.fixes.length) thresholds.chunksWithFixes++;
+    for (const f of res.fixes) thresholds.fixKinds[f.kind] = (thresholds.fixKinds[f.kind] ?? 0) + 1;
+    thresholds.partialTag += res.fixes.filter((f) => f.detail === 'partial-tag').length;
+    thresholds.rerequested += plan.rerequest.length;
+    thresholds.merged += plan.merged.length;
+    const ratios = [...res.segs].map(([id, text]) => text.length / Math.max(1, (source.get(id) ?? '').length));
+    const sorted = [...ratios].sort((a, b) => a - b);
+    const median = sorted[Math.floor((sorted.length - 1) / 2)] ?? 1;
+    for (const r of ratios) {
+      const rel = r / median;
+      thresholds.maxRatio = Math.max(thresholds.maxRatio, rel);
+      for (const k of Object.keys(thresholds.over)) if (rel > Number(k)) thresholds.over[k] = (thresholds.over[k] ?? 0) + 1;
+    }
+    if (call.usage) thresholds.maxBudgetUse = Math.max(thresholds.maxBudgetUse, call.usage.output / call.maxOutputTokens);
+  }
+}
 const nonce = probes.length ? { echoed: probes.reduce((n, p) => n + p.echoed, 0), opens: probes.reduce((n, p) => n + p.opens, 0), perDoc: probes } : null;
-const summary = { run: stamp, label, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce };
+const summary = { run: stamp, label, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
 fs.writeFileSync(path.join(outDir, 'summary.json'), `${JSON.stringify(summary, null, 1)}\n`);
 const money = (n: number | null): string => (n === null ? 'n/a' : `$${n.toFixed(5)}`);
 const md = [
@@ -262,6 +318,8 @@ const md = [
   ...results.map((r) => `| ${r.slug} | ${r.translatable} | ${r.lost} | ${r.repaired} | ${r.calls} | ${r.input} | ${r.cachedInput} | ${r.output} | ${(r.wallMs / 1000).toFixed(1)} | ${r.firstFinalMs === null ? '–' : (r.firstFinalMs / 1000).toFixed(1)} | ${money(r.costUsd)} |`),
   `| **total** | ${total.translatable} | ${total.lost} | ${total.repaired} | ${total.calls} | ${total.input} | ${total.cachedInput} | ${total.output} | ${(total.wallMs / 1000).toFixed(1)} | | ${money(total.costUsd)} |`,
   '',
+  `Characters per token (provider-counted; the engine assumes ${CHARS_PER_TOKEN}): input ${charsPerToken.input?.toFixed(2) ?? '–'}, output ${charsPerToken.output?.toFixed(2) ?? '–'} over ${charsPerToken.calls} calls.`,
+  `S2 thresholds on ${thresholds.chunks} chunks / ${thresholds.segments} segments: ${thresholds.chunksWithFixes} chunks with parser fixes ${JSON.stringify(thresholds.fixKinds)}, ${thresholds.rerequested} re-requested, ${thresholds.merged} flagged merged; length ratio vs chunk median: max ${thresholds.maxRatio.toFixed(2)}, over 1.2/1.4/${MERGE_FACTOR}: ${Object.values(thresholds.over).join('/')}; ${MAX_TAG}-char tag hold-back: ${thresholds.partialTag} partial tags; highest answer/max_tokens ${thresholds.maxBudgetUse.toFixed(2)}.`,
   nonce ? `Nonce copy: ${nonce.echoed}/${nonce.opens} opening tags carried the nonce (${nonce.opens ? ((100 * nonce.echoed) / nonce.opens).toFixed(1) : '–'}%).` : 'Nonce probe not run (--probe-nonce).',
   ...results.filter((r) => r.errors.length).map((r) => `\n${r.slug} errors: ${r.errors.join('; ')}`),
   '',
