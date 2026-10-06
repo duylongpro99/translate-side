@@ -305,3 +305,30 @@ describe('single-pass: working memory after a failed repair (carry-over b)', () 
     expect(c2.memory.translated.get('a')).toEqual({ text: 'refined', revision: 2 });
   });
 });
+
+// Gemini was seen to answer a 25-segment chunk with nothing (stop `end`, 0 output tokens). The chunk
+// must be re-requested whole, and if the repair is empty too, every segment fails: never a silent loss.
+describe('single-pass: an empty answer', () => {
+  const many = Array.from({ length: 25 }, (_, i) => seg(`e${i}`, `Sentence number ${i + 1}.`));
+  const empty = { text: '', stopReason: 'end' as const, usage: { input: 400, output: 0 } };
+
+  it('(a) is re-requested with all 25 ids and the good repair answer finishes the chunk', async () => {
+    const client = translatorClient((lines, call) => (call === 1 ? empty : renderLines(lines, (s) => `vi:${s}`)));
+    const events = await collect(createEngine(deps(client)).translate(job(many), new AbortController().signal));
+    expect(finals(events)).toHaveLength(25);
+    expect(finals(events).every(([, text, attempt]) => text.startsWith('vi:') && attempt === 2)).toBe(true);
+    expect(failures(events)).toEqual([]);
+    expect(client.requests).toHaveLength(2);
+    expect((client.requests[1]?.messages[0]?.content.match(/<seg id="\d+"/g) ?? []).length).toBe(25);
+    expect(events.at(-1)?.type).toBe('done');
+  });
+
+  it('(b) fails all 25 segments with UNREADABLE_MESSAGE when the repair is empty too', async () => {
+    const client = translatorClient(() => empty);
+    const events = await collect(createEngine(deps(client)).translate(job(many), new AbortController().signal));
+    expect(finals(events)).toEqual([]);
+    expect(failures(events)).toEqual(many.map((s) => [s.id, 'unknown', UNREADABLE_MESSAGE]));
+    expect(client.requests).toHaveLength(2);
+    expect(events.at(-1)?.type).toBe('done');
+  });
+});
