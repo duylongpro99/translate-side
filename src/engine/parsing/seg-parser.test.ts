@@ -235,6 +235,11 @@ const V1_CASES: Case[] = [
     expect(view(r).kinds).toEqual(['bad-id']);
     expect(plan(r).rerequest).toEqual([1, 2, 3]);
   }],
+  ['v1 unclosed last segment whose text ends tag-shaped ("Vec<se"): re-requested as truncated (fuzz finding)', '<seg id="1">A</seg><seg id="2">B</seg><seg id="3">C Vec<se', (r) => {
+    expect(r.segs.get(3)).toBe('C Vec');
+    expect(plan(r).truncated).toEqual([3]);
+    expect(plan(r).rerequest).toEqual([3]);
+  }],
   ['v1 refusal stop: unclosed text is accepted, the rest missing', '<seg id="1">A', (r) => expect(plan(r).rerequest).toEqual([2, 3]), { stop: 'refusal' }],
 ];
 
@@ -282,6 +287,11 @@ const NONCE_CASES: Case[] = [
   ['nonce: quoting drift on a nonce tag is a lenient open', `<seg id='1' n='${N}'>A</seg><SEG ID=2 N=${N}>B</seg><seg n="${N}" id="3">C</seg>`, (r) => {
     expect(view(r).segs).toEqual({ 1: 'A', 2: 'B', 3: 'C' });
     expect(view(r).kinds).toEqual(['open-form', 'open-form', 'open-form']);
+  }, nonce],
+  ['nonce: a swallowed nonce OPEN whose id comes again is a hidden duplicate → whole chunk (fuzz finding)', `<seg id="1" n="${N}">A <seg id="2" n="${N}">B</seg><seg id="2" n="${N}">garbage</seg><seg id="3" n="${N}">C</seg>`, (r) => {
+    expect(r.segs.get(2)).toBe('garbage');
+    expect(plan(r).ambiguous).toBe(true);
+    expect(plan(r).rerequest).toEqual([1, 2, 3]);
   }, nonce],
   ['nonce: wrong nonce on the first tag → treated as not copied', '<seg id="1" n="zzzz">A</seg><seg id="2" n="zzzz">B</seg><seg id="3" n="zzzz">C</seg>', (r) => {
     expect(view(r).segs).toEqual({ 1: 'A', 2: 'B', 3: 'C' });

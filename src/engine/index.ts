@@ -16,3 +16,4 @@ export { DEFAULT_CHUNK_TOKENS, chunkLimits, chunkSegments, type Chunk, type Chun
 export { MAX_TAG, SegParser, literalTagCount, parseOutput, type Fix, type FixKind, type Grammar, type ParseResult, type SegParserOptions } from './parsing/seg-parser.ts';
 export { formatWire, nonceFor, toWire, type WireChunk, type WireSegment } from './parsing/wire.ts';
 export { MERGE_FACTOR, planRepair, type RepairPlan } from './parsing/repair.ts';
+export { UNREADABLE_MESSAGE, translateChunk, type CallReport, type ChunkCall, type ChunkReport, type TranslateChunkOptions } from './parsing/translate-chunk.ts';

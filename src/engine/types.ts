@@ -101,6 +101,11 @@ export type EngineEvent =
       text: string;
       revision: number;
       producedBy: { strategy: string; stage: string; model: string };
+      /**
+       * Absent = 1. A repair (decision S2, M1-E3) re-emits the same revision with a higher attempt,
+       * and the panel replaces that revision's text. Revisions stay for later stages (refine = 2).
+       */
+      attempt?: number;
       /** E.g. an idiom explained. */
       notes?: string[];
     }

@@ -4,10 +4,12 @@
 // - empty ones (whitespace only, where the source isn't);
 // - suspect-merged ones: a neighbour is missing and either an OPEN was swallowed as text (v2) or
 //   the length ratio is over `mergeFactor` × the median ratio of the chunk's other segments;
-// - truncated ones (v1): closed implicitly by an unknown id, i.e. cut at a literal `<seg`;
+// - truncated ones: closed implicitly by an unknown id (v1), i.e. cut at a literal `<seg`; or
+//   left unclosed at the end with a partial tag held back after them, which may have been their
+//   own text (`… Vec<se`; M1-E3 addition, found by fuzzing: S2 rule 5 sends it to stray);
 // - literal-tag mismatch: the count of tag-shaped strings differs between source and output.
 // Any dup, orphan close, unknown id or bad id makes the structure ambiguous: the whole chunk is
-// re-requested. Everything else is kept.
+// re-requested; so does, in nonce mode, a swallowed nonce OPEN whose id also came as a segment. Everything else is kept.
 
 import { literalTagCount, type ParseResult } from './seg-parser.ts';
 
@@ -49,10 +51,16 @@ export function planRepair(res: ParseResult, source: ReadonlyMap<number, string>
   );
   const empty = present.filter((id) => out(id).trim() === '' && src(id).trim() !== '');
   const truncated = res.fixes.flatMap((f, i) =>
-    f.kind === 'implicit-close' && res.fixes[i + 1]?.kind === 'unknown' && typeof f.id === 'number' ? [f.id] : [],
+    typeof f.id === 'number' &&
+    ((f.kind === 'implicit-close' && res.fixes[i + 1]?.kind === 'unknown') || (f.kind === 'unclosed-end' && f.detail === 'partial-tag'))
+      ? [f.id]
+      : [],
   );
   const tagMismatch = present.filter((id) => literalTagCount(src(id)) !== literalTagCount(out(id)));
-  const ambiguous = res.fixes.some((f) => AMBIGUOUS.has(f.kind));
+  // Nonce mode: an OPEN with the nonce swallowed as text whose id also came as a segment is a
+  // duplicate in disguise (M1-E3, found by fuzzing).
+  const swallowedDup = res.fixes.some((f) => f.kind === 'open-in-text' && f.detail?.startsWith('nonce:') === true && res.segs.has(Number(f.detail.slice(6))));
+  const ambiguous = swallowedDup || res.fixes.some((f) => AMBIGUOUS.has(f.kind));
   const cut = res.cut?.id ?? null;
   const rerequest = ambiguous
     ? ids
