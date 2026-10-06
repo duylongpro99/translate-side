@@ -1,7 +1,8 @@
 // Retry and backoff (DESIGN.md §4.3.5, plan M1 §5 "Retry owner"). The pipeline is the ONLY
 // retry owner: adapters run their SDKs with `maxRetries: 0` and yield one classified error
-// (src/llm/types.ts; their only resend is the §4.2.4 quirk flip on a 400, never a rate limit). The engine wraps each role's client once (engine.ts), and wrapping is
-// idempotent, so retries can't stack.
+// (src/llm/types.ts; their only resend is the §4.2.4 quirk flip on a 400, never a rate limit).
+// The engine wraps each role's client once (engine.ts), and wrapping is idempotent, so retries
+// can't stack.
 
 import type { LLMClient, LLMError, NormalizedEvent, NormalizedRequest } from '../llm/types.ts';
 

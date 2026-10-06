@@ -19,6 +19,17 @@ const http = (status: number, body: unknown, extra: Partial<Parameters<typeof cl
 
 // One case per row of the S4 classifier table (docs/decisions/S4-ollama-error-classifier.md),
 // with bodies copied from spikes/s4/results/*.json.
+describe('404 model regex (Phase A carry-over c2)', () => {
+  it('matches only a message that names the model right after the word "model"', () => {
+    for (const m of ['model "no-such-model:1b" not found', "model 'x:1b' not found", 'The model `gpt-5-nano` does not exist or you do not have access to it.', 'model: claude-nope', 'models/gemini-nope is not found for API version v1beta, or is not supported for generateContent.']) {
+      expect(http(404, { error: { message: m } }).kind, m).toBe('model_not_found');
+    }
+    for (const m of ['path "/model/v1/x" not found', 'path "/api/v1/chat/completions" not found', 'Not Found', 'The model configuration was not found']) {
+      expect(http(404, { error: { message: m } }), m).toMatchObject({ kind: 'bad_request', message: `Wrong base URL (${m})` });
+    }
+  });
+});
+
 describe('S4 classifier table', () => {
   it('row 0a: invalid base URL → bad_request', () => {
     for (const base of ['https://ollama .com/v1', 'ollama.com/v1', 'ftp://ollama.com', 'file:///etc', '']) {

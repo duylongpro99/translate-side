@@ -53,9 +53,12 @@ export interface HttpErrorInput {
   now?: () => number;
 }
 
-// A 404 message that names a model. Ollama: `model "x" not found`; OpenAI: "The model `x` does
-// not exist or you do not have access to it."; Anthropic: "model: claude-x".
-const MODEL_NOT_FOUND = /\bmodel\b.*\b(not found|does not exist)|^model: \S/i;
+// A 404 message that names a model: the word "model" directly followed by the name (quoted or
+// not), then "not found" / "does not exist"; or Gemini's "models/x is not found"; or Anthropic's
+// bare "model: claude-x". Ollama: `model "x" not found`; OpenAI: "The model `x` does not exist or
+// you do not have access to it." The name must follow "model" at once, so a wrong-path 404 whose
+// path merely contains the word (`path "/model/v1/x" not found`) does not match (Phase A c2).
+const MODEL_NOT_FOUND = /^model:\s*\S|\bmodel(?:\s*[:=]\s*|\s+)[`"']?[\w.\-:/]+[`"']?\s+(?:is\s+)?(?:not\s+found|does\s+not\s+exist)|\bmodels\/[\w.\-:]+\s+(?:is\s+|was\s+)?not\s+found/i;
 const CONTEXT_LENGTH = /context[ _-]?(length|window)|prompt is too long|too many (input )?tokens|maximum context|reduce the length/i;
 const CREDIT_BALANCE = /credit balance/i;
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
@@ -121,10 +124,16 @@ const STREAM_ERROR_KINDS: Record<string, LLMError['kind']> = {
   authentication_error: 'auth',
   permission_error: 'auth',
   billing_error: 'quota',
+  // Decision M1-D7 (404 → model_not_found only when the message names a model) is about the
+  // HTTP status, where a 404 is as likely a wrong base URL as a missing model. It does not apply
+  // here: an error inside a 200 stream came from the right URL, which already accepted the
+  // request, so a not_found_error there can only be about the model (or a resource it needs).
   not_found_error: 'model_not_found',
   rate_limit_error: 'rate_limit',
   overloaded_error: 'overloaded',
   api_error: 'overloaded',
+  // OpenAI-format gateways send `{"error":{"type":"server_error"}}` in the stream.
+  server_error: 'overloaded',
   request_too_large: 'context_length',
   invalid_request_error: 'bad_request',
 };

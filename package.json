@@ -47,6 +47,8 @@
     ]
   },
   "dependencies": {
-    "@mozilla/readability": "^0.6.0"
+    "@anthropic-ai/sdk": "^0.131.0",
+    "@mozilla/readability": "^0.6.0",
+    "openai": "^7.28.0"
   }
 }
