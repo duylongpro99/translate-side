@@ -2,7 +2,8 @@
 // `analyze` role, that asks for the document brief (`analyze@1`). A brief that parses is put in
 // working memory and emitted as an `artifact` event (the panel shows it). Anything else, a
 // failed call, a cut answer, invalid JSON, an exhausted budget, is "no brief": the stage yields
-// nothing more and the job goes on (plan M2 criterion 5, §5.6). Only an abort stops it.
+// nothing more and the job goes on (plan M2 criterion 5, §5.6). Only an abort stops it. A brief
+// the job brought along (`options.brief`: a resumed run) is already in memory: no call is made.
 //
 // The stage only fills memory: it yields no output value, so the job passes through to the
 // next stage unchanged (runner.ts).
@@ -52,7 +53,7 @@ export const analyzeStage = defineStage<TranslationJob, never>({
   role: 'analyze',
   promptId: ANALYZE_PROMPT_ID,
   async *run(job, ctx) {
-    if (ctx.budget.exhausted()) return;
+    if (ctx.memory.brief !== undefined || ctx.budget.exhausted()) return;
     let text = '';
     let ok = false;
     try {

@@ -102,7 +102,7 @@ function createStageContext(deps: EngineDeps, job: TranslationJob, signal: Abort
       }
       return client;
     },
-    memory: createWorkingMemory(job.options.glossary),
+    memory: { ...createWorkingMemory(job.options.glossary), ...(job.options.brief ? { brief: job.options.brief } : {}) },
     context: [...(deps.context ?? [])],
     prompts: deps.prompts,
     budget: createBudget(job.options.budget ?? {}, deps.now),

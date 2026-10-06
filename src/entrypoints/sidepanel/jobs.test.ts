@@ -417,6 +417,35 @@ describe('Jobs: contextual (plan M2-E1) and same-language skip (M2-E5)', () => {
     expect(v.counts).toEqual({ total: 2, final: 2, failed: 0 });
   });
 
+  it('resume keeps the brief and makes no second brief call', async () => {
+    const first = both(JSON.stringify(BRIEF));
+    // The first run gets its brief, then every translate call fails (not retried): segments are left to resume.
+    const broken: LLMClient = {
+      model: first.model,
+      reasoningReserveTokens: 0,
+      async *stream(req) {
+        if (isAnalyze(req)) yield* first.stream(req);
+        else yield { type: 'error', error: { kind: 'bad_request', status: 400, message: 'down' } };
+      },
+    };
+    let current: LLMClient = broken;
+    const jobs = new Jobs({ translateClient: () => ok(current)() });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', { ...doc(3), sourceLang: '' });
+    expect(jobs.get(1)?.brief).toEqual(BRIEF);
+    expect(jobs.get(1)?.counts.failed).toBe(3);
+
+    const again = both('{"genre": "a different brief"}');
+    current = again;
+    await jobs.resume(1);
+    const v = jobs.get(1) as JobView;
+    expect(again.requests.filter(isAnalyze)).toHaveLength(0);
+    expect(v.brief).toEqual(BRIEF);
+    expect(v.sourceLang).toBe('de');
+    expect(again.requests[0]?.system).toContain('from German into Vietnamese');
+    expect(v.counts).toEqual({ total: 3, final: 3, failed: 0 });
+  });
+
   it('skip: no client is resolved and nothing is sent; resume translates anyway', async () => {
     const client = both(JSON.stringify(BRIEF));
     let resolved = 0;

@@ -66,6 +66,11 @@ export interface JobOptions {
   chunkTokens: number;
   /** Token and time ceiling for this job (§5.6). No limit when absent. */
   budget?: BudgetLimits;
+  /**
+   * A brief already made for this document (e.g. kept from an earlier run of the same page, or the
+   * M3 brief cache). It seeds working memory and the analyze stage makes no call.
+   */
+  brief?: DocumentBrief;
 }
 
 export interface TranslationJob {

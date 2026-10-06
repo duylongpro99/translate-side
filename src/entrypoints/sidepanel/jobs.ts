@@ -318,7 +318,8 @@ export class Jobs {
         paused: !gate.open,
         model: keep?.view.model ?? '',
         targetLang: doc.targetLang,
-        sourceLang: doc.sourceLang,
+        // A resumed run keeps its brief, and the brief's language when detection found none.
+        sourceLang: doc.sourceLang || (keep?.view.brief?.language ?? ''),
         ...(doc.detection ? { detection: doc.detection } : {}),
         ...(keep?.view.brief ? { brief: keep.view.brief } : {}),
         segments,
@@ -367,7 +368,14 @@ export class Jobs {
       },
       priority: [],
       strategy: this.deps.strategy ?? PANEL_STRATEGY,
-      options: { style: 'natural', glossary: [], maxConcurrency: profile.maxConcurrency, chunkTokens: profile.chunkTokens },
+      options: {
+        style: 'natural',
+        glossary: [],
+        maxConcurrency: profile.maxConcurrency,
+        chunkTokens: profile.chunkTokens,
+        // A resumed run keeps its brief: no second analyze call (and none made from the leftover segments only).
+        ...(job.view.brief ? { brief: job.view.brief } : {}),
+      },
     };
     try {
       for await (const event of engine.translate(engineJob, signal)) {
