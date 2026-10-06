@@ -21,7 +21,8 @@
     "test:watch": "vitest",
     "check:manifest": "node scripts/check-manifest.mjs",
     "check": "pnpm run lint && pnpm run typecheck && pnpm run check:engine && pnpm run test && pnpm run build && pnpm run check:manifest",
-    "check:engine": "node scripts/check-engine-boundary.mjs"
+    "check:engine": "node scripts/check-engine-boundary.mjs",
+    "engine:node": "node scripts/engine-node-run.mts"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",

@@ -42,7 +42,7 @@ describe('engine/ boundary (TypeScript)', () => {
 
   // N1: the repo uses .ts specifiers; value imports must typecheck under the engine config.
   it('accepts value imports with .ts specifiers', () => {
-    const source = `import { describeEngine } from './index.ts';\nexport const d = describeEngine;`;
+    const source = `import { createEngine } from './index.ts';\nexport const d = createEngine;`;
     expect(diagnosticsFor(source)).toEqual([]);
   });
 

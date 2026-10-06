@@ -133,8 +133,8 @@ describe('engine/ boundary (ESLint)', () => {
 
   it.each([
     ['sibling file', `import { a } from './util.ts';\nexport const b = a;`],
-    ['parent engine file', `import { describeEngine } from '../index.ts';\nexport const d = describeEngine;`],
-    ['engine directory index', `import { describeEngine } from '..';\nexport const d = describeEngine;`],
+    ['parent engine file', `import { createEngine } from '../index.ts';\nexport const d = createEngine;`],
+    ['engine directory index', `import { createEngine } from '..';\nexport const d = createEngine;`],
     ['interface via relative path', `import type { LLMClient } from '../../llm/types.ts';\nexport type C = LLMClient;`],
     ['interface without extension', `import type { LLMClient } from '../../llm/types';\nexport type C = LLMClient;`],
     ['interface via @/ alias', `import type { LLMClient } from '@/llm/types';\nexport type C = LLMClient;`],
