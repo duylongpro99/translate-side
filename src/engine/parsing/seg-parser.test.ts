@@ -323,6 +323,19 @@ const NONCE_CASES: Case[] = [
     expect(plan(r).ambiguous).toBe(true);
     expect(plan(r).rerequest).toEqual([1, 2, 3]);
   }, nonce],
+  // Decision M1-D10: the same shape when the nonce was not copied (plain v2), found by the tightened fuzz.
+  ['nonce not copied: a swallowed OPEN whose id comes again, in a segment with extra tags → whole chunk (M1-D10)', '<seg id="1">A <seg id="2">B</seg><seg id="2">garbage</seg><seg id="3">C</seg>', (r) => {
+    expect(r.segs.get(2)).toBe('garbage');
+    expect(plan(r).ambiguous).toBe(true);
+    expect(plan(r).rerequest).toEqual([1, 2, 3]);
+  }, nonce],
+  ['plain v2: a swallowed OPEN whose id comes again, in a segment with extra tags → whole chunk (M1-D10)', '<seg id="1">A <seg id="2">B</seg><seg id="2">garbage</seg><seg id="3">C</seg>', (r) => {
+    expect(plan(r).ambiguous).toBe(true);
+  }, { grammar: 'v2' }],
+  ['plain v2: the same swallowed OPEN held as text by the source is kept (M1-D10 tag count)', '<seg id="1">Type <seg id="2"> before and </seg> after.</seg><seg id="2">B</seg><seg id="3">C</seg>', (r) => {
+    expect(plan(r, srcSeen).ambiguous).toBe(false);
+    expect(plan(r, srcSeen).rerequest).toEqual([]);
+  }, { grammar: 'v2' }],
   ['nonce: wrong nonce on the first tag → treated as not copied', '<seg id="1" n="zzzz">A</seg><seg id="2" n="zzzz">B</seg><seg id="3" n="zzzz">C</seg>', (r) => {
     expect(view(r).segs).toEqual({ 1: 'A', 2: 'B', 3: 'C' });
     expect(plan(r).rerequest).toEqual([]);

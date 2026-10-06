@@ -281,8 +281,11 @@ export class SegParser {
           // v2: an OPEN inside a segment is content; a missing close shows up as missing + merged.
           // In nonce mode a swallowed OPEN carrying the nonce is a model tag, never literal text:
           // its id is recorded, so the plan can see a later segment under it as a duplicate (M1-D8 (b)).
+          // Any other swallowed OPEN with an id is recorded too: the plan decides from the tag
+          // counts whether it was a model tag (M1-D10).
           const modelTag = this.#nonceMode === 'on' && open.nonce === this.#nonce && open.id !== null;
-          this.#fix('open-in-text', { id: this.#open.id, ...(modelTag ? { detail: `nonce:${open.id}` } : {}) });
+          const detail = modelTag ? `nonce:${open.id}` : open.id !== null ? `open:${open.id}` : undefined;
+          this.#fix('open-in-text', { id: this.#open.id, ...(detail === undefined ? {} : { detail }) });
           this.#text(open.tag);
           continue;
         }
