@@ -773,7 +773,10 @@ viewport comes first, you can start reading almost immediately.
 - Never auto-translate by default. Allowlisting a site grants an optional host permission for it,
   so the extension can re-inject on navigation; on allowlisted sites the open panel translates
   each new page automatically. The panel cannot be opened without a user gesture (decision S5).
-  A built-in denylist (banking, mail, `chrome://`, password fields) is never sent.
+  A built-in denylist is never read or sent: webmail and sign-in hosts, plus browser pages
+  (`chrome://` and similar) and the Chrome Web Store, which Chrome itself blocks. Password and
+  other form fields are never read on any page. Banking sites can't be listed exhaustively, so
+  they go on a user-editable denylist in settings (M4+; decision D23).
 - **Prompt injection**: page content is untrusted. It's wrapped in `<seg>` tags, the system
   prompt says it's data, and the output is only ever **rendered as text** (sanitized, no HTML
   injection). The model has no tools, so the worst a hostile page can do is cause a bad

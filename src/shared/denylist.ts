@@ -7,7 +7,8 @@ export type UrlVerdict = { ok: true } | { ok: false; reason: 'restricted' | 'den
 const READABLE_SCHEMES = new Set(['http:', 'https:', 'file:']);
 
 // Built-in denylist: webmail and sign-in pages. Matched on the host and its subdomains.
-// Banking can't be listed exhaustively here; per-site rules arrive with settings (M4+).
+// Banking can't be listed exhaustively here; it goes on a user-editable denylist in settings
+// (M4+; DESIGN §8, decision D23). Form fields, passwords included, are never read anywhere.
 export const DENYLISTED_HOSTS = [
   'mail.google.com',
   'accounts.google.com',
