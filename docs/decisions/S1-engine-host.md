@@ -1,6 +1,6 @@
 # S1 — MV3 worker suspension during streaming → where the engine runs
 
-Status: **decision approved by the user 2026-10-05** (engine host = side panel page; DESIGN §4/§4.1 edits approved, applied in the final Phase B step); record amended after review rounds 1–2 · Depends on: S5 record (commit 921fee0) · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS) · Spike code: `spikes/s1/`
+Status: **decision approved by the user 2026-10-05** (engine host = side panel page; DESIGN §4/§4.1 edits approved, applied in the final Phase B step); record amended after review rounds 1–2 · Depends on: S5 record (commit 8a9cbf9) · Date: 2026-10-05 · Chrome 154.0.8037.93 (macOS) · Spike code: `spikes/s1/`
 
 ## Question
 
@@ -72,7 +72,7 @@ Findings:
 6. **A fetch in an extension page doesn't depend on the worker.** In `panelhost` the worker went idle and was killed at
    ~30 s while the panel page finished 90/90 chunks, in 3/3 runs.
 
-Related S5 evidence (committed in 921fee0; `spikes/s5/results/onclicked-granted.jsonl` and
+Related S5 evidence (committed in 8a9cbf9; `spikes/s5/results/onclicked-granted.jsonl` and
 `onclicked-optional.jsonl`, the `panelTargetOpen` field and the `panel-LOADED`/`panel-UNLOAD` events). The decision's
 premise that the real side panel container lives long enough rests on this, not on S1: the default side panel (global `side_panel.default_path`) stays loaded across
 same-origin, cross-origin and browser-initiated navigations, reloads, and switching to another tab and back (one
@@ -148,7 +148,7 @@ mid-page failures. The panel host removes that whole class of problem (finding 6
 
 ## Proposed spec changes
 
-**Applied in b10a1c0** (user decision 2026-10-05). Exact edits for `DESIGN.md`:
+**Applied in b2c7c89** (user decision 2026-10-05). Exact edits for `DESIGN.md`:
 
 1. **§4 diagram** (lines 88–101).
    - Old: the "Service worker (orchestrator)" box holds "job queue/priority, chunker, prompt builder, provider
@@ -175,4 +175,4 @@ mid-page failures. The panel host removes that whole class of problem (finding 6
    - New: the same text, plus "; re-injected on navigation while the `activeTab` grant or a site permission holds
      (decision S5)".
 
-Approved by the user on 2026-10-05 together with the S3/S5 spec changes, and applied in b10a1c0.
+Approved by the user on 2026-10-05 together with the S3/S5 spec changes, and applied in b2c7c89.
