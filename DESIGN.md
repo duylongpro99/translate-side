@@ -691,6 +691,8 @@ sent unescaped.
 - Length ratio sanity check, to catch an empty or runaway segment.
 
 #### System prompt (draft) — `translate@1`
+> Superseded (decision M1-D12): the prompt actually sent is `src/engine/prompts/translate.ts`, the source of truth for `translate@1`; where this draft and the file differ, the file wins. The draft stays as the design rationale.
+
 ```
 You are a professional translator and native writer of {TARGET_LANG}.
 Translate the document segments from {SOURCE_LANG} into {TARGET_LANG}.
