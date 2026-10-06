@@ -336,6 +336,20 @@ const NONCE_CASES: Case[] = [
     expect(plan(r, srcSeen).ambiguous).toBe(false);
     expect(plan(r, srcSeen).rerequest).toEqual([]);
   }, { grammar: 'v2' }],
+  // Review T-B6 (fuzz seed 123456789, chunk 157): the source of the emptied segment holds another
+  // literal tag, so the totals are equal; M1-D10 compares the swallowed id.
+  ['nonce not copied: emptied unclosed segment with a literal tag in its source swallows the next OPEN → whole chunk (M1-D10)', '<seg id="1">A</seg><seg id="2">\n<seg id="3">C</seg>\n<seg id="3">garbage</seg>', (r) => {
+    const s = src({ 2: 'Has <SEG id=1> inside.' });
+    expect(r.segs.get(2)).toBe('\n<seg id="3">C');
+    expect(literalTagCount(r.segs.get(2) ?? '')).toBe(literalTagCount(s.get(2) ?? ''));
+    expect(plan(r, s).ambiguous).toBe(true);
+    expect(plan(r, s).rerequest).toEqual([1, 2, 3]);
+  }, nonce],
+  ['plain v2 (tester repro T-B6): emptied segment 1 with a literal tag in its source swallows OPEN 2 → whole chunk (M1-D10)', '<seg id="1">\n<seg id="2">Second sentence here.</seg><seg id="2">garbage</seg><seg id="3">Third sentence.</seg>', (r) => {
+    const s = src({ 1: 'Long source with <SEG id=1> literal inside it here' });
+    expect(plan(r, s).ambiguous).toBe(true);
+    expect(plan(r, s).rerequest).toEqual([1, 2, 3]);
+  }, { grammar: 'v2' }],
   ['nonce: wrong nonce on the first tag → treated as not copied', '<seg id="1" n="zzzz">A</seg><seg id="2" n="zzzz">B</seg><seg id="3" n="zzzz">C</seg>', (r) => {
     expect(view(r).segs).toEqual({ 1: 'A', 2: 'B', 3: 'C' });
     expect(plan(r).rerequest).toEqual([]);

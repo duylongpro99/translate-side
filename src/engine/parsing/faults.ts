@@ -186,13 +186,28 @@ export function simulateOutput(
     seen.add(n);
     if (p.wrong === true) tainted.add(n);
   }
-  // A merge the plan (repair.ts) may miss: it needs a missing neighbour (id ± 1), so not when the
-  // absorbed id still comes (a wrong copy) or was not a neighbour (after a reorder, or no id); and a length
+  let output = prefix;
+  /** End offset of each piece's close in the output. */
+  const ends = new Map<Piece, number>();
+  pieces.forEach((p, i) => {
+    output += `${i > 0 ? '\n' : ''}${p.open}${p.text}${p.close}`;
+    ends.set(p, output.length);
+    output += p.after;
+  });
+  output += suffix;
+  if (cut) {
+    output = output.slice(0, pickIndex(output.length + 1));
+    stopReason = (['max_tokens', 'max_tokens', 'refusal', 'other'] as const)[pickIndex(4)] ?? 'max_tokens';
+  }
+  // A merge the plan (repair.ts) may miss, judged on what the plan sees: the pieces complete before
+  // a cut (review T-B5). The plan needs a missing neighbour (id ± 1), so not when the absorbed id
+  // still comes (a wrong copy) or was not a neighbour (after a reorder, or no id); and a length
   // ratio over its threshold (taint within MERGE_MARGIN of it).
-  const present = pieces.map((p) => idOf(p.open));
+  const visible = pieces.filter((p) => (ends.get(p) ?? Infinity) <= output.length);
+  const present = visible.map((p) => idOf(p.open));
   const source = new Map(chunk.segments.map((e) => [e.n, e.segment.inlineMarkup]));
   const ratio = (p: Piece): number => p.text.length / Math.max(1, (source.get(idOf(p.open) ?? -1) ?? '').length);
-  for (const p of pieces) {
+  for (const p of visible) {
     const n = idOf(p.open);
     const a = p.absorbed;
     if (a === undefined || n === undefined) continue;
@@ -200,17 +215,12 @@ export function simulateOutput(
       tainted.add(n);
       continue;
     }
-    const others = pieces
+    const others = visible
       .filter((o) => o !== p && source.has(idOf(o.open) ?? -1))
       .map(ratio)
       .sort((a, b) => a - b);
     const median = others.length > 0 ? (others[Math.floor((others.length - 1) / 2)] ?? 1) : 1;
     if (ratio(p) <= MERGE_FACTOR * median * MERGE_MARGIN) tainted.add(n);
-  }
-  let output = prefix + pieces.map((p) => `${p.open}${p.text}${p.close}${p.after}`).join('\n') + suffix;
-  if (cut) {
-    output = output.slice(0, pickIndex(output.length + 1));
-    stopReason = (['max_tokens', 'max_tokens', 'refusal', 'other'] as const)[pickIndex(4)] ?? 'max_tokens';
   }
   return { output, stopReason, faults, tainted };
 }

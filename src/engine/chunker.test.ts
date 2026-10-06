@@ -50,8 +50,7 @@ function checkInvariants(input: Segment[], chunks: Chunk[], lim = limits): void 
   // Over the maximum only when the chunk is one unit (a single segment or a single group).
   for (const c of chunks) {
     if (c.tokens > lim.maxTokens) {
-      const nonHeading = c.segments.filter((s) => s.kind !== 'heading');
-      const groups = new Set(nonHeading.map((s) => s.groupId ?? s.id));
+      const groups = new Set(c.segments.map((s) => s.groupId ?? s.id));
       expect(groups.size).toBe(1);
     }
   }
@@ -134,6 +133,26 @@ describe('chunkSegments', () => {
     checkInvariants(input, chunks);
   });
 
+  // Review R2-1: a heading below the minimum must still respect the maximum.
+  it('cuts a run of headings at the maximum (a page that is mostly headings)', () => {
+    const input = [seg(700), ...Array.from({ length: 60 }, () => h(30)), seg(100)];
+    const chunks = chunkSegments(input);
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.every((c) => c.tokens <= limits.maxTokens)).toBe(true);
+    checkInvariants(input, chunks);
+  });
+
+  it('cuts a page of only short headings at the maximum (tester repro R2-1)', () => {
+    const input = Array.from({ length: 400 }, (_, i): Segment => {
+      const text = `Section ${String(i).padStart(3, '0')}: overview`;
+      return { ...h(), text, inlineMarkup: text };
+    });
+    const chunks = chunkSegments(input);
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.every((c) => c.tokens <= limits.maxTokens)).toBe(true);
+    checkInvariants(input, chunks);
+  });
+
   it('keeps a table row (groupId) together even across the maximum', () => {
     const row = (g: string, n: number, t: number): Segment[] => Array.from({ length: n }, () => seg(t, { kind: 'table-cell', groupId: g }));
     const input = [seg(1000), ...row('r1', 4, 200), ...row('r2', 3, 100)];
@@ -163,11 +182,13 @@ describe('chunkSegments', () => {
     for (let k = 0; k < 500; k++) {
       const input: Segment[] = [];
       const n = 1 + Math.floor(rng() * 80);
+      // One document in four is mostly headings (an index or a changelog).
+      const headings = rng() < 0.25 ? 0.7 : 0.1;
       for (let i = 0; i < n; i++) {
         const r = rng();
-        if (r < 0.1) input.push(h(1 + Math.floor(rng() * 20)));
-        else if (r < 0.15) input.push(seg(10 + Math.floor(rng() * 200), { kind: 'code', translate: false }));
-        else if (r < 0.25) {
+        if (r < headings) input.push(h(1 + Math.floor(rng() * 40)));
+        else if (r < headings + 0.05) input.push(seg(10 + Math.floor(rng() * 200), { kind: 'code', translate: false }));
+        else if (r < headings + 0.15) {
           const g = `g${k}-${i}`;
           for (let c = 0, m = 1 + Math.floor(rng() * 6); c < m; c++) input.push(seg(1 + Math.floor(rng() * 150), { kind: 'table-cell', groupId: g, translate: rng() > 0.1 }));
         } else input.push(seg(pick([5, 30, 80, 150, 400, 900, 1700]) * (0.5 + rng())));

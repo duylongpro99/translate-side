@@ -11,7 +11,7 @@
 // Any dup, orphan close, unknown id or bad id makes the structure ambiguous: the whole chunk is
 // re-requested; so does, in nonce mode, a swallowed nonce OPEN whose id also came as a segment
 // (decision M1-D8 (b)), and, in any v2 chunk, a swallowed OPEN whose id also came as a segment,
-// inside a segment with more tag-shaped strings than its source (decision M1-D10). Everything
+// inside a segment whose source holds fewer OPENs with that id (decision M1-D10). Everything
 // else is kept.
 
 import { literalTagCount, type ParseResult } from './seg-parser.ts';
@@ -31,6 +31,19 @@ export interface RepairPlan {
 export const MERGE_FACTOR = 1.6;
 
 const AMBIGUOUS = new Set(['dup', 'orphan-close', 'unknown', 'bad-id']);
+
+const TAG_OPEN = /<\s*seg(\s[^<>]*)?>/gi;
+const ID_ATTR = /\bid\s*=\s*(?:"(\d+)"|'(\d+)'|(\d+))/i;
+
+/** Tag-shaped OPENs with id `id` in a text (the parser's lenient OPEN). */
+function openCount(text: string, id: number): number {
+  let n = 0;
+  for (const m of text.matchAll(TAG_OPEN)) {
+    const g = ID_ATTR.exec(m[1] ?? '');
+    if (g !== null && Number(g[1] ?? g[2] ?? g[3]) === id) n++;
+  }
+  return n;
+}
 
 /** `source`: every id of the request, with the text sent for it. */
 export function planRepair(res: ParseResult, source: ReadonlyMap<number, string>, options: { mergeFactor?: number } = {}): RepairPlan {
@@ -64,17 +77,15 @@ export function planRepair(res: ParseResult, source: ReadonlyMap<number, string>
   // Decision M1-D8 (b): in nonce mode, an OPEN with the nonce swallowed as text whose id also came
   // as a segment is a duplicate in disguise (found by fuzzing).
   const swallowedDup = res.fixes.some((f) => f.kind === 'open-in-text' && f.detail?.startsWith('nonce:') === true && res.segs.has(Number(f.detail.slice(6))));
-  // Decision M1-D10: the same without the nonce (not copied), when the swallowing segment has more
-  // tag-shaped strings than its source, so the OPEN was the model's (found by fuzzing). A source
-  // that holds the tag as text has equal counts and is kept.
-  const swallowedDupPlain = res.fixes.some(
-    (f) =>
-      f.kind === 'open-in-text' &&
-      typeof f.id === 'number' &&
-      f.detail?.startsWith('open:') === true &&
-      res.segs.has(Number(f.detail.slice(5))) &&
-      literalTagCount(out(f.id)) > literalTagCount(src(f.id)),
-  );
+  // Decision M1-D10: the same without the nonce copied, when the swallowing segment holds more
+  // OPENs with that id than its source, so the OPEN was the model's (found by fuzzing). Compared
+  // per id, not as a total tag count: an emptied segment whose source holds another literal tag
+  // has equal totals (review T-B6). A source that holds the same tag as text is kept.
+  const swallowedDupPlain = res.fixes.some((f) => {
+    if (f.kind !== 'open-in-text' || typeof f.id !== 'number' || f.detail?.startsWith('open:') !== true) return false;
+    const j = Number(f.detail.slice(5));
+    return res.segs.has(j) && openCount(out(f.id), j) > openCount(src(f.id), j);
+  });
   const ambiguous = swallowedDup || swallowedDupPlain || res.fixes.some((f) => AMBIGUOUS.has(f.kind));
   const cut = res.cut?.id ?? null;
   const rerequest = ambiguous

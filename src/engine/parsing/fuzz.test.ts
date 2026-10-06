@@ -173,6 +173,12 @@ describe(`parser fuzz (${ITERATIONS} chunks, seed ${SEED})`, () => {
     }
   }, 60_000);
 
+  // Review T-B5 (seed 42, chunk 2582: taint after a cut) and T-B6 (seed 123456789, chunk 157: M1-D10 per id).
+  it.each([42, 123456789])('holds on the tester seed %i (3,000 chunks)', async (seed) => {
+    const { violations } = await fuzz(3000, seed);
+    expect(violations.slice(0, 3)).toEqual([]);
+  }, 60_000);
+
   it('catches the loss when the merge rule is removed (mutation check)', async () => {
     const { stats } = await fuzz(500, SEED, Number.POSITIVE_INFINITY);
     expect(stats.silentWrong).toBeGreaterThan(0);
