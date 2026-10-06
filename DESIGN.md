@@ -173,7 +173,9 @@ type NormalizedEvent =
 
 interface LLMError {
   kind: "auth" | "rate_limit" | "overloaded" | "context_length"
-      | "bad_request" | "model_not_found" | "network" | "cors" | "unknown";
+      | "bad_request" | "model_not_found" | "network" | "cors" | "unknown"
+      | "quota";  // valid key, but no allowance: 402 plan/credits, OpenAI 429 insufficient_quota, Anthropic 400 credit balance
+  cause?: "permission" | "origin";  // only for "cors" (decision S4)
   status?: number;
   retryAfterMs?: number;
   message: string;             // human-readable, shown in UI
@@ -326,6 +328,7 @@ A preset is just default values for a connection. You can always override them.
 | Google Gemini | openai-chat | https://generativelanguage.googleapis.com/v1beta/openai | bearer | Flash / Flash-Lite |
 | OpenRouter | openai-chat (also anthropic-messages) | https://openrouter.ai/api/v1 | bearer | Many models through one key |
 | Ollama (local) | openai-chat | http://localhost:11434/v1 | none | Needs CORS setup (see 4.3.6) |
+| Ollama (cloud) | openai-chat | https://ollama.com/v1 | bearer | Needs the `https://ollama.com/*` host permission; `maxConcurrency` 4; Test connection uses a 1-token chat call, success = 200 (model listing is public) (decision S4) |
 | LM Studio (local) | openai-chat | http://localhost:1234/v1 | none | Turn on CORS in server settings |
 | **Custom — OpenAI-compatible** | openai-chat | user-entered | bearer / custom | vLLM, LiteLLM, company proxy |
 | **Custom — Anthropic-compatible** | anthropic-messages | user-entered | x-api-key / bearer / custom | Anthropic-format gateways |
@@ -403,10 +406,20 @@ model"). The choice applies to this tab only. The default routing stays the same
 ### 4.3.5 Runtime behavior
 - **Resolve**: on each job, pick the profile from `siteOverrides`, then the tab override, then
   `routing.translate`.
-- **Classify errors** in the adapter:
-  - `401/403` (auth): stop, mark the connection `error`, and show "Fix key" in the panel. Don't
-    fall back silently, because that would send content to a different provider than you chose.
-  - `429` (rate limit) or `5xx`/network errors: retry with backoff, then move to the next
+- **Classify errors** in the adapter (decision S4). Match on status and message, never on
+  `content-type`:
+  - Before `fetch`, validate the base URL (`http(s)`, non-empty host) and that the key is
+    header-safe.
+  - `401`, and `403` unless the CORS rule applies (auth): stop, mark the connection `error`, and
+    show "Fix key" in the panel. Don't fall back silently, because that would send content to a
+    different provider than you chose.
+  - A `fetch` `TypeError` while the connection's host permission is not held → `cors`
+    (`cause: "permission"`): show "No access to {host}" with a **Grant access** button.
+  - `402` and other "no allowance" answers (`quota`): stop for that model, no fallback, show the
+    server's message.
+  - `404` → `model_not_found` when the message names a model, else "wrong base URL".
+  - The quirk flip runs on status `400` only.
+  - `429` (rate limit; honor `Retry-After`) or `5xx`/network errors: retry with backoff, then move to the next
     `fallback` profile. The panel shows which model translated each block (a small badge).
   - `context/length` errors: shrink `chunkTokens` and retry.
 - **Privacy rule for fallback**: a site rule marked *local only* never falls back to a cloud

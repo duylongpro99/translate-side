@@ -431,7 +431,7 @@ Ordered by how early they bite.
 
 4. **Prompt caching will not engage on the default model.** Haiku 4.5's minimum cacheable prefix is 4096 tokens; the system block is ~1k tokens. §5.7 calls this "harmless", which is true for cost (the §6 estimate uses uncached prices), but §4.2.5's rule "prefer `anthropic-messages` for `claude-*` so prompt caching works fully" buys nothing on Haiku. Keep the rule for larger models; do not pad.
 
-5. **Ollama's 403 is misclassified.** Ollama rejects disallowed `Origin` with 403; §4.3.5 maps 401/403 to *auth* → "Fix key", which is wrong for a connection with auth `none`. Add the classifier rule from S4 and show the CORS guide instead.
+5. **Ollama's 403 is misclassified.** Ollama rejects disallowed `Origin` with 403; §4.3.5 maps 401/403 to *auth* → "Fix key", which is wrong for a connection with auth `none`. Add the classifier rule from S4 and show the CORS guide instead. For Ollama cloud there is no 403: without the host permission every call fails as a `TypeError` (S4). Classify that as `cors` when the permission is missing. The local 403 rule is still untested.
 
 6. **`activeTab` does not survive navigation, and `sidePanel.open()` needs a user gesture.** §4.1 injects only under `activeTab`; §3 and §8 describe following links on docs sites and auto-open on allowlisted sites. After navigation the content script is gone and the grant is revoked; auto-open without a gesture is not possible. **Resolution:** allowlisting a site requests an optional host permission for it (re-injection then works on every navigation); "auto-open" becomes "auto-translate when the panel is already open". Spike S5.
 
