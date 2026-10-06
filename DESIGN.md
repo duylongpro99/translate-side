@@ -777,6 +777,8 @@ viewport comes first, you can start reading almost immediately.
   (`chrome://` and similar) and the Chrome Web Store, which Chrome itself blocks. Password and
   other form fields are never read on any page. Banking sites can't be listed exhaustively, so
   they go on a user-editable denylist in settings (M4+; decision D23).
+  Editable regions (`contenteditable`, `role="textbox"`) are never read either, neither their
+  default nor their typed text; code editors are shown as do-not-translate code (decision D24).
 - **Prompt injection**: page content is untrusted. It's wrapped in `<seg>` tags, the system
   prompt says it's data, and the output is only ever **rendered as text** (sanitized, no HTML
   injection). The model has no tools, so the worst a hostile page can do is cause a bad
