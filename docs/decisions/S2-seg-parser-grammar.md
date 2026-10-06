@@ -589,7 +589,7 @@ Plan default: "Strict `<seg id="N">` with lenient fallback; retry only missing s
    grammar and a nonce for chunks with literal tags (option C); one-round repair; no escaping; budget formula instead
    of a per-language multiplier."
 
-## M1 addendum (decisions M1-D8, M1-D9, M1-D10)
+## M1 addendum (decisions M1-D8, M1-D9, M1-D10, M1-D11)
 
 Found by the M1-E12 fuzz tests; the engine port (`src/engine/parsing/`) implements them.
 
@@ -604,3 +604,12 @@ Found by the M1-E12 fuzz tests; the engine port (`src/engine/parsing/`) implemen
   nonce in nonce mode): an OPEN read as text inside segment i, whose id also arrives as its own segment, makes the
   chunk ambiguous when segment i holds more OPENs with that id than its source. A source that holds the same tag as
   text has equal counts and is kept.
+- **M1-D11.** Two known limits of a v2 chunk where the model did not copy the nonce; both leave wrong text under a
+  right id, and no rule is added for them:
+  - **L1.** The source of segment i holds an L-adjacent literal `</seg><seg id="j">` naming an id j of the chunk,
+    and the model drops segment j: the tail of segment i's text is accepted as segment j.
+  - **L2.** The source of segment i holds a literal `<seg id="j">`; the model empties segment i, leaves it unclosed
+    (so it swallows the real `<seg id="j">`), then sends a wrong copy of j. The per-id counts of M1-D10 tie with a
+    genuine echo, so the wrong copy is kept.
+
+  Phase D measures the real nonce-copy rate; if it is low, S2's isolation fallback gets planned.
