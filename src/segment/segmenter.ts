@@ -4,6 +4,9 @@
 // verbatim and never translated; table cells of a row share a groupId.
 import type { Segment, SegmentKind } from '@/engine/types';
 import { BOX_ATTR } from '@/extract/compose';
+import { CODE_BLOCK } from './code-block.ts';
+
+export { CODE_BLOCK };
 import { hashId } from './hash.ts';
 
 export interface SegmentOptions {
@@ -21,11 +24,6 @@ const BLOCK_TAGS = new Set([
 ]);
 const BLOCK_SELECTOR = [...BLOCK_TAGS].join(', ');
 const HEADING = /^h([1-6])$/;
-/**
- * Code blocks: `pre`, and code-editor surfaces that hold code as one div per line, e.g. MDN's
- * interactive examples (CodeMirror 6 `.cm-content`; CodeMirror 5 `.CodeMirror-code`).
- */
-export const CODE_BLOCK = 'pre, .cm-content, .CodeMirror-code';
 const EDITOR_LINES = new Set(['div', 'p']);
 const INLINE_CODE = new Set(['code', 'kbd', 'samp', 'tt']);
 const EMPHASIS = new Set(['em', 'i', 'strong', 'b']);
@@ -55,7 +53,8 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
     // and table cells: a cell like `{/* … */}` keeps its row aligned, and isn't translated.
     if (!wordy && kind !== 'code' && kind !== 'table-cell') return;
     if (text.trim() === '') return;
-    const seg: Segment = { id: hashId(`${domPath}\n${text}`), kind, text, inlineMarkup, domPath, translate: kind !== 'code' && wordy, ...extra };
+    const translate = kind !== 'code' && wordy && !optedOut(el);
+    const seg: Segment = { id: hashId(`${domPath}\n${text}`), kind, text, inlineMarkup, domPath, translate, ...extra };
     if (opts.isHidden?.(el)) seg.hidden = true;
     out.push(seg);
   };
@@ -137,6 +136,17 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
     if (n > 1) s.id = `${s.id}~${n}`;
   }
   return out;
+}
+
+/**
+ * The page asks for no translation: the nearest `translate` attribute says "no", or the block
+ * sits in a `.notranslate` region (the class Google Translate honours). It keeps its kind.
+ */
+function optedOut(el: Element): boolean {
+  const marked = el.closest('[translate], .notranslate');
+  if (!marked) return false;
+  if (marked.classList.contains('notranslate')) return true;
+  return marked.getAttribute('translate')?.toLowerCase() === 'no';
 }
 
 /** Plain text and marker text of inline content. */

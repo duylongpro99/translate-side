@@ -32,14 +32,15 @@ export const GENERIC_NOISE = [
   'a[href*="action=edit"]', // edit-this-section links
 ];
 
-export type Generator = 'Docusaurus' | 'MDN' | 'rustdoc' | 'MediaWiki' | 'WordPress' | 'GoDev';
+export type Generator = 'Docusaurus' | 'MDN' | 'rustdoc' | 'MediaWiki' | 'WordPress' | 'GoDev' | 'MkDocs';
 
 /** S: per-generator cleanup selectors. */
 export const GENERATOR_NOISE: Record<Generator, string[]> = {
   Docusaurus: ['.theme-doc-version-badge', '[class*=browserWindowHeader]', '[class*=playgroundHeader]'],
   // Code-example headers (language label, copy button) and the compat table's icon legend.
   MDN: ['.baseline-indicator', '.bc-toolbar', '.article-footer', '.code-example > .example-header', '.bc-legend'],
-  rustdoc: ['rustdoc-toolbar', '.main-heading .sub-heading', 'summary.hideme'],
+  // Feature/platform badges glued to item names in the module and re-export lists.
+  rustdoc: ['rustdoc-toolbar', '.main-heading .sub-heading', 'summary.hideme', '.item-table .stab'],
   MediaWiki: [
     '.catlinks',
     '.shortdescription',
@@ -52,6 +53,15 @@ export const GENERATOR_NOISE: Record<Generator, string[]> = {
   // related-story and term lists.
   WordPress: ['#respond', '.widget-container', '.headlines-container', '.post-terms-container', '.post-translations-container'],
   GoDev: ['.prevnext'],
+  MkDocs: [],
+};
+
+/**
+ * S, removed only when the element is all the text of its parent: a version badge on a line of
+ * its own is metadata, but the same badge inside a sentence ("Prior to 8.5.6, …") is a word of it.
+ */
+export const GENERATOR_STANDALONE_NOISE: Partial<Record<Generator, string[]>> = {
+  MkDocs: ['.mdx-badge'], // Material for MkDocs' own docs: "minimum version" badges
 };
 
 /**
@@ -67,17 +77,22 @@ export function detectGenerator(doc: Document): Generator | null {
   if (doc.querySelector('.bc-table, .baseline-indicator') && /^https:\/\/developer\.mozilla\.org\//.test(url)) return 'MDN';
   if (/wordpress/i.test(gen)) return 'WordPress';
   if (/^https:\/\/go\.dev\//.test(url)) return 'GoDev';
+  if (/^mkdocs\b/i.test(gen)) return 'MkDocs';
   return null;
 }
 
 /**
  * Paywall boxes ("Subscribe to keep reading"). Matched loosely by class, so only a small box is
- * removed: some news CMSs wrap the article body itself in `.paywall-content`.
+ * removed: some news CMSs wrap the article body itself in `.paywall-content`. Limit: a site that
+ * puts a paywall class on each paragraph would lose every paragraph (S3 follow-ups).
  */
 const PAYWALL = '[class*=paywall i], [data-testid=paywall]';
 const PAYWALL_MAX_CHARS = 500;
 const isPaywallBox = (el: Element) =>
   !el.querySelector('main, article, [role=main]') && (el.textContent ?? '').replace(/\s+/g, ' ').trim().length < PAYWALL_MAX_CHARS;
+
+const squash = (s: string | null | undefined) => (s ?? '').replace(/\s+/g, '');
+const isStandalone = (el: Element) => !!el.parentElement && squash(el.parentElement.textContent) === squash(el.textContent);
 
 /** Permalink anchors whose text has no letters or digits (¶, §, #, zero-width space). */
 const isGlyphAnchor = (a: Element) => (a.getAttribute('href') ?? '').startsWith('#') && !/[\p{L}\p{N}]/u.test(a.textContent ?? '');
@@ -87,6 +102,8 @@ export function stripInContent(root: Element, generator: Generator | null): void
   const selectors = [...GENERIC_NOISE, ...(generator ? GENERATOR_NOISE[generator] : [])];
   root.querySelectorAll(selectors.join(', ')).forEach((e) => e.remove());
   root.querySelectorAll(PAYWALL).forEach((e) => isPaywallBox(e) && e.remove());
+  const standalone = generator ? GENERATOR_STANDALONE_NOISE[generator] : undefined;
+  if (standalone?.length) root.querySelectorAll(standalone.join(', ')).forEach((e) => isStandalone(e) && e.remove());
   root.querySelectorAll('a').forEach((a) => isGlyphAnchor(a) && a.remove());
 }
 

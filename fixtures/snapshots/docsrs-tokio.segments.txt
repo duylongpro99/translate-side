@@ -270,16 +270,16 @@
   Using this flag enables the use of `tokio::net` on the wasm32-wasi target. However, not all methods are available on the networking types as `WASI` currently does not support the creation of new sockets from within `WASM`. Because of this, sockets must currently be created via the `FromRawFd` trait.
 282t1j42m4f heading [h2] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/h2[1]
   Re-exports
-28fqqxvkuy7 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[1]/dt[1]
-  `pub use task::spawn;``rt`
+0hazl8g1wvw p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[1]/dt[1]
+  `pub use task::spawn;`
 1y5ty75i0wa heading [h2] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/h2[2]
   Modules
-049g8gar7kz p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[1]
-  [link]doc[/link]`docsrs` and Unix
+2fucyh0k2ux p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[1]
+  [link]doc[/link]
 19e8pv3xlfv p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[1]
   Types which are documented locally in the Tokio crate, but does not actually live here.
-08mvq1sw4yp p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[2]
-  [link]fs[/link]`fs`
+1tz4ylh213w p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[2]
+  [link]fs[/link]
 06vumld20qz p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[2]
   Asynchronous file utilities.
 177varbrlhq p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[3]
@@ -290,63 +290,63 @@
   [link]net[/link]
 0zut2ahepjx p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[4]
   TCP/UDP/Unix bindings for `tokio`.
-0zhli9515qa p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[5]
-  [link]process[/link]`process`
+1ilv86yot7o p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[5]
+  [link]process[/link]
 2fu5ct2y4cy p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[5]
   An implementation of asynchronous process management for Tokio.
-0cuhijpoh1q p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[6]
-  [link]runtime[/link]`rt`
+1m1dpl7pw6t p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[6]
+  [link]runtime[/link]
 12hxo4hq8t0 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[6]
   The Tokio runtime.
-1nq7si0orpp p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[7]
-  [link]signal[/link]`signal`
+1efdc49x28t p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[7]
+  [link]signal[/link]
 1idnpy9z59g p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[7]
   Asynchronous signal handling for Tokio.
 048o4tojc6y p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[8]
   [link]stream[/link]
 0ltucibnpx0 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[8]
   Due to the `Stream` trait’s inclusion in `std` landing later than Tokio’s 1.0 release, most of the Tokio stream utilities have been moved into the [link]`tokio-stream`[/link] crate.
-043tdigxswm p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[9]
-  [link]sync[/link]`sync`
+2ckvln2pftp p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[9]
+  [link]sync[/link]
 1qjydtzt1vw p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[9]
   Synchronization primitives for use in asynchronous contexts.
-0z521c26wqc p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[10]
-  [link]task[/link]`rt`
+23rtlsgpi0v p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[10]
+  [link]task[/link]
 1m43o68mwmg p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[10]
   Asynchronous green-threads.
-1ub5awgrk3x p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[11]
-  [link]time[/link]`time`
+0egfz1jmlk9 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dt[11]
+  [link]time[/link]
 0q39gui1x3i p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[2]/dd[11]
   Utilities for tracking time.
 0y4ah7dnqdv heading [h2] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/h2[3]
   Macros
-0fsa40ipk8x p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[1]
-  [link]join[/link]`macros`
+21azzoflve1 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[1]
+  [link]join[/link]
 19i09e8hpv3 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dd[1]
   Waits on multiple concurrent branches, returning when *all* branches complete.
 1tei6h9kq40 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[2]
   [link]pin[/link]
 2eacjnh4zsc p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dd[2]
   Pins a value on the stack.
-100oae68zv1 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[3]
-  [link]select[/link]`macros`
+1f4wunryzw0 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[3]
+  [link]select[/link]
 0pk6ck45adx p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dd[3]
   Waits on multiple concurrent branches, returning when the *first* branch completes, cancelling the remaining branches.
-1weiwjl5wyo p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[4]
-  [link]task_local[/link]`rt`
+1811l5hqrj8 p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[4]
+  [link]task_local[/link]
 0ve3kfpv19d p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dd[4]
   Declares a new task-local key of type [link]`tokio::task::LocalKey`[/link].
-0bpulzd1rif p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[5]
-  [link]try_join[/link]`macros`
+0ukw6b3uzzs p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dt[5]
+  [link]try_join[/link]
 1d1hqokmt4a p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[3]/dd[5]
   Waits on multiple concurrent branches, returning when *all* branches complete with `Ok(_)` or on the first `Err(_)`.
 0guy6vmq1b1 heading [h2] /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/h2[4]
   Attribute Macros
-22p8hmbbskx p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[4]/dt[1]
-  [link]main[/link]`macros` and `rt`
+0dauxi53rrc p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[4]/dt[1]
+  [link]main[/link]
 0vyojr635ja p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[4]/dd[1]
   Marks async function to be executed by the selected runtime. This macro helps set up a `Runtime` without requiring the user to use [link]Runtime[/link] or [link]Builder[/link] directly.
-042ae76s4lb p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[4]/dt[2]
-  [link]test[/link]`macros` and `rt`
+0k48qtsag4o p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[4]/dt[2]
+  [link]test[/link]
 2e8lx9ysk4l p /html[1]/body[1]/div[4]/main[1]/div[1]/section[1]/dl[4]/dd[2]
   Marks async function to be executed by runtime, suitable to test environment. This macro helps set up a `Runtime` without requiring the user to use [link]Runtime[/link] or [link]Builder[/link] directly.

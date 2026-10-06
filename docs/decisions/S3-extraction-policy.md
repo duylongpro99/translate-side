@@ -333,6 +333,9 @@ reverse: Readability first, walk as the fallback.
     rejecting role.
   - Collect a page whose walk is < 500 chars but real (a short docs page), to set the floor.
   - Both are untested today.
+- **Paywall rule limit (M0-E5 review).** The generic paywall rule removes `[class*=paywall i]` boxes under 500 chars
+  with no main/article inside. A site that marks *each paragraph* with a paywall class would lose every paragraph.
+  No fixture has a paywall; revisit with a real paywalled page.
 - **M0-E8.**
   - jsdom tests must flatten `<template shadowrootmode>` first.
   - `noise.json` is the reference list for criterion #1.

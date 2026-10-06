@@ -58,6 +58,15 @@ describe('extraction policy (decision S3)', () => {
     expect(texts(segs)).toEqual([LONG.trim()]);
   });
 
+  it('removes a badge only when it stands alone in its paragraph (MkDocs)', () => {
+    const body = `<main><p><span class="mdx-badge"><a href="/changelog">8.3.0</a></span></p><p>${LONG}</p>
+      <p>Prior to <span class="mdx-badge"><a href="/changelog">8.5.6</a></span>, admonitions looked different.</p></main>`;
+    const doc = loadHtml(`<!doctype html><html><head><meta name="generator" content="mkdocs-1.6.1"></head><body>${body}</body></html>`, 'https://example.com/');
+    const result = extractPage(doc);
+    if (!result.ok) throw new Error('expected content');
+    expect(texts(result.segments)).toEqual([LONG.trim(), 'Prior to 8.5.6, admonitions looked different.']);
+  });
+
   it('falls back to Readability when there is no main/article container', () => {
     const { result } = extract(`<div id="top">Menu links</div><div class="content"><p>${LONG}</p><p>${LONG}</p></div>`);
     expect(result).toMatchObject({ ok: true, via: 'readability' });
@@ -98,6 +107,25 @@ describe('extraction policy (decision S3)', () => {
       <div class="byline"><span style="display:inline-block">Written by</span><a href="/a">Ana</a></div>
       <p><b>un</b><i>glued</i> stays glued</p></main>`);
     expect(texts(segs).slice(1)).toEqual(['Written by Ana', 'unglued stays glued']);
+  });
+
+  it('never reads editable regions, default or typed text, but still shows code editors as code (D24)', () => {
+    const { doc } = extract(`<main><p>${LONG}</p>
+      <div contenteditable="true"><p>default draft</p></div>
+      <div contenteditable=""><p>empty-attr draft</p></div>
+      <div role="textbox"><p>textbox draft</p></div>
+      <div contenteditable="false"><p>Read-only note stays.</p></div>
+      <div class="cm-editor"><div class="cm-content" contenteditable="true" role="textbox"><div class="cm-line">let x = 1;</div></div></div></main>`);
+    // The user types into the editable region and the code editor.
+    const editable = doc.querySelector('[contenteditable="true"] p') as HTMLElement;
+    editable.textContent = 'typed secret';
+    (doc.querySelector('.cm-line') as HTMLElement).textContent = 'let x = 2;';
+    const result = extractPage(doc);
+    if (!result.ok) throw new Error('expected content');
+    const all = JSON.stringify(result);
+    for (const secret of ['default draft', 'empty-attr draft', 'textbox draft', 'typed secret']) expect(all).not.toContain(secret);
+    expect(texts(result.segments)).toContain('Read-only note stays.');
+    expect(result.segments.find((s) => s.kind === 'code')).toMatchObject({ text: 'let x = 2;', translate: false });
   });
 
   it('reports title, url and lang', () => {

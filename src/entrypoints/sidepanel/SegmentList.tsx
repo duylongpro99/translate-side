@@ -88,7 +88,8 @@ function Block({ seg }: { seg: Segment }) {
  */
 function tableOf(seg: Segment): string | undefined {
   if (!seg.groupId) return undefined;
-  const steps = seg.domPath.match(/^.*\/table\[\d+\]/);
+  // `~table` is a step Readability created (extract/index.ts livePath).
+  const steps = seg.domPath.match(/^.*\/~?table\[\d+\]/);
   return steps?.[0] ?? '';
 }
 

@@ -108,6 +108,16 @@ describe('code blocks', () => {
     expect(s.map((x) => [x.kind, x.text, x.translate])).toEqual([['code', 'const a = 1;\n  f(a);', false]]);
   });
 
+  it('marks blocks the page opts out of (translate="no", .notranslate) do-not-translate, keeping their kind', () => {
+    const s = seg('<p translate="no">Brand Name</p><div class="notranslate"><p>Kept term</p></div><div translate="no"><p translate="yes">Back in</p></div><p>Normal</p>');
+    expect(s.map((x) => [x.kind, x.text, x.translate])).toEqual([
+      ['p', 'Brand Name', false],
+      ['p', 'Kept term', false],
+      ['p', 'Back in', true],
+      ['p', 'Normal', true],
+    ]);
+  });
+
   it('marks everything else translatable', () => {
     expect(seg('<p>x</p><li>y</li>').every((s) => s.translate)).toBe(true);
   });

@@ -34,6 +34,11 @@
       "text": "↩",
       "kind": "glyph",
       "note": "footnote back-link"
+    },
+    {
+      "text": "8.3.0",
+      "kind": "meta",
+      "note": "minimum-version badge on its own line (.mdx-badge); added in test-C review of M0-E5. The same badge inside a sentence (8.5.6) is content."
     }
   ],
   "mdn-promise-then": [

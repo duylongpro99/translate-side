@@ -113,10 +113,13 @@ describe('segments by kind', () => {
       seg({ kind: 'table-cell', inlineMarkup: 'A', groupId: 'r1', domPath: '/table[1]/tr[1]/td[1]' }),
       seg({ kind: 'li', inlineMarkup: 'A-item', groupId: 'r1', domPath: '/table[1]/tr[1]/td[2]/ul[1]/li[1]' }),
       seg({ kind: 'table-cell', inlineMarkup: 'B', groupId: 'r2', domPath: '/table[2]/tr[1]/td[1]' }),
+      // Readability-created tables have `~table` steps.
+      seg({ kind: 'table-cell', inlineMarkup: 'C', groupId: 'r3', domPath: '/div[1]/~table[1]/tr[1]/td[1]' }),
+      seg({ kind: 'table-cell', inlineMarkup: 'D', groupId: 'r4', domPath: '/div[1]/~table[2]/tr[1]/td[1]' }),
     ];
     mount({ kind: 'ready', docId: 'd', result: { ok: true, via: 'walk', url: 'https://x/', title: 'Page', segments: cells } });
     const tables = [...root.querySelectorAll('.seg-table')];
-    expect(tables.map((t) => t.textContent)).toEqual(['AA-item', 'B']);
+    expect(tables.map((t) => t.textContent)).toEqual(['AA-item', 'B', 'C', 'D']);
     expect(tables[0]?.querySelectorAll('.seg-row')).toHaveLength(1);
   });
 

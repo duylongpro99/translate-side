@@ -2,6 +2,7 @@
 // this copy, never the page. Each copied element carries `data-ts-i`, an index into `live`, so
 // a block found in the copy (or in Readability's output, which keeps attributes) maps back to
 // the page element it came from, for its domPath.
+import { CODE_BLOCK } from '@/segment/code-block';
 
 export const INDEX_ATTR = 'data-ts-i';
 /** On an element that is not visible but kept: an inactive tab panel or closed `details` content. */
@@ -61,7 +62,7 @@ function copyChild(node: Node, into: Element, live: Element[], inHidden: boolean
   }
   if (node.nodeType !== 1) return;
   const el = node as Element;
-  if (SKIP.has(el.localName)) return;
+  if (SKIP.has(el.localName) || isEditable(el)) return;
   if (el.localName === 'slot' && el.getRootNode() !== el.ownerDocument) {
     // A slot inside a shadow tree: its assigned light nodes (or fallback content), flattened
     // through nested slots.
@@ -88,6 +89,17 @@ function isKeptHidden(el: Element, inClosedDetails: boolean): boolean {
   if (inClosedDetails && el.localName !== 'summary') return true;
   if (!el.matches(TAB_PANEL)) return false;
   return el.hasAttribute('hidden') || el.getAttribute('aria-hidden') === 'true' || !isVisible(el);
+}
+
+/**
+ * Editable regions are never read, neither their default nor their typed text (decision D24):
+ * contenteditable and role=textbox. Code editors (CodeMirror) are the exception: they show the
+ * page's code example, and come out as do-not-translate code blocks.
+ */
+function isEditable(el: Element): boolean {
+  const ce = el.getAttribute('contenteditable');
+  const editable = (ce !== null && ce.toLowerCase() !== 'false') || el.getAttribute('role') === 'textbox';
+  return editable && !el.matches(CODE_BLOCK);
 }
 
 /** Only checked where it matters: elements glued to a sibling element, outside code. */
