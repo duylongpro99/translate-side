@@ -234,11 +234,23 @@ interface Quirks {
   supportsStreamUsage?: boolean;     // send stream_options.include_usage?
   supportsJsonMode?: boolean;        // response_format / output_config
   supportsCacheControl?: boolean;    // Anthropic-format gateway may strip it
+  reasoning?: {                      // decision S2
+    control: "effort" | "budget" | "none";  // how the model's reasoning is set: an effort level
+                                            // (OpenAI-style reasoning_effort), a token budget
+                                            // (Anthropic-style thinking.budget_tokens), or not at all
+    lowest: string | number | "off";        // the value to send, e.g. "low", or a budget in tokens;
+                                            // "off" where the model can switch thinking off
+    reserveTokens: number;                  // added to maxOutputTokens; 0 when lowest is "off"
+  };
 }
 ```
 When a request fails with a `bad_request` whose message names a parameter (e.g. "temperature is
 not supported"), the adapter flips that flag, retries once, and saves the learned quirk on the
 connection. Users never see this unless it keeps failing.
+
+The gpt-oss preset's `reasoning` is `{ control: "effort", lowest: "low", reserveTokens: 256 }` (S2).
+For a model whose thinking can be switched off, the lowest setting is `"off"` and the reserve is 0.
+Values for other presets come from their own measurements.
 
 #### 4.2.5 Auto-detect for custom endpoints
 For a **Custom** connection, the user can pick the protocol, or leave it on **Auto-detect**.
@@ -653,6 +665,18 @@ The output uses the same markers. The streaming parser emits each segment as soo
 parse more robustly while streaming than JSON does, and they make it easy to detect a missing or
 merged segment. If that happens, retry just that segment.
 
+The parser grammar and repair policy are fixed by S2 (`docs/decisions/S2-seg-parser-grammar.md`).
+Tags are parsed leniently (quoting and case drift accepted), and every close tag closes. Chunks
+whose source holds literal `<seg`/`</seg>` text are detected before sending. They get a per-chunk
+nonce attribute (isolation if M1-E3 shows models don't copy it), and the close-by-lookahead
+grammar: a close tag closes only when followed by an open tag or the end of output, an open tag
+inside a segment is text, and a segment is final when that lookahead decides. A repaired segment
+replaces the shown text in place (same revision, a new attempt; M1-E3 decides between an
+`attempt` counter and a `replace` flag, because `revision` is taken by refine). Re-request
+missing, cut-and-later, empty, suspect-merged and literal-tag-mismatch segments in one follow-up
+call; re-request the whole chunk if ids are duplicated, unknown or malformed. Source `<`/`>` are
+sent unescaped.
+
 #### Step 4 — Post-checks (cheap, local)
 - Same number of segments in and out. Re-request any that are missing.
 - Inline markers balanced. Backtick spans byte-identical to the source.
@@ -698,9 +722,13 @@ prefix. One caveat: if the system block is shorter than the model's minimum cach
 simply won't cache. That's harmless.
 
 #### Model settings
-- `max_tokens` around 2.5× the chunk's source tokens. Some target languages (Vietnamese, Thai,
-  Japanese, and others) need more tokens than English for the same content.
-- Use low/no thinking. Translation with a good brief doesn't benefit from it, and thinking adds
+- `max_tokens` = 2.0 × estimated source tokens + 12 × segments + `reasoning.reserveTokens` (0 for
+  models without reasoning). Provisional: fitted on one model (S2), re-checked per preset. S2
+  measured vi/de/ja with no per-language multiplier needed; a fixed 2.5× cut 13% of chunks because
+  small chunks carry fixed overhead.
+- Use the lowest reasoning setting the model accepts (`reasoning.lowest`); some models cannot turn
+  it off. Reasoning tokens count against `max_tokens`. Adapters never emit reasoning as text.
+  Translation with a good brief doesn't benefit from it, and thinking adds
   latency and cost.
 
 ---
