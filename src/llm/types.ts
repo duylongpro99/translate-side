@@ -1,20 +1,148 @@
-// LLMClient interface (DESIGN.md §4.2.1). The engine depends on this file only, never on
-// adapter implementations. Placeholder until M1 defines the normalized contract.
+// Normalized LLM contract (DESIGN.md §4.2.1, §4.2.4, §4.3.1). The engine depends on this file
+// only, never on adapter implementations. M4 builds the second adapter against it, so changes
+// here are contract changes: additive and optional only.
+//
+// Retry ownership (plan M1 §5, criterion 7): adapters and the SDKs under them do NOT retry
+// (SDK `maxRetries: 0`). They classify the failure (src/llm/errors.ts) and yield one `error`
+// event. The engine's pipeline is the single owner of backoff and retry (src/engine/retry.ts).
 
-export type ModelRole = 'analyze' | 'translate' | 'review';
+/** Roles the engine asks for (§5.1). The shell maps each to a model profile (§4.3.1 Routing). */
+export type ModelRole = 'translate' | 'analyze' | 'review';
 
-export interface LLMRequest {
-  role: ModelRole;
-  system: string;
-  messages: { role: 'user' | 'assistant'; content: string }[];
-  maxTokens: number;
+export type Protocol = 'anthropic-messages' | 'openai-chat' | 'chrome-builtin';
+export type AuthStyle = 'x-api-key' | 'bearer' | 'custom-header' | 'none';
+
+/** Per-connection capability flags (§4.2.4). */
+export interface Quirks {
+  maxTokensParam?: 'max_tokens' | 'max_completion_tokens';
+  /** Some reasoning models reject it. */
+  supportsTemperature?: boolean;
+  /** Rare: fold system into the first user message if false. */
+  supportsSystemRole?: boolean;
+  /** Send `stream_options.include_usage`? */
+  supportsStreamUsage?: boolean;
+  /** `response_format` / `output_config`. */
+  supportsJsonMode?: boolean;
+  /** An Anthropic-format gateway may strip it. */
+  supportsCacheControl?: boolean;
+  /** Decision S2. */
+  reasoning?: {
+    /** An effort level (OpenAI-style), a token budget (Anthropic-style), or not at all. */
+    control: 'effort' | 'budget' | 'none';
+    /** The value to send, e.g. "low", or a budget in tokens; "off" where thinking can be switched off. */
+    lowest: string | number | 'off';
+    /** Added to maxOutputTokens; 0 when `lowest` is "off". */
+    reserveTokens: number;
+  };
 }
 
-export type LLMEvent =
-  | { type: 'text'; text: string }
-  | { type: 'usage'; input: number; output: number }
-  | { type: 'done'; stopReason: 'end' | 'max_tokens' | 'other' };
+/**
+ * A connection as an adapter receives it: the stored ProviderConnection (§4.3.1) with the
+ * protocol resolved and the key read from secret storage (§4.3.4). Built by the shell.
+ */
+export interface ResolvedConnection {
+  id: string;
+  protocol: Protocol;
+  baseUrl: string;
+  auth: { style: AuthStyle; headerName?: string };
+  /** Trimmed when saved (S4). Absent for auth `none`. */
+  apiKey?: string;
+  extraHeaders?: Record<string, string>;
+  queryParams?: Record<string, string>;
+  quirks: Quirks;
+  /**
+   * Port: does the extension hold the host permission for `baseUrl`? Used to tell a missing
+   * permission (`cors`, cause `permission`) from a network failure (S4 row 1). Absent where
+   * there is no such permission (the Node harness): treated as held.
+   */
+  hasHostPermission?: () => Promise<boolean>;
+}
 
+export interface NormalizedRequest {
+  model: string;
+  /** Stable prefix: rules + brief + glossary. */
+  system: string;
+  messages: { role: 'user' | 'assistant'; content: string }[];
+  maxOutputTokens: number;
+  /** Dropped by the adapter if the model doesn't accept it. */
+  temperature?: number;
+  /** "Please cache the system prefix if you can." */
+  cacheHint?: 'system';
+  /** For the brief call. */
+  jsonMode?: boolean;
+  signal: AbortSignal;
+}
+
+export type StopReason = 'end' | 'max_tokens' | 'refusal' | 'other';
+
+/**
+ * What a stream yields, in this order: `text` deltas, at most one `usage` (request totals), then
+ * exactly one terminal event, `done` or `error`, after which the stream ends. Reasoning is never
+ * emitted as text (§5.7). `usage.input` counts every input token, cached ones included;
+ * `cachedInput` says how many of them were read from the prompt cache.
+ */
+export type NormalizedEvent =
+  | { type: 'text'; delta: string }
+  | { type: 'usage'; input: number; output: number; cachedInput?: number }
+  | { type: 'done'; stopReason: StopReason }
+  | { type: 'error'; error: LLMError };
+
+export type LLMErrorKind =
+  | 'auth'
+  | 'rate_limit'
+  | 'overloaded'
+  | 'context_length'
+  | 'bad_request'
+  | 'model_not_found'
+  | 'network'
+  | 'cors'
+  | 'unknown'
+  // valid key, but no allowance: 402 plan/credits, OpenAI 429 insufficient_quota, Anthropic 400 credit balance
+  | 'quota';
+
+export interface LLMError {
+  kind: LLMErrorKind;
+  /** Only for `cors` (decision S4): `permission` → Grant access; `origin` → the §4.3.6 guide. */
+  cause?: 'permission' | 'origin';
+  status?: number;
+  retryAfterMs?: number;
+  /** Human-readable, shown in UI. */
+  message: string;
+  raw?: unknown;
+}
+
+/**
+ * What the engine calls (§4.2 diagram): a client already bound to one model profile, handed out
+ * per role by the shell (`StageContext.llm(role)`, §5.3).
+ *
+ * Contract for implementations:
+ * - No retries of any kind (see the header). One request → one attempt.
+ * - Failures are yielded as one `error` event (classified, src/llm/errors.ts), never thrown.
+ * - Cancel: when `req.signal` aborts, the stream stops and throws `signal.reason`. A cancel is
+ *   never reported as an `error` event (and never as `network`, S4).
+ */
 export interface LLMClient {
-  stream(req: LLMRequest, signal: AbortSignal): AsyncIterable<LLMEvent>;
+  /** The model this client calls; the engine copies it into `NormalizedRequest.model`, `producedBy` and usage. */
+  readonly model: string;
+  /** `quirks.reasoning.reserveTokens`, or 0: the engine adds it to maxOutputTokens (§5.7). */
+  readonly reasoningReserveTokens: number;
+  stream(req: NormalizedRequest): AsyncIterable<NormalizedEvent>;
+}
+
+export interface ModelInfo {
+  id: string;
+  displayName?: string;
+  contextWindow?: number;
+}
+
+/** Result of "Test connection" (§4.2.5, S4 decision 3: success is the status, not the content). */
+export type ProbeResult = { ok: true; models?: ModelInfo[] } | { ok: false; error: LLMError };
+
+/** One per wire format (§4.2.2). Same contract as LLMClient.stream for `stream`. */
+export interface ProtocolAdapter {
+  protocol: Protocol;
+  stream(conn: ResolvedConnection, req: NormalizedRequest): AsyncIterable<NormalizedEvent>;
+  listModels?(conn: ResolvedConnection): Promise<ModelInfo[]>;
+  /** Used by "Test connection". */
+  probe(conn: ResolvedConnection): Promise<ProbeResult>;
 }

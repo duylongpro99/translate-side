@@ -15,3 +15,5 @@ export interface EngineDeps {
 export function describeEngine(deps: EngineDeps): string {
   return `engine v${ENGINE_VERSION} @ ${deps.now()}`;
 }
+
+export { DEFAULT_RETRY_POLICY, decideRetry, withRetry, type RetryDecision, type RetryInfo, type RetryOptions, type RetryPolicy } from './retry.ts';
