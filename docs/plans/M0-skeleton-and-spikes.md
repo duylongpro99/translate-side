@@ -25,7 +25,7 @@ side panel page. Answering them now is cheap. Answering them after M1 means rewr
 
 | # | Check | Target |
 |---|---|---|
-| 1 | Fixture sites with no nav/footer noise in segments | ≥ 8 of 10 |
+| 1 | Fixture sites with no UI noise in segments, judged against the hand-checked list `spikes/s3/noise.json`, with M0-E5's generic + per-site cleanup selectors (decision S3) | ≥ 8 of 10 |
 | 2 | Fixture sites with all code blocks intact and marked do-not-translate | 10 of 10 |
 | 3 | Segment ids stable across two extractions of the same page | 100% |
 | 4 | Panel opens on `chrome://` / Web Store pages with a clear "can't read this page" state, no crash | yes |

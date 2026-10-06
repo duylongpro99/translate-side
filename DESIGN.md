@@ -35,7 +35,7 @@ Status: draft v0.1 (2026-10-05)
 | Firefox | Uses `sidebar_action`, which doesn't work with Chrome's API. | Use **WXT** (a cross-browser extension framework) to abstract over both, and target Chrome first. |
 | Chrome built-in AI | The Translator, Language Detector, and Prompt API (Gemini Nano) are stable in Chrome 138–148 on desktop. They run on-device, cost nothing, and work offline, but need capable hardware. | Use **Language Detector** to detect the source language for free. **Translator API** is an offline/free fallback, but its quality is close to classic machine translation (literal). The Prompt API (Nano) can be an experimental local option. |
 | Light cloud LLMs | Claude Haiku 4.5 costs $1 / $5 per 1M input/output tokens, with a 200K context window, streaming, and prompt caching. Other light options: Gemini Flash-Lite and GPT-mini class models, all available through OpenAI-compatible endpoints. | Default provider: Claude Haiku 4.5. Second adapter: "OpenAI-compatible", which covers OpenRouter, Gemini, Ollama, and LM Studio. |
-| Content extraction | Mozilla `@mozilla/readability` pulls the main article out of a page and drops nav, ads, and footers. | Use it for articles, with a DOM-walk fallback for docs sites and SPAs. |
+| Content extraction | Mozilla `@mozilla/readability` pulls the main article out of a page and drops nav, ads, and footers. | DOM walk first, so docs-site structure and code survive; Readability as the fallback for pages without semantic containers (decision S3). |
 
 **Why an LLM instead of MT?** Classic machine translation works sentence by sentence and can't see
 the document's purpose, audience, or tone. An LLM given **document-level context** (a "brief" plus
@@ -88,7 +88,7 @@ Manifest V3, built with **WXT + TypeScript**. The panel UI uses Preact or Svelte
 ```
 ┌──────────────┐  segments, viewport,   ┌──────────────────────────┐   provider API
 │Content script│◀──────────────────────▶│ Side panel (engine host) │◀──────────────▶ Claude / OpenAI-compat
-│ - Readability│  hover / scroll events │ - render, settings       │                 / Chrome built-in AI
+│ - DOM walk   │  hover / scroll events │ - render, settings       │                 / Chrome built-in AI
 │ - segmenter  │  (tabs.connect)        │ - translation engine (§5)│
 │ - IO/scroll  │                        │   chunker, prompts,      │
 │   observers  │                        │   parsing                │
@@ -108,8 +108,11 @@ Manifest V3, built with **WXT + TypeScript**. The panel UI uses Preact or Svelte
 1. **Content script** (injected only when you open the panel, using the `activeTab` and
    `scripting` permissions rather than a blanket `<all_urls>` content script; re-injected on
    navigation while the `activeTab` grant or a site permission holds (decision S5)):
-   - Runs Readability on a cloned DOM. If the result is poor (too little text compared with the
-     page), it falls back to walking `main`/`article`/`[role=main]`.
+   - Composes open shadow roots into a working copy, then walks `main`/`article`/`[role=main]`,
+     removing landmark chrome, generic in-content UI (visually-hidden helpers, edit links,
+     permalink glyphs) and elements that fail `checkVisibility()`. Inactive tab panels and closed
+     `details` are kept and translated when shown. If the walk finds no container or too little
+     text, it falls back to Readability on the composed copy, then to selection mode (decision S3).
    - **Segmenter**: produces `Segment { id, kind: heading|p|li|quote|code|table-cell|caption, text,
      inlineMarkup, domPath }`. Inline formatting (`<a>`, `<code>`, `<em>`, `<strong>`) becomes
      light markers (`[link]…[/link]`, backticks, `*…*`) so the model can keep it.
