@@ -27,7 +27,7 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS, createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
 import type { LLMClient, Quirks, ResolvedConnection, StopReason } from '@/llm/types';
-import { ANALYZE_PROMPT_ID, chunkLimits, chunkSegments, createContextual, CONTEXTUAL_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, TRANSLATE_V2_PROMPT_ID, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, SINGLE_PASS_ID, toWire, renderSystemPrompt, renderSystemPromptV2, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type Segment, type StyleMode, type TranslationJob } from '@/engine/index';
+import { ANALYZE_PROMPT_ID, chunkLimits, chunkSegments, createContextual, CONTEXTUAL_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, TRANSLATE_V2_PROMPT_ID, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, SINGLE_PASS_ID, toWire, renderSystemPrompt, renderSystemPromptV2, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, checkDuplicates, checkSegment, codeSpans, type CheckKind, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type Segment, type StyleMode, type TranslationJob } from '@/engine/index';
 import type { ModelRole } from '@/llm/types';
 import { costUsd, priceFor } from './pricing.ts';
 import { EVAL_SLUGS } from './docs.ts';
@@ -254,6 +254,36 @@ interface DocResult {
   /** Chunks (first-pass translate calls) and how many of them carried the brief in their system block. */
   chunks: number;
   briefedChunks: number;
+  /** Phase D check stage: segments it re-requested, per check kind (recomputed from the finals it saw), and the outcome. */
+  check: {
+    rerequested: number;
+    kinds: Partial<Record<CheckKind, number>>;
+    repaired: number;
+    failed: number;
+    /** Tokens of the check stage's re-request calls. */
+    input: number;
+    output: number;
+    /** Translatable segments whose source has a backtick span, and those whose final keeps markers, code spans and URLs. */
+    codeBearing: number;
+    codePreserved: number;
+    /** Finals (any segment) failing any post-check at the end (should be 0: the stage fails them). */
+    finalsFailingChecks: number;
+  };
+}
+
+/** Kinds of the post-checks a set of finals fails, per segment id (the check stage's own logic, for the report). */
+function failingChecks(segments: readonly Segment[], text: (id: string) => string | undefined, targetLang: string): Map<string, CheckKind[]> {
+  const rows = segments.flatMap((s) => {
+    const t = text(s.id);
+    return s.translate && t !== undefined ? [{ id: s.id, source: s.inlineMarkup, translation: t }] : [];
+  });
+  const out = new Map<string, CheckKind[]>();
+  for (const r of rows) {
+    const f = checkSegment(r.source, r.translation, targetLang).map((c) => c.kind);
+    if (f.length) out.set(r.id, f);
+  }
+  for (const id of checkDuplicates(rows).keys()) out.set(id, [...(out.get(id) ?? []), 'duplicate']);
+  return out;
 }
 
 async function runDoc(slug: string): Promise<DocResult> {
@@ -276,8 +306,24 @@ async function runDoc(slug: string): Promise<DocResult> {
   let firstFinalMs: number | null = null;
   const briefedChunks = new Set<number>();
   let reviseKept = 0;
+  let inCheck = false;
+  const check: DocResult['check'] = { rerequested: 0, kinds: {}, repaired: 0, failed: 0, input: 0, output: 0, codeBearing: 0, codePreserved: 0, finalsFailingChecks: 0 };
   const t0 = Date.now();
   for await (const e of engine.translate(job, new AbortController().signal) as AsyncIterable<EngineEvent>) {
+    if (e.type === 'stage' && e.stage === 'check') {
+      inCheck = e.status === 'start';
+      if (inCheck) {
+        const before = failingChecks(doc.segments, (id) => finals.get(id)?.text, opt.target as string);
+        check.rerequested = before.size;
+        for (const kinds of before.values()) for (const k of kinds) check.kinds[k] = (check.kinds[k] ?? 0) + 1;
+      }
+    }
+    if (inCheck && e.type === 'segment.final') check.repaired++;
+    if (inCheck && e.type === 'segment.failed') check.failed++;
+    if (inCheck && e.type === 'usage') {
+      check.input += e.input;
+      check.output += e.output;
+    }
     if (e.type === 'segment.final') {
       const cur = finals.get(e.id);
       const attempt = e.attempt ?? 1;
@@ -291,8 +337,8 @@ async function runDoc(slug: string): Promise<DocResult> {
       failed.delete(e.id);
       firstFinalMs ??= Date.now() - t0;
     } else if (e.type === 'segment.failed') {
-      // As in the panel: a failure of the first pass does not undo a revision 2.
-      if ((finals.get(e.id)?.revision ?? 1) > 1) continue;
+      // As in the panel: a failure of the first pass does not undo a revision 2; the check stage's does.
+      if (!inCheck && (finals.get(e.id)?.revision ?? 1) > 1) continue;
       failed.set(e.id, `${e.error.kind}: ${e.error.message}`);
       finals.delete(e.id);
     } else if (e.type === 'chunk') {
@@ -313,6 +359,14 @@ async function runDoc(slug: string): Promise<DocResult> {
   }
   const wallMs = Date.now() - t0;
   const want = doc.segments.filter((s) => s.translate);
+  const after = failingChecks(doc.segments, (id) => finals.get(id)?.text, opt.target as string);
+  check.finalsFailingChecks = after.size;
+  for (const s of want) {
+    if (codeSpans(s.inlineMarkup).length === 0) continue;
+    check.codeBearing++;
+    const kinds = after.get(s.id) ?? [];
+    if (finals.has(s.id) && !kinds.some((k) => k === 'markers' || k === 'code' || k === 'url')) check.codePreserved++;
+  }
   const analyzeCall = calls.slice(callsBefore).find((c) => c.role === 'analyze');
   const chunkWires = chunkSegments(doc.segments, chunkLimits(chunkTokens)).map((ch) => formatWire(toWire(ch.segments)));
   // A chunk is counted once: contextual's second pass of chunk 0 (M2-D17) sends the same wire.
@@ -350,6 +404,7 @@ async function runDoc(slug: string): Promise<DocResult> {
     chunks: firstPass.length,
     // Engine-reported (ChunkOutcome.briefed, via the `chunk` event), not read off the prompt text.
     briefedChunks: briefedChunks.size,
+    check,
   };
 }
 
@@ -391,7 +446,7 @@ for (const [i, slug] of slugs.entries()) {
   if (i > 0 && pauseMs > 0) await new Promise((r) => setTimeout(r, pauseMs));
   const r = await runDoc(slug);
   results.push(r);
-  console.log(`${slug.padEnd(34)} final ${r.final}/${r.translatable} lost ${r.lost} repaired ${r.repaired}${r.revised ? ` revised ${r.revised}` : ''}${r.reviseKept ? ` revise-kept ${r.reviseKept}` : ''} calls ${r.calls} in ${r.input} out ${r.output} ${(r.wallMs / 1000).toFixed(1)}s ${r.costUsd === null ? 'cost n/a' : `$${r.costUsd.toFixed(5)}`}${price && !price.verified ? ' (UNVERIFIED price)' : ''}`);
+  console.log(`${slug.padEnd(34)} final ${r.final}/${r.translatable} lost ${r.lost} repaired ${r.repaired}${r.revised ? ` revised ${r.revised}` : ''}${r.reviseKept ? ` revise-kept ${r.reviseKept}` : ''} check ${r.check.rerequested}→${r.check.repaired}/${r.check.failed}${Object.keys(r.check.kinds).length ? ` ${JSON.stringify(r.check.kinds)}` : ''} code ${r.check.codePreserved}/${r.check.codeBearing} calls ${r.calls} in ${r.input} out ${r.output} ${(r.wallMs / 1000).toFixed(1)}s ${r.costUsd === null ? 'cost n/a' : `$${r.costUsd.toFixed(5)}`}${price && !price.verified ? ' (UNVERIFIED price)' : ''}`);
 }
 const probes: NonceProbe[] = [];
 if (opt['probe-nonce']) {
@@ -419,6 +474,10 @@ const reasoningStats = {
 fs.writeFileSync(path.join(outDir, 'calls.jsonl'), calls.map((c) => JSON.stringify(c)).join('\n') + '\n');
 const sum = (f: (r: DocResult) => number): number => results.reduce((n, r) => n + f(r), 0);
 const total = { translatable: sum((r) => r.translatable), lost: sum((r) => r.lost), failed: sum((r) => r.failed), repaired: sum((r) => r.repaired), revised: sum((r) => r.revised), reviseKept: sum((r) => r.reviseKept), calls: sum((r) => r.calls), input: sum((r) => r.input), cachedInput: sum((r) => r.cachedInput), output: sum((r) => r.output), wallMs: sum((r) => r.wallMs), costUsd: price ? sum((r) => r.costUsd ?? 0) : null };
+const checkKinds: Partial<Record<CheckKind, number>> = {};
+for (const r of results) for (const [k, n] of Object.entries(r.check.kinds)) checkKinds[k as CheckKind] = (checkKinds[k as CheckKind] ?? 0) + (n ?? 0);
+const checkTotal = { rerequested: sum((r) => r.check.rerequested), kinds: checkKinds, repaired: sum((r) => r.check.repaired), failed: sum((r) => r.check.failed), input: sum((r) => r.check.input), output: sum((r) => r.check.output), codeBearing: sum((r) => r.check.codeBearing), codePreserved: sum((r) => r.check.codePreserved), finalsFailingChecks: sum((r) => r.check.finalsFailingChecks) };
+console.log(`check: re-requested ${checkTotal.rerequested} ${JSON.stringify(checkKinds)} → repaired ${checkTotal.repaired}, failed ${checkTotal.failed}; extra tokens in ${checkTotal.input} out ${checkTotal.output}; code-bearing preserved ${checkTotal.codePreserved}/${checkTotal.codeBearing}; finals failing checks ${checkTotal.finalsFailingChecks}; lost ${total.lost}/${total.translatable}`);
 // chars/3.5 check (tokens.ts): characters per token as the provider counted them, over the
 // translation calls (system + user text in, answer text out). Nonce probes are left out.
 const counted = calls.filter((c) => !c.doc.endsWith('#nonce') && c.role !== 'analyze' && c.usage !== undefined);
@@ -478,7 +537,7 @@ const nonce = probes.length ? { echoed: probes.reduce((n, p) => n + p.echoed, 0)
 const briefs = results.flatMap((r) => (r.brief ? [r.brief] : []));
 // M2-D9: one-chunk documents make no brief call (`skipped`); they are counted apart.
 const briefTotals = briefs.length ? { docs: briefs.length, ok: briefs.filter((b) => b.ok).length, skipped: briefs.filter((b) => b.skipped).length, input: briefs.reduce((n, b) => n + b.input, 0), output: briefs.reduce((n, b) => n + b.output, 0), costUsd: price ? costUsd(price, { input: briefs.reduce((n, b) => n + b.input, 0), cachedInput: 0, output: briefs.reduce((n, b) => n + b.output, 0) }) : null } : null;
-const summary = { run: stamp, set: opt.set, strategy: STRATEGY, strategyVersion, prompt: TRANSLATE_PROMPT, promptHash, prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, label, thinking, reasoning: reasoningStats, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
+const summary = { run: stamp, set: opt.set, strategy: STRATEGY, strategyVersion, prompt: TRANSLATE_PROMPT, promptHash, prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, label, thinking, reasoning: reasoningStats, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, check: checkTotal, nonce, charsPerToken, thresholds };
 fs.writeFileSync(path.join(outDir, 'summary.json'), `${JSON.stringify(summary, null, 1)}\n`);
 const money = (n: number | null): string => (n === null ? 'n/a' : `$${n.toFixed(5)}`);
 const md = [
