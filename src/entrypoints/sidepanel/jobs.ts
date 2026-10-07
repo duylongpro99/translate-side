@@ -8,7 +8,7 @@
 // - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
-import { contextual, createDefaultPromptRegistry, createEngine, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type Segment, type StrategyId, type TranslationEngine, type TranslationJob } from '@/engine/index';
+import { contextual, createDefaultPromptRegistry, createEngine, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob } from '@/engine/index';
 import type { LLMClient, LLMError, LLMErrorKind, NormalizedRequest } from '@/llm/types';
 import { costUsd, type UsageTotals } from '@/shared/cost';
 import type { Detection } from '@/shared/language';
@@ -215,6 +215,10 @@ export interface JobDoc {
   /** Per-segment detection (flag): translatable segments already in the target language, kept as they are. */
   keep?: ReadonlySet<string>;
   segments: Segment[];
+  /** From the settings (plan M2-E6); absent = Natural, gloss on first use, no personal glossary. */
+  style?: StyleMode;
+  gloss?: GlossMode;
+  glossary?: readonly GlossaryEntry[];
 }
 
 interface Job {
@@ -284,12 +288,15 @@ export class Jobs {
    * Translates the page in `tabId`. A job of another document in that tab is cancelled and
    * replaced. `resume` keeps a cancelled or finished job's finals and its cost, and translates
    * only what is left (pending or failed). `keepCost` keeps only the cost of the same document's
-   * earlier runs (a restart in other languages): the page total stays honest.
+   * earlier runs (a restart in other languages): the page total stays honest. `keepBrief` keeps
+   * the same document's brief when the target language is unchanged (a restart for a new style or
+   * glossary): the brief doesn't depend on them, so no second analyze call.
    */
-  async start(tabId: number, docId: string, doc: JobDoc, { resume = false, keepCost = false } = {}): Promise<void> {
+  async start(tabId: number, docId: string, doc: JobDoc, { resume = false, keepCost = false, keepBrief = false } = {}): Promise<void> {
     const prev = this.jobs.get(tabId);
     const keep = resume && prev?.docId === docId && prev.view.status !== 'running' ? prev : undefined;
     const costFrom = keep ?? (keepCost && prev?.docId === docId ? prev : undefined);
+    const brief = keep?.view.brief ?? (keepBrief && prev?.docId === docId && prev.view.targetLang === doc.targetLang ? prev.view.brief : undefined);
     // A replaced run's requests in flight end without usage; they are this page's spend too.
     const abandoned = costFrom && costFrom.view.status === 'running' ? costFrom.inflight : 0;
     if (prev?.view.status === 'running') prev.controller.abort(new DOMException('replaced', 'AbortError'));
@@ -319,9 +326,9 @@ export class Jobs {
         model: keep?.view.model ?? '',
         targetLang: doc.targetLang,
         // A resumed run keeps its brief, and the brief's language when detection found none.
-        sourceLang: doc.sourceLang || (keep?.view.brief?.language ?? ''),
+        sourceLang: doc.sourceLang || (brief?.language ?? ''),
         ...(doc.detection ? { detection: doc.detection } : {}),
-        ...(keep?.view.brief ? { brief: keep.view.brief } : {}),
+        ...(brief ? { brief } : {}),
         segments,
         segs,
         counts: count(segs),
@@ -369,8 +376,9 @@ export class Jobs {
       priority: [],
       strategy: this.deps.strategy ?? PANEL_STRATEGY,
       options: {
-        style: 'natural',
-        glossary: [],
+        style: doc.style ?? 'natural',
+        ...(doc.gloss ? { gloss: doc.gloss } : {}),
+        glossary: [...(doc.glossary ?? [])],
         maxConcurrency: profile.maxConcurrency,
         chunkTokens: profile.chunkTokens,
         // A resumed run keeps its brief: no second analyze call (and none made from the leftover segments only).

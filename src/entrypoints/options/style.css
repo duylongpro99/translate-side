@@ -57,3 +57,20 @@ body {
   cursor: pointer;
   font: inherit;
 }
+.opt__row label.opt__check {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.opt__glossary {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+.opt__glossary li {
+  padding: 4px 0;
+}
+.opt__term {
+  font-family: ui-monospace, monospace;
+}

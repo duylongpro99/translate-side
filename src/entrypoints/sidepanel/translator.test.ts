@@ -33,6 +33,10 @@ function fakeApi() {
       sync.set('prefs', prefs);
       for (const fn of onSync) fn({ prefs: { newValue: prefs } });
     },
+    setGlossary(glossary: unknown) {
+      sync.set('glossary', glossary);
+      for (const fn of onSync) fn({ glossary: { newValue: glossary } });
+    },
   };
 }
 
@@ -191,6 +195,95 @@ describe('translator wiring (plan M1-E8)', () => {
       const f3 = fakeApi();
       const all = createTranslator(f3.api, { translateClient: client() }, { detector: detector('vi'), mixedLanguage: true });
       expect((await ready(all, f3))?.status).toBe('skipped');
+    });
+  });
+
+  describe('style, gloss and personal glossary from the settings (plan M2-E6)', () => {
+    const BRIEF = JSON.stringify({ language: 'en', genre: 'blog post', audience: 'developers', purpose: 'explain', tone: 'dry', glossary: [{ term: 'deploy', rendering: 'triển khai' }] });
+    /** One client for both roles, as the panel routes them: the brief call gets BRIEF, translate calls are echoed. */
+    const recording = () => {
+      const c = translatorClient((lines, _n, req) => (req.messages[0]?.content.startsWith('<document>') ? BRIEF : lines.map((l) => `<seg id="${l.n}">vi:${l.source}</seg>`).join('\n')));
+      const analyzeCalls = () => c.requests.filter((r) => r.messages[0]?.content.startsWith('<document>')).length;
+      const translateCalls = () => c.requests.filter((r) => !r.messages[0]?.content.startsWith('<document>'));
+      return { c, analyzeCalls, translateCalls, resolve: () => Promise.resolve({ ok: true as const, client: c, profile: GEMINI_PROFILE }) };
+    };
+
+    it('sends the stored style, gloss setting and personal glossary; the user\'s entry beats the brief\'s', async () => {
+      const f = fakeApi();
+      f.setPrefs({ targetLang: 'vi', sourceLang: 'auto', style: 'faithful', gloss: 'off' });
+      f.setGlossary([{ term: 'deploy', rendering: 'deploy' }]);
+      const r = recording();
+      const t = createTranslator(f.api, { translateClient: r.resolve });
+      const hooks = t.hooks as Required<SessionHooks>;
+      hooks.active(1);
+      // Three chunks: the later ones carry the brief and its glossary (M2-D6).
+      const long = Array.from({ length: 36 }, (_, i) => ({ ...segments[0], id: `l${i}`, domPath: `/p[${i + 1}]` })) as Segment[];
+      hooks.ready(1, 'd', { ...result, segments: long } as Ready);
+      f.answer();
+      await settle(120);
+      expect(t.jobs.get(1)?.status).toBe('done');
+      const calls = r.translateCalls();
+      expect(calls.length).toBeGreaterThanOrEqual(3);
+      expect(calls.filter((req) => req.system.includes('Genre: blog post')).length).toBeGreaterThanOrEqual(2);
+      for (const req of calls) {
+        expect(req.system).toContain('Style mode: Faithful');
+        expect(req.system).toContain('Glosses: never add glosses');
+        expect(req.system).toContain('- deploy → deploy (keep as is, do not translate)');
+        expect(req.system).not.toContain('triển khai');
+      }
+    });
+
+    it('a glossary or style change retranslates the active page from scratch, keeping the brief (no second analyze call)', async () => {
+      const f = fakeApi();
+      const r = recording();
+      const t = createTranslator(f.api, { translateClient: r.resolve });
+      const hooks = t.hooks as Required<SessionHooks>;
+      const stop = t.watch(() => 1);
+      hooks.active(1);
+      hooks.ready(1, 'd', result);
+      f.answer();
+      await settle(80);
+      expect(t.jobs.get(1)?.status).toBe('done');
+      expect(r.analyzeCalls()).toBe(1);
+      const before = r.translateCalls().length;
+      const cost = t.jobs.get(1)?.cost ?? 0;
+
+      f.setGlossary([{ term: 'deploy', rendering: 'deploy' }]);
+      f.answer();
+      await settle(80);
+      const after = r.translateCalls().slice(before);
+      expect(t.jobs.get(1)?.status).toBe('done');
+      expect(t.jobs.get(1)?.counts.final).toBe(segments.length);
+      expect(r.analyzeCalls()).toBe(1);
+      expect(t.jobs.get(1)?.brief?.genre).toBe('blog post');
+      expect(after.length).toBeGreaterThan(0);
+      // The kept brief is there from the start: every chunk, the first one too, is briefed.
+      for (const req of after) {
+        expect(req.system).toContain('Genre: blog post');
+        expect(req.system).toContain('- deploy → deploy (keep as is, do not translate)');
+      }
+      expect(t.jobs.get(1)?.cost ?? 0).toBeGreaterThan(cost);
+
+      const n = r.translateCalls().length;
+      f.setPrefs({ targetLang: 'vi', sourceLang: 'auto', style: 'simplified', gloss: 'first' });
+      f.answer();
+      await settle(80);
+      expect(r.translateCalls().slice(n).every((req) => req.system.includes('Style mode: Simplified'))).toBe(true);
+      expect(r.analyzeCalls()).toBe(1);
+
+      // An unrelated sync change, or the same settings again: nothing is retranslated.
+      const m = r.translateCalls().length;
+      f.setPrefs({ targetLang: 'vi', sourceLang: 'auto', style: 'simplified', gloss: 'first' });
+      f.answer();
+      await settle(40);
+      expect(r.translateCalls().length).toBe(m);
+
+      // A new target language drops the brief: it is asked again in that language.
+      f.setPrefs({ targetLang: 'ja', sourceLang: 'auto', style: 'simplified', gloss: 'first' });
+      f.answer();
+      await settle(80);
+      expect(r.analyzeCalls()).toBe(2);
+      stop();
     });
   });
 });

@@ -5,16 +5,23 @@ import {
   GEMINI_CONNECTION,
   GEMINI_ORIGIN,
   GEMINI_PROFILE,
+  GLOSSARY_KEY,
+  SYNC_QUOTA_BYTES,
+  SYNC_QUOTA_BYTES_PER_ITEM,
+  cleanGlossary,
   maskKey,
   originPattern,
   readApiKey,
+  readGlossary,
   readPreferences,
   removeApiKey,
   resolveConnection,
   resolveProfile,
   saveApiKey,
+  saveGlossary,
   savePreferences,
   secretKey,
+  syncItemBytes,
 } from './settings.ts';
 
 type Api = Parameters<typeof readApiKey>[0];
@@ -95,10 +102,18 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
 
   it('defaults the target to the browser language and the source to auto; a saved override is read back', async () => {
     const { api, sync } = fakeApi({ ui: 'vi-VN' });
-    expect(await readPreferences(api)).toEqual({ targetLang: 'vi', sourceLang: 'auto' });
-    await savePreferences(api, { targetLang: 'ja', sourceLang: 'de' });
-    expect(sync.data).toEqual({ prefs: { targetLang: 'ja', sourceLang: 'de' } });
-    expect(await readPreferences(api)).toEqual({ targetLang: 'ja', sourceLang: 'de' });
+    expect(await readPreferences(api)).toEqual({ targetLang: 'vi', sourceLang: 'auto', style: 'natural', gloss: 'first' });
+    await savePreferences(api, { targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off' });
+    expect(sync.data).toEqual({ prefs: { targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off' } });
+    expect(await readPreferences(api)).toEqual({ targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off' });
+  });
+
+  it('reads M1-era prefs (no style or gloss) and unknown values as the defaults: Natural, gloss on first use (M2-D1)', async () => {
+    const { api, sync } = fakeApi({ ui: 'vi-VN' });
+    await sync.set({ prefs: { targetLang: 'de', sourceLang: 'auto' } });
+    expect(await readPreferences(api)).toEqual({ targetLang: 'de', sourceLang: 'auto', style: 'natural', gloss: 'first' });
+    await sync.set({ prefs: { targetLang: 'de', sourceLang: 'auto', style: 'poetic', gloss: 'always' } });
+    expect(await readPreferences(api)).toMatchObject({ style: 'natural', gloss: 'first' });
   });
 
   it('formats the cost readout', () => {
@@ -106,5 +121,66 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
     expect(formatUsd(0.00727)).toBe('$0.0073');
     expect(formatUsd(0.00001)).toBe('<$0.0001');
     expect(formatUsd(1.234)).toBe('$1.23');
+  });
+});
+
+describe('personal glossary (plan M2-E6): storage.sync with a quota guard', () => {
+  const withBytes = (inUse: number) => {
+    const f = fakeApi();
+    const sync = f.api.storage.sync as unknown as Record<string, unknown>;
+    sync.getBytesInUse = (keys: string | null) => Promise.resolve(keys === null ? inUse : syncItemBytes(GLOSSARY_KEY, f.sync.data[GLOSSARY_KEY] ?? []));
+    return f;
+  };
+
+  it('saves to the sync key "glossary" and reads it back, trimmed; "keep as is" is a rendering equal to the term', async () => {
+    const { api, sync } = fakeApi();
+    expect(await readGlossary(api)).toEqual([]);
+    const saved = await saveGlossary(api, [{ term: ' deploy ', rendering: '' }, { term: 'executor', rendering: ' bộ thực thi ', note: ' core ' }]);
+    expect(saved).toMatchObject({ ok: true, entries: [{ term: 'deploy', rendering: 'deploy' }, { term: 'executor', rendering: 'bộ thực thi', note: 'core' }] });
+    expect(sync.data).toEqual({ glossary: [{ term: 'deploy', rendering: 'deploy' }, { term: 'executor', rendering: 'bộ thực thi', note: 'core' }] });
+    expect(await readGlossary(api)).toEqual(sync.data.glossary);
+  });
+
+  it('drops blank and repeated terms (case-insensitive) and ignores junk in storage', async () => {
+    expect(cleanGlossary([{ term: '', rendering: 'x' }, { term: 'A', rendering: '1' }, { term: 'a', rendering: '2' }, null, 'x', { term: 3 }])).toEqual([{ term: 'A', rendering: '1' }]);
+    const { api, sync } = fakeApi();
+    await sync.set({ glossary: 'not a list' });
+    expect(await readGlossary(api)).toEqual([]);
+  });
+
+  it('counts bytes as Chrome does: key + JSON, UTF-8', () => {
+    expect(syncItemBytes('k', 'é')).toBe(1 + 4);
+    expect(SYNC_QUOTA_BYTES_PER_ITEM).toBe(8192);
+    expect(SYNC_QUOTA_BYTES).toBe(102400);
+  });
+
+  it('refuses, without writing, a glossary over the per-item quota, and warns from 80%', async () => {
+    const { api, sync } = fakeApi();
+    const many = (n: number) => Array.from({ length: n }, (_, i) => ({ term: `term-${i}`, rendering: `rendering number ${i} with some text` }));
+    const tooBig = await saveGlossary(api, many(400));
+    expect(tooBig).toMatchObject({ ok: false, reason: 'item-quota' });
+    expect(sync.data).toEqual({});
+    let n = 1;
+    while (syncItemBytes(GLOSSARY_KEY, cleanGlossary(many(n + 1))) < SYNC_QUOTA_BYTES_PER_ITEM * 0.85) n++;
+    const near = await saveGlossary(api, many(n));
+    expect(near).toMatchObject({ ok: true });
+    expect(near.ok && near.warning).toMatch(/uses 8\d% of the space/);
+    const small = await saveGlossary(api, many(2));
+    expect(small.ok && small.warning).toBeUndefined();
+  });
+
+  it('refuses a save that would push synced settings over the total quota', async () => {
+    const { api, sync } = withBytes(SYNC_QUOTA_BYTES - 50);
+    const got = await saveGlossary(api, [{ term: 'a fairly long glossary term', rendering: 'and an even longer rendering for it, to pass fifty bytes' }]);
+    expect(got).toMatchObject({ ok: false, reason: 'total-quota' });
+    expect(sync.data).toEqual({});
+    const fine = withBytes(1000);
+    expect(await saveGlossary(fine.api, [{ term: 'deploy', rendering: 'deploy' }])).toMatchObject({ ok: true });
+  });
+
+  it('reports a storage error instead of throwing', async () => {
+    const { api } = fakeApi();
+    (api.storage.sync as unknown as Record<string, unknown>).set = () => Promise.reject(new Error('QUOTA_BYTES_PER_ITEM quota exceeded'));
+    expect(await saveGlossary(api, [{ term: 'x', rendering: 'x' }])).toEqual({ ok: false, reason: 'error', message: 'QUOTA_BYTES_PER_ITEM quota exceeded' });
   });
 });

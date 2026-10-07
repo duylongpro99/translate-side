@@ -2,7 +2,7 @@
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { GEMINI_ORIGIN } from '@/shared/settings';
+import { GEMINI_ORIGIN, GLOSSARY_KEY, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/settings';
 import { Options } from './Options.tsx';
 
 type Api = Parameters<typeof Options>[0]['api'];
@@ -118,6 +118,118 @@ describe('options v0 (plan M1-E9)', () => {
       source.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await flush();
-    expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'de' });
+    expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'de', style: 'natural', gloss: 'first' });
+  });
+});
+
+const input = (sel: string, value: string) =>
+  act(() => {
+    const el = root.querySelector(sel) as HTMLInputElement;
+    el.value = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+const choose = (sel: string, value: string) =>
+  act(() => {
+    const el = root.querySelector(sel) as HTMLSelectElement;
+    el.value = value;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+const check = (sel: string, on: boolean) =>
+  act(() => {
+    const el = root.querySelector(sel) as HTMLInputElement;
+    el.checked = on;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+const submitGlossary = () =>
+  act(() => {
+    (root.querySelector('[data-testid=glossary-form]') as HTMLFormElement).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  });
+const click = (label: string) =>
+  act(() => {
+    (root.querySelector(`[aria-label="${label}"]`) as HTMLButtonElement).click();
+  });
+const rows = () => [...root.querySelectorAll('[data-testid=glossary-entry]')].map((li) => li.textContent?.replace(/\s*Edit\s*Remove\s*$/, '').trim());
+
+describe('options: style and personal glossary (plan M2-E6)', () => {
+  it('stores the style mode and the gloss setting in sync prefs, keeping the languages (M2-D1 defaults)', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    expect((root.querySelector('#style') as HTMLSelectElement).value).toBe('natural');
+    expect((root.querySelector('#gloss') as HTMLSelectElement).value).toBe('first');
+    choose('#target', 'vi');
+    choose('#style', 'simplified');
+    choose('#gloss', 'off');
+    await flush();
+    expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'auto', style: 'simplified', gloss: 'off' });
+    expect(root.querySelector('[data-testid=style-hint]')?.textContent).toContain('Short sentences');
+  });
+
+  it('adds a "keep as is" entry and a translated one, edits and removes them, saving each change to sync', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    expect(root.querySelector('[data-testid=glossary-empty]')).not.toBeNull();
+    expect((root.querySelector('#g-keep') as HTMLInputElement).checked).toBe(true);
+    expect((root.querySelector('#g-rendering') as HTMLInputElement).disabled).toBe(true);
+    input('#g-term', ' deploy ');
+    submitGlossary();
+    await flush();
+    expect(f.sync.get('glossary')).toEqual([{ term: 'deploy', rendering: 'deploy' }]);
+    expect(rows()).toEqual(['deploy → keep as is']);
+    expect((root.querySelector('#g-term') as HTMLInputElement).value).toBe('');
+
+    input('#g-term', 'executor');
+    check('#g-keep', false);
+    input('#g-rendering', 'bộ thực thi');
+    submitGlossary();
+    await flush();
+    expect(f.sync.get('glossary')).toEqual([
+      { term: 'deploy', rendering: 'deploy' },
+      { term: 'executor', rendering: 'bộ thực thi' },
+    ]);
+    expect(rows()).toEqual(['deploy → keep as is', 'executor → bộ thực thi']);
+
+    click('Edit deploy');
+    expect((root.querySelector('#g-term') as HTMLInputElement).value).toBe('deploy');
+    check('#g-keep', false);
+    input('#g-rendering', 'triển khai');
+    submitGlossary();
+    await flush();
+    expect(rows()).toEqual(['deploy → triển khai', 'executor → bộ thực thi']);
+
+    click('Remove executor');
+    await flush();
+    expect(f.sync.get('glossary')).toEqual([{ term: 'deploy', rendering: 'triển khai' }]);
+  });
+
+  it('refuses a duplicate term and shows the quota guard\'s refusal without saving', async () => {
+    const f = fakeApi();
+    f.sync.set('glossary', [{ term: 'deploy', rendering: 'deploy' }]);
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    expect(rows()).toEqual(['deploy → keep as is']);
+    input('#g-term', 'Deploy');
+    submitGlossary();
+    await flush();
+    expect(root.querySelector('[data-testid=glossary-note]')?.textContent).toContain('already in the glossary');
+    expect(f.sync.get('glossary')).toEqual([{ term: 'deploy', rendering: 'deploy' }]);
+
+    // Fill the item close to its 8 KB quota, then one more entry is refused.
+    const big = [];
+    for (let i = 0; syncItemBytes(GLOSSARY_KEY, big) < SYNC_QUOTA_BYTES_PER_ITEM - 150; i++) big.push({ term: `term ${i}`, rendering: `r ${i}` });
+    f.sync.set('glossary', big);
+    act(() => render(null, root));
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    input('#g-term', 'one more term that does not fit');
+    check('#g-keep', false);
+    input('#g-rendering', 'y'.repeat(200));
+    submitGlossary();
+    await flush();
+    const note = root.querySelector('[data-testid=glossary-note]')?.textContent ?? '';
+    expect(note).toContain("over Chrome's sync limit of 8192 bytes");
+    expect(f.sync.get('glossary')).toBe(big);
+    expect(rows()).toHaveLength(big.length);
   });
 });

@@ -2,6 +2,7 @@
 // profile, the API key in storage.local under `secret:<connectionId>` (DESIGN.md §4.3.4), and the
 // target and source languages. Provider choice, presets, Test connection and routing are M4.
 import type { browser } from 'wxt/browser';
+import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
 import type { ModelRole, Protocol, AuthStyle, Quirks, ResolvedConnection } from '@/llm/types';
 
 type Browser = typeof browser;
@@ -124,14 +125,23 @@ export interface Preferences {
   targetLang: string;
   /** "auto" = detected (src/shared/language.ts: LanguageDetector, then the page's `lang`); otherwise a code that overrides it. */
   sourceLang: 'auto' | (string & {});
+  /** Style mode (DESIGN §3 "Style control"); Natural by default. */
+  style: StyleMode;
+  /** Term glosses (plan M2 §5, decision M2-D1): first occurrence only by default, or never. */
+  gloss: GlossMode;
 }
 
-const PREFS_KEY = 'prefs';
+export const PREFS_KEY = 'prefs';
+
+export const STYLES: readonly StyleMode[] = ['natural', 'faithful', 'simplified'];
+export const GLOSS_MODES: readonly GlossMode[] = ['first', 'off'];
 
 /** The browser's language, the native-language guess before onboarding exists (§4.3.3 C, M5). */
 export function defaultPreferences(uiLanguage = 'en'): Preferences {
-  return { targetLang: uiLanguage.split('-')[0] || 'en', sourceLang: 'auto' };
+  return { targetLang: uiLanguage.split('-')[0] || 'en', sourceLang: 'auto', style: 'natural', gloss: 'first' };
 }
+
+const oneOf = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T => (allowed.includes(value as T) ? (value as T) : fallback);
 
 export async function readPreferences(api: Browser): Promise<Preferences> {
   const got = await api.storage.sync.get(PREFS_KEY);
@@ -140,11 +150,102 @@ export async function readPreferences(api: Browser): Promise<Preferences> {
   return {
     targetLang: typeof stored.targetLang === 'string' && stored.targetLang !== '' ? stored.targetLang : base.targetLang,
     sourceLang: typeof stored.sourceLang === 'string' && stored.sourceLang !== '' ? stored.sourceLang : base.sourceLang,
+    style: oneOf(stored.style, STYLES, base.style),
+    gloss: oneOf(stored.gloss, GLOSS_MODES, base.gloss),
   };
 }
 
 export async function savePreferences(api: Browser, prefs: Preferences): Promise<void> {
   await api.storage.sync.set({ [PREFS_KEY]: prefs });
+}
+
+let prefsWrite: Promise<unknown> = Promise.resolve();
+
+/**
+ * Applies `patch` to the stored preferences. Updates run one after another, each on what the last
+ * one wrote, so two settings changed in quick succession (two option sections) both stick.
+ */
+export function updatePreferences(api: Browser, patch: Partial<Preferences>): Promise<Preferences> {
+  const run = prefsWrite.then(async () => {
+    const next = { ...(await readPreferences(api)), ...patch };
+    await savePreferences(api, next);
+    return next;
+  });
+  prefsWrite = run.catch(() => undefined);
+  return run;
+}
+
+// ---- Personal glossary (storage.sync, plan M2-E6) ----------------------------------------------
+// One sync item, `glossary`: an array of { term, rendering, note? }. "Keep as is" is a rendering
+// equal to the term. A basic quota guard refuses a save that would exceed chrome.storage.sync's
+// per-item or total quota (it would fail anyway, losing the edit silently) and warns from 80% of
+// the per-item quota. Splitting across items, compression and conflict handling are M6-E6.
+
+export const GLOSSARY_KEY = 'glossary';
+/** chrome.storage.sync.QUOTA_BYTES_PER_ITEM and QUOTA_BYTES (fixed by Chrome). */
+export const SYNC_QUOTA_BYTES_PER_ITEM = 8192;
+export const SYNC_QUOTA_BYTES = 102400;
+/** Warn once an item reaches this share of its quota. */
+export const GLOSSARY_WARN_RATIO = 0.8;
+const TERM_MAX = 120;
+const RENDERING_MAX = 200;
+const NOTE_MAX = 200;
+
+/** Bytes chrome.storage.sync counts for one item: the key plus the value's JSON, in UTF-8. */
+export function syncItemBytes(key: string, value: unknown): number {
+  return new TextEncoder().encode(key + JSON.stringify(value)).length;
+}
+
+/** Trimmed and capped entries; blank terms and repeated terms (case-insensitive, first wins) dropped. */
+export function cleanGlossary(entries: readonly unknown[]): GlossaryEntry[] {
+  const seen = new Set<string>();
+  const out: GlossaryEntry[] = [];
+  for (const raw of entries) {
+    if (typeof raw !== 'object' || raw === null) continue;
+    const r = raw as Record<string, unknown>;
+    const term = typeof r.term === 'string' ? r.term.trim().slice(0, TERM_MAX) : '';
+    const key = term.toLowerCase();
+    if (term === '' || seen.has(key)) continue;
+    seen.add(key);
+    const rendering = typeof r.rendering === 'string' && r.rendering.trim() !== '' ? r.rendering.trim().slice(0, RENDERING_MAX) : term;
+    const note = typeof r.note === 'string' ? r.note.trim().slice(0, NOTE_MAX) : '';
+    out.push(note ? { term, rendering, note } : { term, rendering });
+  }
+  return out;
+}
+
+export async function readGlossary(api: Browser): Promise<GlossaryEntry[]> {
+  const got = await api.storage.sync.get(GLOSSARY_KEY);
+  const stored = got[GLOSSARY_KEY];
+  return Array.isArray(stored) ? cleanGlossary(stored) : [];
+}
+
+export type GlossarySave =
+  | { ok: true; entries: GlossaryEntry[]; bytes: number; warning?: string }
+  | { ok: false; reason: 'item-quota' | 'total-quota' | 'error'; message: string };
+
+/** Checks the quota first; nothing is written when the save would not fit. */
+export async function saveGlossary(api: Browser, entries: readonly GlossaryEntry[]): Promise<GlossarySave> {
+  const clean = cleanGlossary(entries);
+  const bytes = syncItemBytes(GLOSSARY_KEY, clean);
+  if (bytes > SYNC_QUOTA_BYTES_PER_ITEM) {
+    return { ok: false, reason: 'item-quota', message: `The glossary would take ${bytes} bytes, over Chrome's sync limit of ${SYNC_QUOTA_BYTES_PER_ITEM} bytes for one setting. Remove or shorten some entries.` };
+  }
+  try {
+    const sync = api.storage.sync as { getBytesInUse?: (keys?: string | string[] | null) => Promise<number> };
+    if (typeof sync.getBytesInUse === 'function') {
+      const [total, current] = await Promise.all([sync.getBytesInUse(null), sync.getBytesInUse(GLOSSARY_KEY)]);
+      if (total - current + bytes > SYNC_QUOTA_BYTES) {
+        return { ok: false, reason: 'total-quota', message: `Synced settings would exceed Chrome's ${SYNC_QUOTA_BYTES}-byte limit. Remove some glossary entries.` };
+      }
+    }
+    await api.storage.sync.set({ [GLOSSARY_KEY]: clean });
+  } catch (error) {
+    return { ok: false, reason: 'error', message: error instanceof Error ? error.message : String(error) };
+  }
+  const warning =
+    bytes >= SYNC_QUOTA_BYTES_PER_ITEM * GLOSSARY_WARN_RATIO ? `The glossary uses ${Math.round((100 * bytes) / SYNC_QUOTA_BYTES_PER_ITEM)}% of the space Chrome syncs for it.` : undefined;
+  return { ok: true, entries: clean, bytes, ...(warning ? { warning } : {}) };
 }
 
 /** Languages offered in options v0. A curated list; any BCP 47 code works in the prompt. */
