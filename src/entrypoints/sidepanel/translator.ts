@@ -51,7 +51,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
    */
   const docFor = async ({ prefs, glossary }: Settings, url: string, title: string, pageLang: string | undefined, segments: JobDoc['segments']): Promise<{ doc: JobDoc; skip: boolean }> => {
     const detection = await detectSourceLanguage({ override: prefs.sourceLang === 'auto' ? undefined : prefs.sourceLang, sample: detectionSample(segments), pageLang }, detector);
-    const base = { url, title, ...(pageLang === undefined ? {} : { pageLang }), sourceLang: detection.lang, targetLang: prefs.targetLang, detection, segments, style: prefs.style, gloss: prefs.gloss, glossary };
+    const base = { url, title, ...(pageLang === undefined ? {} : { pageLang }), sourceLang: detection.lang, targetLang: prefs.targetLang, detection, segments, style: prefs.style, gloss: prefs.gloss, glossary, budgetTokens: prefs.budgetTokens };
     if (!mixed) return { doc: base, skip: sameLanguage(detection.lang, prefs.targetLang) };
     const keep = await segmentsInLanguage(segments, prefs.targetLang, detector);
     const left = segments.some((s) => s.translate && !keep.has(s.id));

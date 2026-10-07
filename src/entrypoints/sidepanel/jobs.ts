@@ -219,6 +219,8 @@ export interface JobDoc {
   style?: StyleMode;
   gloss?: GlossMode;
   glossary?: readonly GlossaryEntry[];
+  /** The per-page token ceiling from the settings (plan M2-E7); absent or 0 = no limit. */
+  budgetTokens?: number;
 }
 
 interface Job {
@@ -379,6 +381,7 @@ export class Jobs {
         style: doc.style ?? 'natural',
         ...(doc.gloss ? { gloss: doc.gloss } : {}),
         glossary: [...(doc.glossary ?? [])],
+        ...(doc.budgetTokens ? { budget: { maxTokens: doc.budgetTokens } } : {}),
         maxConcurrency: profile.maxConcurrency,
         chunkTokens: profile.chunkTokens,
         // A resumed run keeps its brief: no second analyze call (and none made from the leftover segments only).

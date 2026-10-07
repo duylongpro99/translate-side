@@ -32,6 +32,10 @@ import {
   secretKey,
   syncItemBytes,
   withProfileQuirks,
+  DEFAULT_BUDGET_TOKENS,
+  MAX_BUDGET_TOKENS,
+  cleanBudget,
+  defaultPreferences,
 } from './settings.ts';
 
 type Api = Parameters<typeof readApiKey>[0];
@@ -140,17 +144,17 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
 
   it('defaults the target to the browser language and the source to auto; a saved override is read back', async () => {
     const { api, sync } = fakeApi({ ui: 'vi-VN' });
-    expect(await readPreferences(api)).toEqual({ targetLang: 'vi', sourceLang: 'auto', style: 'natural', gloss: 'first' });
-    await savePreferences(api, { targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off' });
-    expect(sync.data).toEqual({ prefs: { targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off' } });
-    expect(await readPreferences(api)).toEqual({ targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off' });
+    expect(await readPreferences(api)).toEqual({ targetLang: 'vi', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: 400000 });
+    await savePreferences(api, { targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off', budgetTokens: 400000 });
+    expect(sync.data).toEqual({ prefs: { targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off', budgetTokens: 400000 } });
+    expect(await readPreferences(api)).toEqual({ targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off', budgetTokens: 400000 });
   });
 
   it('reads M1-era prefs (no style or gloss) and unknown values as the defaults: Natural, gloss on first use (M2-D1)', async () => {
     const { api, sync } = fakeApi({ ui: 'vi-VN' });
     await sync.set({ prefs: { targetLang: 'de', sourceLang: 'auto' } });
-    expect(await readPreferences(api)).toEqual({ targetLang: 'de', sourceLang: 'auto', style: 'natural', gloss: 'first' });
-    await sync.set({ prefs: { targetLang: 'de', sourceLang: 'auto', style: 'poetic', gloss: 'always' } });
+    expect(await readPreferences(api)).toEqual({ targetLang: 'de', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: 400000 });
+    await sync.set({ prefs: { targetLang: 'de', sourceLang: 'auto', style: 'poetic', gloss: 'always', budgetTokens: 400000 } });
     expect(await readPreferences(api)).toMatchObject({ style: 'natural', gloss: 'first' });
   });
 
@@ -159,6 +163,16 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
     expect(formatUsd(0.00727)).toBe('$0.0073');
     expect(formatUsd(0.00001)).toBe('<$0.0001');
     expect(formatUsd(1.234)).toBe('$1.23');
+  });
+});
+
+describe('token budget per page (plan M2-E7)', () => {
+  it('defaults to DEFAULT_BUDGET_TOKENS; keeps whole numbers within 0…MAX_BUDGET_TOKENS; anything else is the default', () => {
+    expect(defaultPreferences().budgetTokens).toBe(DEFAULT_BUDGET_TOKENS);
+    expect(cleanBudget(0)).toBe(0);
+    expect(cleanBudget(1234.6)).toBe(1235);
+    expect(cleanBudget(MAX_BUDGET_TOKENS * 2)).toBe(MAX_BUDGET_TOKENS);
+    for (const bad of [-1, Number.NaN, Infinity, '5000', undefined, null]) expect(cleanBudget(bad)).toBe(DEFAULT_BUDGET_TOKENS);
   });
 });
 

@@ -122,7 +122,7 @@ describe('options v0 (plan M1-E9)', () => {
       source.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await flush();
-    expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'de', style: 'natural', gloss: 'first' });
+    expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'de', style: 'natural', gloss: 'first', budgetTokens: 400000 });
   });
 });
 
@@ -165,8 +165,24 @@ describe('options: style and personal glossary (plan M2-E6)', () => {
     choose('#style', 'simplified');
     choose('#gloss', 'off');
     await flush();
-    expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'auto', style: 'simplified', gloss: 'off' });
+    expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'auto', style: 'simplified', gloss: 'off', budgetTokens: 400000 });
     expect(root.querySelector('[data-testid=style-hint]')?.textContent).toContain('Short sentences');
+  });
+
+  it('stores the token budget per page in sync prefs (plan M2-E7): a whole number of tokens, 0 for no limit', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    expect((root.querySelector('#budget') as HTMLInputElement).value).toBe('400000');
+    choose('#budget', '150000.4');
+    await flush();
+    expect(f.sync.get('prefs')).toMatchObject({ budgetTokens: 150000 });
+    choose('#budget', '0');
+    await flush();
+    expect(f.sync.get('prefs')).toMatchObject({ budgetTokens: 0 });
+    choose('#budget', '-5');
+    await flush();
+    expect(f.sync.get('prefs')).toMatchObject({ budgetTokens: 400000 });
   });
 
   it('adds a "keep as is" entry and a translated one, edits and removes them, saving each change to sync', async () => {

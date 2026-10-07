@@ -193,6 +193,24 @@ export interface Preferences {
   style: StyleMode;
   /** Term glosses (plan M2 §5, decision M2-D1): first occurrence only by default, or never. */
   gloss: GlossMode;
+  /**
+   * Per-page token ceiling (DESIGN.md §5.6, plan M2-E7): input + output tokens of one translation
+   * job, every call included. 0 = no limit. Segments left when it runs out are skipped.
+   */
+  budgetTokens: number;
+}
+
+/**
+ * About 10× what an eval passage costs with the default strategy (≈ 10–40k tokens): room for a long
+ * article, a stop for a runaway page or loop.
+ */
+export const DEFAULT_BUDGET_TOKENS = 400_000;
+/** The options page's largest value (a sync item holds any number; this keeps typos sane). */
+export const MAX_BUDGET_TOKENS = 10_000_000;
+
+/** A stored budget as a whole number of tokens within 0…MAX_BUDGET_TOKENS, or the default. */
+export function cleanBudget(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.min(MAX_BUDGET_TOKENS, Math.round(value)) : DEFAULT_BUDGET_TOKENS;
 }
 
 export const PREFS_KEY = 'prefs';
@@ -202,7 +220,7 @@ export const GLOSS_MODES: readonly GlossMode[] = ['first', 'off'];
 
 /** The browser's language, the native-language guess before onboarding exists (§4.3.3 C, M5). */
 export function defaultPreferences(uiLanguage = 'en'): Preferences {
-  return { targetLang: uiLanguage.split('-')[0] || 'en', sourceLang: 'auto', style: 'natural', gloss: 'first' };
+  return { targetLang: uiLanguage.split('-')[0] || 'en', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: DEFAULT_BUDGET_TOKENS };
 }
 
 const oneOf = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T => (allowed.includes(value as T) ? (value as T) : fallback);
@@ -216,6 +234,7 @@ export async function readPreferences(api: Browser): Promise<Preferences> {
     sourceLang: typeof stored.sourceLang === 'string' && stored.sourceLang !== '' ? stored.sourceLang : base.sourceLang,
     style: oneOf(stored.style, STYLES, base.style),
     gloss: oneOf(stored.gloss, GLOSS_MODES, base.gloss),
+    budgetTokens: cleanBudget(stored.budgetTokens),
   };
 }
 

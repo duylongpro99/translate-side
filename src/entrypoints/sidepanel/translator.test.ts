@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import type { Segment } from '@/engine/index';
+import { BUDGET_MESSAGE, type Segment } from '@/engine/index';
 import type { LLMClient } from '@/llm/types';
 import { translatorClient } from '@/engine/testing';
 import { GEMINI_PROFILE } from '@/shared/settings';
@@ -245,6 +245,23 @@ describe('translator wiring (plan M1-E8)', () => {
         expect(req.system).toContain('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)');
         expect(req.system).not.toContain('triển khai');
       }
+    });
+
+    it('passes the stored token budget as the job budget (plan M2-E7): once spent, the rest is skipped with BUDGET_MESSAGE', async () => {
+      const f = fakeApi();
+      f.setPrefs({ targetLang: 'vi', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: 1 });
+      const r = recording();
+      const t = createTranslator(f.api, { translateClient: r.resolve });
+      const hooks = t.hooks as Required<SessionHooks>;
+      hooks.active(1);
+      hooks.ready(1, 'd', longResult);
+      f.answer();
+      await settle(120);
+      const view = t.jobs.get(1);
+      expect(view?.status).toBe('done');
+      const skipped = [...(view?.segs.values() ?? [])].filter((s) => s.status === 'failed' && s.error?.message === BUDGET_MESSAGE);
+      expect(skipped.length).toBeGreaterThan(0);
+      expect(view?.counts.final).toBeGreaterThan(0);
     });
 
     it('a glossary or style change retranslates the active page from scratch, keeping the brief (no second analyze call)', async () => {

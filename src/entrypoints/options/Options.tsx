@@ -12,7 +12,9 @@ import {
   DEFAULT_PROFILE,
   GLOSS_MODES,
   LANGUAGES,
+  MAX_BUDGET_TOKENS,
   STYLES,
+  cleanBudget,
   hasHostPermission,
   maskKey,
   readApiKey,
@@ -237,6 +239,21 @@ function StyleSection({ api }: { api: Browser }) {
         </select>
       </div>
       <p class="opt__hint">A change retranslates the page open in the panel.</p>
+      <div class="opt__row">
+        <label for="budget">Token budget per page</label>
+        <input
+          id="budget"
+          type="number"
+          min={0}
+          max={MAX_BUDGET_TOKENS}
+          step={10000}
+          value={prefs.budgetTokens}
+          onChange={(e) => update({ budgetTokens: cleanBudget(Number((e.target as HTMLInputElement).value)) })}
+        />
+      </div>
+      <p class="opt__hint" data-testid="budget-hint">
+        Input and output tokens for one page, every model call included; 0 for no limit. What is left untranslated when it runs out is marked as skipped.
+      </p>
     </section>
   );
 }
