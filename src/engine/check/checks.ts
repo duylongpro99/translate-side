@@ -21,13 +21,15 @@
 //              translation while the sources differ (duplicate.ts)
 //
 // Numbers: a run of digits with single `.`, `,`, NBSP, narrow NBSP or `'` between digit groups
-// ("1,000.5", "1.000,5", "1 000") is read as values (numberValues). A separator followed by
-// exactly three digits groups thousands; one other `.` or `,`, the last, is the decimal point;
-// with more than one other separator the run is a list or a version ("1,2,3", "1.2.10") and each
-// group is a value. So thousand and decimal separators may be localised ("3.5" = "3,5", "1,000" =
-// "1.000", "1,000.5" = "1.000,5"), but "3.5" ≠ "35" and "1,2,3" is 1, 2 and 3 (review D-N4). A
-// value may come back fewer or more times. Numbers are never required to be spelled out or
-// converted; a number written as words, in Roman numerals or with its digits changed fails.
+// ("1,000.5", "1.000,5", "1 000"), or digits grouped in threes by plain spaces ("1 000 000"), is
+// read as values (numberValues). A separator followed by exactly three digits groups thousands;
+// one other `.` or `,`, the last, is the decimal point; with more than one other separator the run
+// is a list or a version ("1,2,3", "1.2.10") and each group is a value. So thousand and decimal
+// separators may be localised ("3.5" = "3,5", "1,000" = "1.000" = "1 000", "1,000.5" =
+// "1.000,5") and trailing decimal zeros do not count ("2.50" = "2,5"), but "3.5" ≠ "35" and
+// "1,2,3" is 1, 2 and 3 (review D-N4). A value may come back fewer or more times. Numbers are
+// never required to be spelled out or converted; a number written as words, in Roman numerals or
+// with its digits changed fails.
 // Digits inside a word ("utf8", "x86_64") count too: they are not translated either.
 //
 // Length (chars of the translation over chars of the source, markers included; review D-N5): the
@@ -79,7 +81,11 @@ const CODE_SPAN = /`[^`]+`/g;
 /** http(s) and www. URLs up to whitespace, a marker or a quote; trailing punctuation is not part of them. */
 const URL_RE = /\b(?:https?:\/\/|www\.)[^\s<>"'`[\]]+/gi;
 const TRAILING = /[.,;:!?)\]}'"»]$/;
-const NUMBER = /\d+(?:[.,\u00a0\u202f'\u2019]\d+)*/g;
+/**
+ * A number: digits grouped by plain spaces in threes ("1 000 000", optionally with a decimal part),
+ * or digits with single `.`, `,`, no-break, narrow no-break or `'` separators between groups.
+ */
+const NUMBER = /\d{1,3}(?: \d{3})+(?:[.,]\d+)?(?!\d)|\d+(?:[.,\u00a0\u202f'\u2019]\d+)*/g;
 
 /** The backtick spans of `text`, in order, backticks included. */
 export function codeSpans(text: string): string[] {
@@ -115,14 +121,19 @@ export function numbers(text: string): string[] {
 
 /** One run of digits and separators as its values (see the top of the file). */
 export function numberValues(run: string): string[] {
-  const parts = run.split(/([.,\u00a0\u202f'\u2019])/);
+  const parts = run.split(/([., \u00a0\u202f'\u2019])/);
   const groups = parts.filter((_, i) => i % 2 === 0);
   const seps = parts.filter((_, i) => i % 2 === 1);
   // Separator i stands between groups i and i + 1.
   const other = seps.flatMap((_, i) => (groups[i + 1]?.length === 3 ? [] : [i]));
   if (other.length === 0) return [groups.join('')];
   const last = seps.length - 1;
-  if (other.length === 1 && other[0] === last && /[.,]/.test(seps[last] ?? '')) return [`${groups.slice(0, -1).join('')}.${groups.at(-1) ?? ''}`];
+  if (other.length === 1 && other[0] === last && /[.,]/.test(seps[last] ?? '')) {
+    // Trailing decimal zeros are not significant: "2.50" = "2,5", "2.0" = "2".
+    const fraction = (groups.at(-1) ?? '').replace(/0+$/, '');
+    const whole = groups.slice(0, -1).join('');
+    return [fraction === '' ? whole : `${whole}.${fraction}`];
+  }
   const out: string[] = [];
   let cur = groups[0] ?? '';
   seps.forEach((_, i) => {
@@ -153,19 +164,33 @@ function linksPaired(text: string): boolean {
   return !open;
 }
 
-/** How many pairs of spans cross ("*a [link]b* c[/link]"): links paired in order, `**` and `*` each paired in turn, outside code. */
+/**
+ * How many pairs of spans cross ("*a [link]b* c[/link]"): links paired in order, `**` and `*` each
+ * paired in turn, outside code. A `***` is both, in stack order: it opens `**` then `*`, and
+ * closes an open `*` before `**`, so "***x***" is two nested spans.
+ */
 export function crossings(text: string): number {
   const spans: [number, number][] = [];
   const open: Record<string, number | undefined> = {};
-  for (const m of withoutCode(text).matchAll(/\[\/?link\]|\*\*|\*/g)) {
-    const key = m[0] === '[/link]' ? '[link]' : m[0];
-    const at = m.index ?? 0;
+  const marker = (token: string, at: number) => {
+    const key = token === '[/link]' ? '[link]' : token;
     const start = open[key];
     if (start === undefined) {
-      if (m[0] !== '[/link]') open[key] = at;
-    } else if (m[0] !== '[link]') {
+      if (token !== '[/link]') open[key] = at;
+    } else if (token !== '[link]') {
       spans.push([start, at]);
       open[key] = undefined;
+    }
+  };
+  for (const m of withoutCode(text).matchAll(/\[\/?link\]|\*{1,3}/g)) {
+    const at = m.index ?? 0;
+    if (m[0] !== '***') marker(m[0], at);
+    else if (open['*'] !== undefined) {
+      marker('*', at);
+      marker('**', at + 1);
+    } else {
+      marker('**', at);
+      marker('*', at + 2);
     }
   }
   let n = 0;
@@ -218,7 +243,8 @@ const DENSE_LETTER = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Sc
 
 /** Whether `text` is written mostly in a dense script (Han, kana, Hangul), by its letters outside code. */
 export function isDense(text: string): boolean {
-  const plain = withoutCode(text);
+  // The link markers' letters are not the text's.
+  const plain = withoutCode(text).replace(/\[\/?link\]/g, ' ');
   const letters = plain.match(/\p{L}/gu)?.length ?? 0;
   return letters > 0 && (plain.match(DENSE_LETTER)?.length ?? 0) / letters >= DENSE_SHARE;
 }

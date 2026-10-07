@@ -56,6 +56,11 @@ describe('checks: markers (M2-E4)', () => {
     expect(checkMarkers('*a [link]b[/link] c*', '*a [link]b[/link] c*')).toBeUndefined();
     expect(checkMarkers('[link]*a* b[/link]', '[link]b *a*[/link]')).toBeUndefined();
     expect(crossings('*a [link]b* c[/link]')).toBe(1);
+    // `***` is bold and emphasis in stack order: nested, not crossed (review round 3).
+    expect(crossings('***x***')).toBe(0);
+    expect(crossings('**a *b***')).toBe(0);
+    expect(crossings('***a* b**')).toBe(0);
+    expect(checkMarkers('A ***very*** big deal.', 'Một việc ***rất*** lớn.')).toBeUndefined();
     expect(crossings('*a* [link]b[/link] `*[link]*`')).toBe(0);
     // A source that crosses may come back crossed the same way.
     expect(checkMarkers('*a [link]b* c[/link]', '*x [link]y* z[/link]')).toBeUndefined();
@@ -101,7 +106,7 @@ describe('checks: URLs', () => {
 
 describe('checks: numbers', () => {
   it('reads values: thousand and decimal separators may be localised', () => {
-    expect(numbers('1,000 users, 3.5 s, 1 000 000 bytes')).toEqual(['1000', '3.5', '1', '000', '000']);
+    expect(numbers('1,000 users, 3.5 s, 1 000 000 bytes')).toEqual(['1000', '3.5', '1000000']);
     expect(numberValues('1,000.5')).toEqual(['1000.5']);
     expect(numberValues('1.000,5')).toEqual(['1000.5']);
     expect(numberValues('1\u00a0000\u00a0000')).toEqual(['1000000']);
@@ -131,6 +136,19 @@ describe('checks: numbers are values, not digit strings (review D-N4)', () => {
     expect(checkNumbers('It took 35 seconds.', 'Mất 3,5 giây.')?.detail).toBe('missing 35');
   });
 
+  it('trailing decimal zeros do not count; plain, no-break and narrow no-break spaces group thousands (review round 3)', () => {
+    expect(checkNumbers('It costs 2.50 dollars.', 'Giá 2,5 đô la.')).toBeUndefined();
+    expect(checkNumbers('Version 2.0 is out.', 'Bản 2 đã ra.')).toBeUndefined();
+    expect(numberValues('2.50')).toEqual(['2.5']);
+    expect(checkNumbers('1,000 users', '1 000 người dùng')).toBeUndefined();
+    expect(checkNumbers('1,000 users', '1\u202f000 người dùng')).toBeUndefined();
+    expect(checkNumbers('1,000 users', '1\u00a0000 người dùng')).toBeUndefined();
+    expect(numbers('1 000 000,5 m')).toEqual(['1000000.5']);
+    // Only threes after a short first group: "2024 100" is two numbers.
+    expect(numbers('in 2024 100 people')).toEqual(['2024', '100']);
+    expect(checkNumbers('It took 2.5 s.', 'Mất 2,05 giây.')?.kind).toBe('number');
+  });
+
   it('a list or a version is its groups: "1,2,3" is 1, 2 and 3, not 123', () => {
     expect(numberValues('1,2,3')).toEqual(['1', '2', '3']);
     expect(numberValues('1.2.10')).toEqual(['1', '2', '10']);
@@ -157,6 +175,9 @@ describe('checks: length ratio', () => {
   it('bounds by source and target script: a Chinese or Japanese source into a Latin-script target (review D-N5)', () => {
     expect(isDense('所有权是一组规则，决定了 Rust 程序如何管理内存。')).toBe(true);
     expect(isDense('Ownership is a set of rules; see `所有权`.')).toBe(false);
+    // The link markers' letters do not count (review round 3).
+    expect(isDense('[link]所有权[/link]')).toBe(true);
+    expect(isDense('[link]所有权[/link] [link]规则[/link]')).toBe(true);
     expect(lengthBounds('所有权是一组规则。', 'en')).toEqual(LENGTH_BOUNDS['dense-sparse']);
     expect(lengthBounds('所有权是一组规则。', 'ja')).toEqual(LENGTH_BOUNDS['dense-dense']);
     expect(lengthBounds('Ownership rules.', 'zh-CN')).toEqual(LENGTH_BOUNDS['sparse-dense']);
