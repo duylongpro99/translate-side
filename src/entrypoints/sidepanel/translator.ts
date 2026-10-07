@@ -65,6 +65,27 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   const live = new Map<number, string>();
   const isLive = (tabId: number, docId: string) => live.get(tabId) === docId;
 
+  /**
+   * Translates the tab's page again, from scratch, if the settings changed since its job started
+   * (languages, style, gloss setting, personal glossary): the earlier runs' cost stays in the page
+   * total (review E-R3), and the brief stays when the target language is the same (plan M2 §7
+   * demo 4–5). Called on a settings change for the active tab, and when a tab becomes active, so
+   * an edit made in the options tab applies once the page's tab is back in front.
+   */
+  const refresh = (tabId: number) => {
+    const current = jobs.docFor(tabId);
+    if (current === undefined) return;
+    const { doc, docId } = current;
+    void readSettings(api)
+      .then((settings) => docFor(settings, doc.url, doc.title, doc.pageLang, doc.segments))
+      .then((next) => {
+        const languages = next.doc.targetLang !== doc.targetLang || next.doc.sourceLang !== doc.sourceLang;
+        const output = next.doc.style !== doc.style || next.doc.gloss !== doc.gloss || JSON.stringify(next.doc.glossary) !== JSON.stringify(doc.glossary ?? []);
+        if (!languages && !output) return;
+        if (isLive(tabId, docId) && jobs.docOf(tabId) === docId) void begin(tabId, docId, next, { keepCost: true, keepBrief: !languages });
+      });
+  };
+
   const hooks: SessionHooks = {
     ready(tabId, docId, result) {
       live.set(tabId, docId);
@@ -83,7 +104,10 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       live.delete(tabId);
       jobs.drop(tabId);
     },
-    active: (tabId) => jobs.setActive(tabId),
+    active: (tabId) => {
+      jobs.setActive(tabId);
+      if (tabId !== undefined) refresh(tabId);
+    },
   };
 
   const actions = (tabId: number): JobActions => ({
@@ -107,27 +131,11 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     const onLocal = (changes: Record<string, unknown>) => {
       if (secretKey(GEMINI_CONNECTION.id) in changes) retryStopped();
     };
-    /**
-     * New languages, style, gloss setting or personal glossary: translate the active tab's page
-     * again, from scratch, keeping what the earlier runs cost in the page total (review E-R3), and
-     * the brief when the target language is the same (plan M2 §7 demo 4–5: retranslate with the
-     * new glossary or style). A background tab's job keeps the settings it started with until its
-     * page is read again (reopened or reloaded).
-     */
+    /** Settings changed: the active tab's page is translated again if they concern it (refresh). */
     const onSync = (changes: Record<string, unknown>) => {
       if (!(PREFS_KEY in changes) && !(GLOSSARY_KEY in changes)) return;
       const tabId = activeTab();
-      const current = tabId === undefined ? undefined : jobs.docFor(tabId);
-      if (tabId === undefined || current === undefined) return;
-      const { doc, docId } = current;
-      void readSettings(api)
-        .then((settings) => docFor(settings, doc.url, doc.title, doc.pageLang, doc.segments))
-        .then((next) => {
-          const languages = next.doc.targetLang !== doc.targetLang || next.doc.sourceLang !== doc.sourceLang;
-          const output = next.doc.style !== doc.style || next.doc.gloss !== doc.gloss || JSON.stringify(next.doc.glossary) !== JSON.stringify(doc.glossary ?? []);
-          if (!languages && !output) return;
-          if (isLive(tabId, docId) && jobs.docOf(tabId) === docId) void begin(tabId, docId, next, { keepCost: true, keepBrief: !languages });
-        });
+      if (tabId !== undefined) refresh(tabId);
     };
     const onPagehide = () => jobs.cancelAll();
     api.storage.local.onChanged.addListener(onLocal);

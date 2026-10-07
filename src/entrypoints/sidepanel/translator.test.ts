@@ -278,12 +278,30 @@ describe('translator wiring (plan M1-E8)', () => {
       await settle(40);
       expect(r.translateCalls().length).toBe(m);
 
+      // A change made while another tab (the options page) is in front applies when the page's tab is back.
+      let front = 2;
+      stop();
+      const stop2 = t.watch(() => front);
+      hooks.active(2);
+      const k = r.translateCalls().length;
+      f.setGlossary([{ term: 'deploy', rendering: 'deploy' }, { term: 'crate', rendering: 'crate' }]);
+      f.answer();
+      await settle(40);
+      expect(r.translateCalls().length).toBe(k);
+      front = 1;
+      hooks.active(1);
+      f.answer();
+      await settle(80);
+      expect(r.translateCalls().length).toBeGreaterThan(k);
+      expect(r.translateCalls().slice(k).every((req) => req.system.includes('- crate → crate'))).toBe(true);
+      expect(r.analyzeCalls()).toBe(1);
+
       // A new target language drops the brief: it is asked again in that language.
       f.setPrefs({ targetLang: 'ja', sourceLang: 'auto', style: 'simplified', gloss: 'first' });
       f.answer();
       await settle(80);
       expect(r.analyzeCalls()).toBe(2);
-      stop();
+      stop2();
     });
   });
 });
