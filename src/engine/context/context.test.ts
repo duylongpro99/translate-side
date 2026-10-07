@@ -12,7 +12,7 @@ import type { ContextProvider, ContextQuery, DocumentBrief, EngineEvent, Glossar
 import { neutralizeContextTags, renderContextBlock, renderSystemPromptV2 } from './assemble.ts';
 import { documentBriefProvider, renderBrief } from './brief.ts';
 import { CONTEXT_BUDGET_TOKENS, DEFAULT_CONTEXT_PROVIDERS, gatherContext } from './budget.ts';
-import { glossaryHash, glossaryProvider, mentions, mergeGlossary, renderGlossaryEntry } from './glossary.ts';
+import { KEEP_AS_IS_MARK, USED_TERMS_HEAD, glossaryHash, glossaryProvider, mentions, mergeGlossary, renderGlossaryEntry } from './glossary.ts';
 import { CONTEXT_TAIL_MAX_TOKENS, contextTailProvider } from './tail.ts';
 
 const seg = (id: string, text: string, over: Partial<Segment> = {}): Segment => ({ id, kind: 'p', text, inlineMarkup: text, domPath: `p[${id}]`, translate: true, ...over });
@@ -65,8 +65,8 @@ describe('glossary merge (plan M2-E2, §5.7 "user overrides take priority")', ()
   });
 
   it('renders "keep as is" entries (rendering = term, or empty) as an explicit do-not-translate', () => {
-    expect(renderGlossaryEntry({ term: 'deploy', rendering: 'deploy' })).toBe('- deploy → deploy (keep as is, do not translate)');
-    expect(renderGlossaryEntry({ term: 'deploy', rendering: '' })).toBe('- deploy → deploy (keep as is, do not translate)');
+    expect(renderGlossaryEntry({ term: 'deploy', rendering: 'deploy' })).toBe('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)');
+    expect(renderGlossaryEntry({ term: 'deploy', rendering: '' })).toBe('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)');
     expect(renderGlossaryEntry({ term: 'executor', rendering: 'bộ thực thi', note: 'core concept' })).toBe('- executor → bộ thực thi — core concept');
   });
 
@@ -104,28 +104,28 @@ describe('GlossaryProvider (personal + auto)', () => {
   it('lists the merged glossary as a document snippet, and the terms already used before the chunk as a chunk snippet', async () => {
     const got = await glossaryProvider.provide(query({ memory: withBrief([{ term: 'deploy', rendering: 'deploy' }]) }));
     expect(got).toEqual([
-      { providerId: 'glossary', scope: 'document', text: '- deploy → deploy (keep as is, do not translate)\n- future → future (keep as is, do not translate) — keep English\n- executor → bộ thực thi' },
-      { providerId: 'glossary', scope: 'chunk', text: 'Terms already used earlier in the document (no gloss for them now): future, executor' },
+      { providerId: 'glossary', scope: 'document', text: '- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)\n- future → future (keep as is: write it exactly like this, never translate it, never gloss it) — keep English\n- executor → bộ thực thi' },
+      { providerId: 'glossary', scope: 'chunk', text: 'Terms already used earlier in the document, so already glossed: write each with no gloss and no parentheses after it in every segment below, headings included: future, executor' },
     ]);
   });
 
   it('gives the personal glossary without a brief (the first chunk), and no "already used" list for the first chunk', async () => {
     const segments = [seg('a', 'We deploy.'), seg('b', 'We deploy again.')];
     const first = await glossaryProvider.provide(query({ segments, chunk: segments.slice(0, 1), memory: createWorkingMemory([{ term: 'deploy', rendering: 'deploy' }]) }));
-    expect(first).toEqual([{ providerId: 'glossary', scope: 'document', text: '- deploy → deploy (keep as is, do not translate)' }]);
+    expect(first).toEqual([{ providerId: 'glossary', scope: 'document', text: '- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)' }]);
     expect(await glossaryProvider.provide(query())).toEqual([]);
   });
 
   it('only counts translatable segments before the chunk (not code, not the chunk itself)', async () => {
     const segments = [seg('code', 'let executor = Executor::new();', { kind: 'code', translate: false }), seg('a', 'A future.'), seg('b', 'An executor.')];
     const got = await glossaryProvider.provide(query({ segments, chunk: segments.slice(2), memory: withBrief() }));
-    expect(got.find((s) => s.scope === 'chunk')?.text).toBe('Terms already used earlier in the document (no gloss for them now): future');
+    expect(got.find((s) => s.scope === 'chunk')?.text).toBe('Terms already used earlier in the document, so already glossed: write each with no gloss and no parentheses after it in every segment below, headings included: future');
   });
 
   it('cuts entries from the end when the list does not fit (the user\'s entries survive)', async () => {
     const personal = [{ term: 'deploy', rendering: 'deploy' }];
-    const got = await glossaryProvider.provide(query({ memory: withBrief(personal), maxTokens: estimateTokens('- deploy → deploy (keep as is, do not translate)\n') }));
-    expect(got).toEqual([{ providerId: 'glossary', scope: 'document', text: '- deploy → deploy (keep as is, do not translate)' }]);
+    const got = await glossaryProvider.provide(query({ memory: withBrief(personal), maxTokens: estimateTokens('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)\n') }));
+    expect(got).toEqual([{ providerId: 'glossary', scope: 'document', text: '- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)' }]);
   });
 });
 
@@ -234,7 +234,7 @@ describe('translate@2 assembly (plan M2-E3)', () => {
     const snippets = await gatherContext(DEFAULT_CONTEXT_PROVIDERS, query({ memory: withBrief() }));
     const system = renderSystemPromptV2(render, { ...base, snippets });
     expect(system).toContain('Document brief:\nGenre: technical blog post\nAudience: Rust developers');
-    expect(system).toContain('(the user\'s entries come first and take priority):\n- future → future (keep as is, do not translate) — keep English');
+    expect(system).toContain('(the user\'s entries come first and take priority):\n- future → future (keep as is: write it exactly like this, never translate it, never gloss it) — keep English');
     expect(system).not.toContain('Terms already used earlier');
     expect(system).not.toContain('<source>');
     expect(system).not.toMatch(/\{[A-Z_]+\}/);
@@ -259,6 +259,30 @@ describe('translate@2 assembly (plan M2-E3)', () => {
     expect(systems[0]).toContain(`- ${GLOSS_RULES.first.replaceAll('{TARGET_LANG}', 'Vietnamese')}`);
     expect(renderSystemPromptV2(render, { ...base, gloss: 'off', snippets: [] })).toContain(`- ${GLOSS_RULES.off}`);
     expect(systems.join('')).not.toContain('{TARGET_LANG}');
+  });
+
+  it('never glosses a keep-as-is entry: the entry says so and the gloss rule excludes it (round 2)', () => {
+    expect(KEEP_AS_IS_MARK).toMatch(/never gloss it/);
+    expect(GLOSS_RULES.first).toContain('Never gloss a glossary entry marked "keep as is": write it bare every time.');
+    const system = renderSystemPromptV2(render, { ...base, snippets: [{ providerId: 'glossary', scope: 'document', text: renderGlossaryEntry({ term: 'deploy', rendering: 'deploy' }) }] });
+    expect(system).toContain(`- deploy → deploy ${KEEP_AS_IS_MARK}`);
+    expect(system).toContain('Never gloss a glossary entry marked "keep as is"');
+  });
+
+  it('never glosses a term listed as already used, in any segment or heading (round 2: "Future (Future)")', () => {
+    expect(GLOSS_RULES.first).toContain('A term the <context> block lists as already used was glossed before: write it with no gloss and no parentheses after it, in every segment and in headings, even if it looks new in these segments.');
+    expect(USED_TERMS_HEAD).toContain('no gloss and no parentheses after it in every segment below, headings included');
+    expect(GLOSS_RULES.off).toBe('Glosses: never add glosses or explanations in parentheses after terms.');
+  });
+
+  it('leaves translate@1 byte-identical to M1 (the frozen baseline)', () => {
+    const fnv = (t: string) => {
+      let h = 0x811c9dc5;
+      for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 0x01000193) >>> 0;
+      return `${h.toString(16)}:${t.length}`;
+    };
+    const vars = { TARGET_LANG: 'T', SOURCE_LANG: 'S', STYLE: 'Y', BRIEF: 'B', GLOSSARY: 'G' };
+    expect(fnv(translateV1.render(vars))).toBe('8886b823:1646');
   });
 });
 
@@ -305,7 +329,7 @@ describe('contextual + translate@2 through the engine', () => {
     expect(briefed.length).toBeGreaterThanOrEqual(LONG_CHUNKS - 1);
     const first = briefed[0]?.system;
     for (const r of briefed) expect(r.system).toBe(first);
-    expect(first).toContain('- deploy → deploy (keep as is, do not translate)\n- future → future (keep as is, do not translate) — keep English');
+    expect(first).toContain('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)\n- future → future (keep as is: write it exactly like this, never translate it, never gloss it) — keep English');
     expect(first).toContain('Style mode: Natural');
     // Chunk-specific text never reaches the system block.
     for (const r of translate.requests) {
@@ -324,7 +348,7 @@ describe('contextual + translate@2 through the engine', () => {
       expect(user).toContain(`end${i - 1}.</source>`);
       // ~430 tokens of source: the tail is the paragraph's end, within its 300-token cap.
       expect(user.split('</context>')[0]?.length ?? 0).toBeLessThan(300 * 3.5 + 400);
-      expect(user).toContain('Terms already used earlier in the document (no gloss for them now): future');
+      expect(user).toContain('Terms already used earlier in the document, so already glossed: write each with no gloss and no parentheses after it in every segment below, headings included: future');
       expect(user).toMatch(/<\/context>\n\n<seg id="1">P\d /);
     }
   });

@@ -228,7 +228,7 @@ describe('translator wiring (plan M1-E8)', () => {
       for (const req of calls) {
         expect(req.system).toContain('Style mode: Faithful');
         expect(req.system).toContain('Glosses: never add glosses');
-        expect(req.system).toContain('- deploy → deploy (keep as is, do not translate)');
+        expect(req.system).toContain('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)');
         expect(req.system).not.toContain('triển khai');
       }
     });
@@ -260,7 +260,7 @@ describe('translator wiring (plan M1-E8)', () => {
       // The kept brief is there from the start: every chunk, the first one too, is briefed.
       for (const req of after) {
         expect(req.system).toContain('Genre: blog post');
-        expect(req.system).toContain('- deploy → deploy (keep as is, do not translate)');
+        expect(req.system).toContain('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)');
       }
       expect(t.jobs.get(1)?.cost ?? 0).toBeGreaterThan(cost);
 

@@ -118,7 +118,7 @@ export const STYLE_RULES = {
 /** translate@2's GLOSS_RULE per gloss mode (plan M2 §5: first occurrence only, a setting). */
 export const GLOSS_RULES = {
   first:
-    'Glosses: the first time a glossary term, or an English term kept because it has no common {TARGET_LANG} equivalent, appears in the document, add a short {TARGET_LANG} gloss in parentheses right after it. Only once per term in the whole document: never again in later segments, and never for a term the <context> block lists as already used.',
+    'Glosses: the first time a translated glossary term, or an English term you keep because it has no common {TARGET_LANG} equivalent, appears in the document, add a short {TARGET_LANG} gloss in parentheses right after it. Only once per term in the whole document, never again in later segments. Never gloss a glossary entry marked "keep as is": write it bare every time. A term the <context> block lists as already used was glossed before: write it with no gloss and no parentheses after it, in every segment and in headings, even if it looks new in these segments.',
   off: 'Glosses: never add glosses or explanations in parentheses after terms.',
 } as const;
 

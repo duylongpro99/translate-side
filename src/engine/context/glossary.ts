@@ -33,9 +33,14 @@ export function keepsTerm(e: GlossaryEntry): boolean {
   return e.rendering.trim() === '' || e.rendering.trim() === e.term.trim();
 }
 
+/** How a keep-as-is entry is marked in the glossary list: never translated, never glossed. */
+export const KEEP_AS_IS_MARK = '(keep as is: write it exactly like this, never translate it, never gloss it)';
+/** The head of the chunk snippet listing the terms used before this chunk (no gloss for them). */
+export const USED_TERMS_HEAD = 'Terms already used earlier in the document, so already glossed: write each with no gloss and no parentheses after it in every segment below, headings included: ';
+
 export function renderGlossaryEntry(e: GlossaryEntry): string {
   const term = e.term.trim();
-  const head = keepsTerm(e) ? `- ${term} → ${term} (keep as is, do not translate)` : `- ${term} → ${e.rendering.trim()}`;
+  const head = keepsTerm(e) ? `- ${term} → ${term} ${KEEP_AS_IS_MARK}` : `- ${term} → ${e.rendering.trim()}`;
   const note = e.note?.trim();
   return note ? `${head} — ${note}` : head;
 }
@@ -86,7 +91,7 @@ export const glossaryProvider: ContextProvider = {
     const before = segmentsBefore(q.segments, q.chunk);
     const used = listed.filter((e) => before.some((s) => mentions(s.text, e.term))).map((e) => e.term.trim());
     if (used.length) {
-      const text = `Terms already used earlier in the document (no gloss for them now): ${used.join(', ')}`;
+      const text = `${USED_TERMS_HEAD}${used.join(', ')}`;
       if (estimateTokens(text) <= left) out.push({ providerId: GLOSSARY_PROVIDER_ID, scope: 'chunk', text });
     }
     return out;
