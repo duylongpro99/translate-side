@@ -393,7 +393,7 @@ describe('Jobs: contextual (plan M2-E1) and same-language skip (M2-E5)', () => {
     const client = both(JSON.stringify(BRIEF));
     const jobs = new Jobs({ translateClient: ok(client) });
     jobs.setActive(1);
-    await jobs.start(1, 'd', { ...doc(3), sourceLang: '' });
+    await jobs.start(1, 'd', { ...doc(3, 700), sourceLang: '' });
     const v = jobs.get(1) as JobView;
     expect(v.status).toBe('done');
     expect(v.brief).toEqual(BRIEF);
@@ -404,6 +404,18 @@ describe('Jobs: contextual (plan M2-E1) and same-language skip (M2-E5)', () => {
     const expected = client.requests.reduce((n, r) => n + 10 * Math.max(1, wireLines(r.messages[0]?.content ?? '').length), 0);
     expect(v.usage.input).toBe(expected);
     expect(expected).toBeGreaterThan(10 * 3);
+  });
+
+  it('a one-chunk page makes no brief call: no brief, so no About card (M2-D9)', async () => {
+    const client = both(JSON.stringify(BRIEF));
+    const jobs = new Jobs({ translateClient: ok(client) });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(3));
+    const v = jobs.get(1) as JobView;
+    expect(v.status).toBe('done');
+    expect(client.requests.filter(isAnalyze)).toHaveLength(0);
+    expect(v.brief).toBeUndefined();
+    expect(v.counts).toEqual({ total: 3, final: 3, failed: 0 });
   });
 
   it('keeps a known source language, and goes on without a brief when the answer is unusable', async () => {
@@ -431,7 +443,7 @@ describe('Jobs: contextual (plan M2-E1) and same-language skip (M2-E5)', () => {
     let current: LLMClient = broken;
     const jobs = new Jobs({ translateClient: () => ok(current)() });
     jobs.setActive(1);
-    await jobs.start(1, 'd', { ...doc(3), sourceLang: '' });
+    await jobs.start(1, 'd', { ...doc(3, 700), sourceLang: '' });
     expect(jobs.get(1)?.brief).toEqual(BRIEF);
     expect(jobs.get(1)?.counts.failed).toBe(3);
 

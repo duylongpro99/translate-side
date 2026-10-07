@@ -11,6 +11,9 @@
 // analyze stage is over, with or without a brief, so a failed or slow brief delays later chunks
 // at most by the brief call itself and never fails the job. Each chunk's outcome records whether
 // the brief was there (ChunkOutcome.briefed). The `artifact` event goes out when the brief lands.
+// A one-chunk document skips the analyze stage altogether (user decision M2-D9): no brief, no
+// About card; documents of two chunks or more are unchanged.
+import { chunkLimits, chunkSegments } from '../chunker.ts';
 import { ANALYZE_PROMPT_ID } from '../prompts/analyze.ts';
 import { TRANSLATE_V2_PROMPT_ID } from '../prompts/translate.ts';
 import { multiplex, runStages, type AnyStage } from '../runner.ts';
@@ -27,6 +30,11 @@ export const CONTEXTUAL_TRANSLATE_PROMPT_ID = TRANSLATE_V2_PROMPT_ID;
 /** Chunks translated without waiting for the brief: the first one (M2-D6). */
 export const BRIEF_FREE_CHUNKS = 1;
 
+/** Whether the document is a single chunk at the job's chunk size (the chunk stage cuts it the same way). */
+export function isOneChunk(job: TranslationJob): boolean {
+  return chunkSegments(job.doc.segments, chunkLimits(job.options.chunkTokens)).length <= 1;
+}
+
 /** The translation stages, the translate stage waiting for the brief as `brief` says. */
 export function contextualStages(brief: BriefWait, translatePrompt: string = CONTEXTUAL_TRANSLATE_PROMPT_ID): readonly AnyStage[] {
   return [chunkStage, createTranslateStage(CONTEXTUAL_ID, brief, translatePrompt), checkStage];
@@ -38,21 +46,27 @@ export function createContextual(translatePrompt: string = CONTEXTUAL_TRANSLATE_
     id: CONTEXTUAL_ID,
     version: CONTEXTUAL_VERSION,
     async *run(job: TranslationJob, ctx: StageContext) {
-        let settle!: () => void;
-        const settled = new Promise<void>((resolve) => (settle = resolve));
-        const concurrency = { concurrency: job.options.maxConcurrency };
-        async function* analyze() {
-          try {
-            yield* runStages([analyzeStage], job, ctx, concurrency);
-          } finally {
-            // Brief or no brief (the stage degrades by itself), the waiting chunks go on.
-            settle();
-          }
+      const concurrency = { concurrency: job.options.maxConcurrency };
+      // M2-D9: a document that fits one chunk makes no analyze call. Its only chunk is brief-free
+      // anyway (M2-D6), so the brief would cost a call for the About card alone.
+      if (isOneChunk(job)) {
+        yield* runStages(contextualStages({ settled: Promise.resolve(), freeChunks: BRIEF_FREE_CHUNKS }, translatePrompt), job, ctx, concurrency);
+        return;
+      }
+      let settle!: () => void;
+      const settled = new Promise<void>((resolve) => (settle = resolve));
+      async function* analyze() {
+        try {
+          yield* runStages([analyzeStage], job, ctx, concurrency);
+        } finally {
+          // Brief or no brief (the stage degrades by itself), the waiting chunks go on.
+          settle();
         }
-        const lanes = [analyze(), runStages(contextualStages({ settled, freeChunks: BRIEF_FREE_CHUNKS }, translatePrompt), job, ctx, concurrency)];
-        // Both lanes run at once; their events pass on as they arrive. Only an abort (or an engine
-        // bug) throws, after the other lane has finished.
-        for await (const { value } of multiplex(lanes, lanes.length, (lane) => lane, ctx.signal)) yield value as EngineEvent;
+      }
+      const lanes = [analyze(), runStages(contextualStages({ settled, freeChunks: BRIEF_FREE_CHUNKS }, translatePrompt), job, ctx, concurrency)];
+      // Both lanes run at once; their events pass on as they arrive. Only an abort (or an engine
+      // bug) throws, after the other lane has finished.
+      for await (const { value } of multiplex(lanes, lanes.length, (lane) => lane, ctx.signal)) yield value as EngineEvent;
     },
   };
 }

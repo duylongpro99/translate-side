@@ -43,6 +43,9 @@ function fakeApi() {
 const text = Array.from({ length: 80 }, (_, i) => `w${i}`).join(' ');
 const segments: Segment[] = Array.from({ length: 12 }, (_, i) => ({ id: `s${i}`, kind: 'p', text, inlineMarkup: text, domPath: `/p[${i + 1}]`, translate: true }));
 const result = { ok: true, via: 'walk', url: 'https://x/', title: 'Page', lang: 'en', segments } as Ready;
+// Three chunks: the brief is asked only for pages of two chunks or more (M2-D9), and later chunks carry it (M2-D6).
+const long = Array.from({ length: 36 }, (_, i) => ({ ...segments[0], id: `l${i}`, domPath: `/p[${i + 1}]` })) as Segment[];
+const longResult = { ...result, segments: long } as Ready;
 const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 const client = () => () => Promise.resolve({ ok: true as const, client: translatorClient(), profile: GEMINI_PROFILE });
 
@@ -216,9 +219,7 @@ describe('translator wiring (plan M1-E8)', () => {
       const t = createTranslator(f.api, { translateClient: r.resolve });
       const hooks = t.hooks as Required<SessionHooks>;
       hooks.active(1);
-      // Three chunks: the later ones carry the brief and its glossary (M2-D6).
-      const long = Array.from({ length: 36 }, (_, i) => ({ ...segments[0], id: `l${i}`, domPath: `/p[${i + 1}]` })) as Segment[];
-      hooks.ready(1, 'd', { ...result, segments: long } as Ready);
+      hooks.ready(1, 'd', longResult);
       f.answer();
       await settle(120);
       expect(t.jobs.get(1)?.status).toBe('done');
@@ -240,7 +241,7 @@ describe('translator wiring (plan M1-E8)', () => {
       const hooks = t.hooks as Required<SessionHooks>;
       const stop = t.watch(() => 1);
       hooks.active(1);
-      hooks.ready(1, 'd', result);
+      hooks.ready(1, 'd', longResult);
       f.answer();
       await settle(80);
       expect(t.jobs.get(1)?.status).toBe('done');
@@ -253,7 +254,7 @@ describe('translator wiring (plan M1-E8)', () => {
       await settle(80);
       const after = r.translateCalls().slice(before);
       expect(t.jobs.get(1)?.status).toBe('done');
-      expect(t.jobs.get(1)?.counts.final).toBe(segments.length);
+      expect(t.jobs.get(1)?.counts.final).toBe(long.length);
       expect(r.analyzeCalls()).toBe(1);
       expect(t.jobs.get(1)?.brief?.genre).toBe('blog post');
       expect(after.length).toBeGreaterThan(0);

@@ -11,18 +11,21 @@ import { createBudget } from '../budget.ts';
 import { createWorkingMemory } from '../memory.ts';
 import { runStages } from '../runner.ts';
 import type { ChunkOutcome } from './single-pass.ts';
-import { BRIEF_FREE_CHUNKS, CONTEXTUAL_ID, contextual, contextualStages } from './contextual.ts';
+import { BRIEF_FREE_CHUNKS, CONTEXTUAL_ID, contextual, contextualStages, isOneChunk } from './contextual.ts';
 import { singlePass } from './single-pass.ts';
 
 const seg = (id: string, text: string, over: Partial<Segment> = {}): Segment => ({ id, kind: 'p', text, inlineMarkup: text, domPath: `p[${id}]`, translate: true, ...over });
 const segments = [seg('h', 'Futures are lazy', { kind: 'heading', level: 1 }), seg('a', 'One sentence.'), seg('b', 'Two sentences here.'), seg('c', 'fn main() {}', { kind: 'code', translate: false })];
+
+/** Small enough that `segments` is more than one chunk: a one-chunk document makes no analyze call (M2-D9). */
+const JOB_CHUNK_TOKENS = 8;
 
 function job(over: Partial<TranslationJob['doc']> = {}, strategy = CONTEXTUAL_ID, budget?: TranslationJob['options']['budget']): TranslationJob {
   return {
     doc: { url: 'https://example.com/futures', title: 'Lazy futures', sourceLang: 'en', targetLang: 'vi', outline: ['Futures are lazy'], segments, ...over },
     priority: [],
     strategy,
-    options: { style: 'natural', glossary: [], maxConcurrency: 2, chunkTokens: 1200, ...(budget ? { budget } : {}) },
+    options: { style: 'natural', glossary: [], maxConcurrency: 2, chunkTokens: JOB_CHUNK_TOKENS, ...(budget ? { budget } : {}) },
   };
 }
 
@@ -144,7 +147,33 @@ describe('contextual: analyze → chunk → translate → check', () => {
     expect(artifacts(events)).toEqual([]);
     expect(events.filter((e) => e.type === 'usage' && e.role === 'analyze')).toEqual([]);
     expect(translate.requests[0]?.system).toContain('from German into Vietnamese');
+    expect(finals(events).map((e) => e.id).sort()).toEqual(['a', 'b', 'h']);
+  });
+
+  it('makes no analyze call for a one-chunk document (M2-D9): no brief, no artifact, no analyze usage or stage', async () => {
+    const analyze = fakeClient([success(JSON.stringify(BRIEF))]);
+    const translate = translatorClient();
+    const j = job();
+    const one = { ...j, options: { ...j.options, chunkTokens: 1200 } };
+    expect(isOneChunk(one)).toBe(true);
+    expect(isOneChunk(j)).toBe(false);
+    const events = await run(analyze, translate, one);
+    expect(analyze.requests).toHaveLength(0);
+    expect(artifacts(events)).toEqual([]);
+    expect(events.filter((e) => (e.type === 'usage' && e.role === 'analyze') || (e.type === 'stage' && e.stage === 'analyze'))).toEqual([]);
+    noFailures(events);
     expect(finals(events).map((e) => e.id)).toEqual(['h', 'a', 'b']);
+    expect(translate.requests).toHaveLength(1);
+    expect(translate.requests[0]?.system).toContain('Document brief:\n(none)');
+  });
+
+  it('still uses a brief a one-chunk job brings along (a resumed run), with no call', async () => {
+    const analyze = fakeClient([success(JSON.stringify(BRIEF))]);
+    const translate = translatorClient();
+    const j = job();
+    await run(analyze, translate, { ...j, options: { ...j.options, chunkTokens: 1200, brief: BRIEF } });
+    expect(analyze.requests).toHaveLength(0);
+    expect(translate.requests[0]?.system).toContain('Genre: technical blog post');
   });
 
   it('accepts a fenced or prose-wrapped brief', async () => {
@@ -166,7 +195,7 @@ describe('contextual: analyze → chunk → translate → check', () => {
       const events = await run(make());
       expect(artifacts(events)).toEqual([]);
       noFailures(events);
-      expect(finals(events).map((e) => e.id)).toEqual(['h', 'a', 'b']);
+      expect(finals(events).map((e) => e.id).sort()).toEqual(['a', 'b', 'h']);
       expect(events.at(-1)).toEqual({ type: 'done' });
     });
   }
