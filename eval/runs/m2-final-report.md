@@ -49,3 +49,9 @@ Scores are 1–5 means over the passages scored (n). Columns after the first sho
 - Runs: m2 @ 8bc7484, APIBOX qwen3.8-flash, 23 eval passages. Column 1 is the frozen single-pass baseline (judge at 3497cc0). The third contextual column (translate@1, chunk 400) is judge-only; no human sheet is committed for it.
 - Judge noise: ds/deepseek-v4-pro re-run on the contextual@2 c1500 outputs gave overall 4.36 (fid 4.30, nat 3.96, tone 4.57, term 4.61) against 4.41 the first time; per-score mean absolute difference 0.27, identical in 73% of scores, within 1 point in 100%. Differences of about 0.1 between runs are inside this noise.
 - At chunk 1500 every eval passage is one chunk, so no brief reaches translation; contextual@2 vs single-pass@1 there differs by the translate prompt version only.
+
+## M2 baseline and status
+
+- **M2 baseline (M2-D22): contextual@2 c1500**, `eval/runs/baseline-contextual-translate2-qwen3.8-flash`. This is the run M6's regression gate will defend. The c400 run (`eval/runs/baseline-contextual-translate2-qwen3.8-flash-c400`) is kept as a reference run (brief reaching later chunks), not as the baseline.
+- **Plan §3 #1 is pending (M2-D21):** it waits for the human scores on the three sheets (frozen single-pass, contextual c1500, contextual c400). The judge-only numbers above show contextual@2 c1500 below single-pass on fidelity (4.22 vs 4.43; 4.30 on the re-judge) and level on tone and terminology; they do not decide it, since human scores are the source of truth.
+- **Plan §3 #2 (cost ≤ 1.3×)** is met at c1500 (×1.17).
