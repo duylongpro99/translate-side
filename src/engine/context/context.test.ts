@@ -187,6 +187,13 @@ describe('GlossaryProvider (personal + auto)', () => {
     expect(renderGlossaryEntry({ term: 'n loop', rendering: 'vòng lặp ản' }, 'brief', code)).toContain('→ vòng lặp ản ');
   });
 
+  it('a code span with `$` in it comes out as written, not as a replacement pattern (round 6)', () => {
+    const segments = [seg('a', 'The `$$` sigil and the `$&` form are shell code.'), seg('b', 'More.')];
+    const code = codeTerms(segments);
+    expect(renderGlossaryEntry({ term: '$$ sigil', rendering: 'ký hiệu $$' }, 'brief', code)).toContain('- `$$` sigil → ký hiệu `$$` ');
+    expect(renderGlossaryEntry({ term: '$& form', rendering: 'dạng $&' }, 'brief', code)).toContain('- `$&` form → dạng `$&` ');
+  });
+
   it('stays fast on a document with many code spans and a long list (review round 5)', () => {
     const segments = Array.from({ length: 300 }, (_, i) => seg(`s${i}`, Array.from({ length: 5 }, (_, j) => `Call \`fn_${i}_${j}\` and the \`fn_${i}_${j}\` method.`).join(' ')));
     const code = codeTerms(segments);
@@ -196,8 +203,9 @@ describe('GlossaryProvider (personal + auto)', () => {
     for (let chunk = 0; chunk < 5; chunk++) fitGlossary(entries, 100_000, () => 'brief', code);
     const ms = performance.now() - t0;
     expect(fitGlossary(entries, 100_000, () => 'brief', code).lines[0]).toContain('- `fn_0_0` method → phương thức `fn_0_0` ');
-    // Before the memo and the includes() prefilter: ~0.75 s per call.
-    expect(ms).toBeLessThan(250);
+    // Before the memo and the includes() prefilter: 2.6 s here; now a few ms. A loose bound, so a
+    // slow machine does not flake it.
+    expect(ms).toBeLessThan(1000);
   });
 
   it('cuts entries from the end when the list does not fit (the user\'s entries survive)', async () => {

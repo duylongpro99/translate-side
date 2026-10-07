@@ -106,14 +106,14 @@ function codeWords(term: string, code: DocCode): string[] {
   const t = term.trim();
   if (code.spans.has(t)) return [t];
   // includes() first: a regex only for the spans the term contains at all (review round 5).
-  return [...code.spans].filter((c) => c !== '' && t.includes(c) && t.search(bare(c)) >= 0 && code.text.includes(t.replace(bare(c), `\`${c}\``)));
+  return [...code.spans].filter((c) => c !== '' && t.includes(c) && t.search(bare(c)) >= 0 && code.text.includes(t.replace(bare(c), () => `\`${c}\``)));
 }
 
-/** `text` with `words` in backticks. */
+/** `text` with `words` in backticks (a function replacer: `$` in a span is no pattern; round 6). */
 function marked(text: string, words: readonly string[]): string {
   const t = text.trim();
   if (words.includes(t)) return `\`${t}\``;
-  return words.reduce((out, w) => out.replace(bare(w), `\`${w}\``), t);
+  return words.reduce((out, w) => out.replace(bare(w), () => `\`${w}\``), t);
 }
 
 /** shown() per document and entry: fitGlossary asks again for every listed entry as the list grows (review round 5). */
