@@ -213,6 +213,17 @@ describe('single-pass: the translate call (M1-E5)', () => {
   });
 });
 
+describe('single-pass: no copy guard (round 14, NB1)', () => {
+  it('accepts a segment whose text repeats an earlier one: no repair call, as in M1', async () => {
+    const segments = [seg('a', 'Ownership is a set of rules that govern how a Rust program manages memory.'), seg('b', 'Some languages have garbage collection that regularly looks for no-longer-used memory.')];
+    const same = 'Quyền sở hữu là một tập hợp quy tắc chi phối cách chương trình Rust quản lý bộ nhớ.';
+    const client = translatorClient((lines) => renderLines(lines, () => same));
+    const events = await collect(createEngine(deps(client)).translate(job(segments), new AbortController().signal));
+    expect(client.requests).toHaveLength(1);
+    expect(finals(events)).toEqual([['a', same, 1], ['b', same, 1]]);
+  });
+});
+
 describe('single-pass: stage events and the cache key (M1-E4 plumbing)', () => {
   it('the translate stage\'s start event carries promptId translate@1; the others carry no info', async () => {
     const events = await collect(createEngine(deps(translatorClient())).translate(job(three), new AbortController().signal));

@@ -33,7 +33,7 @@ export interface TranslateChunkOptions {
   role: ModelRole;
   mergeFactor?: number;
   /**
-   * Turns the copy guard on (the translate stage always does): translated passages before the
+   * Turns the copy guard on (the translate stage does under translate@2): translated passages before the
    * chunk (the context tail) that no segment may copy, besides the call's own earlier segments.
    */
   neighbours?: readonly Rendered[];

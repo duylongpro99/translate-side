@@ -4,7 +4,7 @@ import { createEngine } from '../engine.ts';
 import { ANALYZE_EXCERPT_TOKENS, ANALYZE_PROMPT_ID, analyzeExcerpt, analyzeInput, neutralizeDelimiters } from '../prompts/analyze.ts';
 import { createDefaultPromptRegistry } from '../prompts/index.ts';
 import { ANALYZE_MAX_OUTPUT_TOKENS, briefCacheKey } from '../stages/analyze.ts';
-import { fakeClient, fakeSleep, failed, success, translatorClient, type FakeClient } from '../testing.ts';
+import { fakeClient, fakeSleep, failed, renderLines, success, translatorClient, type FakeClient } from '../testing.ts';
 import { estimateTokens } from '../tokens.ts';
 import type { EngineEvent, Segment, StageContext, TranslationJob } from '../types.ts';
 import { createBudget } from '../budget.ts';
@@ -99,15 +99,15 @@ describe('contextual: analyze → chunk → translate → check', () => {
     expect(artifacts(events)).toEqual([{ type: 'artifact', kind: 'brief', data: BRIEF }]);
     // The analyze stage runs beside the translation stages (M2-D6): their frames interleave.
     const starts = events.flatMap((e) => (e.type === 'stage' && e.status === 'start' ? [[e.stage, e.info]] : []));
-    expect(starts).toHaveLength(5);
+    expect(starts).toHaveLength(4);
     expect(starts).toEqual(expect.arrayContaining([
       ['analyze', { promptId: ANALYZE_PROMPT_ID }],
       ['chunk', undefined],
       ['translate', { promptId: 'translate@2' }],
       ['check', undefined],
-      ['revise', { promptId: 'translate@2' }],
     ]));
-    expect(starts.filter(([s]) => s !== 'analyze' && s !== 'revise').map(([s]) => s)).toEqual(['chunk', 'translate', 'check']);
+    // The revise pass (M2-D17) is a work item of the translate stage: no frame of its own.
+    expect(starts.filter(([s]) => s !== 'analyze').map(([s]) => s)).toEqual(['chunk', 'translate', 'check']);
     expect(finals(events).filter((e) => e.revision === 1).map((e) => [e.id, e.text, e.producedBy.strategy])).toEqual([
       ['h', 'vi:Futures are lazy', 'contextual'],
       ['a', 'vi:One sentence.', 'contextual'],
@@ -393,6 +393,35 @@ describe('contextual: the brief runs beside the first chunk (plan §8, M2-D6)', 
   });
 });
 
+describe('contextual: the copy guard (translate@2 only, round 14 NB1)', () => {
+  const copy = [seg('a', 'Ownership is a set of rules that govern how a Rust program manages memory.'), seg('b', 'Some languages have garbage collection that regularly looks for no-longer-used memory.')];
+  const same = 'Quyền sở hữu là một tập hợp quy tắc chi phối cách chương trình Rust quản lý bộ nhớ.';
+  const oneChunk = (strategy = CONTEXTUAL_ID) => {
+    const j = job({ segments: copy, outline: [] }, strategy);
+    return { ...j, options: { ...j.options, chunkTokens: 1500 } };
+  };
+  // First call: both segments come back as the same sentence; the repair call answers properly.
+  const copier = () => translatorClient((lines, call) => renderLines(lines, (source) => (call === 1 ? same : `vi:${source}`)));
+
+  it('translate@2 re-requests a segment that copies an earlier one', async () => {
+    const translate = copier();
+    const events = await run(() => {
+      throw new Error('no analyze call for one chunk');
+    }, translate, oneChunk());
+    expect(translate.requests).toHaveLength(2);
+    expect(finals(events).map((e) => [e.id, e.attempt ?? 1])).toEqual([['a', 1], ['b', 2]]);
+    noFailures(events);
+  });
+
+  it('translate@1 does not: one call, both accepted', async () => {
+    const translate = copier();
+    const engine = createEngine({ llm: () => translate, now: () => 0, sleep: fakeSleep(), strategies: [createContextual('translate@1')], prompts: createDefaultPromptRegistry(), random: () => 0 });
+    const events = await collect(engine.translate(oneChunk(), new AbortController().signal));
+    expect(translate.requests).toHaveLength(1);
+    expect(finals(events).map((e) => [e.id, e.text])).toEqual([['a', same], ['b', same]]);
+  });
+});
+
 describe('contextual: chunk 0 again with the brief, as revision 2 (M2-D17)', () => {
   const words = (r: { messages: { content: string }[] }) => r.messages.at(-1)?.content ?? '';
 
@@ -428,6 +457,46 @@ describe('contextual: chunk 0 again with the brief, as revision 2 (M2-D17)', () 
     noFailures(events);
     expect(finals(events).filter((e) => e.revision === 2)).toEqual([]);
     expect(finals(events).filter((e) => e.id === 'p0').map((e) => e.text)).toEqual(['vi:P0']);
+  });
+
+  it('starts only once chunk 0\'s own call is over, inside the job\'s maxConcurrency (round 14, NB2)', async () => {
+    for (const maxConcurrency of [1, 2]) {
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => (release = resolve));
+      const log: string[] = [];
+      let inFlight = 0;
+      let most = 0;
+      const echo = translatorClient();
+      const translate: FakeClient = {
+        ...echo,
+        async *stream(req) {
+          const label = words(req).includes('P0 ') ? 'P0' : 'later';
+          inFlight++;
+          most = Math.max(most, inFlight);
+          log.push(`start ${label}`);
+          // Chunk 0's first call answers only after the brief is in.
+          if (echo.requests.length === 0) await held;
+          try {
+            yield* echo.stream(req);
+          } finally {
+            inFlight--;
+            log.push(`end ${label}`);
+          }
+        },
+      };
+      const j = longJob();
+      const done = run(fakeClient([success(JSON.stringify(BRIEF))]), translate, { ...j, options: { ...j.options, maxConcurrency } });
+      await ticks(50);
+      // The brief is in; chunk 0 is still out, and its second pass has not started beside it.
+      expect(log).toEqual(['start P0']);
+      release();
+      const events = await done;
+      expect(log.filter((l) => l.endsWith('P0'))).toEqual(['start P0', 'end P0', 'start P0', 'end P0']);
+      expect(most).toBeLessThanOrEqual(maxConcurrency);
+      expect(echo.requests).toHaveLength(LONG_CHUNKS + 1);
+      expect(finals(events).filter((e) => e.id === 'p0').map((e) => e.revision)).toEqual([1, 2]);
+      noFailures(events);
+    }
   });
 
   it('no second pass without a brief, with a brief the job brought, under translate@1, or for a one-chunk document', async () => {

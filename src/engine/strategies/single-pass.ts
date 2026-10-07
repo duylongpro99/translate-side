@@ -23,7 +23,7 @@ import type { Rendered } from '../parsing/duplicate.ts';
 import { STYLE_LABELS, TRANSLATE_PROMPT_ID, languageLabel } from '../prompts/translate.ts';
 import { defineStage, defineStrategy, type AnyStage } from '../runner.ts';
 import { estimateTokens } from '../tokens.ts';
-import type { EngineEvent, JobOptions, Segment, Strategy, TranslationJob, WorkingMemory } from '../types.ts';
+import type { EngineEvent, JobOptions, Segment, StageContext, Strategy, TranslationJob, WorkingMemory } from '../types.ts';
 
 export const SINGLE_PASS_ID = 'single-pass';
 export const SINGLE_PASS_VERSION = 1;
@@ -146,6 +146,9 @@ export function untilSettledOrAborted(promise: Promise<void>, signal: AbortSigna
   });
 }
 
+/** One chunk through the translate stage: its events, then its outcome as the return value. */
+export type TranslateRun = (work: ChunkWork, ctx: StageContext) => AsyncGenerator<EngineEvent, ChunkOutcome>;
+
 /**
  * The translate stage, its finals marked as `strategyId`'s (strategies that extend this one,
  * like `contextual`, reuse it). The source language is the job's, or, when the shell could not
@@ -159,85 +162,95 @@ export function untilSettledOrAborted(promise: Promise<void>, signal: AbortSigna
  * `promptId` picks the prompt: `translate@1` (default) is sent exactly as in M1, brief and
  * glossary "(none)"; `translate@2` gathers the context providers' snippets (ctx.context) for the
  * chunk and assembles the byte-stable system block and the `<context>` block (context/assemble.ts).
+ * Only `translate@2` turns on the copy guard (translate-chunk.ts `neighbours`): `translate@1`
+ * runs as in M1, so single-pass and its baseline are unchanged.
  */
 export function createTranslateStage(strategyId: string, brief?: BriefWait, promptId: string = TRANSLATE_PROMPT_ID, revision: number = REVISION): AnyStage {
+  const translate = createTranslateRun(strategyId, brief, promptId, revision);
   return defineStage<ChunkWork, ChunkOutcome>({
     id: 'translate',
     scope: 'chunk',
     role: 'translate',
     promptId,
     async *run(work, ctx) {
-      const outcome: ChunkOutcome = { index: work.chunk.index, ids: work.chunk.segments.map((s) => s.id), final: [], failed: [] };
-      if (brief !== undefined && work.chunk.index >= brief.freeChunks) await untilSettledOrAborted(brief.settled, ctx.signal);
-      // One snapshot for the whole prompt: a brief landing while this chunk's prompt is being built
-      // must not reach part of it (the language, the providers) and miss `briefed`.
-      const memory: Readonly<WorkingMemory> = { ...ctx.memory };
-      if (brief !== undefined) {
-        outcome.briefed = memory.brief !== undefined;
-        yield { type: 'chunk', index: outcome.index, briefed: outcome.briefed };
-      }
-      if (ctx.budget.exhausted()) {
-        const error: LLMError = { kind: 'unknown', message: BUDGET_MESSAGE };
-        for (const id of outcome.ids) {
-          outcome.failed.push(id);
-          yield { type: 'segment.failed', id, error };
-        }
-        yield outcome;
-        return;
-      }
-      const client = ctx.llm('translate');
-      const prompt = ctx.prompts.get(promptId);
-      const sourceLang = work.doc.sourceLang.trim() || (memory.brief?.language ?? '');
-      const render = (vars: Readonly<Record<string, string>>) => prompt.render(vars);
-      let system: string;
-      let context = '';
-      let neighbours: Rendered[] = [];
-      if (prompt.name === 'translate' && prompt.version >= 2) {
-        // The tail's translated paragraphs: no segment of this chunk may come back as one of them.
-        neighbours = segmentsBefore(work.doc.segments, work.chunk.segments)
-          .slice(-CONTEXT_TAIL_PARAGRAPHS)
-          .flatMap((s) => {
-            const t = memory.translated.get(s.id)?.text;
-            return t === undefined ? [] : [{ source: s.inlineMarkup, translation: t }];
-          });
-        const { segments, ...doc } = work.doc;
-        const snippets = await gatherContext(ctx.context, { doc, chunk: work.chunk.segments, targetLang: work.doc.targetLang, segments, memory, options: work.options });
-        system = renderSystemPromptV2(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style, gloss: work.options.gloss ?? DEFAULT_GLOSS, snippets });
-        context = renderContextBlock(snippets);
-      } else {
-        system = renderSystemPrompt(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
-      }
-      const call: ChunkCall = (wire, attempt) => client.stream(translateRequest(client, system, wire, ctx.signal, context, work.chunk.index, attempt));
-      const gen = translateChunk(toWire(work.chunk.segments), call, {
-        producedBy: { strategy: strategyId, stage: 'translate', model: client.model },
-        revision,
-        role: 'translate',
-        neighbours,
-      });
-      const shown = new Set<string>();
-      for (;;) {
-        const next = await gen.next();
-        if (next.done) {
-          outcome.report = next.value;
-          break;
-        }
-        const event: EngineEvent = next.value;
-        if (event.type === 'segment.final') shown.add(event.id);
-        else if (event.type === 'segment.failed') {
-          outcome.failed.push(event.id);
-          // A segment failed after an earlier attempt was shown: the repair plan re-requested it,
-          // so that text could not be trusted (translate-chunk.ts). It is not a "last good
-          // revision" (§5.6): drop it from memory, where the engine recorded the final before this
-          // event (it never records a `failed`). Only this strategy's revision: a later stage's
-          // failure must keep the draft.
-          if (shown.has(event.id) && ctx.memory.translated.get(event.id)?.revision === revision) ctx.memory.translated.delete(event.id);
-        }
-        yield event;
-      }
-      outcome.final = outcome.ids.filter((id) => shown.has(id) && !outcome.failed.includes(id));
+      const outcome = yield* translate(work, ctx);
       yield outcome;
     },
   });
+}
+
+/** The translate stage's work for one chunk, typed (createTranslateStage wraps it; contextual's revise pass calls it). */
+export function createTranslateRun(strategyId: string, brief?: BriefWait, promptId: string = TRANSLATE_PROMPT_ID, revision: number = REVISION): TranslateRun {
+  return async function* (work, ctx) {
+    const outcome: ChunkOutcome = { index: work.chunk.index, ids: work.chunk.segments.map((s) => s.id), final: [], failed: [] };
+    if (brief !== undefined && work.chunk.index >= brief.freeChunks) await untilSettledOrAborted(brief.settled, ctx.signal);
+    // One snapshot for the whole prompt: a brief landing while this chunk's prompt is being built
+    // must not reach part of it (the language, the providers) and miss `briefed`.
+    const memory: Readonly<WorkingMemory> = { ...ctx.memory };
+    if (brief !== undefined) {
+      outcome.briefed = memory.brief !== undefined;
+      yield { type: 'chunk', index: outcome.index, briefed: outcome.briefed };
+    }
+    if (ctx.budget.exhausted()) {
+      const error: LLMError = { kind: 'unknown', message: BUDGET_MESSAGE };
+      for (const id of outcome.ids) {
+        outcome.failed.push(id);
+        yield { type: 'segment.failed', id, error };
+      }
+      return outcome;
+    }
+    const client = ctx.llm('translate');
+    const prompt = ctx.prompts.get(promptId);
+    const sourceLang = work.doc.sourceLang.trim() || (memory.brief?.language ?? '');
+    const render = (vars: Readonly<Record<string, string>>) => prompt.render(vars);
+    let system: string;
+    let context = '';
+    let neighbours: Rendered[] | undefined;
+    if (prompt.name === 'translate' && prompt.version >= 2) {
+      // The tail's translated paragraphs: no segment of this chunk may come back as one of them.
+      neighbours = segmentsBefore(work.doc.segments, work.chunk.segments)
+        .slice(-CONTEXT_TAIL_PARAGRAPHS)
+        .flatMap((s) => {
+          const t = memory.translated.get(s.id)?.text;
+          return t === undefined ? [] : [{ source: s.inlineMarkup, translation: t }];
+        });
+      const { segments, ...doc } = work.doc;
+      const snippets = await gatherContext(ctx.context, { doc, chunk: work.chunk.segments, targetLang: work.doc.targetLang, segments, memory, options: work.options });
+      system = renderSystemPromptV2(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style, gloss: work.options.gloss ?? DEFAULT_GLOSS, snippets });
+      context = renderContextBlock(snippets);
+    } else {
+      system = renderSystemPrompt(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
+    }
+    const call: ChunkCall = (wire, attempt) => client.stream(translateRequest(client, system, wire, ctx.signal, context, work.chunk.index, attempt));
+    const gen = translateChunk(toWire(work.chunk.segments), call, {
+      producedBy: { strategy: strategyId, stage: 'translate', model: client.model },
+      revision,
+      role: 'translate',
+      ...(neighbours === undefined ? {} : { neighbours }),
+    });
+    const shown = new Set<string>();
+    for (;;) {
+      const next = await gen.next();
+      if (next.done) {
+        outcome.report = next.value;
+        break;
+      }
+      const event: EngineEvent = next.value;
+      if (event.type === 'segment.final') shown.add(event.id);
+      else if (event.type === 'segment.failed') {
+        outcome.failed.push(event.id);
+        // A segment failed after an earlier attempt was shown: the repair plan re-requested it,
+        // so that text could not be trusted (translate-chunk.ts). It is not a "last good
+        // revision" (§5.6): drop it from memory, where the engine recorded the final before this
+        // event (it never records a `failed`). Only this strategy's revision: a later stage's
+        // failure must keep the draft.
+        if (shown.has(event.id) && ctx.memory.translated.get(event.id)?.revision === revision) ctx.memory.translated.delete(event.id);
+      }
+      yield event;
+    }
+    outcome.final = outcome.ids.filter((id) => shown.has(id) && !outcome.failed.includes(id));
+    return outcome;
+  };
 }
 
 export const checkStage = defineStage<ChunkOutcome[], CheckSummary>({
