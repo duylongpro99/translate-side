@@ -58,6 +58,8 @@ export interface JudgeFile {
   failed: string[];
   usage: { input: number; cachedInput?: number; output: number };
   costUsd: number | null;
+  /** The judge's thinking: the effort sent ("off" = none) and the reserve added to max_tokens. Absent = off (before round 8). */
+  reasoning?: { effort: string; reserveTokens: number };
 }
 
 export interface Run {

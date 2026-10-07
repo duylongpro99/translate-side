@@ -2,12 +2,12 @@
 //   [--mock] [--concurrency n] [--price in,cached,out]
 // Writes <run-dir>/judge.json after every passage and resumes from it: passages already scored by the same judge model
 // are skipped, so a run cut short by a quota is finished by running the command again later. `--docs` scores only those
-// passages (a smoke test). Provider `apibox` (default, M2-D13; AIBOX_API_KEY, thinking off) or `gemini` (GEMINI_API_KEY,
+// passages (a smoke test). Provider `apibox` (default, M2-D13; AIBOX_API_KEY, thinking at effort medium, recorded in judge.json) or `gemini` (GEMINI_API_KEY,
 // the old judge); keys from .env. The judge model is pinned in judge-core.ts.
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
+import { APIBOX_BASE_URL, APIBOX_JUDGE_QUIRKS, createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
 import type { LLMClient, ResolvedConnection } from '@/llm/types';
 import { costUsd, priceFor } from './pricing.ts';
 import { askJudge, isComplete, judgeOnce, JUDGE_MODEL, JUDGE_PROMPT_ID, judgeSystemPrompt, judgeUserPrompt, QuotaStop } from './judge-core.ts';
@@ -44,17 +44,20 @@ function client(): LLMClient {
   const keyName = gemini ? 'GEMINI_API_KEY' : 'AIBOX_API_KEY';
   const key = process.env[keyName];
   if (!key) throw new Error(`${keyName} is not set (.env or the environment)`);
-  const conn: ResolvedConnection = { id: 'eval-judge', protocol: 'openai-chat', baseUrl: gemini ? GEMINI_OPENAI_BASE_URL : APIBOX_BASE_URL, auth: { style: 'bearer' }, apiKey: key, quirks: gemini ? {} : APIBOX_DEEPSEEK_QUIRKS, hasHostPermission: async () => true };
+  const conn: ResolvedConnection = { id: 'eval-judge', protocol: 'openai-chat', baseUrl: gemini ? GEMINI_OPENAI_BASE_URL : APIBOX_BASE_URL, auth: { style: 'bearer' }, apiKey: key, quirks: gemini ? {} : { ...APIBOX_JUDGE_QUIRKS }, hasHostPermission: async () => true };
   return createClient(conn, model);
 }
 
 const llm = client();
+/** The thinking setting the scores were made with; scores made with another are not resumed. */
+const reasoning: NonNullable<JudgeFile['reasoning']> = opt.mock || opt.provider === 'gemini' ? { effort: 'off', reserveTokens: 0 } : { effort: String(APIBOX_JUDGE_QUIRKS.reasoning?.lowest), reserveTokens: APIBOX_JUDGE_QUIRKS.reasoning?.reserveTokens ?? 0 };
 const price = priceFor(model, opt.price);
 const usage = { input: 0, cachedInput: 0, output: 0 };
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 const ask = (system: string, user: string): Promise<string> => askJudge(llm, system, user, usage, sleep);
 
-const prior = run.judge?.judgeModel === model && run.judge.prompt === JUDGE_PROMPT_ID ? run.judge : undefined;
+const sameThinking = (r: JudgeFile['reasoning']) => (r?.effort ?? 'off') === reasoning.effort;
+const prior = run.judge?.judgeModel === model && run.judge.prompt === JUDGE_PROMPT_ID && sameThinking(run.judge.reasoning) ? run.judge : undefined;
 const judged: JudgeFile['scores'] = Object.fromEntries(Object.entries(prior?.scores ?? {}).filter(([id, sc]) => run.outputs[id] && isComplete(sc)));
 const only = opt.docs ? new Set(opt.docs.split(',')) : undefined;
 const ids = Object.keys(run.outputs).sort().filter((id) => !judged[id] && (only === undefined || only.has(id)));
@@ -73,6 +76,7 @@ const save = (): void => {
     failed: [...failed].sort(),
     usage: { input: usage.input, cachedInput: usage.cachedInput, output: usage.output },
     costUsd: price ? costUsd(price, usage) : null,
+    reasoning,
   };
   fs.writeFileSync(path.join(run.dir, JUDGE_FILE), `${JSON.stringify(file, null, 1)}\n`);
 };

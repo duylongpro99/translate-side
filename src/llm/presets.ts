@@ -16,3 +16,10 @@ export const APIBOX_BASE_URL = 'https://api.ai-box.vn/v1';
  * chunk and `response_format: json_object` all work. So: thinking off, no reserve (DESIGN §4.2.4, §5.7).
  */
 export const APIBOX_DEEPSEEK_QUIRKS: Quirks = { reasoning: { control: 'effort', lowest: 'off', reserveTokens: 0 } };
+
+/**
+ * The judge (ds/deepseek-v4-pro, M2-D13) thinks: effort "medium" (accepted, probed 2026-10-07),
+ * pinned so a server-side default can't change the scores. The reserve keeps the score JSON from
+ * being cut by thinking that counts against max_tokens.
+ */
+export const APIBOX_JUDGE_QUIRKS: Quirks = { reasoning: { control: 'effort', lowest: 'medium', reserveTokens: 16000 } };
