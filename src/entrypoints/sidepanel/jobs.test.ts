@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BUDGET_MESSAGE, type EngineEvent, type Segment } from '@/engine/index';
+import { BUDGET_MESSAGE, CHECK_MESSAGE, type EngineEvent, type Segment, type TranslationJob } from '@/engine/index';
 import { translatorClient, wireLines, renderLines } from '@/engine/testing';
 import type { LLMClient, LLMError, NormalizedRequest } from '@/llm/types';
 import { GEMINI_PROFILE } from '@/shared/settings';
@@ -8,7 +8,9 @@ import { failureText } from './status.ts';
 
 const by = { strategy: 'single-pass', stage: 'translate', model: 'm' };
 const final = (id: string, text: string, revision = 1, attempt?: number): EngineEvent => ({ type: 'segment.final', id, text, revision, producedBy: by, ...(attempt === undefined ? {} : { attempt }) });
-const failedEv = (id: string, error: LLMError = { kind: 'unknown', message: 'x' }): EngineEvent => ({ type: 'segment.failed', id, error });
+const failedEv = (id: string, error: LLMError = { kind: 'unknown', message: 'x' }, revision?: number): EngineEvent => ({ type: 'segment.failed', id, error, ...(revision === undefined ? {} : { revision }) });
+/** What the check stage sends for a text that failed its checks twice. */
+const checkFailed = (id: string, revision: number): EngineEvent => failedEv(id, { kind: 'unknown', message: CHECK_MESSAGE, raw: { reason: 'check', outcome: 'failed-again', checks: [{ kind: 'code', detail: 'missing `poll`' }] } }, revision);
 const partial = (id: string, text: string): EngineEvent => ({ type: 'segment.partial', id, text });
 
 function fold(events: EngineEvent[]): SegState | undefined {
@@ -43,6 +45,23 @@ describe('applySegmentEvent: the §5.2 panel rule', () => {
     expect(fold([final('a', 'refined', 2), final('a', 'draft repaired', 1, 3)])).toMatchObject({ text: 'refined' });
     expect(fold([final('a', 'refined', 2), failedEv('a')])).toMatchObject({ status: 'final', text: 'refined' });
     expect(fold([failedEv('a'), final('a', 'refined', 2)])).toMatchObject({ status: 'final', text: 'refined' });
+  });
+});
+
+describe('applySegmentEvent: check failures (review D-B1)', () => {
+  it('a failure naming the shown revision replaces it, revision 2 included: the text is gone', () => {
+    const s = fold([final('a', 'draft'), final('a', 'revised, lost a code span', 2), checkFailed('a', 2)]);
+    expect(s).toMatchObject({ status: 'failed', revision: 2, error: { message: CHECK_MESSAGE } });
+    expect(s?.text).toBeUndefined();
+    expect(fold([final('a', 'draft'), checkFailed('a', 1)])).toMatchObject({ status: 'failed', revision: 1 });
+  });
+
+  it('a failure naming a lower revision only adds the error to a higher one', () => {
+    expect(fold([final('a', 'revised', 2), checkFailed('a', 1)])).toMatchObject({ status: 'final', text: 'revised', revision: 2, error: { message: CHECK_MESSAGE } });
+  });
+
+  it('after a check failure of revision 2, a late revision-1 final does not bring a text back', () => {
+    expect(fold([final('a', 'revised', 2), checkFailed('a', 2), final('a', 'draft repaired', 1, 2)])).toMatchObject({ status: 'failed' });
   });
 });
 
@@ -306,6 +325,51 @@ describe('Jobs (plan M1-E8)', () => {
     expect(v.segs.get('s2')).toEqual({ status: 'pending' });
     expect(v.counts).toEqual({ total: 3, final: 0, failed: 1 });
     expect(v.usage).toEqual({ input: 1000, cachedInput: 0, output: 500 });
+  });
+
+  it('a revision 2 that failed its checks is counted failed and shows no text (review D-B1)', async () => {
+    const engine = () => ({
+      async *translate() {
+        yield final('s0', 'vi:P0');
+        yield final('s1', 'vi:P1');
+        yield final('s2', 'vi:P2');
+        yield final('s0', 'vi:P0 revised', 2);
+        yield checkFailed('s0', 2);
+        yield { type: 'done' } as EngineEvent;
+      },
+    });
+    const jobs = new Jobs({ strategy: 'contextual', translateClient: ok(translatorClient()), engine: engine as never });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(3));
+    const v = jobs.get(1) as JobView;
+    expect(v.segs.get('s0')).toMatchObject({ status: 'failed', revision: 2 });
+    expect(v.segs.get('s0')?.text).toBeUndefined();
+    expect(v.counts).toEqual({ total: 3, final: 2, failed: 1 });
+  });
+
+  it('resume sends a segment that failed its checks again, and only that one (review D-N9)', async () => {
+    const sent: string[][] = [];
+    let run = 0;
+    const engine = () => ({
+      async *translate(job: TranslationJob) {
+        run++;
+        const ids = job.doc.segments.filter((s) => s.translate).map((s) => s.id);
+        sent.push(ids);
+        for (const id of ids) yield final(id, `vi:${id}`);
+        // The first run's check fails s1 for good; the resumed run's passes.
+        if (run === 1) yield checkFailed('s1', 1);
+        yield { type: 'done' } as EngineEvent;
+      },
+    });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(translatorClient()), engine: engine as never });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(3));
+    expect(jobs.get(1)?.counts).toEqual({ total: 3, final: 2, failed: 1 });
+    await jobs.resume(1);
+    expect(sent).toEqual([['s0', 's1', 's2'], ['s1']]);
+    const v = jobs.get(1) as JobView;
+    expect(v.counts).toEqual({ total: 3, final: 3, failed: 0 });
+    expect(v.segs.get('s1')).toMatchObject({ status: 'final', text: 'vi:s1' });
   });
 
   it('counts the requests a cancel cut off before their usage arrived; one still waiting at the gate is not one (review E-T2)', async () => {

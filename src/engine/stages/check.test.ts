@@ -6,6 +6,7 @@ import { createDefaultPromptRegistry } from '../prompts/index.ts';
 import { defineStage, defineStrategy } from '../runner.ts';
 import { CHECK_MESSAGE, SINGLE_PASS_STAGES, singlePass, type CheckSummary } from '../strategies/single-pass.ts';
 import { createContextual } from '../strategies/contextual.ts';
+import { checkFailure } from './check.ts';
 import { fakeSleep, renderLines, success, fakeClient, translatorClient, wireLines, type FakeClient } from '../testing.ts';
 import type { EngineEvent, Segment, TranslationJob, WorkingMemory } from '../types.ts';
 
@@ -117,7 +118,10 @@ describe('check stage: re-request once, then segment.failed (M2-E4)', () => {
     expect(f?.id).toBe('b');
     expect(f?.error.kind).toBe('unknown');
     expect(f?.error.message).toBe(CHECK_MESSAGE);
-    expect(f?.error.raw).toMatchObject({ checks: [{ kind: 'markers' }, { kind: 'url' }], after: [{ kind: 'markers' }, { kind: 'url' }] });
+    expect(f?.error.raw).toMatchObject({ reason: 'check', outcome: 'failed-again', checks: [{ kind: 'markers' }, { kind: 'url' }], after: [{ kind: 'markers' }, { kind: 'url' }] });
+    // It names the revision it condemns (review D-B1), and is recognised as a check failure (D-N1).
+    expect(f?.revision).toBe(1);
+    expect(f === undefined ? undefined : checkFailure(f.error)?.outcome).toBe('failed-again');
     expect(summary).toMatchObject({ final: 2, failed: 1, repaired: 0, checkFailed: ['b'] });
     expect(memory?.has('b')).toBe(false);
   });
@@ -126,7 +130,7 @@ describe('check stage: re-request once, then segment.failed (M2-E4)', () => {
     const idOf = byIndex(SOURCES);
     const client = translatorClient((lines, call) => (call === 1 ? renderLines(lines, (_s, n) => (idOf(n) === 'c' ? (BAD.c ?? '') : (GOOD[idOf(n)] ?? ''))) : ''));
     const { events } = await runWithSummary(job(SOURCES), client);
-    expect(failures(events).map((e) => [e.id, e.error.message, (e.error.raw as { after?: unknown }).after])).toEqual([['c', CHECK_MESSAGE, 'not returned']]);
+    expect(failures(events).map((e) => [e.id, e.error.message, checkFailure(e.error)?.outcome])).toEqual([['c', CHECK_MESSAGE, 'not-returned']]);
   });
 
   it('fails with the call\'s own error when the re-request fails as a call', async () => {
@@ -144,7 +148,9 @@ describe('check stage: re-request once, then segment.failed (M2-E4)', () => {
       },
     };
     const { events } = await runWithSummary(job(SOURCES), client);
-    expect(failures(events).map((e) => [e.id, e.error.kind])).toEqual([['a', 'auth']]);
+    expect(failures(events).map((e) => [e.id, e.error.kind, e.error.message])).toEqual([['a', 'auth', 'bad key']]);
+    // The check's reasons stay with the call's error (review D-N1).
+    expect(failures(events)[0]?.error.raw).toMatchObject({ reason: 'check', outcome: 'call-failed', checks: [{ kind: 'markers' }, { kind: 'code' }] });
   });
 
   it('a segment the parser already repaired (attempt 2) comes back from the check as attempt 3', async () => {
@@ -162,6 +168,24 @@ describe('check stage: re-request once, then segment.failed (M2-E4)', () => {
       [3, 'check'],
     ]);
     expect(failures(events)).toEqual([]);
+  });
+
+  it('a re-request has one attempt number for its call and for every final it confirms (review D-N2)', async () => {
+    let call = 0;
+    const idOf = byIndex(SOURCES);
+    const client = translatorClient((lines) => {
+      call++;
+      // Call 1 drops b (the parser re-requests it) and loses a's code spans; call 2 brings b back
+      // without its link (attempt 2); call 3, the check's, fixes a (attempt 1) and b (attempt 2).
+      if (call === 1) return renderLines(lines.filter((l) => l.n !== 2), (_s, i) => (idOf(i) === 'a' ? (BAD.a ?? '') : (GOOD[idOf(i)] ?? '')));
+      return renderLines(lines, (_s, i) => (call === 2 ? (BAD[idOf(i)] ?? '') : (GOOD[idOf(i)] ?? '')));
+    });
+    const { events } = await runWithSummary(job(SOURCES), client);
+    expect(sentIds(client, 2)).toEqual([1, 2]);
+    expect(finals(events).filter((e) => e[3] === 'check').map((e) => [e[0], e[2]])).toEqual([
+      ['a', 3],
+      ['b', 3],
+    ]);
   });
 
   it('makes one re-request per chunk with failing segments', async () => {
@@ -183,7 +207,7 @@ describe('check stage: re-request once, then segment.failed (M2-E4)', () => {
     const { events } = await runWithSummary(job(SOURCES, { budget: { maxTokens: 10 } }), client);
     expect(client.requests).toHaveLength(1);
     const [f] = failures(events);
-    expect([f?.id, f?.error.message, (f?.error.raw as { budget?: boolean }).budget]).toEqual(['a', CHECK_MESSAGE, true]);
+    expect([f?.id, f?.error.message, f === undefined ? undefined : checkFailure(f.error)?.outcome]).toEqual(['a', CHECK_MESSAGE, 'budget']);
   });
 
   it('the neighbour-duplicate check runs over the document (M2-D19): a copy of the segment before it is re-requested', async () => {
@@ -217,6 +241,21 @@ describe('check stage: re-request once, then segment.failed (M2-E4)', () => {
       [2, 2, 'check'],
     ]);
     expect(failures(events)).toEqual([]);
+  });
+});
+
+describe('check failures of a revision 2 (review D-B1)', () => {
+  it('a revision 2 that fails the checks twice fails naming revision 2, so the panel drops its text', async () => {
+    const long = (i: number) => seg(`p${i}`, `P${i} see https://a.example/${i} ${'word '.repeat(300).trim()}`);
+    const segments = Array.from({ length: 3 }, (_, i) => long(i));
+    // Every call drops chunk 0's URL: revision 1, revision 2 (no regression, so it stands) and the check's.
+    const translate = translatorClient((lines) => renderLines(lines, (s) => (s.startsWith('P0') ? `vi:${s.replace(/https:\/\/\S+/, 'đây')}` : `vi:${s}`)));
+    const brief = { genre: 'g', audience: 'a', purpose: 'p', tone: 't', glossary: [] };
+    const engine = createEngine({ llm: (role) => (role === 'analyze' ? fakeClient([success(JSON.stringify(brief))]) : translate), now: () => 0, sleep: fakeSleep(), strategies: [createContextual()], prompts: createDefaultPromptRegistry(), random: () => 0 });
+    const events = await collect(engine.translate(job(segments, { chunkTokens: 500 }, 'contextual'), new AbortController().signal));
+    expect(events.some((e) => e.type === 'segment.final' && e.id === 'p0' && e.revision === 2)).toBe(true);
+    const [f] = failures(events);
+    expect([f?.id, f?.revision, f?.error.message, f === undefined ? undefined : checkFailure(f.error)?.outcome]).toEqual(['p0', 2, CHECK_MESSAGE, 'failed-again']);
   });
 });
 

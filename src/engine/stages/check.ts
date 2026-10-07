@@ -9,9 +9,13 @@
 //      prompt (the translate stage's call, single-pass.ts prepareChunk) with only those segments,
 //      as the parser's repair does (decision S2). A text that comes back and passes every check
 //      replaces the shown one in place: the same revision, one attempt higher (§5.2);
-//   4. fails the rest: `segment.failed` with CHECK_MESSAGE (the checks in `raw`), or the call's
-//      own error when the re-request failed as a call. A failed text is no "last good revision"
-//      (§5.6), so it leaves working memory.
+//   4. fails the rest: `segment.failed` with CHECK_MESSAGE, or the call's own error when the
+//      re-request failed as a call; either way `raw` is a CheckFailedRaw (`reason: 'check'`, the
+//      checks failed), the marker M3's inline retry keys on (review D-N1). The event names the
+//      revision it condemns, so the panel replaces that text even when it is a revision 2 (review
+//      D-B1). A failed text is no "last good revision" (§5.6), so it leaves working memory.
+// The re-request is one call with one attempt number, one above the highest of its segments; the
+// finals it confirms carry that same number (review D-N2).
 // No re-request once the job's budget is exhausted (§5.6): the failing segments fail at once.
 // Re-requests of different chunks run at once, up to the job's maxConcurrency.
 
@@ -27,6 +31,27 @@ import type { CheckSummary, ChunkOutcome, ChunkWork } from '../strategies/single
 export const UNCHECKED_MESSAGE = 'The segment was neither translated nor reported failed';
 /** A translation that failed the post-checks twice (raw: `{ checks, after? }`). */
 export const CHECK_MESSAGE = 'The translation failed the quality checks (markers, code, links, numbers or length)';
+
+/** `LLMError.raw` of every failure the check stage sends (review D-N1). */
+export interface CheckFailedRaw {
+  reason: 'check';
+  /**
+   * What became of the re-request: its text failed the checks again (`after`), it did not return
+   * the segment, the call failed (the event's error is the call's; its raw is `cause`), or none was
+   * made because the budget was spent.
+   */
+  outcome: 'failed-again' | 'not-returned' | 'call-failed' | 'budget';
+  /** The checks the shown text failed, which caused the re-request. */
+  checks: CheckFailure[];
+  after?: CheckFailure[];
+  cause?: unknown;
+}
+
+/** The check stage's details of `error`, when it is a check failure. */
+export function checkFailure(error: LLMError): CheckFailedRaw | undefined {
+  const raw = error.raw as Partial<CheckFailedRaw> | undefined;
+  return raw !== null && typeof raw === 'object' && raw.reason === 'check' ? (raw as CheckFailedRaw) : undefined;
+}
 
 /** How the check stage reaches a chunk's translate call (the strategy's translate stage builds it). */
 export type PrepareCall = (work: ChunkWork, ctx: StageContext) => Promise<{ model: string; call: ChunkCall }>;
@@ -95,24 +120,26 @@ export function createCheckStage(strategyId: string, prepare: PrepareCall): AnyS
         // Not a last good revision (§5.6); the engine recorded it as final.
         const t = ctx.memory.translated.get(r.id);
         if (t !== undefined && t.revision === r.revision) ctx.memory.translated.delete(r.id);
-        return { type: 'segment.failed', id: r.id, error };
+        return { type: 'segment.failed', id: r.id, error, revision: r.revision };
       };
       async function* recheck(group: Row[]): AsyncGenerator<EngineEvent> {
         const work = group[0]?.outcome.work;
         if (work === undefined) return;
-        const reasons = (r: Row) => failing.get(r.id) ?? [];
+        const raw = (r: Row, outcome: CheckFailedRaw['outcome'], more: Partial<CheckFailedRaw> = {}): CheckFailedRaw => ({ reason: 'check', outcome, checks: failing.get(r.id) ?? [], ...more });
         if (ctx.budget.exhausted()) {
-          for (const r of group) yield fail(r, { kind: 'unknown', message: CHECK_MESSAGE, raw: { checks: reasons(r), budget: true } });
+          for (const r of group) yield fail(r, { kind: 'unknown', message: CHECK_MESSAGE, raw: raw(r, 'budget') });
           return;
         }
         const { model, call } = await prepare(work, ctx);
         const wire = toWire(group.map((r): WireSegment => ({ n: r.n, segment: r.segment })));
         const attempt = Math.max(...group.map((r) => r.attempt)) + 1;
+        // No finals come from the call itself (they are checked below), so its `revision` is unused.
         const result = yield* rerequestSegments(wire, call, { producedBy: { strategy: strategyId, stage: 'check', model }, revision: 1, role: 'translate' }, attempt);
         for (const r of group) {
           const text = result.accepted.get(r.n);
           if (text === undefined) {
-            yield fail(r, result.error ?? { kind: 'unknown', message: CHECK_MESSAGE, raw: { checks: reasons(r), after: 'not returned' } });
+            const e = result.error;
+            yield fail(r, e === undefined ? { kind: 'unknown', message: CHECK_MESSAGE, raw: raw(r, 'not-returned') } : { ...e, raw: raw(r, 'call-failed', e.raw === undefined ? {} : { cause: e.raw }) });
             continue;
           }
           const after = checkSegment(r.source, text, targetLang);
@@ -121,12 +148,12 @@ export function createCheckStage(strategyId: string, prepare: PrepareCall): AnyS
           const before = rows.slice(Math.max(0, at - DUPLICATE_WINDOW), at);
           if (copiesNeighbour(r.source, text, before)) after.push({ kind: 'duplicate', detail: 'copies a neighbouring translation' });
           if (after.length) {
-            yield fail(r, { kind: 'unknown', message: CHECK_MESSAGE, raw: { checks: reasons(r), after } });
+            yield fail(r, { kind: 'unknown', message: CHECK_MESSAGE, raw: raw(r, 'failed-again', { after }) });
             continue;
           }
           r.translation = text;
           summary.repaired++;
-          yield { type: 'segment.final', id: r.id, text, revision: r.revision, producedBy: { strategy: strategyId, stage: 'check', model }, attempt: r.attempt + 1 };
+          yield { type: 'segment.final', id: r.id, text, revision: r.revision, producedBy: { strategy: strategyId, stage: 'check', model }, attempt };
         }
       }
       for await (const { value } of multiplex(groups, concurrency, recheck, ctx.signal)) yield value as EngineEvent;

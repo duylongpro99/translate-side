@@ -89,9 +89,11 @@ const STOP_KINDS: ReadonlySet<LLMErrorKind> = new Set(['auth', 'quota', 'cors', 
  * attempt replaces the text in place; a later `segment.failed` for that revision replaces any
  * attempt; a higher revision always wins. A partial only previews a segment with no final yet.
  *
- * `segment.failed` carries no revision. Single-pass has only revision 1, so a failure replaces a
- * revision-1 final (review B-N1: a first-pass final the repair could not confirm). A higher
- * revision (refine, M7) is a better text than the failed pass, so it stays (§5.6).
+ * A `segment.failed` without a revision replaces a revision-1 final (review B-N1: a first-pass
+ * final the repair could not confirm); a higher revision (contextual's revise pass M2-D17, refine
+ * M7) is a better text than the failed pass, so it stays (§5.6) and only gets the error. A failure
+ * naming a revision (the check stage) replaces a final of that revision or lower: the shown text
+ * is the one that failed (review D-B1).
  */
 export function applySegmentEvent(cur: SegState | undefined, e: EngineEvent): SegState | undefined {
   switch (e.type) {
@@ -108,8 +110,8 @@ export function applySegmentEvent(cur: SegState | undefined, e: EngineEvent): Se
       return { status: 'final', text: e.text, revision: e.revision, attempt };
     }
     case 'segment.failed':
-      if (cur?.status === 'final' && (cur.revision ?? 1) > 1) return { ...cur, error: e.error };
-      return { status: 'failed', error: e.error, revision: cur?.revision ?? 1 };
+      if (cur?.status === 'final' && (cur.revision ?? 1) > (e.revision ?? 1)) return { ...cur, error: e.error };
+      return { status: 'failed', error: e.error, revision: Math.max(cur?.revision ?? 1, e.revision ?? 1) };
     default:
       return cur;
   }

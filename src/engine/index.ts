@@ -43,23 +43,27 @@ export {
   type ChunkWork,
   type SystemPromptVars,
 } from './strategies/single-pass.ts';
-export { CHECK_MESSAGE, UNCHECKED_MESSAGE, createCheckStage, type PrepareCall } from './stages/check.ts';
+export { CHECK_MESSAGE, UNCHECKED_MESSAGE, checkFailure, createCheckStage, type CheckFailedRaw, type PrepareCall } from './stages/check.ts';
 export {
   DUPLICATE_WINDOW,
-  LENGTH_MAX_RATIO,
-  LENGTH_MIN_RATIO,
-  LENGTH_MIN_RATIO_CJK,
-  LENGTH_MIN_SOURCE_CHARS,
+  DENSE_SHARE,
+  LENGTH_BOUNDS,
   LENGTH_SLACK_CHARS,
   checkDuplicates,
+  checkScript,
   checkSegment,
   codeSpans,
+  crossings,
+  lengthBounds,
   markerCounts,
+  numberValues,
   numbers,
   urls,
+  TARGET_SCRIPTS,
   type CheckFailure,
   type CheckKind,
   type CheckedSegment,
+  type LengthBounds,
 } from './check/checks.ts';
 export type * from './types.ts';
 export { estimateTokens, CHARS_PER_TOKEN } from './tokens.ts';

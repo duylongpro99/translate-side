@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
 import {
+  DEFAULT_BUDGET_TOKENS,
   DEFAULT_CONNECTION,
   DEFAULT_HOST,
   DEFAULT_ORIGIN,
@@ -248,11 +249,15 @@ function StyleSection({ api }: { api: Browser }) {
           max={MAX_BUDGET_TOKENS}
           step={10000}
           value={prefs.budgetTokens}
-          onChange={(e) => update({ budgetTokens: cleanBudget(Number((e.target as HTMLInputElement).value)) })}
+          // An emptied field is the default, not 0 (no limit): review D-N7.
+          onChange={(e) => {
+            const raw = (e.target as HTMLInputElement).value.trim();
+            update({ budgetTokens: raw === '' ? DEFAULT_BUDGET_TOKENS : cleanBudget(Number(raw)) });
+          }}
         />
       </div>
       <p class="opt__hint" data-testid="budget-hint">
-        Input and output tokens for one page, every model call included; 0 for no limit. What is left untranslated when it runs out is marked as skipped.
+        Input and output tokens for one page, every model call included; 0 for no limit, empty for the default. What is left untranslated when it runs out is marked as skipped.
       </p>
     </section>
   );

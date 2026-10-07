@@ -6,7 +6,9 @@
 //   markers    inline markers well-formed: `[link]…[/link]` paired in order and exactly as many
 //              as the source's (the panel maps them to the page's links); emphasis asterisks
 //              (outside code spans) and backtick spans no fewer than the source's, and paired.
-//              More are allowed: a first-use gloss repeats a marked term ("*giai đoạn* (*stages*)")
+//              More are allowed: a first-use gloss repeats a marked term ("*giai đoạn* (*stages*)").
+//              Spans nest, never cross: "*a [link]b* c[/link]" fails unless the source crosses
+//              the same way (no more crossings than the source's)
 //   code       every distinct backtick span of the source, byte-identical, at least once ("To
 //              `panic!` or Not to `panic!`" may come back with one)
 //   url        every URL of the source (outside code spans), byte-identical
@@ -18,19 +20,32 @@
 //   duplicate  (document level, checkDocument) the translation copies a neighbouring segment's
 //              translation while the sources differ (duplicate.ts)
 //
-// Numbers: a number is a run of digits with single `.`, `,`, NBSP, narrow NBSP or `'` between digit
-// groups ("1,000.5", "1.000,5", "1 000"); it compares by its digits alone, so thousand and decimal
-// separators may differ ("3.5" = "3,5", "1,000" = "1.000"), and the same number may come back
-// fewer or more times. Numbers are never required to be spelled out or converted; a number written
-// as words, in Roman numerals or with its digits changed fails. Digits inside a word ("utf8",
-// "x86_64") count too: they are not translated either.
+// Numbers: a run of digits with single `.`, `,`, NBSP, narrow NBSP or `'` between digit groups
+// ("1,000.5", "1.000,5", "1 000") is read as values (numberValues). A separator followed by
+// exactly three digits groups thousands; one other `.` or `,`, the last, is the decimal point;
+// with more than one other separator the run is a list or a version ("1,2,3", "1.2.10") and each
+// group is a value. So thousand and decimal separators may be localised ("3.5" = "3,5", "1,000" =
+// "1.000", "1,000.5" = "1.000,5"), but "3.5" ≠ "35" and "1,2,3" is 1, 2 and 3 (review D-N4). A
+// value may come back fewer or more times. Numbers are never required to be spelled out or
+// converted; a number written as words, in Roman numerals or with its digits changed fails.
+// Digits inside a word ("utf8", "x86_64") count too: they are not translated either.
 //
-// Length (chars of the translation over chars of the source, markers included): fails when the
-// translation is empty, or when the source has at least LENGTH_MIN_SOURCE_CHARS and the ratio is
-// below the target's floor (0.25; 0.1 for Chinese, Japanese and Korean targets, whose text is
-// denser), or when the translation is longer than LENGTH_MAX_RATIO × source + LENGTH_SLACK_CHARS
-// (3× plus room for a short heading's first-use gloss). Calibrated on every stored eval output
-// (M1, M2: English to Vietnamese ran 0.6–2.4, glosses included).
+// Length (chars of the translation over chars of the source, markers included; review D-N5): the
+// bounds depend on whether each side is written in a dense script (Chinese, Japanese, Korean: a
+// character carries about a word's share of meaning). The source's side is read from its text (at
+// least DENSE_SHARE of its letters Han, kana or Hangul), the target's from its language (zh, ja,
+// ko). It fails when the translation is empty; when the source has at least the minimum length
+// and the ratio is below the floor; or when the translation is longer than max × source +
+// LENGTH_SLACK_CHARS (room for a short heading's first-use gloss).
+//
+//   source → target        min source chars   floor   max
+//   sparse → sparse               20           0.25     3    calibrated: en→vi ran 0.6–2.4 (M1, M2 eval outputs)
+//   sparse → dense                20           0.1      3    zh/ja/ko text ~0.3–0.6× English
+//   dense  → sparse               10           0.5      8    English ~2–4× Chinese/Japanese chars
+//   dense  → dense                10           0.25     3
+//
+// The dense rows are estimates from typical character ratios, not calibrated: the eval set has
+// no CJK source yet.
 
 import { copiesNeighbour, type Rendered } from '../parsing/duplicate.ts';
 
@@ -42,13 +57,23 @@ export interface CheckFailure {
   detail: string;
 }
 
-/** Below this many source characters a short ratio is not judged (labels, "OK", numbers). */
-export const LENGTH_MIN_SOURCE_CHARS = 20;
-export const LENGTH_MIN_RATIO = 0.25;
-/** Chinese, Japanese and Korean targets: denser text. */
-export const LENGTH_MIN_RATIO_CJK = 0.1;
-export const LENGTH_MAX_RATIO = 3;
+export interface LengthBounds {
+  /** Below this many source characters a short ratio is not judged (labels, "OK", numbers). */
+  minSourceChars: number;
+  floor: number;
+  max: number;
+}
+
+/** The table above, by `${source}-${target}` density. */
+export const LENGTH_BOUNDS: Record<'sparse-sparse' | 'sparse-dense' | 'dense-sparse' | 'dense-dense', LengthBounds> = {
+  'sparse-sparse': { minSourceChars: 20, floor: 0.25, max: 3 },
+  'sparse-dense': { minSourceChars: 20, floor: 0.1, max: 3 },
+  'dense-sparse': { minSourceChars: 10, floor: 0.5, max: 8 },
+  'dense-dense': { minSourceChars: 10, floor: 0.25, max: 3 },
+};
 export const LENGTH_SLACK_CHARS = 80;
+/** A source is dense when at least this share of its letters (outside code) are Han, kana or Hangul. */
+export const DENSE_SHARE = 0.3;
 
 const CODE_SPAN = /`[^`]+`/g;
 /** http(s) and www. URLs up to whitespace, a marker or a quote; trailing punctuation is not part of them. */
@@ -81,11 +106,33 @@ function trimUrl(url: string): string {
   return u;
 }
 
-/** The numbers of `text` outside code spans and URLs, as digit strings ("1,000.5" → "10005"). */
+/** The numbers of `text` outside code spans and URLs, as values ("1,000.5" → "1000.5", "1,2,3" → 1, 2, 3). */
 export function numbers(text: string): string[] {
   let rest = withoutCode(text);
   for (const u of urls(text)) rest = rest.split(u).join(' ');
-  return (rest.match(NUMBER) ?? []).map((n) => n.replace(/\D/g, ''));
+  return (rest.match(NUMBER) ?? []).flatMap(numberValues);
+}
+
+/** One run of digits and separators as its values (see the top of the file). */
+export function numberValues(run: string): string[] {
+  const parts = run.split(/([.,\u00a0\u202f'\u2019])/);
+  const groups = parts.filter((_, i) => i % 2 === 0);
+  const seps = parts.filter((_, i) => i % 2 === 1);
+  // Separator i stands between groups i and i + 1.
+  const other = seps.flatMap((_, i) => (groups[i + 1]?.length === 3 ? [] : [i]));
+  if (other.length === 0) return [groups.join('')];
+  const last = seps.length - 1;
+  if (other.length === 1 && other[0] === last && /[.,]/.test(seps[last] ?? '')) return [`${groups.slice(0, -1).join('')}.${groups.at(-1) ?? ''}`];
+  const out: string[] = [];
+  let cur = groups[0] ?? '';
+  seps.forEach((_, i) => {
+    if (other.includes(i)) {
+      out.push(cur);
+      cur = '';
+    }
+    cur += groups[i + 1] ?? '';
+  });
+  return [...out, cur];
 }
 
 /** Inline markers of a text, outside code spans: links, emphasis, backtick spans. */
@@ -106,6 +153,26 @@ function linksPaired(text: string): boolean {
   return !open;
 }
 
+/** How many pairs of spans cross ("*a [link]b* c[/link]"): links paired in order, `**` and `*` each paired in turn, outside code. */
+export function crossings(text: string): number {
+  const spans: [number, number][] = [];
+  const open: Record<string, number | undefined> = {};
+  for (const m of withoutCode(text).matchAll(/\[\/?link\]|\*\*|\*/g)) {
+    const key = m[0] === '[/link]' ? '[link]' : m[0];
+    const at = m.index ?? 0;
+    const start = open[key];
+    if (start === undefined) {
+      if (m[0] !== '[/link]') open[key] = at;
+    } else if (m[0] !== '[link]') {
+      spans.push([start, at]);
+      open[key] = undefined;
+    }
+  }
+  let n = 0;
+  for (const [i, a] of spans.entries()) for (const b of spans.slice(i + 1)) if ((a[0] < b[0] && b[0] < a[1] && a[1] < b[1]) || (b[0] < a[0] && a[0] < b[1] && b[1] < a[1])) n++;
+  return n;
+}
+
 const asterisks = (text: string) => (withoutCode(text).match(/\*/g) ?? []).length;
 
 const short = (s: string) => (s.length > 40 ? `${s.slice(0, 37)}…` : s);
@@ -116,6 +183,7 @@ export function checkMarkers(source: string, translation: string): CheckFailure 
   if (!linksPaired(translation) && linksPaired(source)) return { kind: 'markers', detail: 'unpaired [link] markers' };
   // Links map to the page's links in order (the panel), so exactly as many.
   if (a.link !== b.link) return { kind: 'markers', detail: `${b.link} links for ${a.link}` };
+  if (crossings(translation) > crossings(source)) return { kind: 'markers', detail: 'crossed markers' };
   // Emphasis and code may be repeated (a first-use gloss "*giai đoạn* (*stages*)"), not lost.
   const sa = asterisks(source);
   const ta = asterisks(translation);
@@ -145,15 +213,28 @@ export function checkNumbers(source: string, translation: string): CheckFailure 
   return undefined;
 }
 
-const CJK_TARGET = /^(zh|ja|ko)\b/i;
+const DENSE_TARGET = /^(zh|ja|ko)\b/i;
+const DENSE_LETTER = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu;
+
+/** Whether `text` is written mostly in a dense script (Han, kana, Hangul), by its letters outside code. */
+export function isDense(text: string): boolean {
+  const plain = withoutCode(text);
+  const letters = plain.match(/\p{L}/gu)?.length ?? 0;
+  return letters > 0 && (plain.match(DENSE_LETTER)?.length ?? 0) / letters >= DENSE_SHARE;
+}
+
+/** The length bounds for `source` translated into `targetLang`. */
+export function lengthBounds(source: string, targetLang: string): LengthBounds {
+  return LENGTH_BOUNDS[`${isDense(source) ? 'dense' : 'sparse'}-${DENSE_TARGET.test(targetLang) ? 'dense' : 'sparse'}`];
+}
 
 export function checkLength(source: string, translation: string, targetLang: string): CheckFailure | undefined {
   const s = source.trim().length;
   const t = translation.trim().length;
   if (t === 0) return s === 0 ? undefined : { kind: 'length', detail: 'empty' };
-  const floor = CJK_TARGET.test(targetLang) ? LENGTH_MIN_RATIO_CJK : LENGTH_MIN_RATIO;
-  if (s >= LENGTH_MIN_SOURCE_CHARS && t / s < floor) return { kind: 'length', detail: `ratio ${(t / s).toFixed(2)} below ${floor}` };
-  if (t > LENGTH_MAX_RATIO * s + LENGTH_SLACK_CHARS) return { kind: 'length', detail: `ratio ${(t / s).toFixed(2)} runaway` };
+  const { minSourceChars, floor, max } = lengthBounds(source, targetLang);
+  if (s >= minSourceChars && t / s < floor) return { kind: 'length', detail: `ratio ${(t / s).toFixed(2)} below ${floor}` };
+  if (t > max * s + LENGTH_SLACK_CHARS) return { kind: 'length', detail: `ratio ${(t / s).toFixed(2)} runaway` };
   return undefined;
 }
 
@@ -171,7 +252,7 @@ const SCRIPTS: Record<string, RegExp> = {
 };
 
 /** The scripts a target language is written in, among SCRIPTS (Latin-script languages: none). */
-const TARGET_SCRIPTS: Record<string, readonly string[]> = {
+export const TARGET_SCRIPTS: Record<string, readonly string[]> = {
   zh: ['Han'],
   ja: ['Han', 'Hiragana', 'Katakana'],
   ko: ['Hangul', 'Han'],

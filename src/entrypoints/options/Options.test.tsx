@@ -183,6 +183,13 @@ describe('options: style and personal glossary (plan M2-E6)', () => {
     choose('#budget', '-5');
     await flush();
     expect(f.sync.get('prefs')).toMatchObject({ budgetTokens: 400000 });
+    // An emptied field is the default, not 0 = no limit (review D-N7).
+    choose('#budget', '0');
+    await flush();
+    choose('#budget', '');
+    await flush();
+    expect(f.sync.get('prefs')).toMatchObject({ budgetTokens: 400000 });
+    expect((root.querySelector('#budget') as HTMLInputElement).value).toBe('400000');
   });
 
   it('adds a "keep as is" entry and a translated one, edits and removes them, saving each change to sync', async () => {

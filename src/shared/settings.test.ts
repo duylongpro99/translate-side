@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PRICES, costUsd as harnessCost, type Price } from '../../scripts/eval/pricing.ts';
 import { costUsd, formatUsd } from './cost.ts';
 import { APIBOX_DEEPSEEK_QUIRKS } from '@/llm/presets';
+import { checkScript, TARGET_SCRIPTS } from '@/engine/index';
 import {
   APIBOX_CONNECTION,
   APIBOX_FLASH_PROFILE,
@@ -36,6 +37,7 @@ import {
   MAX_BUDGET_TOKENS,
   cleanBudget,
   defaultPreferences,
+  LANGUAGES,
 } from './settings.ts';
 
 type Api = Parameters<typeof readApiKey>[0];
@@ -234,5 +236,40 @@ describe('personal glossary (plan M2-E6): storage.sync with a quota guard', () =
     const { api } = fakeApi();
     (api.storage.sync as unknown as Record<string, unknown>).set = () => Promise.reject(new Error('QUOTA_BYTES_PER_ITEM quota exceeded'));
     expect(await saveGlossary(api, [{ term: 'x', rendering: 'x' }])).toEqual({ ok: false, reason: 'error', message: 'QUOTA_BYTES_PER_ITEM quota exceeded' });
+  });
+});
+
+describe('LANGUAGES against the wrong-script check (review D-N6)', () => {
+  /** A correct sentence in each target's own script; Latin-script targets with their diacritics. */
+  const SAMPLES: Record<string, string> = {
+    en: 'The futures are lazy.',
+    vi: 'Các future được đánh giá lười.',
+    'zh-CN': '这些 future 是惰性的。',
+    'zh-TW': '這些 future 是惰性的。',
+    ja: 'これらのフューチャーは遅延評価です。',
+    ko: '이 퓨처들은 게으릅니다(遅延).',
+    fr: 'Les futures sont paresseuses, ça marche.',
+    de: 'Futures sind träge; Größe zählt.',
+    es: 'Los futures son perezosos, señor.',
+    'pt-BR': 'Os futures são preguiçosos, então.',
+    it: 'I future sono pigri, più o meno.',
+    ru: 'Футуры ленивы.',
+    uk: 'Ф\u2019ючерси ліниві, ґанок.',
+    pl: 'Futures są leniwe, zażółć gęślą jaźń.',
+    nl: 'Futures zijn lui, één keer.',
+    tr: 'Future\u2019lar tembeldir, İstanbul\u2019da.',
+    ar: 'العقود الآجلة كسولة.',
+    hi: 'फ्यूचर्स आलसी होते हैं।',
+    id: 'Future bersifat malas.',
+    th: 'ฟิวเจอร์เป็นแบบขี้เกียจ',
+  };
+
+  it('has a sample for every language of the list, and never flags a correct translation into it', () => {
+    expect(LANGUAGES.map((l) => l.code).sort()).toEqual(Object.keys(SAMPLES).sort());
+    for (const { code } of LANGUAGES) expect([code, checkScript('The futures are lazy.', SAMPLES[code] ?? '', code)]).toEqual([code, undefined]);
+  });
+
+  it('knows the script of every non-Latin target', () => {
+    for (const code of ['zh-CN', 'zh-TW', 'ja', 'ko', 'ru', 'uk', 'ar', 'hi', 'th']) expect([code, TARGET_SCRIPTS[code.split('-')[0] ?? '']]).not.toEqual([code, undefined]);
   });
 });

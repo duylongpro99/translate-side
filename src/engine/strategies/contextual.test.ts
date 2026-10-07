@@ -523,6 +523,22 @@ describe('contextual: chunk 0 again with the brief, as revision 2 (M2-D17)', () 
     expect(regresses('Futures are *lazy*.', 'Các future *lười*.', 'Các future **lười**.', 'vi')).toBe(false);
   });
 
+  it('regresses(): edge cases (review D-N9)', () => {
+    const src = 'Depend on the `futures` crate for `ArcWake`, version 0.3.';
+    const draft = 'Phụ thuộc vào crate `futures` cho `ArcWake`, phiên bản 0.3.';
+    expect(regresses(src, draft, draft, 'vi')).toBe(false);
+    // An empty revision 2 (length) and a script leak are regressions too, not only markers.
+    expect(regresses(src, draft, '', 'vi')).toBe(true);
+    expect(regresses(src, draft, 'Phụ thuộc vào crate `futures` cho `ArcWake`, phiên bản 0.3 版本.', 'vi')).toBe(true);
+    // It fixes revision 1's code spans but drops the number: a new kind failed, so a regression.
+    expect(regresses(src, 'Phụ thuộc vào crate futures cho ArcWake, phiên bản 0.3.', 'Phụ thuộc vào crate `futures` cho `ArcWake`.', 'vi')).toBe(true);
+    // Kind level: revision 1 lost one span, revision 2 another; no new kind, so revision 2 stands
+    // (the check stage then re-requests it anyway).
+    expect(regresses(src, 'Phụ thuộc vào crate futures cho `ArcWake`, phiên bản 0.3.', 'Phụ thuộc vào crate `futures` cho ArcWake, phiên bản 0.3.', 'vi')).toBe(false);
+    // Fewer failures than revision 1 and none new: an improvement.
+    expect(regresses(src, 'Phụ thuộc vào crate futures cho ArcWake.', 'Phụ thuộc vào crate `futures` cho `ArcWake`.', 'vi')).toBe(false);
+  });
+
   it('keeps revision 1 for a segment whose revision 2 lost inline markers; replaces the rest (round 15)', async () => {
     const mixed = [
       seg('m1', 'Depend on the `futures` crate for `ArcWake`.'),

@@ -126,7 +126,18 @@ export type EngineEvent =
       /** E.g. an idiom explained. */
       notes?: string[];
     }
-  | { type: 'segment.failed'; id: string; error: LLMError }
+  | {
+      type: 'segment.failed';
+      id: string;
+      error: LLMError;
+      /**
+       * The revision this failure is about. Absent: the pass that failed had no text shown yet or
+       * was a revision-1 pass, and a higher revision already shown stays (§5.6). Present (the check
+       * stage, Phase D): the failure condemns that revision's shown text, which is replaced by the
+       * failure (review D-B1: a revision 2 that failed its checks twice is not a good revision).
+       */
+      revision?: number;
+    }
   /**
    * Contextual only: a chunk's prompt is about to be built, with or without the brief (plan M2-D6,
    * ChunkOutcome.briefed). For the harness and diagnostics; the panel ignores it.

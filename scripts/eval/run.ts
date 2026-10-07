@@ -337,8 +337,9 @@ async function runDoc(slug: string): Promise<DocResult> {
       failed.delete(e.id);
       firstFinalMs ??= Date.now() - t0;
     } else if (e.type === 'segment.failed') {
-      // As in the panel: a failure of the first pass does not undo a revision 2; the check stage's does.
-      if (!inCheck && (finals.get(e.id)?.revision ?? 1) > 1) continue;
+      // As in the panel: a failure of the first pass does not undo a revision 2; one naming that
+      // revision (the check stage's) does.
+      if ((finals.get(e.id)?.revision ?? 1) > (e.revision ?? 1)) continue;
       failed.set(e.id, `${e.error.kind}: ${e.error.message}`);
       finals.delete(e.id);
     } else if (e.type === 'chunk') {

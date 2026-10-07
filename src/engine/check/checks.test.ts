@@ -9,8 +9,13 @@ import {
   checkSegment,
   checkUrls,
   codeSpans,
+  crossings,
+  isDense,
+  LENGTH_BOUNDS,
+  lengthBounds,
   markerCounts,
   numbers,
+  numberValues,
   urls,
 } from './checks.ts';
 
@@ -42,6 +47,18 @@ describe('checks: markers (M2-E4)', () => {
   it('fails lost backtick spans and an unclosed backtick', () => {
     expect(checkMarkers('crate `futures` for `ArcWake`', 'crate futures cho ArcWake')?.detail).toBe('0 code spans for 2');
     expect(checkMarkers('call `poll`', 'gọi `poll')?.kind).toBe('markers');
+  });
+
+  it('fails crossed spans the source does not have (review D-N3)', () => {
+    expect(checkMarkers('*a b* [link]c d[/link]', '*a [link]b* c[/link] d')?.detail).toBe('crossed markers');
+    expect(checkMarkers('[link]a b[/link] **c**', '[link]a **b[/link] c**')?.detail).toBe('crossed markers');
+    // Nesting is fine, both ways.
+    expect(checkMarkers('*a [link]b[/link] c*', '*a [link]b[/link] c*')).toBeUndefined();
+    expect(checkMarkers('[link]*a* b[/link]', '[link]b *a*[/link]')).toBeUndefined();
+    expect(crossings('*a [link]b* c[/link]')).toBe(1);
+    expect(crossings('*a* [link]b[/link] `*[link]*`')).toBe(0);
+    // A source that crosses may come back crossed the same way.
+    expect(checkMarkers('*a [link]b* c[/link]', '*x [link]y* z[/link]')).toBeUndefined();
   });
 
   it('counts markers per kind outside code spans (round 15 carry-over)', () => {
@@ -83,8 +100,12 @@ describe('checks: URLs', () => {
 });
 
 describe('checks: numbers', () => {
-  it('compares digits only: thousand and decimal separators may be localised', () => {
-    expect(numbers('1,000 users, 3.5 s, 1 000 000 bytes')).toEqual(['1000', '35', '1', '000', '000']);
+  it('reads values: thousand and decimal separators may be localised', () => {
+    expect(numbers('1,000 users, 3.5 s, 1 000 000 bytes')).toEqual(['1000', '3.5', '1', '000', '000']);
+    expect(numberValues('1,000.5')).toEqual(['1000.5']);
+    expect(numberValues('1.000,5')).toEqual(['1000.5']);
+    expect(numberValues('1\u00a0000\u00a0000')).toEqual(['1000000']);
+    expect(checkNumbers('pi is 3.14159', 'pi là 3,14159')).toBeUndefined();
     expect(checkNumbers('It took 3.5 seconds for 1,000 requests.', 'Mất 3,5 giây cho 1.000 yêu cầu.')).toBeUndefined();
     expect(checkNumbers('1,234,567 rows', '1.234.567 dòng')).toBeUndefined();
     expect(checkNumbers('1,234 rows', '1 234 dòng')).toBeUndefined();
@@ -99,8 +120,23 @@ describe('checks: numbers', () => {
 
   it('fails a dropped, changed or spelled-out number', () => {
     expect(checkNumbers('back in the 1800s', 'vào thế kỷ 19')?.detail).toBe('missing 1800');
-    expect(checkNumbers('Go 1.18 added generics', 'Go 1.19 thêm generics')?.detail).toBe('missing 118');
+    expect(checkNumbers('Go 1.18 added generics', 'Go 1.19 thêm generics')?.detail).toBe('missing 1.18');
     expect(checkNumbers('wait 2 seconds', 'chờ hai giây')?.kind).toBe('number');
+  });
+});
+
+describe('checks: numbers are values, not digit strings (review D-N4)', () => {
+  it('a decimal point is not dropped: "3.5" is not "35"', () => {
+    expect(checkNumbers('It took 3.5 seconds.', 'Mất 35 giây.')?.detail).toBe('missing 3.5');
+    expect(checkNumbers('It took 35 seconds.', 'Mất 3,5 giây.')?.detail).toBe('missing 35');
+  });
+
+  it('a list or a version is its groups: "1,2,3" is 1, 2 and 3, not 123', () => {
+    expect(numberValues('1,2,3')).toEqual(['1', '2', '3']);
+    expect(numberValues('1.2.10')).toEqual(['1', '2', '10']);
+    expect(checkNumbers('Steps 1,2,3 run first.', 'Các bước 1, 2, 3 chạy trước.')).toBeUndefined();
+    expect(checkNumbers('Steps 1,2,3 run first.', 'Các bước 123 chạy trước.')?.detail).toBe('missing 1');
+    expect(checkNumbers('Rust 1.2.10 is out.', 'Rust 1.2.10 đã ra mắt.')).toBeUndefined();
   });
 });
 
@@ -116,6 +152,23 @@ describe('checks: length ratio', () => {
     expect(checkLength(src, 'x'.repeat(3 * src.length + 81), 'vi')?.detail).toContain('runaway');
     // A short heading with a first-use gloss is within the slack.
     expect(checkLength('Ownership', 'Quyền sở hữu (ownership — cơ chế quản lý bộ nhớ của Rust)', 'vi')).toBeUndefined();
+  });
+
+  it('bounds by source and target script: a Chinese or Japanese source into a Latin-script target (review D-N5)', () => {
+    expect(isDense('所有权是一组规则，决定了 Rust 程序如何管理内存。')).toBe(true);
+    expect(isDense('Ownership is a set of rules; see `所有权`.')).toBe(false);
+    expect(lengthBounds('所有权是一组规则。', 'en')).toEqual(LENGTH_BOUNDS['dense-sparse']);
+    expect(lengthBounds('所有权是一组规则。', 'ja')).toEqual(LENGTH_BOUNDS['dense-dense']);
+    expect(lengthBounds('Ownership rules.', 'zh-CN')).toEqual(LENGTH_BOUNDS['sparse-dense']);
+    expect(lengthBounds('Ownership rules.', 'vi')).toEqual(LENGTH_BOUNDS['sparse-sparse']);
+    const zh = '所有权是一组规则，决定了程序如何管理内存。'; // 21 chars
+    // English runs 2–4× the characters: past the sparse 3× + 80 bound, inside the dense one.
+    const en = 'Ownership is a set of rules that governs how a program manages its memory, and these rules are checked by the compiler at build time, so that a program that breaks them simply does not compile.';
+    expect(en.length).toBeGreaterThan(3 * zh.length + 80);
+    expect(checkLength(zh, en, 'en')).toBeUndefined();
+    // A Latin rendering under half the characters dropped content.
+    expect(checkLength(zh, 'Rules.', 'en')?.kind).toBe('length');
+    expect(checkLength('所有权。', 'OK', 'en')).toBeUndefined();
   });
 
   it('allows the denser Chinese, Japanese and Korean text', () => {
