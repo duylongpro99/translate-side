@@ -22,6 +22,7 @@ import {
   updatePreferences,
   type Preferences,
 } from '@/shared/settings';
+import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
 
 type Browser = typeof browser;
@@ -237,10 +238,16 @@ interface Draft {
   term: string;
   rendering: string;
   keep: boolean;
+  /** An entry's note has no field here; an edit carries it over unchanged. */
+  note?: string;
 }
 const emptyDraft: Draft = { term: '', rendering: '', keep: true };
-const draftOf = (e: GlossaryEntry): Draft => ({ term: e.term, rendering: e.rendering === e.term ? '' : e.rendering, keep: e.rendering === e.term });
-const entryOf = (d: Draft): GlossaryEntry => ({ term: d.term.trim(), rendering: d.keep || d.rendering.trim() === '' ? d.term.trim() : d.rendering.trim() });
+const draftOf = (e: GlossaryEntry): Draft => ({ term: e.term, rendering: e.rendering === e.term ? '' : e.rendering, keep: e.rendering === e.term, ...(e.note ? { note: e.note } : {}) });
+const entryOf = (d: Draft): GlossaryEntry => ({
+  term: d.term.trim(),
+  rendering: d.keep || d.rendering.trim() === '' ? d.term.trim() : d.rendering.trim(),
+  ...(d.note?.trim() ? { note: d.note.trim() } : {}),
+});
 
 function GlossarySection({ api }: { api: Browser }) {
   const [entries, setEntries] = useState<GlossaryEntry[] | undefined>();
@@ -305,7 +312,8 @@ function GlossarySection({ api }: { api: Browser }) {
           {entries.map((e, i) => (
             <li key={e.term} data-testid="glossary-entry">
               <span class="opt__term">{e.term}</span> →{' '}
-              {e.rendering === e.term ? <em>keep as is</em> : <span class="opt__term">{e.rendering}</span>}{' '}
+              {e.rendering === e.term ? <em>keep as is</em> : <span class="opt__term">{e.rendering}</span>}
+              {e.note ? <span class="opt__hint"> · {e.note}</span> : null}{' '}
               <button type="button" class="opt__link" onClick={() => onEdit(i)} aria-label={`Edit ${e.term}`}>
                 Edit
               </button>{' '}
@@ -343,6 +351,12 @@ function GlossarySection({ api }: { api: Browser }) {
           </button>
         ) : null}
       </form>
+      {personalGlossaryTokens(entries) > PERSONAL_GLOSSARY_PROMPT_TOKENS ? (
+        <p class="opt__status opt__status--warn" data-testid="glossary-share">
+          Your glossary is longer than fits in a translation request (about {personalGlossaryTokens(entries)} of {PERSONAL_GLOSSARY_PROMPT_TOKENS} tokens): the entries at the end of the list
+          are left out. Keep the ones that matter most near the top.
+        </p>
+      ) : null}
       {note ? (
         <p class={note.warn ? 'opt__status opt__status--warn' : 'opt__note'} role="status" data-testid="glossary-note">
           {note.text}

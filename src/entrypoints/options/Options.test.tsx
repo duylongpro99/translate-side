@@ -3,6 +3,7 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { GEMINI_ORIGIN, GLOSSARY_KEY, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/settings';
+import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import { Options } from './Options.tsx';
 
 type Api = Parameters<typeof Options>[0]['api'];
@@ -201,6 +202,36 @@ describe('options: style and personal glossary (plan M2-E6)', () => {
     click('Remove executor');
     await flush();
     expect(f.sync.get('glossary')).toEqual([{ term: 'deploy', rendering: 'triển khai' }]);
+  });
+
+  it('keeps an entry\'s note when the entry is edited (review 3)', async () => {
+    const f = fakeApi();
+    f.sync.set('glossary', [{ term: 'executor', rendering: 'bộ thực thi', note: 'core concept' }]);
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    expect(rows()).toEqual(['executor → bộ thực thi · core concept']);
+    click('Edit executor');
+    input('#g-rendering', 'trình thực thi');
+    submitGlossary();
+    await flush();
+    expect(f.sync.get('glossary')).toEqual([{ term: 'executor', rendering: 'trình thực thi', note: 'core concept' }]);
+  });
+
+  it('warns when the personal glossary is larger than its share of a translation request (review 6)', async () => {
+    const f = fakeApi();
+    const many = Array.from({ length: 30 }, (_, i) => ({ term: `term ${i}`, rendering: `${'r'.repeat(150)} ${i}` }));
+    expect(personalGlossaryTokens(many)).toBeGreaterThan(PERSONAL_GLOSSARY_PROMPT_TOKENS);
+    f.sync.set('glossary', many.slice(0, 3));
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    expect(root.querySelector('[data-testid=glossary-share]')).toBeNull();
+    f.sync.set('glossary', many);
+    act(() => render(null, root));
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    const warn = root.querySelector('[data-testid=glossary-share]')?.textContent ?? '';
+    expect(warn).toContain(`of ${PERSONAL_GLOSSARY_PROMPT_TOKENS} tokens`);
+    expect(warn).toContain('the entries at the end of the list are left out');
   });
 
   it('refuses a duplicate term and shows the quota guard\'s refusal without saving', async () => {
