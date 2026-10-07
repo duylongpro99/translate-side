@@ -12,14 +12,23 @@
 // at most by the brief call itself and never fails the job. Each chunk's outcome records whether
 // the brief was there (ChunkOutcome.briefed). The `artifact` event goes out when the brief lands.
 // A one-chunk document skips the analyze stage altogether (user decision M2-D9): no brief, no
-// About card; documents of two chunks or more are unchanged.
+// About card.
+//
+// Chunk 0 again (user decision M2-D17): on a document of two chunks or more, once the brief lands
+// the brief-free chunk 0 is translated once more with it (the `revise` stage) and its segments are
+// replaced in place as revision 2 (§5.2: a higher revision always wins), so the first chunk follows
+// the brief's renderings and first-use glosses like the others. One extra call per such document;
+// none without a brief, when the job brought its brief (chunk 0 had it), or under translate@1
+// (no brief in the prompt). The pass is all or nothing per segment: its finals go out when the call
+// is over, only for segments it translated cleanly; a segment it fails keeps revision 1, and no
+// `segment.failed` goes out for it.
 import { chunkLimits, chunkSegments } from '../chunker.ts';
 import { ANALYZE_PROMPT_ID } from '../prompts/analyze.ts';
 import { TRANSLATE_V2_PROMPT_ID } from '../prompts/translate.ts';
-import { multiplex, runStages, type AnyStage } from '../runner.ts';
+import { defineStage, multiplex, runStages, type AnyStage } from '../runner.ts';
 import { analyzeStage } from '../stages/analyze.ts';
 import type { EngineEvent, StageContext, Strategy, TranslationJob } from '../types.ts';
-import { checkStage, chunkStage, createTranslateStage, type BriefWait } from './single-pass.ts';
+import { checkStage, chunkStage, createTranslateStage, untilSettledOrAborted, type BriefWait, type ChunkOutcome } from './single-pass.ts';
 
 export const CONTEXTUAL_ID = 'contextual';
 /** 2: translate@2 with the context providers (M2-E3). 1 was Phase B's translate@1 with the brief unused. */
@@ -29,6 +38,50 @@ export const CONTEXTUAL_TRANSLATE_PROMPT_ID = TRANSLATE_V2_PROMPT_ID;
 
 /** Chunks translated without waiting for the brief: the first one (M2-D6). */
 export const BRIEF_FREE_CHUNKS = 1;
+
+/** The revision chunk 0's second pass marks its finals with (M2-D17). */
+export const REVISED_REVISION = 2;
+
+/**
+ * M2-D17: the brief-free chunks again, now with the brief, as revision 2. A document stage: it
+ * holds each chunk's events until the call is over and passes on usage and the last final of each
+ * segment the pass translated cleanly; partials and failures stay inside (the revision-1 text stands).
+ */
+export function createReviseStage(translatePrompt: string = CONTEXTUAL_TRANSLATE_PROMPT_ID): AnyStage {
+  const translate = createTranslateStage(CONTEXTUAL_ID, undefined, translatePrompt, REVISED_REVISION);
+  return defineStage<TranslationJob, never>({
+    id: 'revise',
+    scope: 'document',
+    role: 'translate',
+    promptId: translatePrompt,
+    async *run(job, ctx) {
+      const chunks = chunkSegments(job.doc.segments, chunkLimits(job.options.chunkTokens)).slice(0, BRIEF_FREE_CHUNKS);
+      for (const chunk of chunks) {
+        const held: EngineEvent[] = [];
+        let outcome: ChunkOutcome | undefined;
+        for await (const item of translate.run({ chunk, doc: job.doc, options: job.options } as never, ctx)) {
+          if (isEvent(item)) held.push(item);
+          else outcome = item as ChunkOutcome;
+        }
+        const clean = new Set(outcome?.final ?? []);
+        const last = new Map<string, EngineEvent>();
+        for (const e of held) {
+          if (e.type === 'usage') yield e;
+          else if (e.type === 'segment.final' && clean.has(e.id)) last.set(e.id, e);
+        }
+        yield* last.values();
+      }
+    },
+  });
+}
+
+const isEvent = (item: unknown): item is EngineEvent => typeof item === 'object' && item !== null && 'type' in item;
+
+/** Whether the revise pass runs: the brief landed after chunk 0 went out, and the prompt renders it. */
+function revises(ctx: StageContext, translatePrompt: string, hadBrief: boolean): boolean {
+  const prompt = ctx.prompts.get(translatePrompt);
+  return !hadBrief && ctx.memory.brief !== undefined && prompt.name === 'translate' && prompt.version >= 2;
+}
 
 /** Whether the document is a single chunk at the job's chunk size (the chunk stage cuts it the same way). */
 export function isOneChunk(job: TranslationJob): boolean {
@@ -55,6 +108,7 @@ export function createContextual(translatePrompt: string = CONTEXTUAL_TRANSLATE_
       }
       let settle!: () => void;
       const settled = new Promise<void>((resolve) => (settle = resolve));
+      const hadBrief = ctx.memory.brief !== undefined;
       async function* analyze() {
         try {
           yield* runStages([analyzeStage], job, ctx, concurrency);
@@ -63,7 +117,11 @@ export function createContextual(translatePrompt: string = CONTEXTUAL_TRANSLATE_
           settle();
         }
       }
-      const lanes = [analyze(), runStages(contextualStages({ settled, freeChunks: BRIEF_FREE_CHUNKS }, translatePrompt), job, ctx, concurrency)];
+      async function* revise() {
+        await untilSettledOrAborted(settled, ctx.signal);
+        if (revises(ctx, translatePrompt, hadBrief)) yield* runStages([createReviseStage(translatePrompt)], job, ctx, concurrency);
+      }
+      const lanes = [analyze(), runStages(contextualStages({ settled, freeChunks: BRIEF_FREE_CHUNKS }, translatePrompt), job, ctx, concurrency), revise()];
       // Both lanes run at once; their events pass on as they arrive. Only an abort (or an engine
       // bug) throws, after the other lane has finished.
       for await (const { value } of multiplex(lanes, lanes.length, (lane) => lane, ctx.signal)) yield value as EngineEvent;

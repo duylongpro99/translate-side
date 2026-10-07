@@ -11,7 +11,7 @@ import { createBudget } from '../budget.ts';
 import { createWorkingMemory } from '../memory.ts';
 import { runStages } from '../runner.ts';
 import type { ChunkOutcome } from './single-pass.ts';
-import { BRIEF_FREE_CHUNKS, CONTEXTUAL_ID, contextual, contextualStages, isOneChunk } from './contextual.ts';
+import { BRIEF_FREE_CHUNKS, CONTEXTUAL_ID, contextual, contextualStages, createContextual, isOneChunk } from './contextual.ts';
 import { singlePass } from './single-pass.ts';
 
 const seg = (id: string, text: string, over: Partial<Segment> = {}): Segment => ({ id, kind: 'p', text, inlineMarkup: text, domPath: `p[${id}]`, translate: true, ...over });
@@ -99,15 +99,16 @@ describe('contextual: analyze → chunk → translate → check', () => {
     expect(artifacts(events)).toEqual([{ type: 'artifact', kind: 'brief', data: BRIEF }]);
     // The analyze stage runs beside the translation stages (M2-D6): their frames interleave.
     const starts = events.flatMap((e) => (e.type === 'stage' && e.status === 'start' ? [[e.stage, e.info]] : []));
-    expect(starts).toHaveLength(4);
+    expect(starts).toHaveLength(5);
     expect(starts).toEqual(expect.arrayContaining([
       ['analyze', { promptId: ANALYZE_PROMPT_ID }],
       ['chunk', undefined],
       ['translate', { promptId: 'translate@2' }],
       ['check', undefined],
+      ['revise', { promptId: 'translate@2' }],
     ]));
-    expect(starts.filter(([s]) => s !== 'analyze').map(([s]) => s)).toEqual(['chunk', 'translate', 'check']);
-    expect(finals(events).map((e) => [e.id, e.text, e.producedBy.strategy])).toEqual([
+    expect(starts.filter(([s]) => s !== 'analyze' && s !== 'revise').map(([s]) => s)).toEqual(['chunk', 'translate', 'check']);
+    expect(finals(events).filter((e) => e.revision === 1).map((e) => [e.id, e.text, e.producedBy.strategy])).toEqual([
       ['h', 'vi:Futures are lazy', 'contextual'],
       ['a', 'vi:One sentence.', 'contextual'],
       ['b', 'vi:Two sentences here.', 'contextual'],
@@ -237,10 +238,11 @@ describe('contextual: analyze → chunk → translate → check', () => {
     const unknown = translatorClient();
     await run(fakeClient([success(JSON.stringify({ ...BRIEF, language: 'de' }))]), unknown, longJob({ sourceLang: '' }));
     const systems = unknown.requests.map((r) => r.system);
-    expect(systems).toHaveLength(LONG_CHUNKS);
-    // The first chunk went out before the brief: it could not know the language yet.
+    expect(systems).toHaveLength(LONG_CHUNKS + 1);
+    // The first chunk went out before the brief: it could not know the language yet. Its second
+    // pass (M2-D17) and every later chunk could.
     expect(systems.filter((t) => t.includes('from the source language into Vietnamese'))).toHaveLength(1);
-    expect(systems.filter((t) => t.includes('from German into Vietnamese'))).toHaveLength(LONG_CHUNKS - 1);
+    expect(systems.filter((t) => t.includes('from German into Vietnamese'))).toHaveLength(LONG_CHUNKS);
     const known = translatorClient();
     await run(fakeClient([success(JSON.stringify({ ...BRIEF, language: 'de' }))]), known, longJob({ sourceLang: 'en' }));
     expect(known.requests.every((r) => r.system.includes('from English into Vietnamese'))).toBe(true);
@@ -282,11 +284,12 @@ describe('contextual: the brief runs beside the first chunk (plan §8, M2-D6)', 
 
     held.release(JSON.stringify(BRIEF));
     await done;
-    expect(translate.requests).toHaveLength(LONG_CHUNKS);
+    // Every chunk, and chunk 0 again with the brief (M2-D17).
+    expect(translate.requests).toHaveLength(LONG_CHUNKS + 1);
     const artifactAt = events.findIndex((e) => e.type === 'artifact');
     expect(artifactAt).toBeGreaterThan(events.findIndex((e) => e.type === 'segment.final'));
     expect(events.findIndex((e) => e.type === 'segment.final' && e.id === 'p1')).toBeGreaterThan(artifactAt);
-    expect(finals(events).map((e) => e.id).sort()).toEqual(['p0', 'p1', 'p2', 'p3']);
+    expect(finals(events).filter((e) => e.revision === 1).map((e) => e.id).sort()).toEqual(['p0', 'p1', 'p2', 'p3']);
     expect(events.at(-1)).toEqual({ type: 'done' });
   });
 
@@ -352,8 +355,9 @@ describe('contextual: the brief runs beside the first chunk (plan §8, M2-D6)', 
       expect(finals(events).map((e) => e.id)).toEqual(['p0']);
       held.release(answer);
       await done;
-      expect(translate.requests).toHaveLength(LONG_CHUNKS);
-      expect(finals(events).map((e) => e.id)).toEqual(['p0', 'p1', 'p2', 'p3']);
+      // With a brief, chunk 0 goes again (M2-D17).
+      expect(translate.requests).toHaveLength(answer === null ? LONG_CHUNKS : LONG_CHUNKS + 1);
+      expect(finals(events).filter((e) => e.revision === 1).map((e) => e.id)).toEqual(['p0', 'p1', 'p2', 'p3']);
       expect(artifacts(events)).toHaveLength(answer === null ? 0 : 1);
       expect(events.at(-1)).toEqual({ type: 'done' });
     }
@@ -386,6 +390,64 @@ describe('contextual: the brief runs beside the first chunk (plan §8, M2-D6)', 
     };
     expect(await outcomes()).toEqual([false, true, true, true]);
     expect(await outcomes(BRIEF)).toEqual([true, true, true, true]);
+  });
+});
+
+describe('contextual: chunk 0 again with the brief, as revision 2 (M2-D17)', () => {
+  const words = (r: { messages: { content: string }[] }) => r.messages.at(-1)?.content ?? '';
+
+  it('translates chunk 0 again once the brief lands, with the brief in its prompt, and replaces it as revision 2', async () => {
+    const translate = translatorClient((lines, call) => ({ text: lines.map((l) => `<seg id="${l.n}">r${call}:${l.source.slice(0, 2)}</seg>`).join('\n'), stopReason: 'end' as const }));
+    const events = await run(fakeClient([success(JSON.stringify(BRIEF))]), translate, longJob());
+    expect(translate.requests).toHaveLength(LONG_CHUNKS + 1);
+    const revise = translate.requests.filter((r) => words(r).includes('P0 '));
+    expect(revise).toHaveLength(2);
+    const [first, second] = revise;
+    // The second pass has the brief (and keeps chunk 0's thinking: chunkIndex 0, not a repair).
+    expect(first?.system).not.toContain('Genre: technical blog post');
+    expect(second?.system).toContain('Genre: technical blog post');
+    expect(second?.chunkIndex).toBe(0);
+    expect(second?.baseReasoning).toBeUndefined();
+    const p0 = finals(events).filter((e) => e.id === 'p0');
+    expect(p0.map((e) => e.revision)).toEqual([1, 2]);
+    expect(p0[1]?.producedBy).toEqual({ strategy: 'contextual', stage: 'translate', model: 'fake-model' });
+    // Only chunk 0 is revised; later chunks had the brief.
+    expect(finals(events).filter((e) => e.revision === 2).map((e) => e.id)).toEqual(['p0']);
+    noFailures(events);
+    expect(events.filter((e) => e.type === 'usage' && e.role === 'translate')).toHaveLength(LONG_CHUNKS + 1);
+  });
+
+  it('a revise pass that fails keeps revision 1: no failure event, no revision-2 final', async () => {
+    let calls = 0;
+    const translate = translatorClient((lines) => {
+      calls++;
+      // The system block names the brief only on the second pass of chunk 0 and on later chunks.
+      return lines[0]?.source.startsWith('P0') && calls > 1 ? { text: 'garbage', stopReason: 'end' as const } : { text: lines.map((l) => `<seg id="${l.n}">vi:${l.source.slice(0, 2)}</seg>`).join('\n'), stopReason: 'end' as const };
+    });
+    const events = await run(fakeClient([success(JSON.stringify(BRIEF))]), translate, longJob());
+    noFailures(events);
+    expect(finals(events).filter((e) => e.revision === 2)).toEqual([]);
+    expect(finals(events).filter((e) => e.id === 'p0').map((e) => e.text)).toEqual(['vi:P0']);
+  });
+
+  it('no second pass without a brief, with a brief the job brought, under translate@1, or for a one-chunk document', async () => {
+    const none = translatorClient();
+    await run(fakeClient([success('not json')]), none, longJob());
+    expect(none.requests).toHaveLength(LONG_CHUNKS);
+    const brought = translatorClient();
+    const j = longJob();
+    await run(fakeClient([success(JSON.stringify(BRIEF))]), brought, { ...j, options: { ...j.options, brief: BRIEF } });
+    expect(brought.requests).toHaveLength(LONG_CHUNKS);
+    const v1 = translatorClient();
+    const engine = createEngine({ llm: (r) => (r === 'analyze' ? fakeClient([success(JSON.stringify(BRIEF))]) : v1), now: () => 0, sleep: fakeSleep(), strategies: [createContextual('translate@1')], prompts: createDefaultPromptRegistry(), random: () => 0 });
+    await collect(engine.translate(longJob(), new AbortController().signal));
+    expect(v1.requests).toHaveLength(LONG_CHUNKS);
+    const one = translatorClient();
+    const single = { ...job(), options: { ...job().options, chunkTokens: 1500 } };
+    expect(isOneChunk(single)).toBe(true);
+    const events = await run(fakeClient([success(JSON.stringify(BRIEF))]), one, single);
+    expect(one.requests).toHaveLength(1);
+    expect(finals(events).every((e) => e.revision === 1)).toBe(true);
   });
 });
 

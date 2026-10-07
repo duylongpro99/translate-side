@@ -480,10 +480,12 @@ describe('contextual + translate@2 through the engine', () => {
   it('sends a byte-identical system block for every briefed chunk, with the brief and the merged glossary in it', async () => {
     const { events, translate } = await runLong({ glossary: [{ term: 'deploy', rendering: 'deploy' }] });
     expect(events.filter((e) => e.type === 'segment.failed')).toEqual([]);
-    expect(translate.requests).toHaveLength(LONG_CHUNKS);
+    // Every chunk, and chunk 0 again once the brief is in (M2-D17).
+    expect(translate.requests).toHaveLength(LONG_CHUNKS + 1);
     const briefed = translate.requests.filter((r) => r.system.includes('Genre: technical blog post'));
-    // The first chunk does not wait for the brief (M2-D6); every later one does.
-    expect(briefed.length).toBeGreaterThanOrEqual(LONG_CHUNKS - 1);
+    // The first chunk does not wait for the brief (M2-D6); every later one does, and so does its
+    // second pass, with the same system block (the caching prefix).
+    expect(briefed.length).toBeGreaterThanOrEqual(LONG_CHUNKS);
     const first = briefed[0]?.system;
     for (const r of briefed) expect(r.system).toBe(first);
     expect(first).toContain('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)\n- future → future (keep it in English, and add a short gloss in parentheses at its first use in the document, once) — keep English');

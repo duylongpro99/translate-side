@@ -406,6 +406,26 @@ describe('Jobs: contextual (plan M2-E1) and same-language skip (M2-E5)', () => {
     expect(expected).toBeGreaterThan(10 * 3);
   });
 
+  it('replaces the first chunk in place with its second, briefed pass (revision 2, M2-D17); counts stay per segment', async () => {
+    let briefed = 0;
+    const client = translatorClient((lines, _n, req) => {
+      if (isAnalyze(req)) return JSON.stringify(BRIEF);
+      const withBrief = req.system.includes('Genre: blog post');
+      if (withBrief) briefed++;
+      return renderLines(lines, (src) => `${withBrief ? 'vi2' : 'vi'}:${src}`);
+    }, { model: GEMINI_PROFILE.model });
+    const jobs = new Jobs({ translateClient: ok(client) });
+    jobs.setActive(1);
+    const d = doc(3, 700);
+    await jobs.start(1, 'd', d);
+    const v = jobs.get(1) as JobView;
+    expect(v.status).toBe('done');
+    expect(v.counts).toEqual({ total: 3, final: 3, failed: 0 });
+    // Every segment ends briefed: chunk 0 through its second pass, the others the first time.
+    expect([...v.segs.values()].map((s) => [s.text?.split(':')[0], s.revision])).toEqual([['vi2', 2], ['vi2', 1], ['vi2', 1]]);
+    expect(briefed).toBe(3);
+  });
+
   it('a one-chunk page makes no brief call: no brief, so no About card (M2-D9)', async () => {
     const client = both(JSON.stringify(BRIEF));
     const jobs = new Jobs({ translateClient: ok(client) });

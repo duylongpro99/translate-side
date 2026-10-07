@@ -128,7 +128,7 @@ export const chunkStage = defineStage<TranslationJob, ChunkWork[]>({
 });
 
 /** Resolves when `promise` settles; rejects with the abort reason if `signal` aborts first. */
-function untilSettledOrAborted(promise: Promise<void>, signal: AbortSignal): Promise<void> {
+export function untilSettledOrAborted(promise: Promise<void>, signal: AbortSignal): Promise<void> {
   signal.throwIfAborted();
   return new Promise<void>((resolve, reject) => {
     const onAbort = () => reject(signal.reason);
@@ -154,11 +154,13 @@ function untilSettledOrAborted(promise: Promise<void>, signal: AbortSignal): Pro
  * With `brief` (contextual), a chunk from index `brief.freeChunks` on waits until the analyze
  * stage is over before it builds its prompt; the outcome records whether the brief was there.
  *
+ * `revision` marks the finals (1, a draft; contextual's chunk-0 revise pass sends 2, M2-D17).
+ *
  * `promptId` picks the prompt: `translate@1` (default) is sent exactly as in M1, brief and
  * glossary "(none)"; `translate@2` gathers the context providers' snippets (ctx.context) for the
  * chunk and assembles the byte-stable system block and the `<context>` block (context/assemble.ts).
  */
-export function createTranslateStage(strategyId: string, brief?: BriefWait, promptId: string = TRANSLATE_PROMPT_ID): AnyStage {
+export function createTranslateStage(strategyId: string, brief?: BriefWait, promptId: string = TRANSLATE_PROMPT_ID, revision: number = REVISION): AnyStage {
   return defineStage<ChunkWork, ChunkOutcome>({
     id: 'translate',
     scope: 'chunk',
@@ -208,7 +210,7 @@ export function createTranslateStage(strategyId: string, brief?: BriefWait, prom
       const call: ChunkCall = (wire, attempt) => client.stream(translateRequest(client, system, wire, ctx.signal, context, work.chunk.index, attempt));
       const gen = translateChunk(toWire(work.chunk.segments), call, {
         producedBy: { strategy: strategyId, stage: 'translate', model: client.model },
-        revision: REVISION,
+        revision,
         role: 'translate',
         neighbours,
       });
@@ -228,7 +230,7 @@ export function createTranslateStage(strategyId: string, brief?: BriefWait, prom
           // revision" (§5.6): drop it from memory, where the engine recorded the final before this
           // event (it never records a `failed`). Only this strategy's revision: a later stage's
           // failure must keep the draft.
-          if (shown.has(event.id) && ctx.memory.translated.get(event.id)?.revision === REVISION) ctx.memory.translated.delete(event.id);
+          if (shown.has(event.id) && ctx.memory.translated.get(event.id)?.revision === revision) ctx.memory.translated.delete(event.id);
         }
         yield event;
       }

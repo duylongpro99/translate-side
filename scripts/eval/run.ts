@@ -247,6 +247,8 @@ interface DocResult {
   errors: string[];
   /** Contextual only: did the brief parse, the brief call's wall time and tokens (included in the totals above). */
   brief?: { ok: boolean; skipped: boolean; ms: number | null; input: number; output: number };
+  /** Segments replaced by a revision 2 (contextual's chunk-0 second pass, M2-D17). */
+  revised: number;
   /** Chunks (first-pass translate calls) and how many of them carried the brief in their system block. */
   chunks: number;
   briefedChunks: number;
@@ -262,7 +264,9 @@ async function runDoc(slug: string): Promise<DocResult> {
     strategy: STRATEGY,
     options: { style: STYLE, gloss: GLOSS, glossary: GLOSSARY, maxConcurrency: Number(opt.concurrency), chunkTokens },
   };
-  const finals = new Map<string, { text: string; attempt: number }>();
+  // The panel's rule (§5.2): a higher revision wins, then a higher attempt; `draft` keeps the
+  // revision-1 text a revision 2 (contextual's chunk-0 second pass, M2-D17) replaced.
+  const finals = new Map<string, { text: string; attempt: number; revision: number; draft?: string }>();
   const failed = new Map<string, string>();
   const usage = { input: 0, cachedInput: 0, output: 0 };
   const analyzeUsage = { input: 0, output: 0 };
@@ -272,10 +276,20 @@ async function runDoc(slug: string): Promise<DocResult> {
   const t0 = Date.now();
   for await (const e of engine.translate(job, new AbortController().signal) as AsyncIterable<EngineEvent>) {
     if (e.type === 'segment.final') {
-      finals.set(e.id, { text: e.text, attempt: e.attempt ?? 1 });
+      const cur = finals.get(e.id);
+      const attempt = e.attempt ?? 1;
+      if (cur === undefined || e.revision > cur.revision || (e.revision === cur.revision && attempt > cur.attempt)) {
+        const draft = cur === undefined ? undefined : e.revision > cur.revision && cur.revision === 1 ? cur.text : cur.draft;
+        finals.set(e.id, { text: e.text, attempt, revision: e.revision, ...(draft === undefined ? {} : { draft }) });
+      } else if (e.revision < cur.revision && e.revision === 1) {
+        // A repaired draft landing after its revision 2: kept as the draft, never shown.
+        cur.draft = e.text;
+      }
       failed.delete(e.id);
       firstFinalMs ??= Date.now() - t0;
     } else if (e.type === 'segment.failed') {
+      // As in the panel: a failure of the first pass does not undo a revision 2.
+      if ((finals.get(e.id)?.revision ?? 1) > 1) continue;
       failed.set(e.id, `${e.error.kind}: ${e.error.message}`);
       finals.delete(e.id);
     } else if (e.type === 'chunk') {
@@ -296,12 +310,17 @@ async function runDoc(slug: string): Promise<DocResult> {
   const want = doc.segments.filter((s) => s.translate);
   const analyzeCall = calls.slice(callsBefore).find((c) => c.role === 'analyze');
   const chunkWires = chunkSegments(doc.segments, chunkLimits(chunkTokens)).map((ch) => formatWire(toWire(ch.segments)));
-  const firstPass = calls.slice(callsBefore).filter((c) => c.role === 'translate' && chunkWires.some((w) => c.user.endsWith(w)));
+  // A chunk is counted once: contextual's second pass of chunk 0 (M2-D17) sends the same wire.
+  const firstPass = chunkWires.filter((w) => calls.slice(callsBefore).some((c) => c.role === 'translate' && c.user.endsWith(w)));
   if (STRATEGY === CONTEXTUAL_ID) fs.writeFileSync(path.join(outDir, `${slug}.brief.json`), `${JSON.stringify(brief, null, 1)}\n`);
   fs.writeFileSync(
     path.join(outDir, `${slug}.output.json`),
     `${JSON.stringify(
-      doc.segments.map((s) => ({ id: s.id, kind: s.kind, translate: s.translate, source: s.inlineMarkup, text: finals.get(s.id)?.text ?? null, attempt: finals.get(s.id)?.attempt ?? null, error: failed.get(s.id) ?? null })),
+      doc.segments.map((s) => {
+        const f = finals.get(s.id);
+        // `text` is what the reader ends with (and what is scored); `draft` the revision 1 it replaced.
+        return { id: s.id, kind: s.kind, translate: s.translate, source: s.inlineMarkup, text: f?.text ?? null, attempt: f?.attempt ?? null, ...(f !== undefined && f.revision > 1 ? { revision: f.revision, draft: f.draft ?? null } : {}), error: failed.get(s.id) ?? null };
+      }),
       null,
       1,
     )}\n`,
@@ -314,6 +333,7 @@ async function runDoc(slug: string): Promise<DocResult> {
     failed: failed.size,
     lost: want.filter((s) => !finals.has(s.id)).length,
     repaired: [...finals.values()].filter((f) => f.attempt > 1).length,
+    revised: [...finals.values()].filter((f) => f.revision > 1).length,
     calls: calls.length - callsBefore,
     ...usage,
     wallMs,
@@ -365,7 +385,7 @@ for (const [i, slug] of slugs.entries()) {
   if (i > 0 && pauseMs > 0) await new Promise((r) => setTimeout(r, pauseMs));
   const r = await runDoc(slug);
   results.push(r);
-  console.log(`${slug.padEnd(34)} final ${r.final}/${r.translatable} lost ${r.lost} repaired ${r.repaired} calls ${r.calls} in ${r.input} out ${r.output} ${(r.wallMs / 1000).toFixed(1)}s ${r.costUsd === null ? 'cost n/a' : `$${r.costUsd.toFixed(5)}`}${price && !price.verified ? ' (UNVERIFIED price)' : ''}`);
+  console.log(`${slug.padEnd(34)} final ${r.final}/${r.translatable} lost ${r.lost} repaired ${r.repaired}${r.revised ? ` revised ${r.revised}` : ''} calls ${r.calls} in ${r.input} out ${r.output} ${(r.wallMs / 1000).toFixed(1)}s ${r.costUsd === null ? 'cost n/a' : `$${r.costUsd.toFixed(5)}`}${price && !price.verified ? ' (UNVERIFIED price)' : ''}`);
 }
 const probes: NonceProbe[] = [];
 if (opt['probe-nonce']) {
@@ -392,7 +412,7 @@ const reasoningStats = {
 };
 fs.writeFileSync(path.join(outDir, 'calls.jsonl'), calls.map((c) => JSON.stringify(c)).join('\n') + '\n');
 const sum = (f: (r: DocResult) => number): number => results.reduce((n, r) => n + f(r), 0);
-const total = { translatable: sum((r) => r.translatable), lost: sum((r) => r.lost), failed: sum((r) => r.failed), repaired: sum((r) => r.repaired), calls: sum((r) => r.calls), input: sum((r) => r.input), cachedInput: sum((r) => r.cachedInput), output: sum((r) => r.output), wallMs: sum((r) => r.wallMs), costUsd: price ? sum((r) => r.costUsd ?? 0) : null };
+const total = { translatable: sum((r) => r.translatable), lost: sum((r) => r.lost), failed: sum((r) => r.failed), repaired: sum((r) => r.repaired), revised: sum((r) => r.revised), calls: sum((r) => r.calls), input: sum((r) => r.input), cachedInput: sum((r) => r.cachedInput), output: sum((r) => r.output), wallMs: sum((r) => r.wallMs), costUsd: price ? sum((r) => r.costUsd ?? 0) : null };
 // chars/3.5 check (tokens.ts): characters per token as the provider counted them, over the
 // translation calls (system + user text in, answer text out). Nonce probes are left out.
 const counted = calls.filter((c) => !c.doc.endsWith('#nonce') && c.role !== 'analyze' && c.usage !== undefined);
