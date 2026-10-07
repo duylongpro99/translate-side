@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { accessKey, type TabAccess } from '@/shared/access';
 import { CONTENT_PORT_NAME, PROTOCOL_VERSION, serve, type ContentApi, type ExtractResult, type PortLike } from '@/shared/protocol';
 import { PanelController, type PanelView } from './controller.ts';
@@ -96,7 +96,17 @@ const ok = (n: number): ExtractResult => ({
   segments: Array.from({ length: n }, (_, i) => ({ id: `s${i}`, kind: 'p', text: 't', inlineMarkup: 't', domPath: `/p[${i + 1}]`, translate: true })),
 });
 
-const wait = (ms = 25) => new Promise((r) => setTimeout(r, ms));
+// Fake timers (Phase D round 7): the controller's grace and lost timers (20 and 30 ms here) and the
+// fake world's message hops run on a virtual clock, so a loaded machine cannot reorder them.
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+/** Moves the virtual clock by `ms`, running every timer and promise due on the way. */
+const wait = (ms = 25) => vi.advanceTimersByTimeAsync(ms);
 
 async function started(w: ReturnType<typeof fakeWorld>, opts = {}) {
   const c = new PanelController(w.api, { idleGraceMs: 20, lostAfterMs: 30, ...opts });
