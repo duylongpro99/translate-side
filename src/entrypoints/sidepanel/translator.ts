@@ -58,14 +58,32 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     return { doc: keep.size ? { ...base, keep } : base, skip: !left && segments.some((s) => s.translate) };
   };
 
-  /** The raw settings (prefs + personal glossary) each tab's job was built from, to skip detection when nothing changed. */
+  /**
+   * The raw settings (prefs + personal glossary) each tab's job was built from, to skip detection
+   * when nothing changed. A key is marked before the detection await, so two refreshes in flight
+   * (onSync and `active` together) restart the job once (review N2); `unmark` puts the old key
+   * back when the job was not rebuilt after all.
+   */
   const used = new Map<number, string>();
   const settingsKey = (settings: Settings) => JSON.stringify([settings.prefs, settings.glossary]);
-
-  const begin = (tabId: number, docId: string, prepared: { doc: JobDoc; skip: boolean }, settings: Settings, opts?: { keepCost?: boolean; keepBrief?: boolean }) => {
-    used.set(tabId, settingsKey(settings));
-    return prepared.skip ? jobs.skip(tabId, docId, prepared.doc) : jobs.start(tabId, docId, prepared.doc, opts);
+  const mark = (tabId: number, key: string) => {
+    const before = used.get(tabId);
+    used.set(tabId, key);
+    return () => {
+      if (used.get(tabId) !== key) return;
+      if (before === undefined) used.delete(tabId);
+      else used.set(tabId, before);
+    };
   };
+
+  const begin = (tabId: number, docId: string, prepared: { doc: JobDoc; skip: boolean }, opts?: { keepCost?: boolean; keepBrief?: boolean }) =>
+    prepared.skip ? jobs.skip(tabId, docId, prepared.doc) : jobs.start(tabId, docId, prepared.doc, opts);
+
+  /** What differs between a job's document and one built from the current settings. */
+  const changes = (doc: JobDoc, next: JobDoc) => ({
+    languages: next.targetLang !== doc.targetLang || next.sourceLang !== doc.sourceLang,
+    output: next.style !== doc.style || next.gloss !== doc.gloss || JSON.stringify(next.glossary ?? []) !== JSON.stringify(doc.glossary ?? []),
+  });
 
   /** The document each tab's session holds now: a job starts only for a page that is still there. */
   const live = new Map<number, string>();
@@ -79,7 +97,8 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
    * an edit made in the options tab applies once the page's tab is back in front.
    *
    * Cheap when nothing changed: the raw settings are compared first, and the page's language is
-   * detected again only when they differ (review). A job the user cancelled is never restarted.
+   * detected again only when they differ (review). A job the user cancelled is never restarted:
+   * Resume picks up the new settings (resume below).
    */
   const refresh = (tabId: number) => {
     const current = jobs.docFor(tabId);
@@ -88,16 +107,39 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     const stillThere = () => isLive(tabId, docId) && jobs.docOf(tabId) === docId && jobs.get(tabId)?.status !== 'cancelled';
     if (!stillThere()) return;
     void readSettings(api).then(async (settings) => {
-      if (settingsKey(settings) === used.get(tabId)) return;
+      const key = settingsKey(settings);
+      if (key === used.get(tabId)) return;
+      const unmark = mark(tabId, key);
       const next = await docFor(settings, doc.url, doc.title, doc.pageLang, doc.segments);
-      const languages = next.doc.targetLang !== doc.targetLang || next.doc.sourceLang !== doc.sourceLang;
-      const output = next.doc.style !== doc.style || next.doc.gloss !== doc.gloss || JSON.stringify(next.doc.glossary) !== JSON.stringify(doc.glossary ?? []);
-      if (!languages && !output) {
-        // Same job either way (e.g. an unrelated preference): no detection next time.
-        used.set(tabId, settingsKey(settings));
-        return;
-      }
-      if (stillThere()) void begin(tabId, docId, next, settings, { keepCost: true, keepBrief: !languages });
+      const { languages, output } = changes(doc, next.doc);
+      // Same job either way (e.g. an unrelated preference): the key stays, no detection next time.
+      if (!languages && !output) return;
+      if (stillThere()) void begin(tabId, docId, next, { keepCost: true, keepBrief: !languages });
+      else unmark();
+    });
+  };
+
+  /**
+   * Resume (the button, a granted access, a saved key) with the current settings (review N3): a
+   * job cancelled or stopped under other settings would otherwise mix the old style and glossary
+   * with the new. Unchanged settings: the job's leftover segments are translated. Changed: the
+   * page is translated from scratch with the new ones, its cost kept, and its brief kept when the
+   * target language is the same (jobs.start). A page skipped as already in the target language is
+   * translated anyway, as Resume asks.
+   */
+  const resume = (tabId: number) => {
+    const current = jobs.docFor(tabId);
+    if (current === undefined || jobs.get(tabId)?.status === 'running') return;
+    const { doc, docId } = current;
+    void readSettings(api).then(async (settings) => {
+      const key = settingsKey(settings);
+      if (key === used.get(tabId)) return void jobs.resume(tabId);
+      const unmark = mark(tabId, key);
+      const next = await docFor(settings, doc.url, doc.title, doc.pageLang, doc.segments);
+      if (jobs.docOf(tabId) !== docId || jobs.get(tabId)?.status === 'running') return unmark();
+      const { languages, output } = changes(doc, next.doc);
+      if (!languages && !output) return void jobs.resume(tabId);
+      void jobs.start(tabId, docId, next.doc, { keepCost: true, keepBrief: true });
     });
   };
 
@@ -105,9 +147,11 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     ready(tabId, docId, result) {
       live.set(tabId, docId);
       void readSettings(api).then(async (settings) => {
+        const unmark = mark(tabId, settingsKey(settings));
         const prepared = await docFor(settings, result.url, result.title, result.lang, result.segments);
         // The page may have gone, or the tab closed, while the settings were read (review E-R1).
-        if (isLive(tabId, docId)) void begin(tabId, docId, prepared, settings);
+        if (isLive(tabId, docId)) void begin(tabId, docId, prepared);
+        else unmark();
       });
     },
     gone: (tabId) => {
@@ -127,12 +171,12 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
 
   const actions = (tabId: number): JobActions => ({
     cancel: () => jobs.cancel(tabId),
-    resume: () => void jobs.resume(tabId),
+    resume: () => resume(tabId),
     openOptions: () => void api.runtime.openOptionsPage(),
     grantAccess: () => {
       // First call in the click handler: permissions.request needs the gesture (§4.3.3 step 3).
       void api.permissions.request({ origins: [GEMINI_ORIGIN] }).then((granted) => {
-        if (granted) void jobs.resume(tabId);
+        if (granted) resume(tabId);
       });
     },
   });
@@ -141,7 +185,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     /** A job that stopped for want of a key or access starts again once that is fixed. */
     const retryStopped = () => {
       const tabId = activeTab();
-      if (tabId !== undefined && jobs.get(tabId)?.status === 'stopped') void jobs.resume(tabId);
+      if (tabId !== undefined && jobs.get(tabId)?.status === 'stopped') resume(tabId);
     };
     const onLocal = (changes: Record<string, unknown>) => {
       if (secretKey(GEMINI_CONNECTION.id) in changes) retryStopped();

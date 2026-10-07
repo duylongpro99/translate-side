@@ -173,9 +173,21 @@ describe('translator wiring (plan M1-E8)', () => {
       const u = createTranslator(g.api, { translateClient: client() }, { detector: detector('vi') });
       await ready(u, g);
       u.actions(1).resume();
+      g.answer();
       await settle(50);
       expect(u.jobs.get(1)?.status).toBe('done');
       expect(u.jobs.get(1)?.counts.final).toBe(segments.length);
+
+      // Settings changed while skipped (still the same target language): Translate anyway still translates it (review N3).
+      const h = fakeApi();
+      const w = createTranslator(h.api, { translateClient: client() }, { detector: detector('vi') });
+      await ready(w, h);
+      h.setGlossary([{ term: 'crate', rendering: 'crate' }]);
+      w.actions(1).resume();
+      h.answer();
+      await settle(50);
+      expect(w.jobs.get(1)?.status).toBe('done');
+      expect(w.jobs.get(1)?.counts.final).toBe(segments.length);
     });
 
     it('per-segment detection is off by default, and keeps target-language segments when on', async () => {
@@ -362,6 +374,132 @@ describe('translator wiring (plan M1-E8)', () => {
       expect(t.jobs.get(1)?.status).toBe('cancelled');
       expect(resolved).toBe(before);
       stop();
+    });
+
+    it('two refreshes in flight (a sync change and the tab coming back) restart the job once (review N2)', async () => {
+      const f = fakeApi();
+      let detections = 0;
+      const detector = { detect: async () => (detections++, await settle(15), [{ detectedLanguage: 'en', confidence: 0.95 }]) };
+      const r = recording();
+      const t = createTranslator(f.api, { translateClient: r.resolve }, { detector });
+      const hooks = t.hooks as Required<SessionHooks>;
+      const stop = t.watch(() => 1);
+      hooks.active(1);
+      hooks.ready(1, 'd', longResult);
+      f.answer();
+      await settle(150);
+      expect(t.jobs.get(1)?.status).toBe('done');
+      expect(r.analyzeCalls()).toBe(1);
+      const seen = detections;
+      // A new target language drops the brief, so each restart would ask for one.
+      f.setPrefs({ targetLang: 'ja', sourceLang: 'auto' });
+      hooks.active(1);
+      f.answer();
+      await settle(200);
+      expect(t.jobs.get(1)?.status).toBe('done');
+      expect(t.jobs.get(1)?.targetLang).toBe('ja');
+      expect(detections - seen).toBe(1);
+      expect(r.analyzeCalls()).toBe(2);
+      stop();
+    });
+
+    describe('Resume reads the settings again (review N3)', () => {
+      /** recording(), with translate calls held until `release` (the analyze call goes through, so the brief lands). */
+      const held = () => {
+        const r = recording();
+        let release = () => {};
+        const gate = new Promise<void>((done) => (release = done));
+        const client: LLMClient = {
+          model: r.c.model,
+          reasoningReserveTokens: r.c.reasoningReserveTokens,
+          async *stream(req) {
+            if (!req.messages[0]?.content.startsWith('<document>')) {
+              await new Promise<void>((done, fail) => {
+                void gate.then(done);
+                req.signal.addEventListener('abort', () => fail(req.signal.reason), { once: true });
+              });
+            }
+            yield* r.c.stream(req);
+          },
+        };
+        return { ...r, release, resolve: () => Promise.resolve({ ok: true as const, client, profile: GEMINI_PROFILE }) };
+      };
+
+      /** A cancelled job (by the Cancel button or the panel's pagehide) whose brief already landed. */
+      const cancelled = async (how: 'button' | 'pagehide') => {
+        const f = fakeApi();
+        let detections = 0;
+        const detector = { detect: async () => (detections++, [{ detectedLanguage: 'en', confidence: 0.95 }]) };
+        const r = held();
+        const t = createTranslator(f.api, { translateClient: r.resolve }, { detector });
+        const hooks = t.hooks as Required<SessionHooks>;
+        const stop = t.watch(() => 1);
+        hooks.active(1);
+        hooks.ready(1, 'd', longResult);
+        f.answer();
+        await settle(60);
+        expect(t.jobs.get(1)?.brief?.genre).toBe('blog post');
+        if (how === 'button') t.actions(1).cancel();
+        else dispatchEvent(new Event('pagehide'));
+        expect(t.jobs.get(1)?.status).toBe('cancelled');
+        r.release();
+        return { f, r, t, stop, detections: () => detections };
+      };
+
+      it('unchanged settings: Resume translates what is left, no detection, no new brief', async () => {
+        const { f, r, t, stop, detections } = await cancelled('button');
+        const seen = detections();
+        t.actions(1).resume();
+        f.answer();
+        await settle(120);
+        expect(t.jobs.get(1)?.status).toBe('done');
+        expect(t.jobs.get(1)?.counts.final).toBe(long.length);
+        expect(detections()).toBe(seen);
+        expect(r.analyzeCalls()).toBe(1);
+        stop();
+      });
+
+      for (const how of ['button', 'pagehide'] as const) {
+        it(`a glossary or style changed while cancelled (${how}): Resume starts afresh with the new settings, keeping the brief`, async () => {
+          const { f, r, t, stop } = await cancelled(how);
+          f.setGlossary([{ term: 'crate', rendering: 'crate' }]);
+          f.setPrefs({ targetLang: 'vi', sourceLang: 'auto', style: 'simplified', gloss: 'first' });
+          f.answer();
+          await settle(40);
+          // Still cancelled: a settings change never restarts a cancelled job.
+          expect(t.jobs.get(1)?.status).toBe('cancelled');
+          const n = r.translateCalls().length;
+          t.actions(1).resume();
+          f.answer();
+          await settle(150);
+          expect(t.jobs.get(1)?.status).toBe('done');
+          expect(t.jobs.get(1)?.counts.final).toBe(long.length);
+          const after = r.translateCalls().slice(n);
+          expect(after.length).toBeGreaterThan(0);
+          for (const req of after) {
+            expect(req.system).toContain('Style mode: Simplified');
+            expect(req.system).toContain('- crate → crate');
+            expect(req.system).toContain('Genre: blog post');
+          }
+          expect(r.analyzeCalls()).toBe(1);
+          stop();
+        });
+      }
+
+      it('a target language changed while cancelled: Resume starts afresh in it, with a new brief', async () => {
+        const { f, r, t, stop } = await cancelled('button');
+        f.setPrefs({ targetLang: 'ja', sourceLang: 'auto' });
+        f.answer();
+        await settle(40);
+        expect(t.jobs.get(1)?.status).toBe('cancelled');
+        t.actions(1).resume();
+        f.answer();
+        await settle(150);
+        expect(t.jobs.get(1)?.status).toBe('done');
+        expect(t.jobs.get(1)?.targetLang).toBe('ja');
+        expect(r.analyzeCalls()).toBe(2);
+        stop();
+      });
     });
   });
 });
