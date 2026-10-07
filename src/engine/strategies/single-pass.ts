@@ -17,6 +17,9 @@ import { formatWire, toWire, type WireChunk } from '../parsing/wire.ts';
 import { translateChunk, type ChunkCall, type ChunkReport } from '../parsing/translate-chunk.ts';
 import { DEFAULT_GLOSS, renderContextBlock, renderSystemPromptV2 } from '../context/assemble.ts';
 import { gatherContext } from '../context/budget.ts';
+import { segmentsBefore } from '../context/glossary.ts';
+import { CONTEXT_TAIL_PARAGRAPHS } from '../context/tail.ts';
+import type { Rendered } from '../parsing/duplicate.ts';
 import { STYLE_LABELS, TRANSLATE_PROMPT_ID, languageLabel } from '../prompts/translate.ts';
 import { defineStage, defineStrategy, type AnyStage } from '../runner.ts';
 import { estimateTokens } from '../tokens.ts';
@@ -186,7 +189,15 @@ export function createTranslateStage(strategyId: string, brief?: BriefWait, prom
       const render = (vars: Readonly<Record<string, string>>) => prompt.render(vars);
       let system: string;
       let context = '';
+      let neighbours: Rendered[] = [];
       if (prompt.name === 'translate' && prompt.version >= 2) {
+        // The tail's translated paragraphs: no segment of this chunk may come back as one of them.
+        neighbours = segmentsBefore(work.doc.segments, work.chunk.segments)
+          .slice(-CONTEXT_TAIL_PARAGRAPHS)
+          .flatMap((s) => {
+            const t = memory.translated.get(s.id)?.text;
+            return t === undefined ? [] : [{ source: s.inlineMarkup, translation: t }];
+          });
         const { segments, ...doc } = work.doc;
         const snippets = await gatherContext(ctx.context, { doc, chunk: work.chunk.segments, targetLang: work.doc.targetLang, segments, memory, options: work.options });
         system = renderSystemPromptV2(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style, gloss: work.options.gloss ?? DEFAULT_GLOSS, snippets });
@@ -199,6 +210,7 @@ export function createTranslateStage(strategyId: string, brief?: BriefWait, prom
         producedBy: { strategy: strategyId, stage: 'translate', model: client.model },
         revision: REVISION,
         role: 'translate',
+        neighbours,
       });
       const shown = new Set<string>();
       for (;;) {

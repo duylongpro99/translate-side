@@ -9,12 +9,16 @@
 //   them, so they replace the shown text in place (same revision; revision is refine's);
 // - a segment still not accepted after the follow-up gets `segment.failed`, also when an earlier
 //   attempt was shown (its text could not be trusted);
+// - a segment whose text copies a neighbour's translation (duplicate.ts: an earlier segment of the
+//   same call, or `neighbours`, the context tail's translated paragraphs) is not accepted: it is
+//   re-requested like a malformed one;
 // - a stream `error` (the pipeline's retries are already spent, retry.ts) fails every segment of
 //   that call that has no accepted text, with that error.
 // Usage from both calls is passed on as `usage` events. An abort propagates as a throw.
 
 import type { LLMError, ModelRole, NormalizedEvent, StopReason } from '../../llm/types.ts';
 import type { EngineEvent } from '../types.ts';
+import { copiesNeighbour, type Rendered } from './duplicate.ts';
 import { planRepair, type RepairPlan, type RepairRule } from './repair.ts';
 import { SegParser, type ParseResult } from './seg-parser.ts';
 import { toWire, type WireChunk, type WireSegment } from './wire.ts';
@@ -28,6 +32,11 @@ export interface TranslateChunkOptions {
   revision: number;
   role: ModelRole;
   mergeFactor?: number;
+  /**
+   * Turns the copy guard on (the translate stage always does): translated passages before the
+   * chunk (the context tail) that no segment may copy, besides the call's own earlier segments.
+   */
+  neighbours?: readonly Rendered[];
 }
 
 /** Not exported from engine/index.ts: the test seam of the fuzz mutation checks (repair.ts). */
@@ -39,6 +48,8 @@ export interface TranslateChunkTestOptions extends TranslateChunkOptions {
 export interface CallReport {
   result: ParseResult;
   plan: RepairPlan;
+  /** Wire ids not accepted because their text copied a neighbour's translation (duplicate.ts). */
+  copied?: number[];
   error?: LLMError;
 }
 
@@ -67,7 +78,18 @@ async function* runCall(
   shown: ReadonlySet<number> = new Set(),
 ): AsyncGenerator<EngineEvent, CallOutcome> {
   const idOf = new Map(chunk.segments.map((e) => [e.n, e.segment.id]));
+  const source = new Map(chunk.segments.map((e) => [e.n, e.segment.inlineMarkup]));
   const pending: EngineEvent[] = [];
+  // The copy guard: each closed segment against the tail and the segments closed before it.
+  const closed: Rendered[] = [...(options.neighbours ?? [])];
+  const copied = new Set<number>();
+  const copies = (n: number, text: string): boolean => {
+    if (options.neighbours === undefined) return false;
+    const src = source.get(n) ?? '';
+    if (copiesNeighbour(src, text, closed)) return true;
+    closed.push({ source: src, translation: text });
+    return false;
+  };
   const parser = new SegParser([...idOf.keys()], {
     grammar: chunk.grammar,
     ...(chunk.nonce === undefined ? {} : { nonce: chunk.nonce }),
@@ -75,7 +97,8 @@ async function* runCall(
       if (!shown.has(n)) pending.push({ type: 'segment.partial', id: idOf.get(n) ?? '', text });
     },
     onFinal: (n, text) => {
-      if (emitFinals) pending.push(final(idOf.get(n) ?? '', text.trim(), attempt, options));
+      if (copies(n, text.trim())) copied.add(n);
+      else if (emitFinals) pending.push(final(idOf.get(n) ?? '', text.trim(), attempt, options));
     },
   });
   // A stream that ends in an error, or with no terminal event, was cut: its open segment is not accepted.
@@ -98,15 +121,14 @@ async function* runCall(
   }
   const result = parser.end(stopReason);
   yield* pending.splice(0);
-  const source = new Map(chunk.segments.map((e) => [e.n, e.segment.inlineMarkup]));
   const plan = planRepair(result, source, {
     ...(options.mergeFactor === undefined ? {} : { mergeFactor: options.mergeFactor }),
     ...(options.disable === undefined ? {} : { disable: options.disable }),
   });
-  const bad = new Set(plan.rerequest);
+  const bad = new Set([...plan.rerequest, ...copied]);
   const accepted = new Map<number, string>();
   for (const [n, text] of result.segs) if (!bad.has(n)) accepted.set(n, text.trim());
-  return { result, plan, accepted, ...(error === undefined ? {} : { error }) };
+  return { result, plan, accepted, ...(copied.size ? { copied: [...copied] } : {}), ...(error === undefined ? {} : { error }) };
 }
 
 function final(id: string, text: string, attempt: number, options: TranslateChunkOptions): EngineEvent {
@@ -140,7 +162,10 @@ export async function* translateChunkWith(chunk: WireChunk, call: ChunkCall, opt
     yield* fail(todo, first.error);
     return report;
   }
-  const repair = yield* runCall(toWire(todo), 2, call, options, false, new Set(first.result.segs.keys()));
+  // The repair may not copy the first pass's accepted segments either.
+  const accepted = chunk.segments.flatMap((e) => (first.accepted.has(e.n) ? [{ source: e.segment.inlineMarkup, translation: first.accepted.get(e.n) ?? '' }] : []));
+  const repairOptions = options.neighbours === undefined ? options : { ...options, neighbours: [...options.neighbours, ...accepted] };
+  const repair = yield* runCall(toWire(todo), 2, call, repairOptions, false, new Set(first.result.segs.keys()));
   report.repair = strip(repair);
   const lost: WireSegment[] = [];
   for (const e of todo) {
@@ -154,5 +179,5 @@ export async function* translateChunkWith(chunk: WireChunk, call: ChunkCall, opt
 }
 
 function strip(outcome: CallOutcome): CallReport {
-  return { result: outcome.result, plan: outcome.plan, ...(outcome.error === undefined ? {} : { error: outcome.error }) };
+  return { result: outcome.result, plan: outcome.plan, ...(outcome.copied === undefined ? {} : { copied: outcome.copied }), ...(outcome.error === undefined ? {} : { error: outcome.error }) };
 }
