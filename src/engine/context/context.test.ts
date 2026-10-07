@@ -373,7 +373,7 @@ describe('translate@2 assembly (plan M2-E3)', () => {
   it('glosses technical terms only: never an ordinary word, never a non-technical headword (round 6, M2-D1)', () => {
     const rule = GLOSS_RULES.first.replaceAll('{TARGET_LANG}', 'Vietnamese');
     expect(rule.startsWith('Glosses are for technical terms only.')).toBe(true);
-    expect(rule).toContain('The first time a technical glossary term, or a technical English term you keep because it has no common Vietnamese equivalent, appears in the document, add a short gloss in parentheses right after it. Only once per term in the whole document');
+    expect(rule).toContain('The first time a technical glossary term, or a technical English term you keep because it has no common Vietnamese equivalent, appears in the document, add a short gloss in parentheses right after it: the original English term after a translated term, or a short Vietnamese explanation after a term kept in English. Only once per term in the whole document');
     expect(rule).toContain('Never gloss an ordinary word or phrase that has a common Vietnamese equivalent, even when the glossary lists it: translate it and put nothing after it, not the English original in parentheses either.');
     expect(rule).toContain('In dictionary entries, word lists and other headword-style text, write each headword in Vietnamese alone, without the original word in parentheses, unless it is a technical term: "BORE, n." becomes the translated headword and part of speech, never the translation followed by "(bore)".');
     // The earlier rules stay: keep-as-is never glossed, already-used terms never again.

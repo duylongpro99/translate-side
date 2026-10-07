@@ -49,6 +49,8 @@ export function totalsOn(r: Run, ids: readonly string[]): Totals {
   if (own.length === ids.length && ids.every((id) => own.includes(id))) return r.summary.total;
   const want = new Set(ids);
   const docs = r.summary.docs.filter((d) => want.has(d.slug));
+  // No doc lines (a run from before they were written): its share of the totals is unknown, not $0 (review).
+  const unknown = r.summary.docs.length === 0;
   const sum = (k: Exclude<keyof Totals, 'costUsd' | 'failed'>) => docs.reduce((n, d) => n + (d[k] ?? 0), 0);
   const costs = docs.map((d) => d.costUsd);
   return {
@@ -61,7 +63,7 @@ export function totalsOn(r: Run, ids: readonly string[]): Totals {
     cachedInput: sum('cachedInput'),
     output: sum('output'),
     wallMs: sum('wallMs'),
-    costUsd: costs.some((c) => c === null || c === undefined) ? null : costs.reduce<number>((n, c) => n + (c ?? 0), 0),
+    costUsd: unknown || costs.some((c) => c === null || c === undefined) ? null : costs.reduce<number>((n, c) => n + (c ?? 0), 0),
   };
 }
 

@@ -52,6 +52,9 @@ describe('renderReport', () => {
     expect(md).toContain('| segments lost after repair | 0/4 | 0/4 |');
     expect(md).toContain('| human fidelity | 3.00 n=2 | 4.00 (+1.00) n=2 |');
     expect(md).toContain('| docs (1) | 3.00 | 4.00 (+1.00) |');
+    // A run with no doc lines (older summary.json): its share of the cost is unknown, not $0 (review).
+    const old = run({ outputs: { a: [], b: [], c: [] } }, { docs: [], total: { translatable: 6, lost: 0, failed: 0, repaired: 0, calls: 3, input: 300, cachedInput: 0, output: 150, wallMs: 3000, costUsd: 0.07 } });
+    expect(renderReport({ runs: [next, old], categories: { a: 'docs', b: 'humor', c: 'docs' } })).toContain('| translation cost | $0.0300 | n/a |');
     // Runs over the same passages: the whole-run totals, no note.
     const same = renderReport({ runs: [run({}), run({}, {}, 0.02)], categories });
     expect(same).not.toContain('compared');
