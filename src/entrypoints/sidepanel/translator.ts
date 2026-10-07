@@ -76,6 +76,24 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     };
   };
 
+  /**
+   * The job document under `settings`, detected with their key marked (mark). Undefined when that
+   * read was overtaken: the detection failed (the old key is put back, review R2), or newer
+   * settings were marked meanwhile, e.g. A→B then B→A while B was detected (review R1): the newer
+   * read decides.
+   */
+  const prepare = async (tabId: number, settings: Settings, page: { url: string; title: string; pageLang?: string | undefined; segments: JobDoc['segments'] }) => {
+    const key = settingsKey(settings);
+    const unmark = mark(tabId, key);
+    try {
+      const prepared = await docFor(settings, page.url, page.title, page.pageLang, page.segments);
+      return used.get(tabId) === key ? { prepared, unmark } : undefined;
+    } catch {
+      unmark();
+      return undefined;
+    }
+  };
+
   const begin = (tabId: number, docId: string, prepared: { doc: JobDoc; skip: boolean }, opts?: { keepCost?: boolean; keepBrief?: boolean }) =>
     prepared.skip ? jobs.skip(tabId, docId, prepared.doc) : jobs.start(tabId, docId, prepared.doc, opts);
 
@@ -109,8 +127,9 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     void readSettings(api).then(async (settings) => {
       const key = settingsKey(settings);
       if (key === used.get(tabId)) return;
-      const unmark = mark(tabId, key);
-      const next = await docFor(settings, doc.url, doc.title, doc.pageLang, doc.segments);
+      const got = await prepare(tabId, settings, doc);
+      if (got === undefined) return;
+      const { prepared: next, unmark } = got;
       const { languages, output } = changes(doc, next.doc);
       // Same job either way (e.g. an unrelated preference): the key stays, no detection next time.
       if (!languages && !output) return;
@@ -134,8 +153,9 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     void readSettings(api).then(async (settings) => {
       const key = settingsKey(settings);
       if (key === used.get(tabId)) return void jobs.resume(tabId);
-      const unmark = mark(tabId, key);
-      const next = await docFor(settings, doc.url, doc.title, doc.pageLang, doc.segments);
+      const got = await prepare(tabId, settings, doc);
+      if (got === undefined) return;
+      const { prepared: next, unmark } = got;
       if (jobs.docOf(tabId) !== docId || jobs.get(tabId)?.status === 'running') return unmark();
       const { languages, output } = changes(doc, next.doc);
       if (!languages && !output) return void jobs.resume(tabId);
@@ -147,11 +167,11 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     ready(tabId, docId, result) {
       live.set(tabId, docId);
       void readSettings(api).then(async (settings) => {
-        const unmark = mark(tabId, settingsKey(settings));
-        const prepared = await docFor(settings, result.url, result.title, result.lang, result.segments);
+        const got = await prepare(tabId, settings, { url: result.url, title: result.title, pageLang: result.lang, segments: result.segments });
+        if (got === undefined) return;
         // The page may have gone, or the tab closed, while the settings were read (review E-R1).
-        if (isLive(tabId, docId)) void begin(tabId, docId, prepared);
-        else unmark();
+        if (isLive(tabId, docId)) void begin(tabId, docId, got.prepared);
+        else got.unmark();
       });
     },
     gone: (tabId) => {

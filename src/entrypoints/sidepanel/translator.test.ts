@@ -403,6 +403,115 @@ describe('translator wiring (plan M1-E8)', () => {
       stop();
     });
 
+    it('settings A→B then B→A while B is still detected: the tab keeps the A job, nothing is retranslated (review R1)', async () => {
+      const f = fakeApi();
+      let hold: Promise<void> | undefined;
+      let release = () => {};
+      const detector = {
+        detect: async () => {
+          const h = hold;
+          hold = undefined;
+          if (h) await h;
+          return [{ detectedLanguage: 'en', confidence: 0.95 }];
+        },
+      };
+      const r = recording();
+      const t = createTranslator(f.api, { translateClient: r.resolve }, { detector });
+      const hooks = t.hooks as Required<SessionHooks>;
+      const stop = t.watch(() => 1);
+      hooks.active(1);
+      hooks.ready(1, 'd', result);
+      f.answer();
+      await settle(80);
+      expect(t.jobs.get(1)?.status).toBe('done');
+      const sent = r.translateCalls().length;
+
+      hold = new Promise<void>((done) => (release = done));
+      f.setPrefs({ targetLang: 'vi', sourceLang: 'auto', style: 'simplified', gloss: 'first' });
+      f.answer();
+      await settle(20);
+      // Back to A (the stored prefs normalise to the same settings as the start).
+      f.setPrefs({ targetLang: 'vi', sourceLang: 'auto' });
+      f.answer();
+      await settle(20);
+      release();
+      await settle(80);
+      expect(r.translateCalls().length).toBe(sent);
+      expect(t.jobs.docFor(1)?.doc.style).toBe('natural');
+      expect(t.jobs.get(1)?.status).toBe('done');
+      // The recorded settings are A's: the tab coming back changes nothing either.
+      hooks.active(1);
+      f.answer();
+      await settle(40);
+      expect(r.translateCalls().length).toBe(sent);
+      stop();
+    });
+
+    it('a detection that fails leaves no settings marked: the same change applies on the next try, refresh and Resume alike (review R2)', async () => {
+      // A segment whose text throws while `explode` is on: docFor rejects (detector errors are caught inside it).
+      let explode = false;
+      const tricky = [
+        Object.defineProperty({ ...segments[0] }, 'text', {
+          get: () => {
+            if (explode) throw new Error('boom');
+            return text;
+          },
+        }),
+        ...segments.slice(1),
+      ] as Segment[];
+      const page = { ...result, segments: tricky } as Ready;
+
+      const f = fakeApi();
+      const r = recording();
+      const t = createTranslator(f.api, { translateClient: r.resolve });
+      const hooks = t.hooks as Required<SessionHooks>;
+      const stop = t.watch(() => 1);
+      hooks.active(1);
+      hooks.ready(1, 'd', page);
+      f.answer();
+      await settle(80);
+      expect(t.jobs.get(1)?.status).toBe('done');
+      const sent = r.translateCalls().length;
+      explode = true;
+      f.setPrefs({ targetLang: 'vi', sourceLang: 'auto', style: 'simplified', gloss: 'first' });
+      f.answer();
+      await settle(40);
+      expect(r.translateCalls().length).toBe(sent);
+      explode = false;
+      hooks.active(1);
+      f.answer();
+      await settle(80);
+      const after = r.translateCalls().slice(sent);
+      expect(after.length).toBeGreaterThan(0);
+      expect(after.every((req) => req.system.includes('Style mode: Simplified'))).toBe(true);
+      stop();
+
+      // Resume (no settings listener here): a failed detection, then the same Resume works.
+      const g = fakeApi();
+      const q = recording();
+      const u = createTranslator(g.api, { translateClient: q.resolve });
+      const uhooks = u.hooks as Required<SessionHooks>;
+      uhooks.active(1);
+      uhooks.ready(1, 'd', page);
+      g.answer();
+      await settle(80);
+      expect(u.jobs.get(1)?.status).toBe('done');
+      const n = q.translateCalls().length;
+      g.setGlossary([{ term: 'crate', rendering: 'crate' }]);
+      explode = true;
+      u.actions(1).resume();
+      g.answer();
+      await settle(40);
+      expect(q.translateCalls().length).toBe(n);
+      explode = false;
+      u.actions(1).resume();
+      g.answer();
+      await settle(80);
+      const resumed = q.translateCalls().slice(n);
+      expect(resumed.length).toBeGreaterThan(0);
+      expect(resumed.every((req) => req.system.includes('- crate → crate'))).toBe(true);
+    });
+
     describe('Resume reads the settings again (review N3)', () => {
       /** recording(), with translate calls held until `release` (the analyze call goes through, so the brief lands). */
       const held = () => {
