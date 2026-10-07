@@ -179,6 +179,27 @@ describe('GlossaryProvider (personal + auto)', () => {
     expect(usedTermsLine([{ term: 'Scan method', rendering: 'phương thức Scan' }], codeTerms(segments))).toBe(`${USED_TERMS_HEAD}\`Scan\` method → phương thức \`Scan\``);
   });
 
+  it('a one-letter code span is no word inside an accented word (review round 5)', () => {
+    const segments = [seg('a', 'Let `n` be the count; the `n` loop runs.'), seg('b', 'More.')];
+    const code = codeTerms(segments);
+    // "n loop" is written with `n` in backticks: marked. "nước" and "ản" contain an n inside a Vietnamese word: left alone.
+    expect(renderGlossaryEntry({ term: 'n loop', rendering: 'vòng lặp n trong nước' }, 'brief', code)).toContain('- `n` loop → vòng lặp `n` trong nước ');
+    expect(renderGlossaryEntry({ term: 'n loop', rendering: 'vòng lặp ản' }, 'brief', code)).toContain('→ vòng lặp ản ');
+  });
+
+  it('stays fast on a document with many code spans and a long list (review round 5)', () => {
+    const segments = Array.from({ length: 300 }, (_, i) => seg(`s${i}`, Array.from({ length: 5 }, (_, j) => `Call \`fn_${i}_${j}\` and the \`fn_${i}_${j}\` method.`).join(' ')));
+    const code = codeTerms(segments);
+    expect(code.spans.size).toBe(1500);
+    const entries = Array.from({ length: 40 }, (_, i) => ({ term: `fn_${i}_0 method`, rendering: `phương thức fn_${i}_0` }));
+    const t0 = performance.now();
+    for (let chunk = 0; chunk < 5; chunk++) fitGlossary(entries, 100_000, () => 'brief', code);
+    const ms = performance.now() - t0;
+    expect(fitGlossary(entries, 100_000, () => 'brief', code).lines[0]).toContain('- `fn_0_0` method → phương thức `fn_0_0` ');
+    // Before the memo and the includes() prefilter: ~0.75 s per call.
+    expect(ms).toBeLessThan(250);
+  });
+
   it('cuts entries from the end when the list does not fit (the user\'s entries survive)', async () => {
     const personal = [{ term: 'deploy', rendering: 'deploy' }];
     const maxTokens = estimateTokens('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)\n') + estimateTokens(usedTermsLine([{ term: 'deploy', rendering: 'deploy' }]));

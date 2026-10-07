@@ -85,14 +85,28 @@ export function codeTerms(segments: readonly Segment[]): DocCode {
   return { spans, text: segments.map((s) => s.inlineMarkup).join('\n') };
 }
 
-/** Bare occurrences of `word` (not inside backticks, not part of a longer word). */
-const bare = (word: string) => new RegExp(`(?<![\\w\`])${escapeRe(word)}(?![\\w\`])`, 'g');
+const bareCache = new Map<string, RegExp>();
+
+/**
+ * Bare occurrences of `word`: not inside backticks, not part of a longer word in any script (a
+ * one-letter span `n` is no match inside "nước"; review round 5). Global: use with replace/search.
+ */
+function bare(word: string): RegExp {
+  let re = bareCache.get(word);
+  if (re === undefined) {
+    re = new RegExp(`(?<![\\p{L}\\p{N}_\`])${escapeRe(word)}(?![\\p{L}\\p{N}_\`])`, 'gu');
+    if (bareCache.size > 4096) bareCache.clear();
+    bareCache.set(word, re);
+  }
+  return re;
+}
 
 /** The code words of `term` the list shows in backticks: the whole term, or words the source backticks inside it. */
 function codeWords(term: string, code: DocCode): string[] {
   const t = term.trim();
   if (code.spans.has(t)) return [t];
-  return [...code.spans].filter((c) => c !== '' && bare(c).test(t) && code.text.includes(t.replace(bare(c), `\`${c}\``)));
+  // includes() first: a regex only for the spans the term contains at all (review round 5).
+  return [...code.spans].filter((c) => c !== '' && t.includes(c) && t.search(bare(c)) >= 0 && code.text.includes(t.replace(bare(c), `\`${c}\``)));
 }
 
 /** `text` with `words` in backticks. */
@@ -102,12 +116,22 @@ function marked(text: string, words: readonly string[]): string {
   return words.reduce((out, w) => out.replace(bare(w), `\`${w}\``), t);
 }
 
+/** shown() per document and entry: fitGlossary asks again for every listed entry as the list grows (review round 5). */
+const shownCache = new WeakMap<DocCode, Map<string, { term: string; rendering: string }>>();
+
 /** A glossary entry's term and rendering as the list shows them (code in backticks). */
 function shown(e: Pick<GlossaryEntry, 'term' | 'rendering'>, code: DocCode): { term: string; rendering: string } {
+  let cache = shownCache.get(code);
+  if (cache === undefined) shownCache.set(code, (cache = new Map()));
+  const key = `${e.term}\u0000${e.rendering}`;
+  const hit = cache.get(key);
+  if (hit !== undefined) return hit;
   const words = codeWords(e.term, code);
   // A rendering that is code itself (a keep-as-is entry written another way) counts too.
   const own = code.spans.has(e.rendering.trim()) ? [e.rendering.trim()] : [];
-  return { term: marked(e.term, words), rendering: marked(e.rendering, [...words, ...own]) };
+  const out = { term: marked(e.term, words), rendering: marked(e.rendering, [...words, ...own]) };
+  cache.set(key, out);
+  return out;
 }
 
 /** One glossary line. Tags are neutralised: the brief's terms are model output over page text (§8). */

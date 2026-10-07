@@ -117,8 +117,8 @@ describe('check stage: re-request once, then segment.failed (M2-E4)', () => {
     expect(client.requests[1]?.messages.map((m) => m.role)).toEqual(['user', 'assistant', 'user']);
     expect(wireLines(first?.content ?? '').map((l) => l.n)).toEqual([1, 3]);
     expect(answer?.content).toBe(`<seg id="1">${BAD.a}</seg>\n<seg id="3">${BAD.c}</seg>`);
-    expect(fixes?.content).toContain('Segment 1:\n- Copy these code spans byte-identical, backticks included, even where the glossary writes the term without them: `futures`, `Cargo.toml`');
-    expect(fixes?.content).toContain('Segment 3:\n- Keep these numbers in digits, as the source writes them (do not convert or spell them out): 3.5, 1,000');
+    expect(fixes?.content).toContain('Segment 1:\n- Copy these code spans byte-identical, backticks included, even where the glossary writes the term without them: <data>`futures` | `Cargo.toml`</data>');
+    expect(fixes?.content).toContain('Segment 3:\n- Keep these numbers in digits, as the source writes them (do not convert or spell them out): <data>3.5 | 1,000</data>');
     // The translate call itself is a single user turn, as before.
     expect(client.requests[0]?.messages.map((m) => m.role)).toEqual(['user']);
   });
