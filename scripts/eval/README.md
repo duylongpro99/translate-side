@@ -12,7 +12,7 @@ Options: `--provider gemini|anthropic` (default gemini; key from `.env`: `GEMINI
 (sends every chunk as a nonce chunk and counts echoed nonces, M1-D11), `--chunk-tokens n` (1500), `--concurrency n` (2),
 `--target vi`, `--price in,cached,out` (USD per million tokens; otherwise `pricing.ts`; the Gemini entry is an unverified placeholder),
 `--out dir`, `--prompt translate@1|translate@2` (contextual's translate prompt, default translate@2; `translate@1` is Phase B's contextual; single-pass is always translate@1, the frozen baseline),
-`--style natural|faithful|simplified`, `--gloss first|off`, `--glossary "deploy,executor=bộ thực thi"` (the job options the panel takes from the settings; a bare term is kept as is).
+`--style natural|faithful|simplified`, `--gloss first|off`, `--glossary "deploy,executor=bộ thực thi"` (the job options the panel takes from the settings; a bare term is kept as is), `--pause ms` (wait between documents, for a free tier's per-minute limit).
 
 A run folder holds `<slug>.output.json` (source and translation per segment), `<slug>.brief.json` (contextual: the parsed brief, or null), `calls.jsonl` (every request and answer, tagged with its role),
 `summary.json` (with `strategy` and `prompts`, the prompt versions by role) and `summary.md` (per doc: segment loss, repairs, chunks and how many carried the brief, calls, tokens, wall time, time to first final, cost; the brief's parse result, time and tokens; chars per token; S2 thresholds; nonce copy).

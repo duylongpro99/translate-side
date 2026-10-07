@@ -6,7 +6,7 @@
 //      [--set fixtures|eval] [--strategy single-pass|contextual] [--probe-nonce] [--chunk-tokens n]
 //      [--concurrency n] [--target vi] [--price in,cached,out]
 //      [--prompt translate@1|translate@2] [--style natural|faithful|simplified] [--gloss first|off]
-//      [--glossary "deploy,executor=bộ thực thi"]
+//      [--glossary "deploy,executor=bộ thực thi"] [--pause ms]
 // `contextual` (plan M2) adds the brief call: <slug>.brief.json holds the parsed brief (or null),
 // calls.jsonl tags each call with its role, and summary.json records the strategy and the prompt
 // versions so the comparison report (pnpm run eval:report) can tell runs apart.
@@ -49,6 +49,8 @@ const { values: opt } = parseArgs({
     style: { type: 'string', default: 'natural' },
     gloss: { type: 'string', default: 'first' },
     glossary: { type: 'string', default: '' },
+    // Wait between documents (ms), to stay under a free tier's requests-per-minute limit.
+    pause: { type: 'string', default: '0' },
   },
 });
 
@@ -312,7 +314,9 @@ async function probeNonce(slug: string): Promise<NonceProbe> {
 }
 
 const results: DocResult[] = [];
-for (const slug of slugs) {
+const pauseMs = Number(opt.pause);
+for (const [i, slug] of slugs.entries()) {
+  if (i > 0 && pauseMs > 0) await new Promise((r) => setTimeout(r, pauseMs));
   const r = await runDoc(slug);
   results.push(r);
   console.log(`${slug.padEnd(34)} final ${r.final}/${r.translatable} lost ${r.lost} repaired ${r.repaired} calls ${r.calls} in ${r.input} out ${r.output} ${(r.wallMs / 1000).toFixed(1)}s ${r.costUsd === null ? 'cost n/a' : `$${r.costUsd.toFixed(5)}`}${price && !price.verified ? ' (UNVERIFIED price)' : ''}`);
