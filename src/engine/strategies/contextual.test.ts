@@ -164,7 +164,7 @@ describe('contextual: analyze → chunk → translate → check', () => {
     noFailures(events);
     expect(finals(events).map((e) => e.id)).toEqual(['h', 'a', 'b']);
     expect(translate.requests).toHaveLength(1);
-    expect(translate.requests[0]?.system).toContain('Document brief:\n(none)');
+    expect(translate.requests[0]?.system).toContain('Document brief:\n<brief>\n(none)\n</brief>');
   });
 
   it('still uses a brief a one-chunk job brings along (a resumed run), with no call', async () => {

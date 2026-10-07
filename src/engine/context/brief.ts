@@ -3,19 +3,30 @@
 // are the glossary provider's. No brief in memory: no snippet ("(none)" in the prompt).
 import type { ContextProvider, DocumentBrief } from '../types.ts';
 import { estimateTokens } from '../tokens.ts';
-import { BRIEF_PROVIDER_ID } from './assemble.ts';
+import { BRIEF_PROVIDER_ID, neutralizeContextTags } from './assemble.ts';
 
+/** The brief's fields, one per line; tags neutralised, since the brief is model output over page text (§8). */
 export function renderBrief(brief: DocumentBrief): string {
   const lines: string[] = [];
-  if (brief.genre) lines.push(`Genre: ${brief.genre}`);
-  if (brief.audience) lines.push(`Audience: ${brief.audience}`);
-  if (brief.purpose) lines.push(`Purpose: ${brief.purpose}`);
-  if (brief.tone) lines.push(`Tone: ${brief.tone}`);
+  const field = (label: string, value: string) => {
+    if (value) lines.push(`${label}: ${neutralizeContextTags(value)}`);
+  };
+  field('Genre', brief.genre);
+  field('Audience', brief.audience);
+  field('Purpose', brief.purpose);
+  field('Tone', brief.tone);
   return lines.join('\n');
 }
 
+/**
+ * The most a brief takes: four fields of at most BRIEF_FIELD_MAX characters with their labels
+ * (~360 tokens). It caps the brief's share, so the glossary is sure of the rest (budget.ts).
+ */
+export const BRIEF_MAX_TOKENS = 400;
+
 export const documentBriefProvider: ContextProvider = {
   id: BRIEF_PROVIDER_ID,
+  maxTokens: BRIEF_MAX_TOKENS,
   async provide(q) {
     const brief = q.memory.brief;
     if (brief === undefined) return [];

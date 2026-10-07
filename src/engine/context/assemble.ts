@@ -49,10 +49,13 @@ export function renderContextBlock(snippets: readonly ContextSnippet[]): string 
   return ['<context>', 'Context only: do not translate this block and do not output it.', '', parts.join('\n\n'), '</context>'].join('\n');
 }
 
-/** Tags of the context block and the wire; page text inside the block must not open or close them (§8). */
-const CONTEXT_TAG = /<(\s*\/?\s*)(context|source|translation|seg)(?=[\s>/]|$)/gi;
+/**
+ * Tags of translate@2's data blocks (brief, glossary, context and its parts) and of the wire. Page
+ * text, and the brief (model output over page text), must not open or close them (§8).
+ */
+const CONTEXT_TAG = /<(\s*\/?\s*)(context|source|translation|seg|brief|glossary)(?=[\s>/]|$)/gi;
 
-/** Page text with every context or `<seg>` tag neutralised ("<" → "‹", as analyze@1 does). */
+/** Text with every data-block or `<seg>` tag neutralised ("<" → "‹", as analyze@1 does). */
 export function neutralizeContextTags(text: string): string {
   return text.replace(CONTEXT_TAG, '‹$1$2');
 }

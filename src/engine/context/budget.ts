@@ -4,13 +4,24 @@
 // context tail last (what remains, at most ~300). A provider's snippets past its share are dropped,
 // and a provider that throws is skipped: context is optional (§5.6), it never fails a chunk.
 import { estimateTokens } from '../tokens.ts';
-import type { ContextProvider, ContextQuery, ContextSnippet } from '../types.ts';
-import { documentBriefProvider } from './brief.ts';
-import { glossaryProvider } from './glossary.ts';
+import type { ContextProvider, ContextQuery, ContextSnippet, GlossaryEntry } from '../types.ts';
+import { BRIEF_MAX_TOKENS, documentBriefProvider } from './brief.ts';
+import { glossaryProvider, renderGlossaryEntry } from './glossary.ts';
 import { contextTailProvider } from './tail.ts';
 
 /** Context tokens per chunk, all providers together (DESIGN §6: system ~1k, context ~300). */
 export const CONTEXT_BUDGET_TOKENS = 1500;
+
+/**
+ * The glossary's share is at least what the largest brief leaves; the user's entries come first in
+ * it. The options page warns when the personal glossary alone is larger (review, plan M2-E6).
+ */
+export const PERSONAL_GLOSSARY_PROMPT_TOKENS = CONTEXT_BUDGET_TOKENS - BRIEF_MAX_TOKENS;
+
+/** What the personal glossary takes in a prompt, as the glossary provider lists it. */
+export function personalGlossaryTokens(entries: readonly GlossaryEntry[]): number {
+  return entries.reduce((n, e) => n + estimateTokens(`${renderGlossaryEntry(e)}\n`), 0);
+}
 
 /** v1 providers (§5.4), document-scoped ones first so the system block can't depend on the chunk. */
 export const DEFAULT_CONTEXT_PROVIDERS: readonly ContextProvider[] = [documentBriefProvider, glossaryProvider, contextTailProvider];

@@ -3,15 +3,17 @@
 // term (case-insensitive) the user's entry wins and the brief's is dropped (§5.7 "user overrides
 // take priority"). Two snippets:
 // - document-scoped, the glossary list (translate@2's GLOSSARY slot). It depends only on memory,
-//   so it is the same for every briefed chunk; entries that don't fit the budget are cut from the
-//   end (the brief's terms go first), the same cut for every chunk;
+//   so it is the same for every briefed chunk. The user's entries come first, so they get the
+//   budget first; entries that don't fit are cut from the end (the brief's terms before any of the
+//   user's), the same cut for every chunk. The options page warns when the user's entries alone
+//   pass PERSONAL_GLOSSARY_PROMPT_TOKENS (budget.ts);
 // - chunk-scoped, the listed terms that already occur in the source before this chunk, so the
 //   model glosses a term only at its first occurrence in the document (plan M2 §5, M2-D1). It is
 //   computed from the source in page order, so it doesn't depend on which chunk finished first.
 import { cyrb53 } from '../hash.ts';
 import { estimateTokens } from '../tokens.ts';
 import type { ContextProvider, ContextSnippet, GlossaryEntry, Segment } from '../types.ts';
-import { GLOSSARY_PROVIDER_ID } from './assemble.ts';
+import { GLOSSARY_PROVIDER_ID, neutralizeContextTags } from './assemble.ts';
 
 const key = (term: string) => term.trim().toLowerCase();
 
@@ -38,11 +40,12 @@ export const KEEP_AS_IS_MARK = '(keep as is: write it exactly like this, never t
 /** The head of the chunk snippet listing the terms used before this chunk (no gloss for them). */
 export const USED_TERMS_HEAD = 'Terms already used earlier in the document, so already glossed: write each with no gloss and no parentheses after it in every segment below, headings included: ';
 
+/** One glossary line. Tags are neutralised: the brief's terms are model output over page text (§8). */
 export function renderGlossaryEntry(e: GlossaryEntry): string {
-  const term = e.term.trim();
-  const head = keepsTerm(e) ? `- ${term} → ${term} ${KEEP_AS_IS_MARK}` : `- ${term} → ${e.rendering.trim()}`;
+  const term = neutralizeContextTags(e.term.trim());
+  const head = keepsTerm(e) ? `- ${term} → ${term} ${KEEP_AS_IS_MARK}` : `- ${term} → ${neutralizeContextTags(e.rendering.trim())}`;
   const note = e.note?.trim();
-  return note ? `${head} — ${note}` : head;
+  return note ? `${head} — ${neutralizeContextTags(note)}` : head;
 }
 
 /** For the translation cache key (DESIGN §7, built in M3): the personal glossary as sent. */
@@ -52,14 +55,19 @@ export function glossaryHash(entries: readonly GlossaryEntry[]): string {
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** Whether `term` occurs in `text` as a whole word (case-insensitive). */
-export function mentions(text: string, term: string): boolean {
+/** The whole-word, case-insensitive pattern for `term`; undefined for a blank term. */
+export function termPattern(term: string): RegExp | undefined {
   const t = term.trim();
-  if (t === '') return false;
+  if (t === '') return undefined;
   // \b only where the term starts/ends with a word character ("async fn", ".await", "I/O").
   const start = /^\w/.test(t) ? '\\b' : '';
   const end = /\w$/.test(t) ? '\\b' : '';
-  return new RegExp(`${start}${escapeRe(t)}${end}`, 'i').test(text);
+  return new RegExp(`${start}${escapeRe(t)}${end}`, 'i');
+}
+
+/** Whether `term` occurs in `text` as a whole word (case-insensitive). */
+export function mentions(text: string, term: string): boolean {
+  return termPattern(term)?.test(text) ?? false;
 }
 
 /** The translatable segments before the chunk's first one, in page order. */
@@ -88,8 +96,10 @@ export const glossaryProvider: ContextProvider = {
     }
     if (lines.length === 0) return [];
     const out: ContextSnippet[] = [{ providerId: GLOSSARY_PROVIDER_ID, scope: 'document', text: lines.join('\n') }];
-    const before = segmentsBefore(q.segments, q.chunk);
-    const used = listed.filter((e) => before.some((s) => mentions(s.text, e.term))).map((e) => e.term.trim());
+    // One pattern per term over the text before the chunk, joined once ("\n" is a word boundary,
+    // so no match spans two segments).
+    const before = segmentsBefore(q.segments, q.chunk).map((s) => s.text).join('\n');
+    const used = before === '' ? [] : listed.filter((e) => termPattern(e.term)?.test(before)).map((e) => neutralizeContextTags(e.term.trim()));
     if (used.length) {
       const text = `${USED_TERMS_HEAD}${used.join(', ')}`;
       if (estimateTokens(text) <= left) out.push({ providerId: GLOSSARY_PROVIDER_ID, scope: 'chunk', text });
