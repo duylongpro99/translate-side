@@ -58,6 +58,10 @@ const { values: opt } = parseArgs({
     glossary: { type: 'string', default: '' },
     // Wait between documents (ms), to stay under a free tier's requests-per-minute limit.
     pause: { type: 'string', default: '0' },
+    // Translator thinking for a trial (round 9 option d), e.g. `--reasoning low --reasoning-reserve 8000`:
+    // the translate calls only; analyze and the defaults are unchanged. Recorded in summary.json.
+    reasoning: { type: 'string' },
+    'reasoning-reserve': { type: 'string', default: '0' },
   },
 });
 
@@ -86,7 +90,10 @@ interface CallRecord {
 
 if (fs.existsSync(path.join(ROOT, '.env'))) process.loadEnvFile(path.join(ROOT, '.env'));
 
-function connection(): { client: LLMClient; label: string } {
+/** `--reasoning`: the translate calls' thinking, sent as `reasoning_effort` (OpenAI-compatible providers). */
+const REASONING = opt.reasoning === undefined ? undefined : { control: 'effort' as const, lowest: opt.reasoning, reserveTokens: Number(opt['reasoning-reserve']) };
+
+function connection(): { client: LLMClient; label: string; translateClient?: LLMClient } {
   if (opt.mock) {
     // Echoes every <seg> with "vi:" in front. Multi-line segments are legal on the wire, so this
     // does not go through the line-based test helper.
@@ -119,7 +126,7 @@ function connection(): { client: LLMClient; label: string } {
   if (!key) throw new Error(`${preset.keyName} is not set (.env or the environment)`);
   const conn: ResolvedConnection = { id: `eval-${opt.provider}`, ...preset.conn, apiKey: key, hasHostPermission: async () => true };
   const model = opt.model ?? preset.model;
-  return { client: createClient(conn, model), label: `${opt.provider}/${model}` };
+  return { client: createClient(conn, model), label: `${opt.provider}/${model}`, ...(REASONING === undefined ? {} : { translateClient: createClient({ ...conn, quirks: { ...conn.quirks, reasoning: REASONING } }, model) }) };
 }
 
 /** The live providers: where the key is read, the connection, the default model (M2-D11, M2-D14). */
@@ -179,7 +186,7 @@ function loadDoc(slug: string): FixtureDoc {
   const p = loadPassage(ROOT, slug);
   return { slug, url: p.meta.url, title: p.meta.title, lang: p.lang, segments: p.segments };
 }
-const { client: baseClient, label } = connection();
+const { client: baseClient, label, translateClient } = connection();
 const price = priceFor(baseClient.model, opt.price);
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 const outDir = path.resolve(opt.out ?? path.join(ROOT, 'eval-results', `${stamp}_${label.replace(/\W+/g, '-')}`));
@@ -190,7 +197,7 @@ let current = '';
 // One recording client per role, as the shell routes them (analyze defaults to translate, §4.3.1).
 const strategies = [singlePass, createContextual(TRANSLATE_PROMPT)];
 const registry = createDefaultPromptRegistry();
-const engine = createEngine({ llm: (role) => recording(baseClient, calls, () => current, role), now: Date.now, sleep, strategies, prompts: registry });
+const engine = createEngine({ llm: (role) => recording(role === 'translate' ? (translateClient ?? baseClient) : baseClient, calls, () => current, role), now: Date.now, sleep, strategies, prompts: registry });
 /**
  * The translate system prompt as this run renders it with no context (English source, the run's
  * target, style and gloss setting): a rule changed in place, under the same prompt id, gets a new
@@ -414,7 +421,7 @@ const nonce = probes.length ? { echoed: probes.reduce((n, p) => n + p.echoed, 0)
 const briefs = results.flatMap((r) => (r.brief ? [r.brief] : []));
 // M2-D9: one-chunk documents make no brief call (`skipped`); they are counted apart.
 const briefTotals = briefs.length ? { docs: briefs.length, ok: briefs.filter((b) => b.ok).length, skipped: briefs.filter((b) => b.skipped).length, input: briefs.reduce((n, b) => n + b.input, 0), output: briefs.reduce((n, b) => n + b.output, 0), costUsd: price ? costUsd(price, { input: briefs.reduce((n, b) => n + b.input, 0), cachedInput: 0, output: briefs.reduce((n, b) => n + b.output, 0) }) : null } : null;
-const summary = { run: stamp, set: opt.set, strategy: STRATEGY, strategyVersion, prompt: TRANSLATE_PROMPT, promptHash, prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, label, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
+const summary = { run: stamp, set: opt.set, strategy: STRATEGY, strategyVersion, prompt: TRANSLATE_PROMPT, promptHash, prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, label, ...(REASONING === undefined ? {} : { reasoning: { effort: REASONING.lowest, reserveTokens: REASONING.reserveTokens } }), brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
 fs.writeFileSync(path.join(outDir, 'summary.json'), `${JSON.stringify(summary, null, 1)}\n`);
 const money = (n: number | null): string => (n === null ? 'n/a' : `$${n.toFixed(5)}`);
 const md = [
