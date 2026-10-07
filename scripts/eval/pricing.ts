@@ -22,6 +22,9 @@ export const PRICES: Record<string, Price> = {
   'ds/deepseek-flash': { input: 0.1, cachedInput: 0.002, output: 0.4, verified: false },
   // ds/deepseek-v4-pro (the judge, M2-D13; the translator from M2-D14): model_ratio 0.22, completion_ratio 3, cache_ratio 0.033181818182.
   'ds/deepseek-v4-pro': { input: 0.44, cachedInput: 0.0146, output: 1.32, verified: false },
+  // qwen3.8-flash (M2-D15 trial): model_ratio 0.016, completion_ratio 2.9375, cache_ratio 0.1 (create_cache_ratio 1.25,
+  // not modelled). Output includes the reasoning tokens.
+  'qwen3.8-flash': { input: 0.032, cachedInput: 0.0032, output: 0.094, verified: false },
   // The offline `--mock` run: no money is spent.
   mock: { input: 0, cachedInput: 0, output: 0, verified: true },
 };

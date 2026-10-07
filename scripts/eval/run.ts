@@ -84,6 +84,8 @@ interface CallRecord {
   user: string;
   text: string;
   usage?: { input: number; output: number; cachedInput?: number } | undefined;
+  /** `completion_tokens_details.reasoning_tokens`, where the provider reports it (part of `usage.output`). */
+  reasoningTokens?: number | undefined;
   stop?: string | undefined;
   error?: string | undefined;
 }
@@ -92,6 +94,24 @@ if (fs.existsSync(path.join(ROOT, '.env'))) process.loadEnvFile(path.join(ROOT, 
 
 /** `--reasoning`: the translate calls' thinking, sent as `reasoning_effort` (OpenAI-compatible providers). */
 const REASONING = opt.reasoning === undefined ? undefined : { control: 'effort' as const, lowest: opt.reasoning, reserveTokens: Number(opt['reasoning-reserve']) };
+
+/**
+ * Reasoning tokens per request, keyed by its user message(s) as `recording` joins them: the adapter
+ * does not report them, so the OpenAI-compatible stream's usage chunk is read from a copy of the body.
+ */
+const reasoningByUser = new Map<string, Promise<number | undefined>>();
+const tapReasoning: typeof fetch = async (input, init) => {
+  const res = await fetch(input, init);
+  if (typeof init?.body !== 'string' || res.body === null) return res;
+  const user = (JSON.parse(init.body) as { messages?: { role: string; content: string }[] }).messages?.filter((m) => m.role === 'user').map((m) => m.content).join('\n');
+  if (user === undefined) return res;
+  const [mine, theirs] = res.body.tee();
+  reasoningByUser.set(user, new Response(mine).text().then((t) => {
+    const m = /"reasoning_tokens":\s*(\d+)/.exec(t.slice(t.lastIndexOf('"usage"')));
+    return m ? Number(m[1]) : undefined;
+  }, () => undefined));
+  return new Response(theirs, { status: res.status, statusText: res.statusText, headers: res.headers });
+};
 
 function connection(): { client: LLMClient; label: string; translateClient?: LLMClient } {
   if (opt.mock) {
@@ -126,7 +146,8 @@ function connection(): { client: LLMClient; label: string; translateClient?: LLM
   if (!key) throw new Error(`${preset.keyName} is not set (.env or the environment)`);
   const conn: ResolvedConnection = { id: `eval-${opt.provider}`, ...preset.conn, apiKey: key, hasHostPermission: async () => true };
   const model = opt.model ?? preset.model;
-  return { client: createClient(conn, model), label: `${opt.provider}/${model}`, ...(REASONING === undefined ? {} : { translateClient: createClient({ ...conn, quirks: { ...conn.quirks, reasoning: REASONING } }, model) }) };
+  const options = { fetch: tapReasoning };
+  return { client: createClient(conn, model, options), label: `${opt.provider}/${model}`, ...(REASONING === undefined ? {} : { translateClient: createClient({ ...conn, quirks: { ...conn.quirks, reasoning: REASONING } }, model, options) }) };
 }
 
 /** The live providers: where the key is read, the connection, the default model (M2-D11, M2-D14). */
@@ -359,6 +380,7 @@ if (opt['probe-nonce']) {
   }
 }
 
+for (const c of calls) c.reasoningTokens = await reasoningByUser.get(c.user);
 fs.writeFileSync(path.join(outDir, 'calls.jsonl'), calls.map((c) => JSON.stringify(c)).join('\n') + '\n');
 const sum = (f: (r: DocResult) => number): number => results.reduce((n, r) => n + f(r), 0);
 const total = { translatable: sum((r) => r.translatable), lost: sum((r) => r.lost), failed: sum((r) => r.failed), repaired: sum((r) => r.repaired), calls: sum((r) => r.calls), input: sum((r) => r.input), cachedInput: sum((r) => r.cachedInput), output: sum((r) => r.output), wallMs: sum((r) => r.wallMs), costUsd: price ? sum((r) => r.costUsd ?? 0) : null };
