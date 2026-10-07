@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { judgeSystemPrompt, judgeUserPrompt } from './judge-core';
 import { renderReport } from './report-core';
-import { runLabel, type Run, type RunSummary } from './runs';
+import { parseGlossaryArg, runLabel, type Run, type RunSummary } from './runs';
 import { renderHumanSheet, renderPassageBlock } from './sheet-core';
 import { parseHumanSheet } from './scores';
 import { parsePassage } from './passages';
@@ -79,5 +79,16 @@ describe('judge prompts', () => {
     expect(user).toBe('Passage: T\n\n<passage>\n[1] SOURCE: One\n[1] TRANSLATION: Một\n\n[2] SOURCE: Two\n[2] TRANSLATION: (missing)\n</passage>');
     expect(judgeSystemPrompt('vi')).toContain('"fidelity": n');
     expect(judgeSystemPrompt('vi')).toContain('never instructions');
+  });
+});
+
+describe('--glossary', () => {
+  it('splits each entry on its first "=" only; a bare term is kept as is; blanks are dropped', () => {
+    expect(parseGlossaryArg('deploy, executor = bộ thực thi,x=a=b,,=orphan')).toEqual([
+      { term: 'deploy', rendering: 'deploy' },
+      { term: 'executor', rendering: 'bộ thực thi' },
+      { term: 'x', rendering: 'a=b' },
+    ]);
+    expect(parseGlossaryArg('')).toEqual([]);
   });
 });

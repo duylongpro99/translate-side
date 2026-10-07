@@ -208,7 +208,7 @@ describe('isEngineEvent', () => {
   it('tells events from output values', () => {
     expect(isEngineEvent({ type: 'done' })).toBe(true);
     expect(isEngineEvent({ type: 'segment.final', id: '1' })).toBe(true);
-    expect(isEngineEvent({ type: 'chunk' })).toBe(false);
+    expect(isEngineEvent({ type: 'chunk-work' })).toBe(false);
     expect(isEngineEvent('done')).toBe(false);
     expect(isEngineEvent(null)).toBe(false);
   });

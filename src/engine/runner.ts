@@ -25,6 +25,7 @@ const EVENT_TYPES = new Set<string>([
   'segment.partial',
   'segment.final',
   'segment.failed',
+  'chunk',
   'artifact',
   'usage',
   'done',

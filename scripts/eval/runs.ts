@@ -72,6 +72,24 @@ export function loadRun(dir: string): Run {
  * `strategy / prompt / model`: what a report column is called. Runs from before M2 have no strategy
  * field: single-pass. Prompts other than the translate one follow it (`translate@1+analyze@1`).
  */
+/**
+ * The harness's `--glossary "deploy,executor=bộ thực thi"`: a bare term is kept as is; the
+ * rendering is everything after the first "=", so a rendering may itself hold "=".
+ */
+export function parseGlossaryArg(arg: string): { term: string; rendering: string }[] {
+  return arg
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .map((x) => {
+      const at = x.indexOf('=');
+      const term = (at < 0 ? x : x.slice(0, at)).trim();
+      const rendering = at < 0 ? '' : x.slice(at + 1).trim();
+      return { term, rendering: rendering || term };
+    })
+    .filter((e) => e.term !== '');
+}
+
 export function runLabel(s: RunSummary): string {
   const translate = s.prompt ?? 'translate@1';
   const others = Object.values(s.prompts ?? {}).filter((p) => p !== translate);

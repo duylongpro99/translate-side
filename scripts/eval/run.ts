@@ -24,6 +24,7 @@ import type { ModelRole } from '@/llm/types';
 import { costUsd, priceFor } from './pricing.ts';
 import { EVAL_SLUGS } from './docs.ts';
 import { listPassageIds, loadPassage } from './passages.ts';
+import { parseGlossaryArg } from './runs.ts';
 
 const ROOT = path.resolve(process.cwd());
 const DOCS = path.join(ROOT, 'fixtures/docs');
@@ -157,15 +158,7 @@ const STYLE = opt.style as StyleMode;
 if (!['natural', 'faithful', 'simplified'].includes(STYLE)) throw new Error('--style expects natural, faithful or simplified');
 const GLOSS = opt.gloss as GlossMode;
 if (GLOSS !== 'first' && GLOSS !== 'off') throw new Error('--gloss expects first or off');
-/** `deploy,executor=bộ thực thi`: a bare term is kept as is. */
-const GLOSSARY: GlossaryEntry[] = (opt.glossary as string)
-  .split(',')
-  .map((x) => x.trim())
-  .filter(Boolean)
-  .map((x) => {
-    const [term = '', rendering] = x.split('=').map((y) => y.trim());
-    return { term, rendering: rendering || term };
-  });
+const GLOSSARY: GlossaryEntry[] = parseGlossaryArg(opt.glossary as string);
 const evalSet = opt.set === 'eval';
 if (!evalSet && opt.set !== 'fixtures') throw new Error('--set expects fixtures or eval');
 const slugs = opt.docs ? opt.docs.split(',') : evalSet ? listPassageIds(ROOT) : [...EVAL_SLUGS];
@@ -204,7 +197,7 @@ interface DocResult {
   costUsd: number | null;
   errors: string[];
   /** Contextual only: did the brief parse, the brief call's wall time and tokens (included in the totals above). */
-  brief?: { ok: boolean; ms: number | null; input: number; output: number };
+  brief?: { ok: boolean; skipped: boolean; ms: number | null; input: number; output: number };
   /** Chunks (first-pass translate calls) and how many of them carried the brief in their system block. */
   chunks: number;
   briefedChunks: number;
@@ -226,6 +219,7 @@ async function runDoc(slug: string): Promise<DocResult> {
   const analyzeUsage = { input: 0, output: 0 };
   let brief: DocumentBrief | null = null;
   let firstFinalMs: number | null = null;
+  const briefedChunks = new Set<number>();
   const t0 = Date.now();
   for await (const e of engine.translate(job, new AbortController().signal) as AsyncIterable<EngineEvent>) {
     if (e.type === 'segment.final') {
@@ -235,6 +229,8 @@ async function runDoc(slug: string): Promise<DocResult> {
     } else if (e.type === 'segment.failed') {
       failed.set(e.id, `${e.error.kind}: ${e.error.message}`);
       finals.delete(e.id);
+    } else if (e.type === 'chunk') {
+      if (e.briefed) briefedChunks.add(e.index);
     } else if (e.type === 'artifact' && e.kind === 'brief') {
       brief = e.data as DocumentBrief;
     } else if (e.type === 'usage') {
@@ -275,9 +271,10 @@ async function runDoc(slug: string): Promise<DocResult> {
     firstFinalMs,
     costUsd: price ? costUsd(price, usage) : null,
     errors: [...new Set(failed.values())],
-    ...(STRATEGY === CONTEXTUAL_ID ? { brief: { ok: brief !== null, ms: analyzeCall?.ms ?? null, ...analyzeUsage } } : {}),
+    ...(STRATEGY === CONTEXTUAL_ID ? { brief: { ok: brief !== null, skipped: analyzeCall === undefined && !job.options.brief, ms: analyzeCall?.ms ?? null, ...analyzeUsage } } : {}),
     chunks: firstPass.length,
-    briefedChunks: firstPass.filter((c) => !c.system.includes('Document brief:\n(none)')).length,
+    // Engine-reported (ChunkOutcome.briefed, via the `chunk` event), not read off the prompt text.
+    briefedChunks: briefedChunks.size,
   };
 }
 
@@ -390,7 +387,8 @@ for (const slug of slugs) {
 }
 const nonce = probes.length ? { echoed: probes.reduce((n, p) => n + p.echoed, 0), opens: probes.reduce((n, p) => n + p.opens, 0), perDoc: probes } : null;
 const briefs = results.flatMap((r) => (r.brief ? [r.brief] : []));
-const briefTotals = briefs.length ? { docs: briefs.length, ok: briefs.filter((b) => b.ok).length, input: briefs.reduce((n, b) => n + b.input, 0), output: briefs.reduce((n, b) => n + b.output, 0), costUsd: price ? costUsd(price, { input: briefs.reduce((n, b) => n + b.input, 0), cachedInput: 0, output: briefs.reduce((n, b) => n + b.output, 0) }) : null } : null;
+// M2-D9: one-chunk documents make no brief call (`skipped`); they are counted apart.
+const briefTotals = briefs.length ? { docs: briefs.length, ok: briefs.filter((b) => b.ok).length, skipped: briefs.filter((b) => b.skipped).length, input: briefs.reduce((n, b) => n + b.input, 0), output: briefs.reduce((n, b) => n + b.output, 0), costUsd: price ? costUsd(price, { input: briefs.reduce((n, b) => n + b.input, 0), cachedInput: 0, output: briefs.reduce((n, b) => n + b.output, 0) }) : null } : null;
 const summary = { run: stamp, set: opt.set, strategy: STRATEGY, prompt: TRANSLATE_PROMPT, prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, label, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
 fs.writeFileSync(path.join(outDir, 'summary.json'), `${JSON.stringify(summary, null, 1)}\n`);
 const money = (n: number | null): string => (n === null ? 'n/a' : `$${n.toFixed(5)}`);
@@ -404,7 +402,7 @@ const md = [
   ...results.map((r) => `| ${r.slug} | ${r.translatable} | ${r.lost} | ${r.repaired} | ${r.chunks} (${r.briefedChunks}) | ${r.calls} | ${r.input} | ${r.cachedInput} | ${r.output} | ${(r.wallMs / 1000).toFixed(1)} | ${r.firstFinalMs === null ? '–' : (r.firstFinalMs / 1000).toFixed(1)} | ${money(r.costUsd)} |`),
   `| **total** | ${total.translatable} | ${total.lost} | ${total.repaired} | ${sum((r) => r.chunks)} (${sum((r) => r.briefedChunks)}) | ${total.calls} | ${total.input} | ${total.cachedInput} | ${total.output} | ${(total.wallMs / 1000).toFixed(1)} | | ${money(total.costUsd)} |`,
   '',
-  ...(briefTotals ? [`Brief (${ANALYZE_PROMPT_ID}): parsed for ${briefTotals.ok}/${briefTotals.docs} docs; ${briefTotals.input} in / ${briefTotals.output} out tokens, ${money(briefTotals.costUsd)} (in the totals above). Per doc: ${results.map((r) => `${r.slug} ${r.brief?.ok ? 'ok' : 'none'} ${r.brief?.ms === null || r.brief === undefined ? '–' : `${(r.brief.ms / 1000).toFixed(1)}s`}`).join(', ')}.`] : []),
+  ...(briefTotals ? [`Brief (${ANALYZE_PROMPT_ID}): parsed for ${briefTotals.ok}/${briefTotals.docs - briefTotals.skipped} docs asked (${briefTotals.skipped} one-chunk docs skipped, M2-D9); ${briefTotals.input} in / ${briefTotals.output} out tokens, ${money(briefTotals.costUsd)} (in the totals above). Per doc: ${results.map((r) => `${r.slug} ${r.brief?.ok ? 'ok' : r.brief?.skipped ? 'skipped' : 'none'} ${r.brief?.ms === null || r.brief === undefined ? '–' : `${(r.brief.ms / 1000).toFixed(1)}s`}`).join(', ')}.`] : []),
   `Characters per token (provider-counted; the engine assumes ${CHARS_PER_TOKEN}): input ${charsPerToken.input?.toFixed(2) ?? '–'}, output ${charsPerToken.output?.toFixed(2) ?? '–'} over ${charsPerToken.calls} calls.`,
   `S2 thresholds on ${thresholds.chunks} chunks / ${thresholds.segments} segments: ${thresholds.chunksWithFixes} chunks with parser fixes ${JSON.stringify(thresholds.fixKinds)}, ${thresholds.rerequested} re-requested, ${thresholds.merged} flagged merged; length ratio vs chunk median: max ${thresholds.maxRatio.toFixed(2)}, over 1.2/1.4/${MERGE_FACTOR}: ${Object.values(thresholds.over).join('/')}; ${MAX_TAG}-char tag hold-back: ${thresholds.partialTag} partial tags; highest answer/max_tokens ${thresholds.maxBudgetUse.toFixed(2)}.`,
   nonce ? `Nonce copy: ${nonce.echoed}/${nonce.opens} opening tags carried the nonce (${nonce.opens ? ((100 * nonce.echoed) / nonce.opens).toFixed(1) : '–'}%).` : 'Nonce probe not run (--probe-nonce).',

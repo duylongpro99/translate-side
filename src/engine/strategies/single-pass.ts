@@ -20,7 +20,7 @@ import { gatherContext } from '../context/budget.ts';
 import { STYLE_LABELS, TRANSLATE_PROMPT_ID, languageLabel } from '../prompts/translate.ts';
 import { defineStage, defineStrategy, type AnyStage } from '../runner.ts';
 import { estimateTokens } from '../tokens.ts';
-import type { EngineEvent, JobOptions, Segment, Strategy, TranslationJob } from '../types.ts';
+import type { EngineEvent, JobOptions, Segment, Strategy, TranslationJob, WorkingMemory } from '../types.ts';
 
 export const SINGLE_PASS_ID = 'single-pass';
 export const SINGLE_PASS_VERSION = 1;
@@ -158,9 +158,13 @@ export function createTranslateStage(strategyId: string, brief?: BriefWait, prom
     promptId,
     async *run(work, ctx) {
       const outcome: ChunkOutcome = { index: work.chunk.index, ids: work.chunk.segments.map((s) => s.id), final: [], failed: [] };
+      if (brief !== undefined && work.chunk.index >= brief.freeChunks) await untilSettledOrAborted(brief.settled, ctx.signal);
+      // One snapshot for the whole prompt: a brief landing while this chunk's prompt is being built
+      // must not reach part of it (the language, the providers) and miss `briefed`.
+      const memory: Readonly<WorkingMemory> = { ...ctx.memory };
       if (brief !== undefined) {
-        if (work.chunk.index >= brief.freeChunks) await untilSettledOrAborted(brief.settled, ctx.signal);
-        outcome.briefed = ctx.memory.brief !== undefined;
+        outcome.briefed = memory.brief !== undefined;
+        yield { type: 'chunk', index: outcome.index, briefed: outcome.briefed };
       }
       if (ctx.budget.exhausted()) {
         const error: LLMError = { kind: 'unknown', message: BUDGET_MESSAGE };
@@ -173,13 +177,13 @@ export function createTranslateStage(strategyId: string, brief?: BriefWait, prom
       }
       const client = ctx.llm('translate');
       const prompt = ctx.prompts.get(promptId);
-      const sourceLang = work.doc.sourceLang.trim() || (ctx.memory.brief?.language ?? '');
+      const sourceLang = work.doc.sourceLang.trim() || (memory.brief?.language ?? '');
       const render = (vars: Readonly<Record<string, string>>) => prompt.render(vars);
       let system: string;
       let context = '';
       if (prompt.name === 'translate' && prompt.version >= 2) {
         const { segments, ...doc } = work.doc;
-        const snippets = await gatherContext(ctx.context, { doc, chunk: work.chunk.segments, targetLang: work.doc.targetLang, segments, memory: ctx.memory, options: work.options });
+        const snippets = await gatherContext(ctx.context, { doc, chunk: work.chunk.segments, targetLang: work.doc.targetLang, segments, memory, options: work.options });
         system = renderSystemPromptV2(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style, gloss: work.options.gloss ?? DEFAULT_GLOSS, snippets });
         context = renderContextBlock(snippets);
       } else {

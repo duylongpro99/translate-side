@@ -176,6 +176,14 @@ describe('contextual: analyze → chunk → translate → check', () => {
     expect(translate.requests[0]?.system).toContain('Genre: technical blog post');
   });
 
+  it('reports per chunk whether its prompt had the brief (the `chunk` event, ChunkOutcome.briefed); single-pass reports none', async () => {
+    const events = await run(fakeClient([success(JSON.stringify(BRIEF))]), translatorClient(), longJob());
+    const chunks = events.flatMap((e) => (e.type === 'chunk' ? [[e.index, e.briefed]] : [])).sort((a, b) => Number(a[0]) - Number(b[0]));
+    expect(chunks).toEqual(Array.from({ length: LONG_CHUNKS }, (_, i) => [i, i >= BRIEF_FREE_CHUNKS]));
+    const single = await run(fakeClient([]), translatorClient(), { ...longJob(), strategy: 'single-pass' });
+    expect(single.filter((e) => e.type === 'chunk')).toEqual([]);
+  });
+
   it('accepts a fenced or prose-wrapped brief', async () => {
     const fenced = await run(fakeClient([success(`Here you go:\n\`\`\`json\n${JSON.stringify(BRIEF)}\n\`\`\``)]));
     expect(artifacts(fenced)).toEqual([{ type: 'artifact', kind: 'brief', data: BRIEF }]);

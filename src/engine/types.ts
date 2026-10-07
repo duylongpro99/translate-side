@@ -127,6 +127,11 @@ export type EngineEvent =
       notes?: string[];
     }
   | { type: 'segment.failed'; id: string; error: LLMError }
+  /**
+   * Contextual only: a chunk's prompt is about to be built, with or without the brief (plan M2-D6,
+   * ChunkOutcome.briefed). For the harness and diagnostics; the panel ignores it.
+   */
+  | { type: 'chunk'; index: number; briefed: boolean }
   /** Shown in UI, cached. */
   | { type: 'artifact'; kind: 'brief' | 'glossary'; data: unknown }
   /** `input` includes cached tokens; `cachedInput` is how many were cache reads (plan M1 §5). */
