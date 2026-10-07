@@ -1,0 +1,179 @@
+{
+ "judgeModel": "ds/deepseek-v4-pro",
+ "prompt": "judge@1",
+ "at": "2026-10-07T13:07:58.205Z",
+ "scores": {
+  "bierce-devils-dictionary": {
+   "fidelity": 3,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "Entry [1] mistranslates 'you wish him to listen' as 'bạn muốn nghe' (you want to listen), reversing the point of the definition."
+  },
+  "docker-multistage": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Translation is accurate overall, but a few details shift slightly, such as 'leaving behind' being rendered as 'loại bỏ', and some phrasings are mildly translationese or mixed English-Vietnamese."
+  },
+  "go-errors-are-values": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Translation is clear and terms are consistent; minor nuance shifts (e.g., 'would have used' rendered as 'cần dùng') and slight translationese such as 'lập trình hóa' are the main weaknesses."
+  },
+  "go-gofmt": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The translation is clear and accurate, but it slightly flattens idiomatic tone such as 'hacking away' and uses a couple of literal phrases like 'thay đổi mang tính cơ học'."
+  },
+  "go-share-memory": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Bản dịch trung thành và giữ đúng giọng kỹ thuật; một số cụm như 'thread-safe' (an toàn cho luồng) và 'concurrency primitives' (nguyên thủy đồng thời) còn hơi dịch theo lối dịch từ, làm giảm độ tự nhiên."
+  },
+  "go2-here-we-come": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch trung thành, nhưng một vài cụm như “big bang”, “for now” được dịch sát khiến câu hơi kém tự nhiên."
+  },
+  "k8s-pods": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch trung thành và giữ thuật ngữ kỹ thuật tốt; một số chi tiết bị lệch nhẹ như 'may have further sub-isolations applied' bị chuyển thành câu chủ động, và vài cụm như 'một-container-mỗi-Pod' còn dịch nguyên văn."
+  },
+  "mdn-closures": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Mostly accurate and fluent; the main weakness is a slight shift where \"function is created\" becomes \"hàm được khai báo,\" and a few phrases like \"ám chỉ thực tế rằng\" read a little translationese."
+  },
+  "mdn-using-promises": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The main weakness is translationese: 'người tiêu thụ' for 'consumers' and ending with '...thay thế' for 'instead' sound unnatural; 'người dùng/sử dụng' and 'thay vào đó' would read more naturally."
+  },
+  "pep20-zen": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "Minor fidelity shifts ('Zen' rendered as 'Triết lý'; 'pass silently' as 'bị bỏ qua') and a few literal renderings make the aphorisms sound slightly translated."
+  },
+  "rust-async-await-primer": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch rất sát và thuật ngữ nhất quán; điểm yếu nhỏ là một vài chi tiết bị dịch chuyển nhẹ (JS and C# thành JS hay C#) và tiêu đề “Futures zero-cost” hơi thiếu tự nhiên."
+  },
+  "rust-async-ecosystem": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch trung thành và thuật ngữ nhất quán; chỉ có vài cụm hơi dịch theo lối Anh-Việt như 'câu chuyện của Rust' và 'futures không tốn chi phí'."
+  },
+  "rust-async-executor": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Dịch khá sát và đúng thuật ngữ, nhưng còn vài chỗ translationese như 'Cho ví dụ này' nên là 'Trong ví dụ này' và 'Các task bản thân chúng chỉ là' chưa mượt tự nhiên."
+  },
+  "rust-book-ownership": {
+   "fidelity": 5,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "No notable weaknesses; the translation is faithful, fluent, and keeps technical terms consistent."
+  },
+  "rust-book-panic": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is faithful and terminologically consistent; naturalness is slightly reduced by calques like 'code gây panic' and 'phần còn lại của code bạn đang làm'."
+  },
+  "so-branch-prediction": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Main weaknesses are 'lái xe' for the train driver instead of 'người lái tàu' and slight inconsistency between 'chỉ thị' and 'lệnh' for 'instruction'."
+  },
+  "so-regex-html": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "Bản dịch bám sát nghĩa và thuật ngữ chuẩn; điểm yếu chính là một số từ lóng/chơi chữ như 'pwn' bị chuyển thành cách nói thông thường, làm giảm nhẹ sắc thái hài hước, và vài câu còn lúng túng."
+  },
+  "swift-modest-proposal": {
+   "fidelity": 3,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 3,
+   "comment": "The main weakness is 'temperance' rendered as 'độ lượng' (generosity) instead of 'tiết độ/điều độ'; also 'there will ever be' becomes 'sẽ luôn có', shifting the conditional nuance."
+  },
+  "wodehouse-jeeves": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The translation is accurate and fluent, but some colloquial and humorous nuances are softened or formalized, and the idiom \"go to par\" is paraphrased rather than matched."
+  },
+  "wp-beans": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Main weakness is the time reference in [2]: 'on previous market days' is translated as 'Trước những ngày mẹ đi chợ', which shifts the meaning to 'before market days'; a few phrasings are mildly translationese."
+  },
+  "wp-dont-bite-newcomers": {
+   "fidelity": 3,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 3,
+   "comment": "Main weaknesses: 'valuable/potential contributors' is rendered as 'đóng góp quý giá/tiềm năng' (contributions, not people), and 'reverting' is mistranslated as 'hồi quy' instead of the wiki-standard 'lùi sửa/hoàn nguyên.'"
+  },
+  "wp-not-a-dictionary": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is accurate and terminology is consistent; only minor translationese remains in phrases like 'bạn đồng hành từ vựng' and 'công trình đang được phát triển'."
+  },
+  "wp-template-regulars": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch trung thành và giữ đúng giọng văn quy phạm; một vài cụm như 'việc giáo dục họ' hoặc 'tình huống tưởng tượng' hơi dịch sát hoặc thiếu tự nhiên."
+  }
+ },
+ "failed": [],
+ "usage": {
+  "input": 36799,
+  "cachedInput": 14976,
+  "output": 92888
+ },
+ "costUsd": 0.1324329296,
+ "reasoning": {
+  "effort": "medium",
+  "reserveTokens": 16000
+ }
+}

@@ -1,0 +1,100 @@
+[
+ {
+  "id": "0l2cd93bbs6",
+  "kind": "heading",
+  "translate": true,
+  "source": "Pods",
+  "text": "Pod",
+  "attempt": 1,
+  "revision": 2,
+  "draft": "Pod",
+  "error": null
+ },
+ {
+  "id": "0srfmoe3mj1",
+  "kind": "p",
+  "translate": true,
+  "source": "*Pods* are the smallest deployable units of computing that you can create and manage in Kubernetes.",
+  "text": "*Pod* (nhóm container) là đơn vị tính toán nhỏ nhất có thể triển khai mà bạn có thể tạo và quản lý trong Kubernetes (hệ thống điều phối container).",
+  "attempt": 1,
+  "revision": 2,
+  "draft": "*Pod* là đơn vị tính toán nhỏ nhất có thể triển khai mà bạn có thể tạo và quản lý trong Kubernetes.",
+  "error": null
+ },
+ {
+  "id": "0gwzzn1lw1r",
+  "kind": "p",
+  "translate": true,
+  "source": "A *Pod* (as in a pod of whales or pea pod) is a group of one or more containers, with shared storage and network resources, and a specification for how to run the containers. A Pod's contents are always co-located and co-scheduled, and run in a shared context. A Pod models an application-specific \"logical host\": it contains one or more application containers which are relatively tightly coupled. In non-cloud contexts, applications executed on the same physical or virtual machine are analogous to cloud applications executed on the same logical host.",
+  "text": "Một *Pod* (tương tự như một đàn cá voi hoặc quả đậu Hà Lan) là một nhóm gồm một hoặc nhiều container (bộ chứa), dùng chung tài nguyên lưu trữ và mạng, cùng với đặc tả về cách chạy các container đó. Nội dung của một Pod luôn được đồng vị trí và được lập lịch cùng nhau, và chạy trong một ngữ cảnh chia sẻ. Một Pod mô hình hóa một \"máy chủ logic\" dành riêng cho ứng dụng: nó chứa một hoặc nhiều container ứng dụng có mối liên kết chặt chẽ tương đối với nhau. Trong các bối cảnh không phải đám mây, các ứng dụng được thực thi trên cùng một máy vật lý hoặc máy ảo tương đương với các ứng dụng đám mây được thực thi trên cùng một máy chủ logic.",
+  "attempt": 1,
+  "revision": 2,
+  "draft": "Một *Pod* (như một đàn cá voi hoặc quả đậu Hà Lan) là một nhóm gồm một hoặc nhiều container, dùng chung tài nguyên lưu trữ và mạng, cùng với đặc tả về cách chạy các container đó. Nội dung của một Pod luôn được đặt cùng chỗ và lên lịch cùng nhau, chạy trong một ngữ cảnh chia sẻ. Một Pod mô hình hóa một \"máy chủ logic\" dành riêng cho ứng dụng: nó chứa một hoặc nhiều container ứng dụng liên kết chặt chẽ với nhau. Trong các bối cảnh không phải đám mây, các ứng dụng được thực thi trên cùng một máy vật lý hoặc máy ảo tương tự như các ứng dụng đám mây được thực thi trên cùng một máy chủ logic.",
+  "error": null
+ },
+ {
+  "id": "1v7b96sntiu",
+  "kind": "p",
+  "translate": true,
+  "source": "As well as application containers, a Pod can contain init containers that run during Pod startup. You can also inject ephemeral containers for debugging a running Pod.",
+  "text": "Ngoài các container ứng dụng, một Pod có thể chứa init container (container khởi tạo) chạy trong quá trình khởi động Pod. Bạn cũng có thể chèn ephemeral container (container tạm thời) để gỡ lỗi một Pod đang chạy.",
+  "attempt": 1,
+  "revision": 2,
+  "draft": "Ngoài các container ứng dụng, một Pod có thể chứa các container khởi tạo (init containers) chạy trong quá trình khởi động Pod. Bạn cũng có thể chèn các container tạm thời (ephemeral containers) để gỡ lỗi một Pod đang chạy.",
+  "error": null
+ },
+ {
+  "id": "0njowdul4i9",
+  "kind": "heading",
+  "translate": true,
+  "source": "What is a Pod?",
+  "text": "Pod là gì?",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "02jf9dejjkl",
+  "kind": "p",
+  "translate": true,
+  "source": "The shared context of a Pod is a set of Linux namespaces, cgroups, and potentially other facets of isolation - the same things that isolate a container. Within a Pod's context, the individual applications may have further sub-isolations applied.",
+  "text": "Ngữ cảnh chung của một Pod là một tập hợp các Linux namespace (không gian tên Linux), cgroup (nhóm điều khiển), và có thể các khía cạnh khác của sự cô lập — cũng chính là những thứ cô lập một container. Trong ngữ cảnh của một Pod, các ứng dụng riêng lẻ có thể được áp dụng thêm các lớp cô lập con.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0bxbr7kk3lo",
+  "kind": "p",
+  "translate": true,
+  "source": "A Pod is similar to a set of containers with shared namespaces and shared filesystem volumes.",
+  "text": "Một Pod tương tự như một tập hợp các container có chung namespace và chung volume hệ thống tệp (filesystem volumes).",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "210iu5cvo09",
+  "kind": "p",
+  "translate": true,
+  "source": "Pods in a Kubernetes cluster are used in two main ways:",
+  "text": "Các Pod trong một cụm Kubernetes được sử dụng theo hai cách chính:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "2852rh0qf5n",
+  "kind": "li",
+  "translate": true,
+  "source": "*Pods that run a single container*. The \"one-container-per-Pod\" model is the most common Kubernetes use case; in this case, you can think of a Pod as a wrapper around a single container; Kubernetes manages Pods rather than managing the containers directly.",
+  "text": "*Pod chạy một container duy nhất*. Mô hình một container mỗi Pod (one-container-per-Pod) là trường hợp sử dụng Kubernetes phổ biến nhất; trong trường hợp này, bạn có thể coi một Pod như một lớp bao bọc quanh một container duy nhất; Kubernetes quản lý các Pod thay vì quản lý trực tiếp các container.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1a4sn5ryn2p",
+  "kind": "li",
+  "translate": true,
+  "source": "*Pods that run multiple containers that need to work together*. A Pod can encapsulate an application composed of [link]multiple co-located containers[/link] that are tightly coupled and need to share resources. These co-located containers form a single cohesive unit.",
+  "text": "*Pod chạy nhiều container cần phối hợp với nhau*. Một Pod có thể bao chứa một ứng dụng được tạo thành từ [link]nhiều container đồng vị trí[/link] có liên kết chặt chẽ và cần chia sẻ tài nguyên. Các container đồng vị trí này tạo thành một đơn vị thống nhất.",
+  "attempt": 1,
+  "error": null
+ }
+]

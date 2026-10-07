@@ -1,0 +1,84 @@
+[
+ {
+  "id": "26z0eymc186",
+  "kind": "heading",
+  "translate": true,
+  "source": "Applied: Build an Executor",
+  "text": "Bài tập: Xây dựng một Executor (bộ thực thi)",
+  "attempt": 1,
+  "revision": 2,
+  "draft": "Bài tập thực hành: Xây dựng một Executor",
+  "error": null
+ },
+ {
+  "id": "1m4ot57wqaz",
+  "kind": "p",
+  "translate": true,
+  "source": "Rust's `Future`s are lazy: they won't do anything unless actively driven to completion. One way to drive a future to completion is to `.await` it inside an `async` function, but that just pushes the problem one level up: who will run the futures returned from the top-level `async` functions? The answer is that we need a `Future` executor.",
+  "text": "Các `Future` trong Rust hoạt động theo cơ chế lười (lazy): chúng sẽ không làm gì cả trừ khi được chủ động thúc đẩy đến khi hoàn tất. Một cách để đưa một future đến trạng thái hoàn thành là dùng `.await` bên trong một hàm `async`, nhưng điều đó chỉ đơn giản là đẩy vấn đề lên một cấp độ cao hơn: ai sẽ chạy các future được trả về từ các hàm `async` ở cấp cao nhất? Câu trả lời là chúng ta cần một Executor cho `Future`.",
+  "attempt": 1,
+  "revision": 2,
+  "draft": "Các `Future` trong Rust là lười (lazy): chúng sẽ không làm gì cả trừ khi được chủ động thúc đẩy đến khi hoàn thành. Một cách để đưa một future đến trạng thái hoàn thành là dùng `.await` bên trong một hàm `async`, nhưng điều đó chỉ đẩy vấn đề lên một cấp độ cao hơn: ai sẽ chạy các future được trả về từ các hàm `async` ở cấp độ cao nhất? Câu trả lời là chúng ta cần một executor cho `Future`.",
+  "error": null
+ },
+ {
+  "id": "17m8vmf3zmr",
+  "kind": "p",
+  "translate": true,
+  "source": "`Future` executors take a set of top-level `Future`s and run them to completion by calling `poll` whenever the `Future` can make progress. Typically, an executor will `poll` a future once to start off. When `Future`s indicate that they are ready to make progress by calling `wake()`, they are placed back onto a queue and `poll` is called again, repeating until the `Future` has completed.",
+  "text": "Executor của `Future` nhận vào một tập hợp các Future cấp cao nhất và chạy chúng đến khi hoàn tất bằng cách gọi `poll` (thăm dò) mỗi khi `Future` có thể tiến triển. Thông thường, executor sẽ `poll` một future một lần để khởi động. Khi các `Future` báo hiệu rằng chúng đã sẵn sàng để tiến triển bằng cách gọi `wake()` (đánh thức), chúng được đặt lại vào hàng đợi và `poll` được gọi lại, lặp đi lặp lại cho đến khi `Future` hoàn thành.",
+  "attempt": 1,
+  "revision": 2,
+  "draft": "Executor của `Future` nhận một tập hợp các `Future` ở cấp độ cao nhất và chạy chúng đến khi hoàn thành bằng cách gọi `poll` bất cứ khi nào `Future` có thể tiến triển. Thông thường, executor sẽ `poll` một future một lần lúc ban đầu. Khi các `Future` báo hiệu rằng chúng sẵn sàng tiến triển bằng cách gọi `wake()`, chúng được đặt lại vào một hàng đợi và `poll` được gọi lại, lặp đi lặp lại cho đến khi `Future` hoàn thành.",
+  "error": null
+ },
+ {
+  "id": "0k38harg4b7",
+  "kind": "p",
+  "translate": true,
+  "source": "In this section, we'll write our own simple executor capable of running a large number of top-level futures to completion concurrently.",
+  "text": "Trong phần này, chúng ta sẽ tự viết một executor đơn giản, có khả năng chạy đồng thời một số lượng lớn các Future cấp cao nhất cho đến khi hoàn tất.",
+  "attempt": 1,
+  "revision": 2,
+  "draft": "Trong phần này, chúng ta sẽ tự viết một executor đơn giản, có khả năng chạy đồng thời một số lượng lớn các future ở cấp độ cao nhất cho đến khi hoàn thành.",
+  "error": null
+ },
+ {
+  "id": "0tnmhcdbuam",
+  "kind": "p",
+  "translate": true,
+  "source": "For this example, we depend on the `futures` crate for the `ArcWake` trait, which provides an easy way to construct a `Waker`. Edit `Cargo.toml` to add a new dependency:",
+  "text": "Cho ví dụ này, chúng ta phụ thuộc vào crate `futures` cho trait `ArcWake`, cung cấp một cách dễ dàng để xây dựng một `Waker`. Hãy chỉnh sửa `Cargo.toml` để thêm một dependency mới:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1udzil0p3zn",
+  "kind": "code",
+  "translate": false,
+  "source": "[package]\nname = \"timer_future\"\nversion = \"0.1.0\"\nauthors = [\"XYZ Author\"]\nedition = \"2021\"\n\n[dependencies]\nfutures = \"0.3\"",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "2frt6mpn5cn",
+  "kind": "p",
+  "translate": true,
+  "source": "Our executor will work by sending tasks to run over a channel. The executor will pull events off of the channel and run them. When a task is ready to do more work (is awoken), it can schedule itself to be polled again by putting itself back onto the channel.",
+  "text": "Executor của chúng ta sẽ hoạt động bằng cách gửi các task cần chạy qua một kênh (channel). Executor sẽ lấy các sự kiện ra khỏi kênh và chạy chúng. Khi một task đã sẵn sàng để thực hiện thêm công việc (được đánh thức), nó có thể tự lên lịch để được poll lại bằng cách tự đặt mình trở lại vào kênh.",
+  "attempt": 1,
+  "revision": 2,
+  "draft": "Executor của chúng ta sẽ hoạt động bằng cách gửi các task cần chạy qua một channel. Executor sẽ lấy các sự kiện ra khỏi channel và chạy chúng. Khi một task sẵn sàng thực hiện thêm công việc (được đánh thức), nó có thể tự lập lịch để được poll lại bằng cách đặt chính nó trở lại channel.",
+  "error": null
+ },
+ {
+  "id": "1yh9lxb5qn4",
+  "kind": "p",
+  "translate": true,
+  "source": "In this design, the executor itself just needs the receiving end of the task channel. The user will get a sending end so that they can spawn new futures. Tasks themselves are just futures that can reschedule themselves, so we'll store them as a future paired with a sender that the task can use to requeue itself.",
+  "text": "Trong thiết kế này, bản thân Executor chỉ cần đầu nhận của kênh task. Người dùng sẽ nhận được đầu gửi để có thể tạo mới các future. Bản thân các task chỉ là những future có thể tự lập lịch lại, vì vậy chúng ta sẽ lưu trữ chúng dưới dạng một future được ghép với một sender mà task có thể sử dụng để tự xếp hàng lại.",
+  "attempt": 1,
+  "error": null
+ }
+]

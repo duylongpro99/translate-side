@@ -1,0 +1,65 @@
+[
+ {
+  "id": "1yxo68wlon5",
+  "kind": "heading",
+  "translate": true,
+  "source": "Introduction",
+  "text": "Giới thiệu",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1xw8rlw8z18",
+  "kind": "p",
+  "translate": true,
+  "source": "Gofmt is a tool that automatically formats Go source code.",
+  "text": "Gofmt là một công cụ tự động định dạng mã nguồn Go.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0bf6g25p64s",
+  "kind": "p",
+  "translate": true,
+  "source": "Gofmt'd code is:",
+  "text": "Mã đã được Gofmt định dạng sẽ:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0fqfolsk90d",
+  "kind": "li",
+  "translate": true,
+  "source": "easier to *write*: never worry about minor formatting concerns while hacking away,",
+  "text": "dễ *viết* hơn: không bao giờ phải lo lắng về các vấn đề định dạng nhỏ nhặt khi đang code,",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "194pgkd0o9p",
+  "kind": "li",
+  "translate": true,
+  "source": "easier to *read*: when all code looks the same you need not mentally convert others' formatting style into something you can understand.",
+  "text": "dễ *đọc* hơn: khi tất cả mã đều trông giống nhau, bạn không cần phải chuyển đổi kiểu định dạng của người khác sang thứ mà bạn có thể hiểu được trong đầu.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "141lqbldtvs",
+  "kind": "li",
+  "translate": true,
+  "source": "easier to *maintain*: mechanical changes to the source don't cause unrelated changes to the file's formatting; diffs show only the real changes.",
+  "text": "dễ *bảo trì* hơn: những thay đổi mang tính cơ học đối với mã nguồn không gây ra các thay đổi không liên quan đến định dạng của tệp; diff chỉ hiển thị những thay đổi thực sự.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "08cj75l01u6",
+  "kind": "li",
+  "translate": true,
+  "source": "*uncontroversial*: never have a debate about spacing or brace position ever again!",
+  "text": "*không gây tranh cãi*: không bao giờ còn phải tranh luận về khoảng trắng hay vị trí dấu ngoặc nhọn nữa!",
+  "attempt": 1,
+  "error": null
+ }
+]

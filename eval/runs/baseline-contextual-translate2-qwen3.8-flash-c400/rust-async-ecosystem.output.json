@@ -1,0 +1,65 @@
+[
+ {
+  "id": "0ukpra0mxcz",
+  "kind": "p",
+  "translate": true,
+  "source": "*On this coming Thursday, November 7, async-await syntax hits stable Rust, as part of the 1.39.0 release.* This work has been a long time in development -- the key ideas for zero-cost futures, for example, were [link]first proposed by Aaron Turon and Alex Crichton in 2016[/link]! -- and we are very proud of the end result. We believe that Async I/O is going to be an increasingly important part of Rust's story.",
+  "text": "*Vào thứ Năm tuần này, ngày 7 tháng 11, cú pháp async-await sẽ chính thức ổn định trong Rust, như một phần của phiên bản phát hành 1.39.0.* Công việc này đã được phát triển từ rất lâu -- ví dụ, các ý tưởng then chốt cho futures không tốn chi phí đã được [link]Aaron Turon và Alex Crichton đề xuất lần đầu vào năm 2016[/link]! -- và chúng tôi rất tự hào về kết quả cuối cùng. Chúng tôi tin rằng Async I/O sẽ ngày càng đóng vai trò quan trọng trong câu chuyện của Rust.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1i70dvtpviq",
+  "kind": "p",
+  "translate": true,
+  "source": "While this first release of \"async-await\" is a momentous event, it's also only the beginning. The current support for async-await marks a kind of \"Minimum Viable Product\" (MVP). We expect to be polishing, improving, and extending it for some time.",
+  "text": "Mặc dù phiên bản đầu tiên của \"async-await\" là một sự kiện trọng đại, nhưng đó cũng mới chỉ là bước khởi đầu. Hỗ trợ hiện tại cho async-await đánh dấu một dạng \"Sản phẩm khả dụng tối thiểu\" (MVP). Chúng tôi dự kiến sẽ tiếp tục tinh chỉnh, cải thiện và mở rộng nó trong một thời gian nữa.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "04y5xtsm4w8",
+  "kind": "p",
+  "translate": true,
+  "source": "Now that async-await is approaching stabilization, all the major Async I/O runtimes are at work adding and extending their support for the new syntax:",
+  "text": "Khi async-await đang tiến tới giai đoạn ổn định hóa, tất cả các runtime Async I/O lớn đều đang nỗ lực bổ sung và mở rộng hỗ trợ cho cú pháp mới:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "20j6atr4osq",
+  "kind": "li",
+  "translate": true,
+  "source": "the [link]tokio[/link] runtime [link]recently announced a number of scheduler improvements[/link], and they are planning a stable release in November that supports async-await syntax;",
+  "text": "runtime [link]tokio[/link] [link]gần đây đã công bố một số cải tiến về scheduler[/link], và họ đang lên kế hoạch cho một phiên bản phát hành ổn định vào tháng 11 với hỗ trợ cú pháp async-await;",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "28hbx1a28p6",
+  "kind": "li",
+  "translate": true,
+  "source": "the [link]async-std[/link] runtime [link]has been putting out weekly releases for the past few months[/link], and plans to make their 1.0 release shortly after async-await hits stable;",
+  "text": "runtime [link]async-std[/link] [link]đã liên tục ra mắt các phiên bản hàng tuần trong vài tháng qua[/link], và dự kiến sẽ phát hành phiên bản 1.0 ngay sau khi async-await đạt trạng thái ổn định;",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "27cvvu30zs5",
+  "kind": "li",
+  "translate": true,
+  "source": "using [link]wasm-bindgen-futures[/link], you can even bridge Rust Futures with [link]JavaScript promises[/link];",
+  "text": "sử dụng [link]wasm-bindgen-futures[/link], bạn thậm chí có thể cầu nối giữa Rust Futures và [link]JavaScript promises[/link];",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1rboxcb0j2f",
+  "kind": "li",
+  "translate": true,
+  "source": "the [link]hyper library[/link] has [link]migrated[/link] to adopt standard Rust futures.",
+  "text": "thư viện [link]hyper[/link] đã [link]chuyển đổi[/link] để áp dụng chuẩn futures của Rust.",
+  "attempt": 1,
+  "error": null
+ }
+]

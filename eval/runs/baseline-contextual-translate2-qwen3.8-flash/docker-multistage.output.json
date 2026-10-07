@@ -1,0 +1,92 @@
+[
+ {
+  "id": "29vgy8mryp7",
+  "kind": "heading",
+  "translate": true,
+  "source": "Multi-stage builds",
+  "text": "Build nhiều giai đoạn",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0hqk7t83q7w",
+  "kind": "p",
+  "translate": true,
+  "source": "Multi-stage builds are useful to anyone who has struggled to optimize Dockerfiles while keeping them easy to read and maintain.",
+  "text": "Build nhiều giai đoạn hữu ích cho bất kỳ ai từng chật vật tối ưu hóa Dockerfile trong khi vẫn giữ chúng dễ đọc và dễ bảo trì.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0tuc93anusm",
+  "kind": "heading",
+  "translate": true,
+  "source": "Use multi-stage builds",
+  "text": "Sử dụng build nhiều giai đoạn",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0ufc9pnvcti",
+  "kind": "p",
+  "translate": true,
+  "source": "With multi-stage builds, you use multiple `FROM` statements in your Dockerfile. Each `FROM` instruction can use a different base, and each of them begins a new stage of the build. You can selectively copy artifacts from one stage to another, leaving behind everything you don't want in the final image.",
+  "text": "Với build nhiều giai đoạn, bạn sử dụng nhiều câu lệnh `FROM` trong Dockerfile. Mỗi chỉ thị `FROM` có thể dùng một base khác nhau, và mỗi chỉ thị bắt đầu một giai đoạn build mới. Bạn có thể chọn lọc sao chép các artifact từ giai đoạn này sang giai đoạn khác, loại bỏ mọi thứ không cần thiết trong image cuối cùng.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "169o9cb9n5s",
+  "kind": "p",
+  "translate": true,
+  "source": "The following Dockerfile has two separate stages: one for building a binary, and another where the binary gets copied from the first stage into the next stage.",
+  "text": "Dockerfile sau đây có hai giai đoạn riêng biệt: một để build binary, và giai đoạn còn lại sao chép binary từ giai đoạn đầu tiên sang giai đoạn tiếp theo.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0m72kdsv816",
+  "kind": "code",
+  "translate": false,
+  "source": "# syntax=docker/dockerfile:1\nFROM golang:1.24\nWORKDIR /src\nCOPY <<EOF ./main.go\npackage main\n\nimport \"fmt\"\n\nfunc main() {\n  fmt.Println(\"hello, world\")\n}\nEOF\nRUN go build -o /bin/hello ./main.go\n\nFROM scratch\nCOPY --from=0 /bin/hello /bin/hello\nCMD [\"/bin/hello\"]",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "1ae8lg2yi1z",
+  "kind": "p",
+  "translate": true,
+  "source": "You only need the single Dockerfile. No need for a separate build script. Just run `docker build`.",
+  "text": "Bạn chỉ cần một Dockerfile duy nhất. Không cần script build riêng. Chỉ cần chạy `docker build`.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0bdgt3uywkw",
+  "kind": "code",
+  "translate": false,
+  "source": "$ docker build -t hello .",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "09g7lwvuur3",
+  "kind": "p",
+  "translate": true,
+  "source": "The end result is a tiny production image with nothing but the binary inside. None of the build tools required to build the application are included in the resulting image.",
+  "text": "Kết quả cuối cùng là một image production nhỏ gọn, chỉ chứa binary bên trong. Không có công cụ build nào cần thiết để xây dựng ứng dụng được bao gồm trong image kết quả.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1ad4um4wpta",
+  "kind": "p",
+  "translate": true,
+  "source": "How does it work? The second `FROM` instruction starts a new build stage with the `scratch` image as its base. The `COPY --from=0` line copies just the built artifact from the previous stage into this new stage. The Go SDK and any intermediate artifacts are left behind, and not saved in the final image.",
+  "text": "Cơ chế hoạt động như thế nào? Chỉ thị `FROM` thứ hai bắt đầu một giai đoạn build mới với image `scratch` làm base. Dòng `COPY --from=0` chỉ sao chép artifact đã build từ giai đoạn trước sang giai đoạn mới này. Go SDK và mọi artifact trung gian đều bị loại bỏ và không được lưu vào image cuối cùng.",
+  "attempt": 1,
+  "error": null
+ }
+]
