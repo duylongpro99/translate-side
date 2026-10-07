@@ -1,0 +1,69 @@
+{
+ "genre": "technical tutorial excerpt",
+ "audience": "programmers learning Rust, especially those new to memory management concepts",
+ "purpose": "explain the concept of ownership in Rust and how it differs from other memory management strategies",
+ "tone": "educational, encouraging, uses second-person 'you' and analogies",
+ "glossary": [
+  {
+   "term": "Ownership",
+   "rendering": "Ownership",
+   "note": "core Rust concept, keep English"
+  },
+  {
+   "term": "Rust",
+   "rendering": "Rust",
+   "note": "programming language name"
+  },
+  {
+   "term": "garbage collection",
+   "rendering": "garbage collection",
+   "note": "standard term, often kept in English or translated as 'thu gom rác' but context suggests keeping technical clarity"
+  },
+  {
+   "term": "allocate",
+   "rendering": "cấp phát",
+   "note": "standard Vietnamese tech term for memory allocation"
+  },
+  {
+   "term": "free",
+   "rendering": "giải phóng",
+   "note": "standard Vietnamese tech term for freeing memory"
+  },
+  {
+   "term": "compiler",
+   "rendering": "trình biên dịch",
+   "note": "standard term"
+  },
+  {
+   "term": "stack",
+   "rendering": "stack",
+   "note": "often kept in English in Vietnamese dev contexts, or 'ngăn xếp'"
+  },
+  {
+   "term": "heap",
+   "rendering": "heap",
+   "note": "often kept in English in Vietnamese dev contexts, or 'bộ nhớ động'"
+  },
+  {
+   "term": "runtime",
+   "rendering": "thời gian chạy",
+   "note": "standard term"
+  },
+  {
+   "term": "last in, first out (LIFO)",
+   "rendering": "vào sau ra trước (LIFO)",
+   "note": "standard translation with acronym preserved"
+  },
+  {
+   "term": "safe",
+   "rendering": "an toàn",
+   "note": "refers to memory safety"
+  },
+  {
+   "term": "efficient",
+   "rendering": "hiệu quả",
+   "note": "refers to performance"
+  }
+ ],
+ "language": "en"
+}

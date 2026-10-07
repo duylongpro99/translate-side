@@ -2,7 +2,7 @@
 
 Scores are 1–5 means over the passages scored (n). Columns after the first show the change from the first run (single-pass / translate@1 / qwen3.8-flash). Human scores are the source of truth; judge scores are shown for regression checks until calibrated.
 
-| | single-pass / translate@1 / qwen3.8-flash | contextual / translate@2+analyze@1 / qwen3.8-flash | contextual / translate@2+analyze@1 / qwen3.8-flash / chunk 400 | contextual / translate@1+analyze@1 / qwen3.8-flash / chunk 400 |
+| | single-pass / translate@1 / qwen3.8-flash | contextual / translate@2+analyze@1 / qwen3.8-flash | contextual / translate@2+analyze@1 / qwen3.8-flash / chunk 400 | contextual / translate@1+analyze@1 / qwen3.8-flash / chunk 400 (local, not committed) |
 |---|---|---|---|---|
 | human fidelity | – | – | – | – |
 | human naturalness | – | – | – | – |
@@ -27,7 +27,7 @@ Scores are 1–5 means over the passages scored (n). Columns after the first sho
 
 ## human overall by category
 
-| | single-pass / translate@1 / qwen3.8-flash | contextual / translate@2+analyze@1 / qwen3.8-flash | contextual / translate@2+analyze@1 / qwen3.8-flash / chunk 400 | contextual / translate@1+analyze@1 / qwen3.8-flash / chunk 400 |
+| | single-pass / translate@1 / qwen3.8-flash | contextual / translate@2+analyze@1 / qwen3.8-flash | contextual / translate@2+analyze@1 / qwen3.8-flash / chunk 400 | contextual / translate@1+analyze@1 / qwen3.8-flash / chunk 400 (local, not committed) |
 |---|---|---|---|---|
 | docs (8) | – | – | – | – |
 | humor (6) | – | – | – | – |
@@ -36,7 +36,7 @@ Scores are 1–5 means over the passages scored (n). Columns after the first sho
 
 ## judge overall by category
 
-| | single-pass / translate@1 / qwen3.8-flash | contextual / translate@2+analyze@1 / qwen3.8-flash | contextual / translate@2+analyze@1 / qwen3.8-flash / chunk 400 | contextual / translate@1+analyze@1 / qwen3.8-flash / chunk 400 |
+| | single-pass / translate@1 / qwen3.8-flash | contextual / translate@2+analyze@1 / qwen3.8-flash | contextual / translate@2+analyze@1 / qwen3.8-flash / chunk 400 | contextual / translate@1+analyze@1 / qwen3.8-flash / chunk 400 (local, not committed) |
 |---|---|---|---|---|
 | docs (8) | 4.66 | 4.63 (-0.03) | 4.16 (-0.50) | 4.56 (-0.09) |
 | humor (6) | 4.08 | 4.13 (+0.04) | 4.21 (+0.13) | 3.96 (-0.12) |
@@ -46,12 +46,13 @@ Scores are 1–5 means over the passages scored (n). Columns after the first sho
 
 ## Notes (Phase F)
 
-- Runs: m2 @ 8bc7484, APIBOX qwen3.8-flash, 23 eval passages. Column 1 is the frozen single-pass baseline (judge at 3497cc0). The third contextual column (translate@1, chunk 400) is judge-only; no human sheet is committed for it.
-- Judge noise: ds/deepseek-v4-pro re-run on the contextual@2 c1500 outputs gave overall 4.36 (fid 4.30, nat 3.96, tone 4.57, term 4.61) against 4.41 the first time; per-score mean absolute difference 0.27, identical in 73% of scores, within 1 point in 100%. Differences of about 0.1 between runs are inside this noise.
-- At chunk 1500 every eval passage is one chunk, so no brief reaches translation; contextual@2 vs single-pass@1 there differs by the translate prompt version only.
+- Runs: m2 @ 8bc7484 (recorded as `gitCommit` in each committed run's summary.json), APIBOX qwen3.8-flash, 23 eval passages. Column 1 is the frozen single-pass baseline (judge at 3497cc0). The third contextual column (translate@1, chunk 400) is local, not committed: judge-only, no human sheet, not under `eval/runs/`.
+- Judge noise: ds/deepseek-v4-pro re-run on the contextual@2 c1500 outputs, committed as `eval/runs/baseline-contextual-translate2-qwen3.8-flash/judge-rerun.json` (the report table uses `judge.json`). Re-judge: overall 4.36 (fidelity 4.30, naturalness 3.96, tone 4.57, terminology 4.61) against 4.41 the first time. On the re-judge, tone (4.57) and terminology (4.61) are below single-pass (4.65 and 4.70), as is fidelity (4.30 vs 4.43). Per-score mean absolute difference between the two judge runs is 0.27, identical in 73% of scores, within 1 point in 100%. Differences of about 0.1 between runs are inside this noise.
+- Single-chunk consequence: at c1500 all 23 eval passages are one chunk, so analyze and the brief never run and no brief reaches translation. contextual@2 c1500 vs single-pass@1 differs only by the translate prompt version (plus the check stage). The M6 regression gate therefore cannot catch brief regressions from this baseline; the c400 run is kept as a reference run for the path where the brief is used (it has the `*.brief.json` files).
+- Plan §3 #2 (cost ≤ 1.3x single-pass), per run: c1500 x1.17 met; c400 x3.59 not met; contextual@1 c400 x1.84 not met.
+- Plan §3 #1 (judge only, contextual vs single-pass on fidelity / tone / terminology): c1500 first judge fidelity -0.22, tone +0.04, terminology +0.04; on the re-judge fidelity -0.13, tone -0.08, terminology -0.09. Not met on fidelity either time; tone and terminology are within judge noise of single-pass and flip sign between the two judge runs. The human scores decide.
 
 ## M2 baseline and status
 
-- **M2 baseline (M2-D22): contextual@2 c1500**, `eval/runs/baseline-contextual-translate2-qwen3.8-flash`. This is the run M6's regression gate will defend. The c400 run (`eval/runs/baseline-contextual-translate2-qwen3.8-flash-c400`) is kept as a reference run (brief reaching later chunks), not as the baseline.
-- **Plan §3 #1 is pending (M2-D21):** it waits for the human scores on the three sheets (frozen single-pass, contextual c1500, contextual c400). The judge-only numbers above show contextual@2 c1500 below single-pass on fidelity (4.22 vs 4.43; 4.30 on the re-judge) and level on tone and terminology; they do not decide it, since human scores are the source of truth.
-- **Plan §3 #2 (cost ≤ 1.3×)** is met at c1500 (×1.17).
+- **M2 baseline (M2-D22): contextual@2 c1500**, `eval/runs/baseline-contextual-translate2-qwen3.8-flash`. This is the run M6's regression gate will defend. The c400 run (`eval/runs/baseline-contextual-translate2-qwen3.8-flash-c400`, see its README.md) is kept as a reference run, not as the baseline.
+- **Plan §3 #1 is pending (M2-D21):** it waits for the human scores on the three sheets (frozen single-pass, contextual c1500, contextual c400).

@@ -1,0 +1,64 @@
+{
+ "genre": "technical blog post / Stack Overflow answer",
+ "audience": "programmers and computer science students",
+ "purpose": "explain the concept of branch prediction and why sorted data improves performance",
+ "tone": "conversational, educational, uses analogies and direct address ('You')",
+ "glossary": [
+  {
+   "term": "Branch Prediction",
+   "rendering": "dự đoán nhánh",
+   "note": "core technical concept"
+  },
+  {
+   "term": "branch instruction",
+   "rendering": "lệnh rẽ nhánh",
+   "note": "processor-level terminology"
+  },
+  {
+   "term": "if-statement",
+   "rendering": "câu lệnh if",
+   "note": "common programming term, often kept as 'if' or translated as 'câu lệnh if'"
+  },
+  {
+   "term": "sorted array",
+   "rendering": "mảng đã sắp xếp",
+   "note": "key context for the problem"
+  },
+  {
+   "term": "unsorted array",
+   "rendering": "mảng chưa sắp xếp",
+   "note": "contrast to sorted array"
+  },
+  {
+   "term": "processor",
+   "rendering": "bộ xử lý",
+   "note": "standard hardware term"
+  },
+  {
+   "term": "execution",
+   "rendering": "thực thi",
+   "note": "standard CS term"
+  },
+  {
+   "term": "inertia",
+   "rendering": "quán tính",
+   "note": "physics analogy used in text"
+  },
+  {
+   "term": "railroad junction",
+   "rendering": "ngã ba đường sắt",
+   "note": "analogy setting"
+  },
+  {
+   "term": "switch",
+   "rendering": "chuyển mạch",
+   "note": "railroad context"
+  },
+  {
+   "term": "data is evenly distributed",
+   "rendering": "dữ liệu được phân bố đều",
+   "note": "statistical condition mentioned"
+  }
+ ],
+ "language": "en"
+}

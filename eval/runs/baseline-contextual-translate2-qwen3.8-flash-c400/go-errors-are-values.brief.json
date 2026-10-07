@@ -1,0 +1,69 @@
+{
+ "genre": "technical blog post",
+ "audience": "Go programmers, especially beginners",
+ "purpose": "To correct the misconception that Go error handling is clumsy by explaining that errors are values and can be programmed flexibly.",
+ "tone": "Educational, reassuring, slightly informal, uses 'we' for the authors",
+ "glossary": [
+  {
+   "term": "Errors are values",
+   "rendering": "Lỗi là giá trị",
+   "note": "Core concept/title of the article"
+  },
+  {
+   "term": "Go",
+   "rendering": "Go",
+   "note": "Programming language name, keep English"
+  },
+  {
+   "term": "if err != nil",
+   "rendering": "if err != nil",
+   "note": "Code snippet, keep as-is"
+  },
+  {
+   "term": "try-catch",
+   "rendering": "try-catch",
+   "note": "Error handling mechanism in other languages, keep English"
+  },
+  {
+   "term": "bufio package",
+   "rendering": "gói bufio",
+   "note": "Standard library package name"
+  },
+  {
+   "term": "Scanner",
+   "rendering": "Scanner",
+   "note": "Specific type name in Go, keep English"
+  },
+  {
+   "term": "Scan method",
+   "rendering": "phương thức Scan",
+   "note": "Method name, keep English"
+  },
+  {
+   "term": "I/O",
+   "rendering": "I/O",
+   "note": "Input/Output abbreviation, keep English"
+  },
+  {
+   "term": "boolean",
+   "rendering": "kiểu boolean",
+   "note": "Data type, often kept or translated as logic value"
+  },
+  {
+   "term": "nil check",
+   "rendering": "kiểm tra nil",
+   "note": "Checking for null/zero value in Go"
+  },
+  {
+   "term": "flow of control",
+   "rendering": "luồng điều khiển",
+   "note": "Standard CS term"
+  },
+  {
+   "term": "open source projects",
+   "rendering": "dự án mã nguồn mở",
+   "note": "Common tech term"
+  }
+ ],
+ "language": "en"
+}

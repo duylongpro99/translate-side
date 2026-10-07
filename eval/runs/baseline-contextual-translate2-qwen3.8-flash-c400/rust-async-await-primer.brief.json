@@ -1,0 +1,64 @@
+{
+ "genre": "technical blog post",
+ "audience": "Rust developers and programmers familiar with async concepts",
+ "purpose": "explain the syntax and zero-cost nature of Rust's async-await feature",
+ "tone": "informative, conversational, uses 'we' for shared understanding",
+ "glossary": [
+  {
+   "term": "async-await",
+   "rendering": "async-await",
+   "note": "core concept, keep English"
+  },
+  {
+   "term": "runtime",
+   "rendering": "runtime",
+   "note": "standard tech term in Vietnamese dev context"
+  },
+  {
+   "term": "I/O",
+   "rendering": "I/O",
+   "note": "Input/Output, keep abbreviation"
+  },
+  {
+   "term": "Future",
+   "rendering": "Future",
+   "note": "specific Rust type name, keep capitalized"
+  },
+  {
+   "term": ".await",
+   "rendering": ".await",
+   "note": "operator syntax, keep as is"
+  },
+  {
+   "term": "? operator",
+   "rendering": "toán tử ?",
+   "note": "error propagation mechanism"
+  },
+  {
+   "term": "method chaining",
+   "rendering": "chuỗi phương thức",
+   "note": "common programming pattern"
+  },
+  {
+   "term": "poll model",
+   "rendering": "mô hình poll",
+   "note": "technical implementation detail"
+  },
+  {
+   "term": "zero cost",
+   "rendering": "chi phí bằng không",
+   "note": "key performance characteristic"
+  },
+  {
+   "term": "scheduling",
+   "rendering": "lập lịch",
+   "note": "execution management"
+  },
+  {
+   "term": "lazy",
+   "rendering": "lazy",
+   "note": "programming paradigm term, often kept or translated as 'lười' but lazy fits better here"
+  }
+ ],
+ "language": "en"
+}

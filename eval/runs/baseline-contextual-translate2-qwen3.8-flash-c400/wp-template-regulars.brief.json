@@ -1,0 +1,59 @@
+{
+ "genre": "Wikipedia policy guideline",
+ "audience": "Wikipedia editors and contributors",
+ "purpose": "To advise against using generic warning templates for experienced users, emphasizing the need for personalized communication to avoid appearing patronizing.",
+ "tone": "Advisory, community-focused, uses 'we' and 'you', slightly formal but accessible",
+ "glossary": [
+  {
+   "term": "user talk templates",
+   "rendering": "mẫu tin nhắn trên trang thảo luận người dùng",
+   "note": "Specific Wikipedia feature for automated warnings"
+  },
+  {
+   "term": "vandalism",
+   "rendering": "phá hoại",
+   "note": "Core concept in Wikipedia moderation"
+  },
+  {
+   "term": "three-revert rule",
+   "rendering": "quy tắc hoàn tác ba lần",
+   "note": "Specific Wikipedia policy name"
+  },
+  {
+   "term": "assume good faith",
+   "rendering": "giả định thiện chí",
+   "note": "Fundamental Wikipedia principle (AGF)"
+  },
+  {
+   "term": "novice editors",
+   "rendering": "biên tập viên mới",
+   "note": "Refers to new users"
+  },
+  {
+   "term": "patronising",
+   "rendering": "trịch thượng",
+   "note": "Key negative tone descriptor"
+  },
+  {
+   "term": "uncivil",
+   "rendering": "thiếu văn minh",
+   "note": "Violation of civility policy"
+  },
+  {
+   "term": "Ignore All Rules",
+   "rendering": "Bỏ qua mọi quy tắc",
+   "note": "Official Wikipedia policy name (IAR)"
+  },
+  {
+   "term": "clear-cut",
+   "rendering": "rõ ràng",
+   "note": "Describes unambiguous violations"
+  },
+  {
+   "term": "amicable resolution",
+   "rendering": "giải quyết hòa bình",
+   "note": "Goal of dispute resolution"
+  }
+ ],
+ "language": "en"
+}

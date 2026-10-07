@@ -1,0 +1,69 @@
+{
+ "genre": "technical tutorial",
+ "audience": "Rust developers learning asynchronous programming",
+ "purpose": "explain the concept of a Future executor and guide the reader to implement a simple one in Rust",
+ "tone": "instructional, clear, uses 'we' for collaborative coding",
+ "glossary": [
+  {
+   "term": "Executor",
+   "rendering": "Executor",
+   "note": "core concept, keep English"
+  },
+  {
+   "term": "Future",
+   "rendering": "Future",
+   "note": "core type name, keep English"
+  },
+  {
+   "term": "poll",
+   "rendering": "poll",
+   "note": "method name, keep English"
+  },
+  {
+   "term": "wake()",
+   "rendering": "wake()",
+   "note": "method name, keep English"
+  },
+  {
+   "term": "ArcWake",
+   "rendering": "ArcWake",
+   "note": "trait name, keep English"
+  },
+  {
+   "term": "Waker",
+   "rendering": "Waker",
+   "note": "type name, keep English"
+  },
+  {
+   "term": "async function",
+   "rendering": "hàm async",
+   "note": "common translation pattern"
+  },
+  {
+   "term": "channel",
+   "rendering": "kênh (channel)",
+   "note": "conceptual term, often kept or parenthesized"
+  },
+  {
+   "term": "Cargo.toml",
+   "rendering": "Cargo.toml",
+   "note": "file name, keep English"
+  },
+  {
+   "term": "futures crate",
+   "rendering": "crate futures",
+   "note": "library name, keep English"
+  },
+  {
+   "term": "top-level Futures",
+   "rendering": "các Future cấp cao nhất",
+   "note": "descriptive phrase"
+  },
+  {
+   "term": "concurrently",
+   "rendering": "đồng thời",
+   "note": "standard adverb"
+  }
+ ],
+ "language": "en"
+}
