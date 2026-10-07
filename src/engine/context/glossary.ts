@@ -41,7 +41,7 @@ export const KEEP_AS_IS_MARK = '(keep as is: write it exactly like this, never t
  * How the brief's keep-in-English entry is marked (round 8, M2-D1 "first occurrence only, for
  * glossary terms and terms with no common equivalent"): kept, and glossed once at its first use.
  */
-export const KEEP_ENGLISH_MARK = '(keep it in English; if it is a technical term, gloss it once at its first use in the document)';
+export const KEEP_ENGLISH_MARK = '(keep it in English, and add a short gloss in parentheses at its first use in the document, once)';
 
 /** Where a glossary entry comes from: the user's settings, or the brief's terms. */
 export type GlossarySource = 'personal' | 'brief';
