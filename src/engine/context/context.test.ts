@@ -370,6 +370,23 @@ describe('translate@2 assembly (plan M2-E3)', () => {
     expect(system).toContain('Never gloss a glossary entry marked "keep as is"');
   });
 
+  it('glosses technical terms only: never an ordinary word, never a non-technical headword (round 6, M2-D1)', () => {
+    const rule = GLOSS_RULES.first.replaceAll('{TARGET_LANG}', 'Vietnamese');
+    expect(rule.startsWith('Glosses are for technical terms only.')).toBe(true);
+    expect(rule).toContain('The first time a technical glossary term, or a technical English term you keep because it has no common Vietnamese equivalent, appears in the document, add a short gloss in parentheses right after it. Only once per term in the whole document');
+    expect(rule).toContain('Never gloss an ordinary word or phrase that has a common Vietnamese equivalent, even when the glossary lists it: translate it and put nothing after it, not the English original in parentheses either.');
+    expect(rule).toContain('In dictionary entries, word lists and other headword-style text, write each headword in Vietnamese with no gloss unless it is a technical term.');
+    // The earlier rules stay: keep-as-is never glossed, already-used terms never again.
+    expect(rule).toContain('Never gloss a glossary entry marked "keep as is"');
+    expect(rule).toContain('A term the <context> block lists as already used was glossed before');
+    // In the system block, once, and the same bytes for every briefed chunk.
+    const snippets = [{ providerId: 'glossary', scope: 'document' as const, text: renderGlossaryEntry({ term: 'executor', rendering: 'bộ thực thi' }) }];
+    const system = renderSystemPromptV2(render, { ...base, snippets });
+    expect(system.split('Glosses are for technical terms only.')).toHaveLength(2);
+    expect(renderSystemPromptV2(render, { ...base, snippets })).toBe(system);
+    expect(renderSystemPromptV2(render, { ...base, gloss: 'off', snippets })).not.toContain('technical terms only');
+  });
+
   it('never glosses a term listed as already used, in any segment or heading (round 2: "Future (Future)")', () => {
     expect(GLOSS_RULES.first).toContain('A term the <context> block lists as already used was glossed before: write it with no gloss and no parentheses after it, in every segment and in headings, even if it looks new in these segments.');
     expect(USED_TERMS_HEAD).toContain('no gloss and no parentheses after it in every segment below, headings included');
