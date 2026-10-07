@@ -75,14 +75,18 @@ Rules:
 - Preserve the author's tone, register, humor, emphasis, and stance (hedging,
   certainty, sarcasm, irony). Do not make it more formal or more polite than the
   original. The document brief says what the tone is: keep it in every segment.
-- Do not omit content and do not summarize. Do not add explanations beyond what the
-  style mode and the gloss rule allow.
+- Do not omit content, however small: every qualifier, adjective and condition of the
+  source is in the translation. Do not summarize. Do not add explanations beyond what
+  the style mode and the gloss rule allow.
 - Keep unchanged: code, \`inline code\`, identifiers, URLs, file paths, command names,
   product/brand names, and numbers/units.
+- Write everything else in {TARGET_LANG}: never leave an ordinary word in English, and
+  never write a word in any other language or script.
 - Technical terms: follow the glossary exactly, the same way in every segment. For
   established English terms with no common {TARGET_LANG} equivalent, keep the English term.
 - {GLOSS_RULE}
-- Keep inline markers ([link]…[/link], *…*, **…**, \`…\`) around the corresponding words.
+- Keep inline markers ([link]…[/link], *…*, **…**, \`…\`) around the corresponding words
+  of your translation. Never keep the original words just to carry a marker.
 - Output each segment as <seg id="N">…</seg> with the same ids, in the same order.
   Output nothing else: no preamble, no notes, no code fences.
 - Copy each opening tag exactly as given, with all its attributes. If a tag is
@@ -114,7 +118,7 @@ Glossary (the user's entries come first and take priority):
 /** What each style mode asks for (translate@2's STYLE_RULE). */
 export const STYLE_RULES = {
   natural:
-    'Write as a native writer of {TARGET_LANG} would for the same readers: restructure freely for flow and idiom, while keeping every point, the order of ideas and the tone.',
+    'Write as a native writer of {TARGET_LANG} would for the same readers: restructure sentences where that reads more naturally, while keeping every point and detail, the order of ideas and the tone.',
   faithful:
     'Stay close to the source: keep its sentence structure, the order of ideas and the author\'s wording wherever {TARGET_LANG} grammar allows, and prefer the literal rendering when it is still correct and clear. Use this for text where exact wording matters.',
   simplified:
@@ -124,7 +128,7 @@ export const STYLE_RULES = {
 /** translate@2's GLOSS_RULE per gloss mode (plan M2 §5: first occurrence only, a setting). */
 export const GLOSS_RULES = {
   first:
-    'Glosses are for technical terms only. Gloss only glossary terms: an entry marked to keep in English gets a short {TARGET_LANG} explanation in parentheses right after its first use in the document; a technical glossary term you translate is written as the glossary renders it, with the original English term in parentheses after its first use. Never gloss a term the glossary does not list. Only once per term in the whole document, never again in later segments. Never put a gloss in a heading, or inside or right after code in backticks: if a term first appears in a heading or as code, gloss its first use in running text instead. Never gloss an ordinary word or phrase that has a common {TARGET_LANG} equivalent, even when the glossary lists it: translate it and put nothing after it, not the English original in parentheses either. In dictionary entries, word lists and other headword-style text, write each headword in {TARGET_LANG} alone, without the original word in parentheses, unless it is a technical term: "BORE, n." becomes the translated headword and part of speech, never the translation followed by "(bore)". Never gloss a glossary entry marked "keep as is": write it bare every time. A term the <context> block lists as already used was glossed before: write it with no gloss and no parentheses after it, in every segment and in headings, even if it looks new in these segments.',
+    'Glosses: only for glossary terms, once each, at the term\'s first use in running text (never in a heading, never inside or right after code in backticks). A term the glossary keeps in English gets a short {TARGET_LANG} explanation in parentheses; a term it translates is written as rendered, with the English original in parentheses. Nothing else gets a gloss: not a term the glossary does not list, not an ordinary word or phrase with a common {TARGET_LANG} equivalent (translate it and add nothing after it, not the English either), not an entry marked "keep as is" (write it bare every time), not a headword in dictionary entries or word lists ("BORE, n." becomes the translated headword and part of speech alone, never followed by "(bore)"). A term the <context> block lists as already used was glossed before: write it with no gloss and no parentheses after it, in every segment and in headings, even if it looks new in these segments.',
   off: 'Glosses: never add glosses or explanations in parentheses after terms.',
 } as const;
 

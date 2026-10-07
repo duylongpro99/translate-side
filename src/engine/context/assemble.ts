@@ -29,14 +29,19 @@ export function renderSystemPromptV2(render: (vars: Readonly<Record<string, stri
   const target = languageLabel(vars.targetLang);
   const doc = vars.snippets.filter((s) => s.scope === 'document');
   const join = (id: string) => doc.filter((s) => s.providerId === id).map((s) => s.text).join('\n') || NONE;
+  const glossary = join(GLOSSARY_PROVIDER_ID);
+  // Only glossary terms are glossed (round 12): with no glossary the first-use rule has nothing to
+  // apply to, and its wording alone drew English originals in parentheses (round 13, "callback
+  // hell"), so the "no glosses" rule is sent instead.
+  const gloss = glossary === NONE ? 'off' : vars.gloss;
   const system = render({
     TARGET_LANG: target,
     SOURCE_LANG: languageLabel(vars.sourceLang),
     STYLE: STYLE_LABELS[vars.style],
     STYLE_RULE: STYLE_RULES[vars.style].replaceAll('{TARGET_LANG}', target),
-    GLOSS_RULE: GLOSS_RULES[vars.gloss].replaceAll('{TARGET_LANG}', target),
+    GLOSS_RULE: GLOSS_RULES[gloss].replaceAll('{TARGET_LANG}', target),
     BRIEF: join(BRIEF_PROVIDER_ID),
-    GLOSSARY: join(GLOSSARY_PROVIDER_ID),
+    GLOSSARY: glossary,
   });
   const extra = doc.filter((s) => s.providerId !== BRIEF_PROVIDER_ID && s.providerId !== GLOSSARY_PROVIDER_ID).map((s) => s.text);
   return extra.length ? `${system}\n\n${extra.join('\n\n')}` : system;

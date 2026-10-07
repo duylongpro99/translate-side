@@ -141,7 +141,7 @@ describe('GlossaryProvider (personal + auto)', () => {
     expect(got.find((s) => s.scope === 'chunk')?.text).toBe(`${USED_TERMS_HEAD}Deploy → triển khai`);
     expect(USED_TERMS_HEAD).toContain('write each exactly as rendered after its arrow');
     // The rule asks for the rendering, the English only once in parentheses at the first use.
-    expect(GLOSS_RULES.first).toContain('a technical glossary term you translate is written as the glossary renders it, with the original English term in parentheses after its first use');
+    expect(GLOSS_RULES.first).toContain('a term it translates is written as rendered, with the English original in parentheses');
     // A kept term is listed as itself, so the line never reads as "write the English" for a translated one.
     expect(usedTermsLine([{ term: 'Future', rendering: '' }, { term: 'deploy', rendering: 'triển khai' }])).toBe(`${USED_TERMS_HEAD}Future → Future; deploy → triển khai`);
   });
@@ -381,34 +381,42 @@ describe('translate@2 assembly (plan M2-E3)', () => {
     expect(systems[0]).toContain(`Style mode: Natural\n${STYLE_RULES.natural.replaceAll('{TARGET_LANG}', 'Vietnamese')}`);
     expect(systems[1]).toContain('Style mode: Faithful\nStay close to the source');
     expect(systems[2]).toContain('Style mode: Simplified\nMake it easy to read for a non-expert in Vietnamese');
-    expect(systems[0]).toContain(`- ${GLOSS_RULES.first.replaceAll('{TARGET_LANG}', 'Vietnamese')}`);
-    expect(renderSystemPromptV2(render, { ...base, gloss: 'off', snippets: [] })).toContain(`- ${GLOSS_RULES.off}`);
+    const glossary = [{ providerId: 'glossary', scope: 'document' as const, text: renderGlossaryEntry({ term: 'executor', rendering: 'bộ thực thi' }) }];
+    expect(renderSystemPromptV2(render, { ...base, snippets: glossary })).toContain(`- ${GLOSS_RULES.first.replaceAll('{TARGET_LANG}', 'Vietnamese')}`);
+    expect(renderSystemPromptV2(render, { ...base, gloss: 'off', snippets: glossary })).toContain(`- ${GLOSS_RULES.off}`);
     expect(systems.join('')).not.toContain('{TARGET_LANG}');
+  });
+
+  it('sends the "no glosses" rule when there is no glossary: nothing to gloss (round 13, "callback hell (callback hell)")', () => {
+    const system = renderSystemPromptV2(render, { ...base, gloss: 'first', snippets: [] });
+    expect(system).toContain('<glossary>\n(none)\n</glossary>');
+    expect(system).toContain(`- ${GLOSS_RULES.off}`);
+    expect(system).not.toContain('Glosses: only for glossary terms');
   });
 
   it('never glosses a keep-as-is entry: the entry says so and the gloss rule excludes it (round 2)', () => {
     expect(KEEP_AS_IS_MARK).toMatch(/never gloss it/);
-    expect(GLOSS_RULES.first).toContain('Never gloss a glossary entry marked "keep as is": write it bare every time.');
+    expect(GLOSS_RULES.first).toContain('not an entry marked "keep as is" (write it bare every time)');
     const system = renderSystemPromptV2(render, { ...base, snippets: [{ providerId: 'glossary', scope: 'document', text: renderGlossaryEntry({ term: 'deploy', rendering: 'deploy' }) }] });
     expect(system).toContain(`- deploy → deploy ${KEEP_AS_IS_MARK}`);
-    expect(system).toContain('Never gloss a glossary entry marked "keep as is"');
+    expect(system).toContain('not an entry marked "keep as is"');
   });
 
   it('glosses technical terms only: never an ordinary word, never a non-technical headword (round 6, M2-D1)', () => {
     const rule = GLOSS_RULES.first.replaceAll('{TARGET_LANG}', 'Vietnamese');
-    expect(rule.startsWith('Glosses are for technical terms only.')).toBe(true);
-    expect(rule).toContain('Gloss only glossary terms: an entry marked to keep in English gets a short Vietnamese explanation in parentheses right after its first use in the document; a technical glossary term you translate is written as the glossary renders it, with the original English term in parentheses after its first use. Never gloss a term the glossary does not list. Only once per term in the whole document, never again in later segments. Never put a gloss in a heading, or inside or right after code in backticks: if a term first appears in a heading or as code, gloss its first use in running text instead.');
-    expect(rule).toContain('Never gloss an ordinary word or phrase that has a common Vietnamese equivalent, even when the glossary lists it: translate it and put nothing after it, not the English original in parentheses either.');
-    expect(rule).toContain('In dictionary entries, word lists and other headword-style text, write each headword in Vietnamese alone, without the original word in parentheses, unless it is a technical term: "BORE, n." becomes the translated headword and part of speech, never the translation followed by "(bore)".');
+    expect(rule.startsWith('Glosses: only for glossary terms, once each, at the term\'s first use in running text (never in a heading, never inside or right after code in backticks).')).toBe(true);
+    expect(rule).toContain('A term the glossary keeps in English gets a short Vietnamese explanation in parentheses; a term it translates is written as rendered, with the English original in parentheses.');
+    expect(rule).toContain('Nothing else gets a gloss: not a term the glossary does not list, not an ordinary word or phrase with a common Vietnamese equivalent (translate it and add nothing after it, not the English either)');
+    expect(rule).toContain('not a headword in dictionary entries or word lists ("BORE, n." becomes the translated headword and part of speech alone, never followed by "(bore)")');
     // The earlier rules stay: keep-as-is never glossed, already-used terms never again.
-    expect(rule).toContain('Never gloss a glossary entry marked "keep as is"');
+    expect(rule).toContain('not an entry marked "keep as is"');
     expect(rule).toContain('A term the <context> block lists as already used was glossed before');
     // In the system block, once, and the same bytes for every briefed chunk.
     const snippets = [{ providerId: 'glossary', scope: 'document' as const, text: renderGlossaryEntry({ term: 'executor', rendering: 'bộ thực thi' }) }];
     const system = renderSystemPromptV2(render, { ...base, snippets });
-    expect(system.split('Glosses are for technical terms only.')).toHaveLength(2);
+    expect(system.split('Glosses: only for glossary terms')).toHaveLength(2);
     expect(renderSystemPromptV2(render, { ...base, snippets })).toBe(system);
-    expect(renderSystemPromptV2(render, { ...base, gloss: 'off', snippets })).not.toContain('technical terms only');
+    expect(renderSystemPromptV2(render, { ...base, gloss: 'off', snippets })).not.toContain('only for glossary terms');
   });
 
   it('glosses a brief "keep English" term once at first use; only the user\'s keep-as-is entries are never glossed (round 8, M2-D1)', async () => {
@@ -420,7 +428,7 @@ describe('translate@2 assembly (plan M2-E3)', () => {
     const [list] = await glossaryProvider.provide(query({ memory }));
     expect(list?.text).toBe(`- Future → Future ${KEEP_AS_IS_MARK}\n- runtime → runtime ${KEEP_ENGLISH_MARK}`);
     // Only listed terms are glossed (round 12, NB4): the used-terms line can track every one of them.
-    expect(GLOSS_RULES.first).toContain('Never gloss a term the glossary does not list.');
+    expect(GLOSS_RULES.first).toContain('not a term the glossary does not list');
     expect(GLOSS_RULES.first).not.toContain('also for terms the glossary does not list');
     // Later chunks: the used-terms line stops a second gloss.
     expect(GLOSS_RULES.first).toContain('A term the <context> block lists as already used was glossed before');
