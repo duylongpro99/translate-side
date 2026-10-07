@@ -422,7 +422,7 @@ describe('contextual: the copy guard (translate@2 only, round 14 NB1)', () => {
     const engine = createEngine({ llm: () => translate, now: () => 0, sleep: fakeSleep(), strategies: [createContextual('translate@1')], prompts: createDefaultPromptRegistry(), random: () => 0 });
     const events = await collect(engine.translate(oneChunk(), new AbortController().signal));
     expect(translate.requests).toHaveLength(2);
-    expect(wireLines(translate.requests[1]?.messages.at(-1)?.content ?? '').map((l) => l.n)).toEqual([2]);
+    expect(wireLines(translate.requests[1]?.messages[0]?.content ?? '').map((l) => l.n)).toEqual([2]);
     expect(finals(events).map((e) => [e.id, e.attempt ?? 1, e.producedBy.stage])).toEqual([['a', 1, 'translate'], ['b', 1, 'translate'], ['b', 2, 'check']]);
     noFailures(events);
   });

@@ -51,7 +51,7 @@ async function collect(stream: AsyncIterable<EngineEvent>): Promise<EngineEvent[
 
 const finals = (events: EngineEvent[]) => events.flatMap((e) => (e.type === 'segment.final' ? [[e.id, e.text, e.attempt ?? 1, e.producedBy.stage] as const] : []));
 const failures = (events: EngineEvent[]) => events.flatMap((e) => (e.type === 'segment.failed' ? [e] : []));
-const sentIds = (client: FakeClient, call: number) => wireLines(client.requests[call]?.messages.at(-1)?.content ?? '').map((l) => l.n);
+const sentIds = (client: FakeClient, call: number) => wireLines(client.requests[call]?.messages[0]?.content ?? '').map((l) => l.n);
 const byIndex = (segments: readonly Segment[]) => (n: number) => segments[n - 1]?.id ?? '';
 
 /** Answers call `k` with `answers[k-1]` per segment id (the last one repeats), GOOD by default. */
@@ -108,6 +108,19 @@ describe('check stage: re-request once, then segment.failed (M2-E4)', () => {
     expect(memory?.get('a')).toEqual({ text: GOOD.a, revision: 1, attempt: 2 });
     // The re-request's usage is passed on.
     expect(events.filter((e) => e.type === 'usage')).toHaveLength(2);
+  });
+
+  it('the re-request shows the earlier answer and names what to fix, per segment (round 4); the first turn is unchanged', async () => {
+    const client = scripted(SOURCES, [{ a: BAD.a ?? '', c: BAD.c ?? '' }, {}]);
+    await runWithSummary(job(SOURCES), client);
+    const [first, answer, fixes] = client.requests[1]?.messages ?? [];
+    expect(client.requests[1]?.messages.map((m) => m.role)).toEqual(['user', 'assistant', 'user']);
+    expect(wireLines(first?.content ?? '').map((l) => l.n)).toEqual([1, 3]);
+    expect(answer?.content).toBe(`<seg id="1">${BAD.a}</seg>\n<seg id="3">${BAD.c}</seg>`);
+    expect(fixes?.content).toContain('Segment 1:\n- Copy these code spans byte-identical, backticks included, even where the glossary writes the term without them: `futures`, `Cargo.toml`');
+    expect(fixes?.content).toContain('Segment 3:\n- Keep these numbers in digits, as the source writes them (do not convert or spell them out): 3.5, 1,000');
+    // The translate call itself is a single user turn, as before.
+    expect(client.requests[0]?.messages.map((m) => m.role)).toEqual(['user']);
   });
 
   it('fails a segment that fails again, with CHECK_MESSAGE and the checks in raw; it leaves working memory', async () => {
@@ -195,9 +208,9 @@ describe('check stage: re-request once, then segment.failed (M2-E4)', () => {
     const client = translatorClient((lines, call) => renderLines(lines, (s) => (call <= 4 && !s.includes('/1 ') ? `vi:${bad(s)}` : `vi:${s}`)), { deltaSize: 400 });
     const events = await collect(createEngine(deps(client)).translate(job(segments, { chunkTokens: 300, maxConcurrency: 1 }), new AbortController().signal));
     const translate = 3;
-    expect(client.requests.map((r) => wireLines(r.messages.at(-1)?.content ?? '').length)).toEqual([1, 1, 1, 1, 1]);
+    expect(client.requests.map((r) => wireLines(r.messages[0]?.content ?? '').length)).toEqual([1, 1, 1, 1, 1]);
     // After the translate calls, two re-requests, each with its chunk's own segment.
-    expect(client.requests.slice(translate).map((r) => wireLines(r.messages.at(-1)?.content ?? '').map((l) => l.source.slice(0, 25)))).toEqual([['See https://a.example/0 f'], ['See https://a.example/2 f']]);
+    expect(client.requests.slice(translate).map((r) => wireLines(r.messages[0]?.content ?? '').map((l) => l.source.slice(0, 25)))).toEqual([['See https://a.example/0 f'], ['See https://a.example/2 f']]);
     expect(failures(events).map((e) => e.id)).toEqual(['p0']);
     expect(finals(events).filter((e) => e[3] === 'check').map((e) => e[0])).toEqual(['p2']);
   });

@@ -15,7 +15,7 @@ import type { LLMClient, LLMError, NormalizedRequest } from '../../llm/types.ts'
 import { BUDGET_MESSAGE, maxOutputTokens } from '../budget.ts';
 import { chunkLimits, chunkSegments, type Chunk } from '../chunker.ts';
 import { formatWire, toWire, type WireChunk } from '../parsing/wire.ts';
-import { translateChunk, type ChunkCall, type ChunkReport } from '../parsing/translate-chunk.ts';
+import { translateChunk, type ChunkCall, type ChunkReport, type FollowUp } from '../parsing/translate-chunk.ts';
 import { DEFAULT_GLOSS, renderContextBlock, renderSystemPromptV2 } from '../context/assemble.ts';
 import { gatherContext } from '../context/budget.ts';
 import { segmentsBefore } from '../context/glossary.ts';
@@ -115,13 +115,15 @@ export function callBudget(wire: WireChunk, reasoningReserveTokens: number): num
  * (M2-D16); `attempt` 2 (the repair) asks for the base setting, so a call cut by its thinking is
  * not resent with the same thinking. The prompt depends on neither.
  */
-export function translateRequest(client: Pick<LLMClient, 'model' | 'reasoningReserveTokens'>, system: string, wire: WireChunk, signal: AbortSignal, context = '', chunkIndex?: number, attempt = 1): NormalizedRequest {
+export function translateRequest(client: Pick<LLMClient, 'model' | 'reasoningReserveTokens'>, system: string, wire: WireChunk, signal: AbortSignal, context = '', chunkIndex?: number, attempt = 1, followUp?: FollowUp): NormalizedRequest {
   const thinking = { ...(chunkIndex === undefined ? {} : { chunkIndex }), ...(attempt > 1 ? { baseReasoning: true } : {}) };
+  const first = { role: 'user' as const, content: context === '' ? formatWire(wire) : `${context}\n\n${formatWire(wire)}` };
   return {
     ...thinking,
     model: client.model,
     system,
-    messages: [{ role: 'user', content: context === '' ? formatWire(wire) : `${context}\n\n${formatWire(wire)}` }],
+    // The check stage's re-request: the earlier answer, then what to fix (the prompt is unchanged).
+    messages: followUp === undefined ? [first] : [first, { role: 'assistant', content: followUp.answer }, { role: 'user', content: followUp.fixes }],
     maxOutputTokens: callBudget(wire, client.reasoningReserveTokens(thinking)),
     temperature: TRANSLATE_TEMPERATURE,
     cacheHint: 'system',
@@ -226,7 +228,7 @@ export async function prepareChunk(work: ChunkWork, ctx: StageContext, memory: R
   } else {
     system = renderSystemPrompt(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
   }
-  const call: ChunkCall = (wire, attempt) => client.stream(translateRequest(client, system, wire, ctx.signal, context, work.chunk.index, attempt));
+  const call: ChunkCall = (wire, attempt, followUp) => client.stream(translateRequest(client, system, wire, ctx.signal, context, work.chunk.index, attempt, followUp));
   return { model: client.model, call, ...(neighbours === undefined ? {} : { neighbours }) };
 }
 

@@ -7,7 +7,8 @@
 //      chunk 0 (M2-D17) is what is checked where it replaced revision 1;
 //   3. re-requests the failing segments once, in one call per chunk, through the chunk's own
 //      prompt (the translate stage's call, single-pass.ts prepareChunk) with only those segments,
-//      as the parser's repair does (decision S2). A text that comes back and passes every check
+//      as the parser's repair does (decision S2), followed by the earlier answer and, per segment,
+//      what to fix (checks.ts fixesFor: the code spans, links, URLs and numbers by name; round 4). A text that comes back and passes every check
 //      replaces the shown one in place: the same revision, one attempt higher (§5.2);
 //   4. fails the rest: `segment.failed` with CHECK_MESSAGE, or the call's own error when the
 //      re-request failed as a call; either way `raw` is a CheckFailedRaw (`reason: 'check'`, the
@@ -20,10 +21,10 @@
 // Re-requests of different chunks run at once, up to the job's maxConcurrency.
 
 import type { LLMError } from '../../llm/types.ts';
-import { checkDuplicates, checkSegment, DUPLICATE_WINDOW, type CheckFailure, type CheckedSegment } from '../check/checks.ts';
+import { checkDuplicates, checkSegment, DUPLICATE_WINDOW, fixesFor, fixesMessage, type CheckFailure, type CheckedSegment } from '../check/checks.ts';
 import { copiesNeighbour } from '../parsing/duplicate.ts';
 import { rerequestSegments, type ChunkCall } from '../parsing/translate-chunk.ts';
-import { toWire, type WireSegment } from '../parsing/wire.ts';
+import { formatAnswer, toWire, type WireSegment } from '../parsing/wire.ts';
 import { defineStage, multiplex, type AnyStage } from '../runner.ts';
 import type { EngineEvent, Segment, StageContext } from '../types.ts';
 import type { CheckSummary, ChunkOutcome, ChunkWork } from '../strategies/single-pass.ts';
@@ -134,7 +135,12 @@ export function createCheckStage(strategyId: string, prepare: PrepareCall): AnyS
         const wire = toWire(group.map((r): WireSegment => ({ n: r.n, segment: r.segment })));
         const attempt = Math.max(...group.map((r) => r.attempt)) + 1;
         // No finals come from the call itself (they are checked below), so its `revision` is unused.
-        const result = yield* rerequestSegments(wire, call, { producedBy: { strategy: strategyId, stage: 'check', model }, revision: 1, role: 'translate' }, attempt);
+        const byN = new Map(group.map((r) => [r.n, r]));
+        const followUp = {
+          answer: formatAnswer(wire, (e) => byN.get(e.n)?.translation ?? ''),
+          fixes: fixesMessage(group.map((r) => ({ n: r.n, fixes: fixesFor(r.source, r.translation, failing.get(r.id) ?? []) }))),
+        };
+        const result = yield* rerequestSegments(wire, (c, a) => call(c, a, followUp), { producedBy: { strategy: strategyId, stage: 'check', model }, revision: 1, role: 'translate' }, attempt);
         for (const r of group) {
           const text = result.accepted.get(r.n);
           if (text === undefined) {

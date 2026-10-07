@@ -13,7 +13,12 @@
 //   order, so it doesn't depend on which chunk finished first. Headings and inline code are not
 //   running text: the gloss rule puts no gloss there, so a term seen only there is still unglossed.
 // A term (or a keep-as-is rendering) that is the content of a backtick span somewhere in the
-// document is shown in backticks in both snippets, so the model keeps it as code (Phase D).
+// document is shown in backticks in both snippets, so the model keeps it as code (Phase D). So is
+// a code word inside a longer term where the source writes the term that way: the brief listed
+// "bufio package → gói bufio", the source has "the `bufio` package", and the model followed the
+// list and dropped the backticks twice (Phase D round 4); the list now shows "`bufio` package →
+// gói `bufio`". A term the source only writes bare ("error handling", with `error` code
+// elsewhere) is left as it is.
 import { cyrb53 } from '../hash.ts';
 import { estimateTokens } from '../tokens.ts';
 import type { ContextProvider, ContextSnippet, GlossaryEntry, Segment } from '../types.ts';
@@ -58,27 +63,58 @@ export type GlossarySource = 'personal' | 'brief';
 /** The head of the chunk snippet listing the terms used before this chunk (no gloss for them). */
 export const USED_TERMS_HEAD = 'Glossary terms already used earlier in the document, so already glossed: write each exactly as rendered after its arrow, with no gloss and no parentheses after it, in every segment below, headings included: ';
 
-/**
- * The contents of the document's backtick spans: a glossary term equal to one is code in the
- * source, so the list shows it in backticks (Phase D: the brief listed `Cargo.toml` bare, and the
- * model followed it and dropped the backticks).
- */
-export function codeTerms(segments: readonly Segment[]): Set<string> {
-  const out = new Set<string>();
-  for (const s of segments) for (const m of s.inlineMarkup.matchAll(/`([^`]+)`/g)) out.add((m[1] ?? '').trim());
-  return out;
+/** The document's code, for showing glossary terms that are code in backticks. */
+export interface DocCode {
+  /** The contents of the document's backtick spans. */
+  spans: ReadonlySet<string>;
+  /** The document's markup, one segment per line: where a term is looked up as the source writes it. */
+  text: string;
 }
 
-/** `text` as the list shows it: in backticks when it is code in the source. */
-function shown(text: string, code: ReadonlySet<string>): string {
+const NO_CODE: DocCode = { spans: new Set(), text: '' };
+
+/**
+ * The document's code: a glossary term equal to a backtick span's content is code in the source,
+ * so the list shows it in backticks (Phase D: the brief listed `Cargo.toml` bare, and the model
+ * followed it and dropped the backticks); so is a code word inside a term, where the source writes
+ * the term with that word in backticks (round 4).
+ */
+export function codeTerms(segments: readonly Segment[]): DocCode {
+  const spans = new Set<string>();
+  for (const s of segments) for (const m of s.inlineMarkup.matchAll(/`([^`]+)`/g)) spans.add((m[1] ?? '').trim());
+  return { spans, text: segments.map((s) => s.inlineMarkup).join('\n') };
+}
+
+/** Bare occurrences of `word` (not inside backticks, not part of a longer word). */
+const bare = (word: string) => new RegExp(`(?<![\\w\`])${escapeRe(word)}(?![\\w\`])`, 'g');
+
+/** The code words of `term` the list shows in backticks: the whole term, or words the source backticks inside it. */
+function codeWords(term: string, code: DocCode): string[] {
+  const t = term.trim();
+  if (code.spans.has(t)) return [t];
+  return [...code.spans].filter((c) => c !== '' && bare(c).test(t) && code.text.includes(t.replace(bare(c), `\`${c}\``)));
+}
+
+/** `text` with `words` in backticks. */
+function marked(text: string, words: readonly string[]): string {
   const t = text.trim();
-  return code.has(t) ? `\`${t}\`` : t;
+  if (words.includes(t)) return `\`${t}\``;
+  return words.reduce((out, w) => out.replace(bare(w), `\`${w}\``), t);
+}
+
+/** A glossary entry's term and rendering as the list shows them (code in backticks). */
+function shown(e: Pick<GlossaryEntry, 'term' | 'rendering'>, code: DocCode): { term: string; rendering: string } {
+  const words = codeWords(e.term, code);
+  // A rendering that is code itself (a keep-as-is entry written another way) counts too.
+  const own = code.spans.has(e.rendering.trim()) ? [e.rendering.trim()] : [];
+  return { term: marked(e.term, words), rendering: marked(e.rendering, [...words, ...own]) };
 }
 
 /** One glossary line. Tags are neutralised: the brief's terms are model output over page text (§8). */
-export function renderGlossaryEntry(e: GlossaryEntry, from: GlossarySource = 'personal', code: ReadonlySet<string> = new Set()): string {
-  const term = neutralizeContextTags(shown(e.term, code));
-  const head = keepsTerm(e) ? `- ${term} → ${term} ${from === 'personal' ? KEEP_AS_IS_MARK : KEEP_ENGLISH_MARK}` : `- ${term} → ${neutralizeContextTags(shown(e.rendering, code))} ${RENDER_MARK}`;
+export function renderGlossaryEntry(e: GlossaryEntry, from: GlossarySource = 'personal', code: DocCode = NO_CODE): string {
+  const show = shown(e, code);
+  const term = neutralizeContextTags(show.term);
+  const head = keepsTerm(e) ? `- ${term} → ${term} ${from === 'personal' ? KEEP_AS_IS_MARK : KEEP_ENGLISH_MARK}` : `- ${term} → ${neutralizeContextTags(show.rendering)} ${RENDER_MARK}`;
   const note = e.note?.trim();
   return note ? `${head} — ${neutralizeContextTags(note)}` : head;
 }
@@ -125,10 +161,11 @@ export function runningTextBefore(segments: readonly Segment[], chunk: readonly 
 }
 
 /** The chunk snippet naming the listed terms already used before the chunk, each with its rendering. */
-export function usedTermsLine(entries: readonly Pick<GlossaryEntry, 'term' | 'rendering'>[], code: ReadonlySet<string> = new Set()): string {
+export function usedTermsLine(entries: readonly Pick<GlossaryEntry, 'term' | 'rendering'>[], code: DocCode = NO_CODE): string {
   const item = (e: Pick<GlossaryEntry, 'term' | 'rendering'>) => {
-    const term = neutralizeContextTags(shown(e.term, code));
-    return `${term} → ${keepsTerm({ term: e.term, rendering: e.rendering }) ? term : neutralizeContextTags(shown(e.rendering, code))}`;
+    const show = shown(e, code);
+    const term = neutralizeContextTags(show.term);
+    return `${term} → ${keepsTerm({ term: e.term, rendering: e.rendering }) ? term : neutralizeContextTags(show.rendering)}`;
   };
   return `${USED_TERMS_HEAD}${entries.map(item).join('; ')}`;
 }
@@ -143,7 +180,7 @@ export function fitGlossary(
   entries: readonly GlossaryEntry[],
   maxTokens: number,
   sourceOf: (e: GlossaryEntry) => GlossarySource = () => 'personal',
-  code: ReadonlySet<string> = new Set(),
+  code: DocCode = NO_CODE,
 ): { listed: GlossaryEntry[]; lines: string[]; tokens: number } {
   const listed: GlossaryEntry[] = [];
   const lines: string[] = [];

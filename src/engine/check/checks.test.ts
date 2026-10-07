@@ -10,6 +10,8 @@ import {
   checkUrls,
   codeSpans,
   crossings,
+  fixesFor,
+  fixesMessage,
   isDense,
   LENGTH_BOUNDS,
   lengthBounds,
@@ -238,6 +240,34 @@ describe('checks: neighbour duplicates (document level, M2-D19)', () => {
       { id: 'b', source: 'Some languages have garbage collection that regularly looks for no-longer-used memory.', translation: same },
     ];
     expect(checkDuplicates(far).size).toBe(0);
+  });
+});
+
+describe('checks: what the re-request asks to fix (round 4)', () => {
+  const fixes = (source: string, translation: string) => fixesFor(source, translation, checkSegment(source, translation, 'vi'));
+
+  it('names the code spans to copy, and the glosses not to add, for the live bufio case', () => {
+    const src = 'Here\'s an example from the `bufio` package\'s [link]`Scanner`[/link] type. Its `Scan` method performs the I/O.';
+    const got = fixes(src, 'Đây là ví dụ từ gói bufio (gói đệm) với kiểu [link]`Scanner`[/link]. Phương thức Scan (quét) thực hiện I/O.');
+    expect(got).toEqual([
+      'Copy these code spans byte-identical, backticks included, even where the glossary writes the term without them: `bufio`, `Scan`',
+      'Do not add explanations in parentheses after code or after the terms around it.',
+    ]);
+  });
+
+  it('names links, URLs, numbers as written, and says what to do about length, script and copies', () => {
+    expect(fixes('Read [link]the guide[/link] at https://a.io/x first.', 'Hãy đọc hướng dẫn trước.')).toEqual([
+      'Keep exactly 1 [link]…[/link] pair, in the source\'s order, each around the words that translate the linked text.',
+      'Copy these URLs byte-identical: https://a.io/x',
+    ]);
+    expect(fixes('back in the 1800s, 1,000 miles away', 'vào thế kỷ 19, cách 1.000 dặm')).toEqual(['Keep these numbers in digits, as the source writes them (do not convert or spell them out): 1800']);
+    expect(fixes('This example shows the first difference between Rust and other languages.', 'Ví dụ.')).toEqual(['Translate the whole segment: every sentence and detail, nothing left out.']);
+    expect(fixes('Do not stuff beans up your nose', 'Đừng nhét đậu麻 vào mũi')).toEqual(['Write no Han characters: only the target language, and what the source itself contains.']);
+    expect(fixesFor('a', 'b', [{ kind: 'duplicate', detail: 'copies a neighbouring translation' }])).toEqual(['Your translation repeated a neighbouring segment\'s: translate this segment\'s own text.']);
+  });
+
+  it('builds one message, segment by segment', () => {
+    expect(fixesMessage([{ n: 2, fixes: ['A.', 'B.'] }, { n: 5, fixes: ['C.'] }])).toMatch(/failed automatic checks[\s\S]*\n\nSegment 2:\n- A\.\n- B\.\n\nSegment 5:\n- C\.$/);
   });
 });
 

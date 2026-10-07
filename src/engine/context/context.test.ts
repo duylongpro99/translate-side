@@ -153,8 +153,30 @@ describe('GlossaryProvider (personal + auto)', () => {
     expect(got[0]?.text).toContain('- `Cargo.toml` → `Cargo.toml` ');
     expect(got[0]?.text).toContain('- executor → bộ thực thi ');
     expect(got.find((s) => s.scope === 'chunk')?.text).toBe(`${USED_TERMS_HEAD}executor → bộ thực thi`);
-    expect(codeTerms(segments)).toEqual(new Set(['Cargo.toml']));
+    expect(codeTerms(segments).spans).toEqual(new Set(['Cargo.toml']));
     expect(usedTermsLine([{ term: 'Cargo.toml', rendering: '' }], codeTerms(segments))).toBe(`${USED_TERMS_HEAD}\`Cargo.toml\` → \`Cargo.toml\``);
+  });
+
+  it('shows a code word inside a term in backticks where the source writes it so, in the term and its rendering (round 4)', async () => {
+    const segments = [
+      seg('a', 'Here is an example from the `bufio` package\'s `Scanner` type. Its `Scan` method performs the I/O.'),
+      seg('b', 'The `error` type is an interface; error handling is plain code.'),
+    ];
+    const glossary = [
+      { term: 'bufio package', rendering: 'gói bufio' },
+      { term: 'Scan method', rendering: 'phương thức Scan' },
+      { term: 'Scanner', rendering: 'Scanner' },
+      { term: 'error handling', rendering: 'xử lý lỗi' },
+    ];
+    const memory = withBrief([], { ...BRIEF, glossary });
+    const got = await glossaryProvider.provide(query({ segments, chunk: segments.slice(1), memory }));
+    const list = got[0]?.text ?? '';
+    expect(list).toContain('- `bufio` package → gói `bufio` ');
+    expect(list).toContain('- `Scan` method → phương thức `Scan` ');
+    expect(list).toContain('- `Scanner` → `Scanner` ');
+    // `error` is code elsewhere, but the source writes "error handling" bare: no backticks.
+    expect(list).toContain('- error handling → xử lý lỗi ');
+    expect(usedTermsLine([{ term: 'Scan method', rendering: 'phương thức Scan' }], codeTerms(segments))).toBe(`${USED_TERMS_HEAD}\`Scan\` method → phương thức \`Scan\``);
   });
 
   it('cuts entries from the end when the list does not fit (the user\'s entries survive)', async () => {

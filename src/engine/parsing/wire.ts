@@ -54,3 +54,9 @@ export function formatWire(chunk: WireChunk): string {
   const attr = chunk.nonce === undefined ? '' : ` n="${chunk.nonce}"`;
   return chunk.segments.map((e) => `<seg id="${e.n}"${attr}>${e.segment.inlineMarkup}</seg>`).join('\n');
 }
+
+/** An answer to `chunk` in the wire format, from each segment's text (a re-request shows the model its earlier answer). */
+export function formatAnswer(chunk: WireChunk, text: (e: WireSegment) => string): string {
+  const attr = chunk.nonce === undefined ? '' : ` n="${chunk.nonce}"`;
+  return chunk.segments.map((e) => `<seg id="${e.n}"${attr}>${text(e)}</seg>`).join('\n');
+}

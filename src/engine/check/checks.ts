@@ -114,9 +114,14 @@ function trimUrl(url: string): string {
 
 /** The numbers of `text` outside code spans and URLs, as values ("1,000.5" → "1000.5", "1,2,3" → 1, 2, 3). */
 export function numbers(text: string): string[] {
+  return numberRuns(text).flatMap(numberValues);
+}
+
+/** The runs of digits and separators of `text` outside code spans and URLs, as written. */
+function numberRuns(text: string): string[] {
   let rest = withoutCode(text);
   for (const u of urls(text)) rest = rest.split(u).join(' ');
-  return (rest.match(NUMBER) ?? []).flatMap(numberValues);
+  return rest.match(NUMBER) ?? [];
 }
 
 /** One run of digits and separators as its values (see the top of the file). */
@@ -348,4 +353,55 @@ export function checkDuplicates(segments: readonly CheckedSegment[]): Map<string
     if (copiesNeighbour(s.source, s.translation, before)) out.set(s.id, { kind: 'duplicate', detail: 'copies a neighbouring translation' });
   });
   return out;
+}
+
+// ---- What the re-request tells the model (Phase D round 4) ---------------------------------------
+// The check stage's one re-request shows the model its failed answer and, per segment, exactly
+// what to fix: the code spans, links, URLs and numbers to copy, by name. A bare re-request of the
+// same prompt was seen repeating the same fault (a glossary rendering without backticks).
+
+/** What to fix in `translation` of `source`, one instruction per line, for the failures given. */
+export function fixesFor(source: string, translation: string, failures: readonly CheckFailure[]): string[] {
+  const kinds = new Set(failures.map((f) => f.kind));
+  const out: string[] = [];
+  const list = (items: readonly string[]) => items.join(', ');
+  if (kinds.has('markers') || kinds.has('code')) {
+    const have = new Set(codeSpans(translation));
+    const missing = [...new Set(codeSpans(source))].filter((c) => !have.has(c));
+    if (missing.length) out.push(`Copy these code spans byte-identical, backticks included, even where the glossary writes the term without them: ${list(missing)}`);
+    // A gloss right after code is against the gloss rule, and is where the spans went missing.
+    if (/`[^`]+`\s*\(/.test(translation) || (translation.match(/\(/g)?.length ?? 0) > (source.match(/\(/g)?.length ?? 0)) {
+      out.push('Do not add explanations in parentheses after code or after the terms around it.');
+    }
+  }
+  if (kinds.has('markers')) {
+    const a = markerCounts(source);
+    const b = markerCounts(translation);
+    if (a.link !== b.link || !linksPaired(translation)) out.push(`Keep exactly ${a.link} [link]…[/link] pair${a.link === 1 ? '' : 's'}, in the source's order, each around the words that translate the linked text.`);
+    if (asterisks(translation) < asterisks(source) || asterisks(translation) % 2 !== asterisks(source) % 2) out.push('Keep the emphasis markers (*…* and **…**) of the source around the corresponding words.');
+    if (crossings(translation) > crossings(source)) out.push('Nest the markers as the source does: a [link]…[/link] and an emphasis must not overlap.');
+    if ((translation.match(/`/g)?.length ?? 0) % 2 !== 0) out.push('Close every backtick span.');
+  }
+  if (kinds.has('url')) out.push(`Copy these URLs byte-identical: ${list([...new Set(urls(source))].filter((u) => !translation.includes(u)))}`);
+  if (kinds.has('number')) {
+    const have = new Set(numbers(translation));
+    const runs = [...new Set(numberRuns(source))].filter((r) => numberValues(r).some((v) => !have.has(v)));
+    out.push(`Keep these numbers in digits, as the source writes them (do not convert or spell them out): ${list(runs)}`);
+  }
+  for (const f of failures) {
+    if (f.kind === 'length') {
+      out.push(f.detail.includes('runaway') ? 'Translate only this segment: no notes, explanations or repetition.' : 'Translate the whole segment: every sentence and detail, nothing left out.');
+    } else if (f.kind === 'script') {
+      out.push(`Write no ${f.detail.replace(/ text \(.*$/, '')} characters: only the target language, and what the source itself contains.`);
+    } else if (f.kind === 'duplicate') {
+      out.push('Your translation repeated a neighbouring segment\'s: translate this segment\'s own text.');
+    }
+  }
+  return out;
+}
+
+/** The follow-up message of a re-request: what failed, per segment (wire id). */
+export function fixesMessage(items: readonly { n: number; fixes: readonly string[] }[]): string {
+  const head = 'Your translations of the segments below failed automatic checks. Translate each of them again from its source, fixing what is listed and following every rule. Output only these segments, as <seg id="N">…</seg> with the same opening tags as in my first message, and nothing else.';
+  return [head, ...items.map((i) => [`Segment ${i.n}:`, ...i.fixes.map((f) => `- ${f}`)].join('\n'))].join('\n\n');
 }

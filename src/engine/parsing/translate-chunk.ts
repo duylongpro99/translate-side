@@ -25,7 +25,16 @@ import { SegParser, type ParseResult } from './seg-parser.ts';
 import { toWire, type WireChunk, type WireSegment } from './wire.ts';
 
 /** Sends `chunk` and returns the stream. `attempt` is 1 for the first pass, 2 for the repair. */
-export type ChunkCall = (chunk: WireChunk, attempt: number) => AsyncIterable<NormalizedEvent>;
+/**
+ * The check stage's re-request (Phase D round 4): the earlier answer to the chunk and what to fix,
+ * sent after the chunk as an assistant turn and a user turn.
+ */
+export interface FollowUp {
+  answer: string;
+  fixes: string;
+}
+
+export type ChunkCall = (chunk: WireChunk, attempt: number, followUp?: FollowUp) => AsyncIterable<NormalizedEvent>;
 
 export interface TranslateChunkOptions {
   producedBy: { strategy: string; stage: string; model: string };
