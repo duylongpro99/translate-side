@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import type { Segment } from '@/engine/index';
+import type { LLMClient } from '@/llm/types';
 import { translatorClient } from '@/engine/testing';
 import { GEMINI_PROFILE } from '@/shared/settings';
 import type { SessionHooks } from './controller.ts';
@@ -303,6 +304,64 @@ describe('translator wiring (plan M1-E8)', () => {
       await settle(80);
       expect(r.analyzeCalls()).toBe(2);
       stop2();
+    });
+
+    it('a tab coming back with the same settings detects nothing again and sends nothing (review)', async () => {
+      const f = fakeApi();
+      let detections = 0;
+      const detector = { detect: async () => (detections++, [{ detectedLanguage: 'en', confidence: 0.95 }]) };
+      const r = recording();
+      const t = createTranslator(f.api, { translateClient: r.resolve }, { detector });
+      const hooks = t.hooks as Required<SessionHooks>;
+      hooks.active(1);
+      hooks.ready(1, 'd', result);
+      f.answer();
+      await settle(80);
+      expect(t.jobs.get(1)?.status).toBe('done');
+      const seen = detections;
+      const sent = r.translateCalls().length;
+      expect(seen).toBeGreaterThan(0);
+      for (const tab of [2, 1, 2, 1]) {
+        hooks.active(tab);
+        f.answer();
+        await settle(20);
+      }
+      expect(detections).toBe(seen);
+      expect(r.translateCalls().length).toBe(sent);
+    });
+
+    it('never restarts a job the user cancelled, on a settings change or when its tab is back (review)', async () => {
+      const f = fakeApi();
+      const hanging: LLMClient = {
+        model: 'm',
+        reasoningReserveTokens: 0,
+        // eslint-disable-next-line require-yield
+        async *stream(req) {
+          await new Promise((_, reject) => req.signal.addEventListener('abort', () => reject(req.signal.reason), { once: true }));
+        },
+      };
+      let resolved = 0;
+      const t = createTranslator(f.api, { translateClient: () => (resolved++, Promise.resolve({ ok: true as const, client: hanging, profile: GEMINI_PROFILE })) });
+      const hooks = t.hooks as Required<SessionHooks>;
+      const stop = t.watch(() => 1);
+      hooks.active(1);
+      hooks.ready(1, 'd', result);
+      f.answer();
+      await settle(40);
+      expect(t.jobs.get(1)?.status).toBe('running');
+      t.jobs.cancel(1);
+      expect(t.jobs.get(1)?.status).toBe('cancelled');
+      const before = resolved;
+      f.setGlossary([{ term: 'deploy', rendering: 'deploy' }]);
+      f.answer();
+      await settle(40);
+      hooks.active(2);
+      hooks.active(1);
+      f.answer();
+      await settle(40);
+      expect(t.jobs.get(1)?.status).toBe('cancelled');
+      expect(resolved).toBe(before);
+      stop();
     });
   });
 });

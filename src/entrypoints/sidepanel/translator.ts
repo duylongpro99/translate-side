@@ -58,8 +58,14 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     return { doc: keep.size ? { ...base, keep } : base, skip: !left && segments.some((s) => s.translate) };
   };
 
-  const begin = (tabId: number, docId: string, prepared: { doc: JobDoc; skip: boolean }, opts?: { keepCost?: boolean; keepBrief?: boolean }) =>
-    prepared.skip ? jobs.skip(tabId, docId, prepared.doc) : jobs.start(tabId, docId, prepared.doc, opts);
+  /** The raw settings (prefs + personal glossary) each tab's job was built from, to skip detection when nothing changed. */
+  const used = new Map<number, string>();
+  const settingsKey = (settings: Settings) => JSON.stringify([settings.prefs, settings.glossary]);
+
+  const begin = (tabId: number, docId: string, prepared: { doc: JobDoc; skip: boolean }, settings: Settings, opts?: { keepCost?: boolean; keepBrief?: boolean }) => {
+    used.set(tabId, settingsKey(settings));
+    return prepared.skip ? jobs.skip(tabId, docId, prepared.doc) : jobs.start(tabId, docId, prepared.doc, opts);
+  };
 
   /** The document each tab's session holds now: a job starts only for a page that is still there. */
   const live = new Map<number, string>();
@@ -71,30 +77,38 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
    * total (review E-R3), and the brief stays when the target language is the same (plan M2 §7
    * demo 4–5). Called on a settings change for the active tab, and when a tab becomes active, so
    * an edit made in the options tab applies once the page's tab is back in front.
+   *
+   * Cheap when nothing changed: the raw settings are compared first, and the page's language is
+   * detected again only when they differ (review). A job the user cancelled is never restarted.
    */
   const refresh = (tabId: number) => {
     const current = jobs.docFor(tabId);
     if (current === undefined) return;
     const { doc, docId } = current;
-    void readSettings(api)
-      .then((settings) => docFor(settings, doc.url, doc.title, doc.pageLang, doc.segments))
-      .then((next) => {
-        const languages = next.doc.targetLang !== doc.targetLang || next.doc.sourceLang !== doc.sourceLang;
-        const output = next.doc.style !== doc.style || next.doc.gloss !== doc.gloss || JSON.stringify(next.doc.glossary) !== JSON.stringify(doc.glossary ?? []);
-        if (!languages && !output) return;
-        if (isLive(tabId, docId) && jobs.docOf(tabId) === docId) void begin(tabId, docId, next, { keepCost: true, keepBrief: !languages });
-      });
+    const stillThere = () => isLive(tabId, docId) && jobs.docOf(tabId) === docId && jobs.get(tabId)?.status !== 'cancelled';
+    if (!stillThere()) return;
+    void readSettings(api).then(async (settings) => {
+      if (settingsKey(settings) === used.get(tabId)) return;
+      const next = await docFor(settings, doc.url, doc.title, doc.pageLang, doc.segments);
+      const languages = next.doc.targetLang !== doc.targetLang || next.doc.sourceLang !== doc.sourceLang;
+      const output = next.doc.style !== doc.style || next.doc.gloss !== doc.gloss || JSON.stringify(next.doc.glossary) !== JSON.stringify(doc.glossary ?? []);
+      if (!languages && !output) {
+        // Same job either way (e.g. an unrelated preference): no detection next time.
+        used.set(tabId, settingsKey(settings));
+        return;
+      }
+      if (stillThere()) void begin(tabId, docId, next, settings, { keepCost: true, keepBrief: !languages });
+    });
   };
 
   const hooks: SessionHooks = {
     ready(tabId, docId, result) {
       live.set(tabId, docId);
-      void readSettings(api)
-        .then((settings) => docFor(settings, result.url, result.title, result.lang, result.segments))
-        .then((prepared) => {
-          // The page may have gone, or the tab closed, while the settings were read (review E-R1).
-          if (isLive(tabId, docId)) void begin(tabId, docId, prepared);
-        });
+      void readSettings(api).then(async (settings) => {
+        const prepared = await docFor(settings, result.url, result.title, result.lang, result.segments);
+        // The page may have gone, or the tab closed, while the settings were read (review E-R1).
+        if (isLive(tabId, docId)) void begin(tabId, docId, prepared, settings);
+      });
     },
     gone: (tabId) => {
       live.delete(tabId);
@@ -102,6 +116,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     },
     closed: (tabId) => {
       live.delete(tabId);
+      used.delete(tabId);
       jobs.drop(tabId);
     },
     active: (tabId) => {
