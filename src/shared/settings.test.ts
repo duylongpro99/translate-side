@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { PRICES, costUsd as harnessCost, type Price } from '../../scripts/eval/pricing.ts';
 import { costUsd, formatUsd } from './cost.ts';
+import { APIBOX_DEEPSEEK_QUIRKS } from '@/llm/presets';
 import {
+  APIBOX_CONNECTION,
+  APIBOX_PROFILE,
+  DEFAULT_CONNECTION,
+  DEFAULT_HOST,
+  DEFAULT_ORIGIN,
+  DEFAULT_PROFILE,
   GEMINI_CONNECTION,
   GEMINI_ORIGIN,
   GEMINI_PROFILE,
@@ -55,19 +62,32 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
     expect(originPattern(GEMINI_CONNECTION.baseUrl)).toBe(GEMINI_ORIGIN);
   });
 
-  it("prices the profile exactly as the harness does (scripts/eval/pricing.ts)", () => {
-    const p = PRICES[GEMINI_PROFILE.model];
-    expect(p).toBeDefined();
-    expect(GEMINI_PROFILE.pricing).toEqual({ inPerM: p?.input, cachedInPerM: p?.cachedInput, outPerM: p?.output });
+  it('defaults to APIBOX with ds/deepseek-flash, thinking off; origin and host come from the base URL (M2-D11, M2-D13)', () => {
+    expect(DEFAULT_CONNECTION).toBe(APIBOX_CONNECTION);
+    expect(DEFAULT_PROFILE).toBe(APIBOX_PROFILE);
+    expect(APIBOX_CONNECTION).toMatchObject({ protocol: 'openai-chat', baseUrl: 'https://api.ai-box.vn/v1', auth: { style: 'bearer' } });
+    expect(APIBOX_CONNECTION.quirks).toEqual({ reasoning: { control: 'effort', lowest: 'off', reserveTokens: 0 } });
+    expect(APIBOX_CONNECTION.quirks).toBe(APIBOX_DEEPSEEK_QUIRKS);
+    expect(APIBOX_PROFILE).toMatchObject({ model: 'ds/deepseek-flash', maxConcurrency: 2, connectionId: APIBOX_CONNECTION.id });
+    expect(DEFAULT_ORIGIN).toBe('https://api.ai-box.vn/*');
+    expect(DEFAULT_HOST).toBe('api.ai-box.vn');
+  });
+
+  it("prices each profile exactly as the harness does (scripts/eval/pricing.ts)", () => {
     const u = { input: 3340, cachedInput: 1000, output: 2868 };
-    expect(costUsd(GEMINI_PROFILE.pricing, u)).toBeCloseTo(harnessCost(p as Price, u), 15);
+    for (const profile of [GEMINI_PROFILE, APIBOX_PROFILE]) {
+      const p = PRICES[profile.model];
+      expect(p).toBeDefined();
+      expect(profile.pricing).toEqual({ inPerM: p?.input, cachedInPerM: p?.cachedInput, outPerM: p?.output });
+      expect(costUsd(profile.pricing, u)).toBeCloseTo(harnessCost(p as Price, u), 15);
+    }
     expect(costUsd(undefined, u)).toBeUndefined();
   });
 
   it('routes translate, and analyze to the translate profile (stub)', () => {
-    expect(resolveProfile('translate').profile).toBe(GEMINI_PROFILE);
+    expect(resolveProfile('translate')).toEqual({ profile: APIBOX_PROFILE, connection: APIBOX_CONNECTION });
     // §4.3.1: an unset analyze route defaults to translate.
-    expect(resolveProfile('analyze').profile).toBe(GEMINI_PROFILE);
+    expect(resolveProfile('analyze').profile).toBe(APIBOX_PROFILE);
     expect(() => resolveProfile('review')).toThrow(/review/);
   });
 

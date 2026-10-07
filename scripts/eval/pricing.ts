@@ -13,6 +13,15 @@ export const PRICES: Record<string, Price> = {
   // https://ai.google.dev/gemini-api/docs/pricing, Gemini 3.5 Flash-Lite, standard tier, checked 2026-10-06
   // (supervisor's tester). Override with --price in,cached,out if the page changes.
   'gemini-3.5-flash-lite': { input: 0.3, cachedInput: 0.03, output: 2.5, verified: true },
+  // APIBOX (M2-D11), from the gateway's public https://api.ai-box.vn/api/pricing, read 2026-10-07 (pricing_version
+  // a42d372c…). It is a new-api gateway: a model ratio of 1 is $2 per million input tokens; output = input ×
+  // completion_ratio, cache reads = input × cache_ratio; group "default" ratio 1. These are the gateway's nominal USD:
+  // what a quota dollar costs at top-up is set by the gateway (its /api/status says price 7.3, presumably CNY per
+  // dollar), so `verified: false` until the user confirms. Ratios between runs are exact either way.
+  // ds/deepseek-flash: model_ratio 0.05, completion_ratio 4, cache_ratio 0.02.
+  'ds/deepseek-flash': { input: 0.1, cachedInput: 0.002, output: 0.4, verified: false },
+  // ds/deepseek-v4-pro (the judge, M2-D13): model_ratio 0.22, completion_ratio 3, cache_ratio 0.033181818182.
+  'ds/deepseek-v4-pro': { input: 0.44, cachedInput: 0.0146, output: 1.32, verified: false },
   // The offline `--mock` run: no money is spent.
   mock: { input: 0, cachedInput: 0, output: 0, verified: true },
 };

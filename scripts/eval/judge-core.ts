@@ -1,4 +1,4 @@
-// LLM-as-judge (plan M2-E8, M2-D2): a stronger Gemini model scores each passage 1–5 on the four rubric dimensions.
+// LLM-as-judge (plan M2-E8, M2-D13): a stronger model scores each passage 1–5 on the four rubric dimensions.
 // Human scores stay the source of truth; the report puts the two side by side before the judge is used as a gate.
 import { DIMENSIONS, RUBRIC } from './rubric.ts';
 import type { LLMClient, LLMError } from '@/llm/types';
@@ -6,12 +6,12 @@ import type { JudgeFile, OutputItem } from './runs.ts';
 import { parseJudgeReply, type Scores } from './scores.ts';
 
 /**
- * Pinned judge: a fixed model ID so scores stay comparable between runs (plan §5, M2-D2). Stronger than the
- * translator (gemini-3.5-flash-lite). Probed 2026-10-06 with the project's key: the Pro models answer 429 (the key's
- * tier has no Pro allowance), 3.8/3.6/3.5 Flash answered 503 (overloaded) on every try, 3.7 Flash answered.
- * Change it only together with re-scoring the baseline. `--model` overrides for a trial.
+ * Pinned judge: a fixed model ID so scores stay comparable between runs (plan §5). User decision M2-D13:
+ * ds/deepseek-v4-pro on APIBOX, stronger than the translator (ds/deepseek-flash); it replaced gemini-3.7-flash
+ * (M2-D2), whose scores are not comparable with its own. Change it only together with re-scoring the baseline.
+ * `--model` overrides for a trial; `--provider gemini --model gemini-3.7-flash` reproduces the old judge.
  */
-export const JUDGE_MODEL = 'gemini-3.7-flash';
+export const JUDGE_MODEL = 'ds/deepseek-v4-pro';
 export const JUDGE_PROMPT_ID = 'judge@1';
 
 export function judgeSystemPrompt(targetLang: string): string {

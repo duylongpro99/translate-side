@@ -17,7 +17,11 @@ export interface RunSummary {
   run: string;
   set?: string;
   strategy?: string;
+  /** The strategy's version (review, M2 Phase C on). */
+  strategyVersion?: number;
   prompt?: string;
+  /** 12 hex digits of SHA-256 over the translate system prompt rendered with no context (run.ts). */
+  promptHash?: string;
   /** Every prompt version the run sent, by role (M2 Phase B on); `prompt` is the translate one. */
   prompts?: Record<string, string>;
   label: string;

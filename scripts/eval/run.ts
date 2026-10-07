@@ -2,7 +2,7 @@
 // fixture documents in fixtures/docs, with a real model (or `--mock`). Writes one folder per run:
 // <slug>.output.json (source + translation per segment), calls.jsonl (every request/response),
 // summary.json and summary.md (tokens, wall time and cost per document, segment loss, repairs).
-// Run: pnpm run eval -- [--provider gemini|anthropic] [--model id] [--docs a,b] [--mock]
+// Run: pnpm run eval -- [--provider apibox|gemini|anthropic] [--model id] [--docs a,b] [--mock]
 //      [--set fixtures|eval] [--strategy single-pass|contextual] [--probe-nonce] [--chunk-tokens n]
 //      [--concurrency n] [--target vi] [--price in,cached,out]
 //      [--prompt translate@1|translate@2] [--style natural|faithful|simplified] [--gloss first|off]
@@ -14,12 +14,17 @@
 // `--prompt translate@1` runs contextual as Phase B did. single-pass stays on translate@1 (the
 // frozen baseline). `--style`, `--gloss` and `--glossary` (term, or term=rendering; a bare term is
 // "keep as is") are the job options the panel takes from the settings (M2-E6).
+// Providers (M2-D11, M2-D13): `apibox` (default; AIBOX_API_KEY, ds/deepseek-flash, thinking off),
+// `gemini` (GEMINI_API_KEY, gemini-3.5-flash-lite: the historical baseline), `anthropic`.
+// summary.json records `promptHash` (the translate system prompt rendered with no context, so a
+// rule edited in place shows as a new hash) and `strategyVersion`.
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
+import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
 import type { LLMClient, ResolvedConnection, StopReason } from '@/llm/types';
-import { ANALYZE_PROMPT_ID, chunkLimits, chunkSegments, createContextual, CONTEXTUAL_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, TRANSLATE_V2_PROMPT_ID, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, SINGLE_PASS_ID, toWire, renderSystemPrompt, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type Segment, type StyleMode, type TranslationJob } from '@/engine/index';
+import { ANALYZE_PROMPT_ID, chunkLimits, chunkSegments, createContextual, CONTEXTUAL_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, TRANSLATE_V2_PROMPT_ID, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, SINGLE_PASS_ID, toWire, renderSystemPrompt, renderSystemPromptV2, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type Segment, type StyleMode, type TranslationJob } from '@/engine/index';
 import type { ModelRole } from '@/llm/types';
 import { costUsd, priceFor } from './pricing.ts';
 import { EVAL_SLUGS } from './docs.ts';
@@ -33,7 +38,7 @@ const { values: opt } = parseArgs({
   // pnpm passes a literal `--` through.
   args: process.argv.slice(2).filter((a) => a !== '--'),
   options: {
-    provider: { type: 'string', default: 'gemini' },
+    provider: { type: 'string', default: 'apibox' },
     model: { type: 'string' },
     docs: { type: 'string' },
     // `eval`: the M2-E8 passages in eval/passages instead of fixtures/docs.
@@ -107,15 +112,21 @@ function connection(): { client: LLMClient; label: string } {
     };
     return { client: c, label: 'mock' };
   }
-  const gemini = opt.provider === 'gemini';
-  const key = process.env[gemini ? 'GEMINI_API_KEY' : 'ANTHROPIC_API_KEY'];
-  if (!key) throw new Error(`${gemini ? 'GEMINI_API_KEY' : 'ANTHROPIC_API_KEY'} is not set (.env or the environment)`);
-  const conn: ResolvedConnection = gemini
-    ? { id: 'eval-gemini', protocol: 'openai-chat', baseUrl: GEMINI_OPENAI_BASE_URL, auth: { style: 'bearer' }, apiKey: key, quirks: {}, hasHostPermission: async () => true }
-    : { id: 'eval-anthropic', protocol: 'anthropic-messages', baseUrl: 'https://api.anthropic.com', auth: { style: 'x-api-key' }, apiKey: key, quirks: {}, hasHostPermission: async () => true };
-  const model = opt.model ?? (gemini ? 'gemini-3.5-flash-lite' : 'claude-haiku-4-5-20251001');
+  const preset = PROVIDERS[opt.provider as string];
+  if (preset === undefined) throw new Error(`--provider expects ${Object.keys(PROVIDERS).join(', ')}`);
+  const key = process.env[preset.keyName];
+  if (!key) throw new Error(`${preset.keyName} is not set (.env or the environment)`);
+  const conn: ResolvedConnection = { id: `eval-${opt.provider}`, ...preset.conn, apiKey: key, hasHostPermission: async () => true };
+  const model = opt.model ?? preset.model;
   return { client: createClient(conn, model), label: `${opt.provider}/${model}` };
 }
+
+/** The live providers: where the key is read, the connection, the default model (M2-D11, M2-D13). */
+const PROVIDERS: Record<string, { keyName: string; conn: Pick<ResolvedConnection, 'protocol' | 'baseUrl' | 'auth' | 'quirks'>; model: string }> = {
+  apibox: { keyName: 'AIBOX_API_KEY', conn: { protocol: 'openai-chat', baseUrl: APIBOX_BASE_URL, auth: { style: 'bearer' }, quirks: APIBOX_DEEPSEEK_QUIRKS }, model: 'ds/deepseek-flash' },
+  gemini: { keyName: 'GEMINI_API_KEY', conn: { protocol: 'openai-chat', baseUrl: GEMINI_OPENAI_BASE_URL, auth: { style: 'bearer' }, quirks: {} }, model: 'gemini-3.5-flash-lite' },
+  anthropic: { keyName: 'ANTHROPIC_API_KEY', conn: { protocol: 'anthropic-messages', baseUrl: 'https://api.anthropic.com', auth: { style: 'x-api-key' }, quirks: {} }, model: 'claude-haiku-4-5-20251001' },
+};
 
 /** Records every call of the wrapped client, so the nonce rate and the repairs can be read back. */
 function recording(inner: LLMClient, calls: CallRecord[], doc: () => string, role?: ModelRole): LLMClient {
@@ -176,7 +187,20 @@ fs.mkdirSync(outDir, { recursive: true });
 const calls: CallRecord[] = [];
 let current = '';
 // One recording client per role, as the shell routes them (analyze defaults to translate, §4.3.1).
-const engine = createEngine({ llm: (role) => recording(baseClient, calls, () => current, role), now: Date.now, sleep, strategies: [singlePass, createContextual(TRANSLATE_PROMPT)], prompts: createDefaultPromptRegistry() });
+const strategies = [singlePass, createContextual(TRANSLATE_PROMPT)];
+const registry = createDefaultPromptRegistry();
+const engine = createEngine({ llm: (role) => recording(baseClient, calls, () => current, role), now: Date.now, sleep, strategies, prompts: registry });
+/**
+ * The translate system prompt as this run renders it with no context (English source, the run's
+ * target, style and gloss setting): a rule changed in place, under the same prompt id, gets a new
+ * hash (review). 12 hex digits of SHA-256.
+ */
+const promptHash = (() => {
+  const render = registry.get(TRANSLATE_PROMPT).render;
+  const system = TRANSLATE_PROMPT === TRANSLATE_PROMPT_ID ? renderSystemPrompt(render, { sourceLang: 'en', targetLang: opt.target as string, style: STYLE }) : renderSystemPromptV2(render, { sourceLang: 'en', targetLang: opt.target as string, style: STYLE, gloss: GLOSS, snippets: [] });
+  return createHash('sha256').update(system).digest('hex').slice(0, 12);
+})();
+const strategyVersion = strategies.find((st) => st.id === STRATEGY)?.version;
 const chunkTokens = Number(opt['chunk-tokens']);
 
 interface DocResult {
@@ -389,7 +413,7 @@ const nonce = probes.length ? { echoed: probes.reduce((n, p) => n + p.echoed, 0)
 const briefs = results.flatMap((r) => (r.brief ? [r.brief] : []));
 // M2-D9: one-chunk documents make no brief call (`skipped`); they are counted apart.
 const briefTotals = briefs.length ? { docs: briefs.length, ok: briefs.filter((b) => b.ok).length, skipped: briefs.filter((b) => b.skipped).length, input: briefs.reduce((n, b) => n + b.input, 0), output: briefs.reduce((n, b) => n + b.output, 0), costUsd: price ? costUsd(price, { input: briefs.reduce((n, b) => n + b.input, 0), cachedInput: 0, output: briefs.reduce((n, b) => n + b.output, 0) }) : null } : null;
-const summary = { run: stamp, set: opt.set, strategy: STRATEGY, prompt: TRANSLATE_PROMPT, prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, label, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
+const summary = { run: stamp, set: opt.set, strategy: STRATEGY, strategyVersion, prompt: TRANSLATE_PROMPT, promptHash, prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, label, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
 fs.writeFileSync(path.join(outDir, 'summary.json'), `${JSON.stringify(summary, null, 1)}\n`);
 const money = (n: number | null): string => (n === null ? 'n/a' : `$${n.toFixed(5)}`);
 const md = [

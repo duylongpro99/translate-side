@@ -1,8 +1,10 @@
-// Settings v0 (plan M1-E9, user decision M1-D13): one hard-wired Gemini connection and its model
-// profile, the API key in storage.local under `secret:<connectionId>` (DESIGN.md §4.3.4), and the
-// target and source languages. Provider choice, presets, Test connection and routing are M4.
+// Settings v0 (plan M1-E9, user decision M1-D13): one hard-wired connection and its model profile,
+// the API key in storage.local under `secret:<connectionId>` (DESIGN.md §4.3.4), and the target and
+// source languages. The default is APIBOX with ds/deepseek-flash (M2-D11, M2-D13); the Gemini preset
+// stays defined. Provider choice, presets, Test connection and routing are M4.
 import type { browser } from 'wxt/browser';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
+import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, GEMINI_OPENAI_BASE_URL } from '@/llm/presets';
 import type { ModelRole, Protocol, AuthStyle, Quirks, ResolvedConnection } from '@/llm/types';
 
 type Browser = typeof browser;
@@ -34,12 +36,12 @@ export const GEMINI_CONNECTION: ProviderConnection = {
   label: 'Google Gemini',
   presetId: 'gemini',
   protocol: 'openai-chat',
-  baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+  baseUrl: GEMINI_OPENAI_BASE_URL,
   auth: { style: 'bearer' },
   quirks: {},
 };
 
-/** The origin pattern the extension asks for when the key is saved (§4.3.3 step 3, §8). */
+/** The Gemini connection's origin pattern (§4.3.3 step 3, §8). */
 export const GEMINI_ORIGIN = 'https://generativelanguage.googleapis.com/*';
 
 export const GEMINI_PROFILE: ModelProfile = {
@@ -53,11 +55,40 @@ export const GEMINI_PROFILE: ModelProfile = {
   pricing: { inPerM: 0.3, cachedInPerM: 0.03, outPerM: 2.5 },
 };
 
-/** §4.3.1 Routing, stubbed: `analyze` is unset, so it defaults to `translate` (§4.3.1); `review` is M7. */
-export const ROUTING: { translate: string; analyze?: string } = { translate: GEMINI_PROFILE.id };
+export const APIBOX_CONNECTION: ProviderConnection = {
+  id: 'apibox',
+  label: 'APIBOX',
+  presetId: 'apibox',
+  protocol: 'openai-chat',
+  baseUrl: APIBOX_BASE_URL,
+  auth: { style: 'bearer' },
+  // DeepSeek thinks by default and the thinking eats max_tokens: switched off (src/llm/presets.ts).
+  quirks: APIBOX_DEEPSEEK_QUIRKS,
+};
 
-const PROFILES = new Map([[GEMINI_PROFILE.id, GEMINI_PROFILE]]);
-const CONNECTIONS = new Map([[GEMINI_CONNECTION.id, GEMINI_CONNECTION]]);
+export const APIBOX_PROFILE: ModelProfile = {
+  id: 'apibox-deepseek-flash',
+  connectionId: APIBOX_CONNECTION.id,
+  model: 'ds/deepseek-flash',
+  maxConcurrency: 2,
+  chunkTokens: 1200,
+  // scripts/eval/pricing.ts (the gateway's nominal USD, unverified); a test keeps the two equal.
+  pricing: { inPerM: 0.1, cachedInPerM: 0.002, outPerM: 0.4 },
+};
+
+/** The connection and profile the extension uses (M2-D11, M2-D13). */
+export const DEFAULT_CONNECTION = APIBOX_CONNECTION;
+export const DEFAULT_PROFILE = APIBOX_PROFILE;
+/** The origin pattern the extension asks for when the key is saved (§4.3.3 step 3, §8), from the base URL. */
+export const DEFAULT_ORIGIN = originPattern(DEFAULT_CONNECTION.baseUrl);
+/** "api.ai-box.vn": how the settings and the panel name the host they need access to. */
+export const DEFAULT_HOST = new URL(DEFAULT_CONNECTION.baseUrl).hostname;
+
+/** §4.3.1 Routing, stubbed: `analyze` is unset, so it defaults to `translate` (§4.3.1); `review` is M7. */
+export const ROUTING: { translate: string; analyze?: string } = { translate: DEFAULT_PROFILE.id };
+
+const PROFILES = new Map([GEMINI_PROFILE, APIBOX_PROFILE].map((p) => [p.id, p]));
+const CONNECTIONS = new Map([GEMINI_CONNECTION, APIBOX_CONNECTION].map((c) => [c.id, c]));
 
 /** §4.3.5 Resolve, M1 stub: no site overrides and no tab override yet. */
 export function resolveProfile(role: ModelRole): { profile: ModelProfile; connection: ProviderConnection } {

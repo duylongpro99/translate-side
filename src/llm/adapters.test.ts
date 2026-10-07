@@ -4,6 +4,7 @@ import { fakeSleep } from '../engine/testing.ts';
 import { createAnthropicAdapter } from './anthropic.ts';
 import { bindClient, createAdapter, createClient } from './client.ts';
 import { createOpenAIAdapter } from './openai.ts';
+import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS } from './presets.ts';
 import { anthropicStream, connection, mockFetch, openaiStream, sse, withOverrides, type Overrides, type ScriptedResponse } from './testing.ts';
 import type { LLMClient, NormalizedEvent, NormalizedRequest, ProtocolAdapter, ResolvedConnection } from './types.ts';
 
@@ -394,6 +395,17 @@ describe('openai-chat adapter (wire details)', () => {
     const f = mockFetch([{ status: 200, body: openaiStream({ text: ['{}'] }) }]);
     await collect(createOpenAIAdapter({ fetch: f.fetch }).stream(conn({ quirks: { reasoning: { control: 'effort', lowest: 'off', reserveTokens: 0 } } }), request('m', { jsonMode: true })));
     expect(f.requests[0]?.body).toMatchObject({ reasoning_effort: 'none', response_format: { type: 'json_object' } });
+  });
+
+  it('APIBOX DeepSeek preset (M2-D11): thinking off, no reserve; a reasoning_content delta is never text', async () => {
+    const f = mockFetch([{ status: 200, body: sse([{ data: JSON.stringify({ choices: [{ index: 0, delta: { role: 'assistant', reasoning_content: 'thinking <seg>' }, finish_reason: null }] }) }, { data: JSON.stringify({ choices: [{ index: 0, delta: { content: 'Xin chào' }, finish_reason: 'stop' }] }) }, { data: JSON.stringify({ choices: [], usage: { prompt_tokens: 21, completion_tokens: 14 } }) }, { data: '[DONE]' }]) }]);
+    const c = conn({ baseUrl: APIBOX_BASE_URL, quirks: { ...APIBOX_DEEPSEEK_QUIRKS } });
+    const events = await collect(createOpenAIAdapter({ fetch: f.fetch }).stream(c, request('ds/deepseek-flash', { temperature: 0.2 })));
+    expect(f.requests[0]?.url).toBe('https://api.ai-box.vn/v1/chat/completions');
+    expect(f.requests[0]?.body).toMatchObject({ model: 'ds/deepseek-flash', reasoning_effort: 'none', temperature: 0.2, stream_options: { include_usage: true } });
+    expect(events.filter((e) => e.type === 'text')).toEqual([{ type: 'text', delta: 'Xin chào' }]);
+    expect(events).toContainEqual({ type: 'usage', input: 21, output: 14 });
+    expect(bindClient(createOpenAIAdapter({ fetch: f.fetch }), c, 'ds/deepseek-flash').reasoningReserveTokens).toBe(0);
   });
 
   it('§4.2.4: a 400 about max_tokens flips to max_completion_tokens, resends once, and saves the quirk on the connection', async () => {

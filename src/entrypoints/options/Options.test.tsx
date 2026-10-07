@@ -2,7 +2,7 @@
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { GEMINI_ORIGIN, GLOSSARY_KEY, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/settings';
+import { DEFAULT_CONNECTION, DEFAULT_ORIGIN, GLOSSARY_KEY, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/settings';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import { Options } from './Options.tsx';
 
@@ -48,7 +48,7 @@ beforeEach(() => {
 const flush = () => act(async () => new Promise((r) => setTimeout(r, 10)));
 
 describe('options v0 (plan M1-E9)', () => {
-  it('saves the key to storage.local, asks for the Gemini origin in the same click, and shows it masked only', async () => {
+  it('saves the key to storage.local, asks for the provider origin (from its base URL) in the same click, and shows it masked only', async () => {
     const f = fakeApi();
     act(() => render(<Options api={f.api} />, root));
     await flush();
@@ -63,9 +63,12 @@ describe('options v0 (plan M1-E9)', () => {
       (root.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     });
     // The permission request comes before any await: still inside the gesture.
-    expect(f.log[0]).toBe(`request ${GEMINI_ORIGIN}`);
+    expect(f.log[0]).toBe('request https://api.ai-box.vn/*');
+    expect(DEFAULT_ORIGIN).toBe('https://api.ai-box.vn/*');
     await flush();
-    expect(f.local.get('secret:gemini')).toBe('AIzaSyExampleKey1234');
+    expect(f.local.get(`secret:${DEFAULT_CONNECTION.id}`)).toBe('AIzaSyExampleKey1234');
+    expect(root.querySelector('#key-h')?.textContent).toBe('APIBOX');
+    expect(root.textContent).toContain('ds/deepseek-flash');
     expect(f.sync.size).toBe(0);
     expect(root.querySelector('[data-testid=masked-key]')?.textContent).toBe('AIz…1234');
     expect(root.innerHTML).not.toContain('AIzaSyExampleKey1234');
@@ -96,10 +99,10 @@ describe('options v0 (plan M1-E9)', () => {
 
   it('offers Grant access when the permission was refused', async () => {
     const f = fakeApi({ grant: false });
-    f.local.set('secret:gemini', 'AIzaSyExampleKey1234');
+    f.local.set(`secret:${DEFAULT_CONNECTION.id}`, 'AIzaSyExampleKey1234');
     act(() => render(<Options api={f.api} />, root));
     await flush();
-    expect(root.querySelector('[data-testid=access-status]')?.textContent).toContain('No access to generativelanguage.googleapis.com');
+    expect(root.querySelector('[data-testid=access-status]')?.textContent).toContain('No access to api.ai-box.vn.');
   });
 
   it('stores the target and source languages in sync', async () => {

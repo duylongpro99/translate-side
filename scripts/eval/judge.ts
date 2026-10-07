@@ -1,11 +1,13 @@
-// LLM-as-judge over a finished run: pnpm run eval:judge -- <run-dir> [--model id] [--mock] [--concurrency n] [--price in,cached,out]
+// LLM-as-judge over a finished run: pnpm run eval:judge -- <run-dir> [--provider apibox|gemini] [--model id] [--docs a,b]
+//   [--mock] [--concurrency n] [--price in,cached,out]
 // Writes <run-dir>/judge.json after every passage and resumes from it: passages already scored by the same judge model
-// are skipped, so a run cut short by a daily quota (the free Gemini tier allows ~20 requests a day per model) is finished
-// by running the command again later. Gemini only (M2-D2); key from .env (GEMINI_API_KEY). The judge model is pinned in judge-core.ts.
+// are skipped, so a run cut short by a quota is finished by running the command again later. `--docs` scores only those
+// passages (a smoke test). Provider `apibox` (default, M2-D13; AIBOX_API_KEY, thinking off) or `gemini` (GEMINI_API_KEY,
+// the old judge); keys from .env. The judge model is pinned in judge-core.ts.
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
+import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
 import type { LLMClient, ResolvedConnection } from '@/llm/types';
 import { costUsd, priceFor } from './pricing.ts';
 import { askJudge, isComplete, judgeOnce, JUDGE_MODEL, JUDGE_PROMPT_ID, judgeSystemPrompt, judgeUserPrompt, QuotaStop } from './judge-core.ts';
@@ -16,7 +18,7 @@ import { DIMENSIONS } from './rubric.ts';
 const { values: opt, positionals } = parseArgs({
   args: process.argv.slice(2).filter((a) => a !== '--'),
   allowPositionals: true,
-  options: { model: { type: 'string' }, mock: { type: 'boolean', default: false }, concurrency: { type: 'string', default: '3' }, price: { type: 'string' } },
+  options: { provider: { type: 'string', default: 'apibox' }, model: { type: 'string' }, docs: { type: 'string' }, mock: { type: 'boolean', default: false }, concurrency: { type: 'string', default: '3' }, price: { type: 'string' } },
 });
 const root = path.resolve(process.cwd());
 if (fs.existsSync(path.join(root, '.env'))) process.loadEnvFile(path.join(root, '.env'));
@@ -37,9 +39,12 @@ function client(): LLMClient {
       },
     };
   }
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error('GEMINI_API_KEY is not set (.env or the environment)');
-  const conn: ResolvedConnection = { id: 'eval-judge', protocol: 'openai-chat', baseUrl: GEMINI_OPENAI_BASE_URL, auth: { style: 'bearer' }, apiKey: key, quirks: {}, hasHostPermission: async () => true };
+  const gemini = opt.provider === 'gemini';
+  if (!gemini && opt.provider !== 'apibox') throw new Error('--provider expects apibox or gemini');
+  const keyName = gemini ? 'GEMINI_API_KEY' : 'AIBOX_API_KEY';
+  const key = process.env[keyName];
+  if (!key) throw new Error(`${keyName} is not set (.env or the environment)`);
+  const conn: ResolvedConnection = { id: 'eval-judge', protocol: 'openai-chat', baseUrl: gemini ? GEMINI_OPENAI_BASE_URL : APIBOX_BASE_URL, auth: { style: 'bearer' }, apiKey: key, quirks: gemini ? {} : APIBOX_DEEPSEEK_QUIRKS, hasHostPermission: async () => true };
   return createClient(conn, model);
 }
 
@@ -51,7 +56,8 @@ const ask = (system: string, user: string): Promise<string> => askJudge(llm, sys
 
 const prior = run.judge?.judgeModel === model && run.judge.prompt === JUDGE_PROMPT_ID ? run.judge : undefined;
 const judged: JudgeFile['scores'] = Object.fromEntries(Object.entries(prior?.scores ?? {}).filter(([id, sc]) => run.outputs[id] && isComplete(sc)));
-const ids = Object.keys(run.outputs).sort().filter((id) => !judged[id]);
+const only = opt.docs ? new Set(opt.docs.split(',')) : undefined;
+const ids = Object.keys(run.outputs).sort().filter((id) => !judged[id] && (only === undefined || only.has(id)));
 const failed: string[] = [];
 let stopped: string | undefined;
 let next = 0;

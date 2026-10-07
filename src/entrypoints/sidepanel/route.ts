@@ -1,14 +1,15 @@
 // The `translate` role → a client (DESIGN.md §4.3.5 Resolve, M1 stub; user decision M1-D13): the
-// hard-wired Gemini profile, its key from storage.local, and the host permission for its origin.
+// hard-wired profile (APIBOX by default, M2-D11), its key from storage.local, and the host
+// permission for its origin.
 import type { browser } from 'wxt/browser';
 import { createClient } from '@/llm/client';
-import { hasHostPermission, resolveConnection, resolveProfile } from '@/shared/settings';
+import { DEFAULT_CONNECTION, hasHostPermission, resolveConnection, resolveProfile } from '@/shared/settings';
 import type { ClientResult } from './jobs.ts';
 
 type Browser = typeof browser;
 
 /** Message of the "no key yet" stop: the panel shows the settings link for it. */
-export const NO_KEY_MESSAGE = 'Add your Gemini API key in settings';
+export const NO_KEY_MESSAGE = `Add your ${DEFAULT_CONNECTION.label} API key in settings`;
 
 export async function translateClient(api: Browser): Promise<ClientResult> {
   const { profile, connection } = resolveProfile('translate');

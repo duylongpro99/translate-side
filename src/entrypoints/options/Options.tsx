@@ -1,13 +1,15 @@
-// Options v0 (plan M1-E9, user decision M1-D13): the Gemini key, the target language and a
-// source-language override. One hard-wired connection; providers, presets, Test connection and
+// Options v0 (plan M1-E9, user decision M1-D13): the provider key (APIBOX by default, M2-D11), the
+// target language and a source-language override. The host-permission text and origin come from the
+// connection's base URL. One hard-wired connection; providers, presets, Test connection and
 // routing are M4 (DESIGN.md §4.3.3 A). M2-E6 adds the translation style, the gloss setting and
 // the personal glossary editor (storage.sync, with the quota guard in shared/settings.ts).
 import { useEffect, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
 import {
-  GEMINI_CONNECTION,
-  GEMINI_ORIGIN,
-  GEMINI_PROFILE,
+  DEFAULT_CONNECTION,
+  DEFAULT_HOST,
+  DEFAULT_ORIGIN,
+  DEFAULT_PROFILE,
   GLOSS_MODES,
   LANGUAGES,
   STYLES,
@@ -27,7 +29,9 @@ import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
 
 type Browser = typeof browser;
 
-const KEY_URL = 'https://aistudio.google.com/apikey';
+/** Where to get a key, per connection preset. */
+const KEY_URLS: Record<string, string> = { gemini: 'https://aistudio.google.com/apikey', apibox: 'https://api.ai-box.vn/' };
+const KEY_URL = KEY_URLS[DEFAULT_CONNECTION.presetId];
 
 function KeySection({ api }: { api: Browser }) {
   const [saved, setSaved] = useState<string | undefined>();
@@ -36,8 +40,8 @@ function KeySection({ api }: { api: Browser }) {
   const [note, setNote] = useState('');
 
   const refresh = async () => {
-    setSaved(await readApiKey(api, GEMINI_CONNECTION.id));
-    setAccess(await hasHostPermission(api, GEMINI_CONNECTION.baseUrl));
+    setSaved(await readApiKey(api, DEFAULT_CONNECTION.id));
+    setAccess(await hasHostPermission(api, DEFAULT_CONNECTION.baseUrl));
   };
   useEffect(() => {
     void refresh();
@@ -47,7 +51,7 @@ function KeySection({ api }: { api: Browser }) {
   // The permission request must be the first call in the click (a user gesture, §4.3.3 step 3):
   // no await before it.
   const requestAccess = () =>
-    api.permissions.request({ origins: [GEMINI_ORIGIN] }).then(
+    api.permissions.request({ origins: [DEFAULT_ORIGIN] }).then(
       (granted) => granted,
       () => false,
     );
@@ -58,12 +62,12 @@ function KeySection({ api }: { api: Browser }) {
     if (key === '') return;
     const granted = requestAccess();
     void (async () => {
-      await saveApiKey(api, GEMINI_CONNECTION.id, key);
+      await saveApiKey(api, DEFAULT_CONNECTION.id, key);
       // The key is stored: show it (masked) now, not once the permission prompt is answered (review E-T1).
       setSaved(key);
       setDraft('');
       const ok = await granted;
-      setNote(ok ? 'Saved.' : 'Saved, but Translate Side has no access to the Gemini API yet. Grant it below.');
+      setNote(ok ? 'Saved.' : `Saved, but Translate Side has no access to ${DEFAULT_HOST} yet. Grant it below.`);
       await refresh();
     })();
   };
@@ -72,9 +76,9 @@ function KeySection({ api }: { api: Browser }) {
   };
   const onRemove = () => {
     void (async () => {
-      await removeApiKey(api, GEMINI_CONNECTION.id);
+      await removeApiKey(api, DEFAULT_CONNECTION.id);
       // §4.3.4: removing the connection's key also gives back its host permission.
-      await api.permissions.remove({ origins: [GEMINI_ORIGIN] }).catch(() => false);
+      await api.permissions.remove({ origins: [DEFAULT_ORIGIN] }).catch(() => false);
       setNote('Key removed.');
       await refresh();
     })();
@@ -82,9 +86,10 @@ function KeySection({ api }: { api: Browser }) {
 
   return (
     <section class="opt__section" aria-labelledby="key-h">
-      <h2 id="key-h">Google Gemini</h2>
+      <h2 id="key-h">{DEFAULT_CONNECTION.label}</h2>
       <p class="opt__hint">
-        Translations use <code>{GEMINI_PROFILE.model}</code> through Gemini's OpenAI-compatible API. Other providers come in a later version.
+        Translations use <code>{DEFAULT_PROFILE.model}</code> through {DEFAULT_CONNECTION.label}'s OpenAI-compatible API at <code>{DEFAULT_HOST}</code>. Other providers come in a later
+        version.
       </p>
       <form onSubmit={onSave} class="opt__row">
         <label for="key">API key</label>
@@ -93,7 +98,7 @@ function KeySection({ api }: { api: Browser }) {
           type="password"
           autocomplete="off"
           spellcheck={false}
-          placeholder={saved ? `Saved: ${maskKey(saved)} (enter a new key to replace it)` : 'Paste your Gemini API key'}
+          placeholder={saved ? `Saved: ${maskKey(saved)} (enter a new key to replace it)` : `Paste your ${DEFAULT_CONNECTION.label} API key`}
           value={draft}
           onInput={(e) => setDraft((e.target as HTMLInputElement).value)}
         />
@@ -112,15 +117,17 @@ function KeySection({ api }: { api: Browser }) {
         ) : (
           <>
             No key yet.{' '}
-            <a href={KEY_URL} target="_blank" rel="noreferrer">
-              Get a key ↗
-            </a>
+            {KEY_URL ? (
+              <a href={KEY_URL} target="_blank" rel="noreferrer">
+                Get a key ↗
+              </a>
+            ) : null}
           </>
         )}
       </p>
       {saved && access === false ? (
         <p class="opt__status opt__status--warn" data-testid="access-status">
-          No access to generativelanguage.googleapis.com.{' '}
+          No access to {DEFAULT_HOST}.{' '}
           <button type="button" onClick={onGrant}>
             Grant access
           </button>

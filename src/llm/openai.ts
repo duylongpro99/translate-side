@@ -12,9 +12,6 @@ import type { ReasoningEffort } from 'openai/resources/shared';
 import { classifySdkError, headerOverrides, preflight, streamAttempts, type AdapterOptions, type QuirkFlip, type SdkApiError, FLIP_TEMPERATURE } from './sdk.ts';
 import type { ModelInfo, NormalizedEvent, NormalizedRequest, ProbeResult, ProtocolAdapter, Quirks, ResolvedConnection, StopReason } from './types.ts';
 
-/** Gemini's OpenAI-compatible endpoint (M1-D5). A preset in M4. */
-export const GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai';
-
 const isApiError = (e: unknown): e is SdkApiError => e instanceof APIError;
 
 /** §4.2.4 flips this adapter knows. Each applies only if the request used the parameter (toOpenAIParams). */
