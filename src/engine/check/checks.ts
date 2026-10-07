@@ -392,7 +392,11 @@ export function fixesFor(source: string, translation: string, failures: readonly
     if (f.kind === 'length') {
       out.push(f.detail.includes('runaway') ? 'Translate only this segment: no notes, explanations or repetition.' : 'Translate the whole segment: every sentence and detail, nothing left out.');
     } else if (f.kind === 'script') {
-      out.push(`Write no ${f.detail.replace(/ text \(.*$/, '')} characters: only the target language, and what the source itself contains.`);
+      // Named by the text itself: "write no Han characters" alone was seen repeating "麻烦" (round 4).
+      const name = f.detail.replace(/ text \(.*$/, '');
+      const re = SCRIPTS[name];
+      const runs = re === undefined ? [] : [...new Set(withoutCode(translation).match(new RegExp(`${re.source}+`, 'gu')) ?? [])];
+      out.push(`Replace this ${name} text with words of the target language: ${runs.map((r) => `"${r}"`).join(', ')}. Write nothing in a script the target language and the source do not use.`);
     } else if (f.kind === 'duplicate') {
       out.push('Your translation repeated a neighbouring segment\'s: translate this segment\'s own text.');
     }

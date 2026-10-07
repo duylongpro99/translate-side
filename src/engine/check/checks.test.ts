@@ -262,7 +262,9 @@ describe('checks: what the re-request asks to fix (round 4)', () => {
     ]);
     expect(fixes('back in the 1800s, 1,000 miles away', 'vào thế kỷ 19, cách 1.000 dặm')).toEqual(['Keep these numbers in digits, as the source writes them (do not convert or spell them out): 1800']);
     expect(fixes('This example shows the first difference between Rust and other languages.', 'Ví dụ.')).toEqual(['Translate the whole segment: every sentence and detail, nothing left out.']);
-    expect(fixes('Do not stuff beans up your nose', 'Đừng nhét đậu麻 vào mũi')).toEqual(['Write no Han characters: only the target language, and what the source itself contains.']);
+    expect(fixes('Hoping to head off new trouble, she added more.', 'Hy vọng ngăn chặn trước những麻烦 mới, bà nói thêm.')).toEqual([
+      'Replace this Han text with words of the target language: "麻烦". Write nothing in a script the target language and the source do not use.',
+    ]);
     expect(fixesFor('a', 'b', [{ kind: 'duplicate', detail: 'copies a neighbouring translation' }])).toEqual(['Your translation repeated a neighbouring segment\'s: translate this segment\'s own text.']);
   });
 
