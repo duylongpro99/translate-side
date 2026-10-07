@@ -1,0 +1,179 @@
+{
+ "judgeModel": "ds/deepseek-v4-pro",
+ "prompt": "judge@1",
+ "at": "2026-10-07T03:05:42.291Z",
+ "scores": {
+  "bierce-devils-dictionary": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "Bản dịch gần như đủ ý và giữ được giọng châm biếm, nhưng một số cấu trúc như “của việc nói dối”, “công việc công” còn dịch gượng; “CYNIC” thành “KẺ HOÀI NGHI” chưa truyền tải hoàn toàn sắc thái yếm thế."
+  },
+  "docker-multistage": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The meaning and technical terms are preserved well; only minor translationese remains in phrases like 'bỏ lại phía sau' and 'Dockerfile sau', which could be more idiomatic."
+  },
+  "go-errors-are-values": {
+   "fidelity": 5,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is accurate and fluent; the only minor weakness is slight stylistic amplification such as 'sôi nổi' and 'quá nhiều lần'."
+  },
+  "go-gofmt": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch trung thành và giữ được giọng nhấn mạnh; chỉ có vài chỗ hơi dịch gọn hơn được như 'những thay đổi mang tính máy móc' và 'Mã đã được gofmt định dạng thì' khiến văn phong chưa thật sự tự nhiên."
+  },
+  "go-share-memory": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch trung thành và rõ ràng; điểm yếu chính là một vài diễn đạt hơi dịch máy, chẳng hạn cụm thứ mà bất kỳ lập trình viên Go nào cũng phải đọc."
+  },
+  "go2-here-we-come": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is accurate and consistent, with only minor literal renderings such as 'quá trình suy nghĩ' and 'Sau gần 10 năm tiếp xúc' that slightly reduce naturalness."
+  },
+  "k8s-pods": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch tốt; điểm yếu chính là bỏ sót 'deployable' trong 'smallest deployable units of computing' ở đoạn [2]."
+  },
+  "mdn-closures": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "The translation is accurate and readable overall; the main weaknesses are the hybrid 'phạm vi lexical'/'môi trường lexical' phrases and the title 'Closures' being changed to singular."
+  },
+  "mdn-using-promises": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The main weakness is slight translationese in 'người tiêu thụ những promise' for 'consumers of promises', which is literal and less natural than a verbal construction like 'sử dụng promise'."
+  },
+  "pep20-zen": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "Main weaknesses are a few stiff, calqued phrases such as 'được im lặng một cách rõ ràng' and the term 'Readability' rendered as 'khả năng đọc hiểu' rather than 'tính dễ đọc'; the informal punch of 'honking great' is also flattened."
+  },
+  "rust-async-await-primer": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is faithful and consistent; the main weakness is a few slightly unnatural renderings such as 'Sự khác biệt khác' and 'phép tính đang bị treo'."
+  },
+  "rust-async-ecosystem": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is highly accurate and fluent; the main nuance shift is 'for some time' rendered as 'một thời gian dài nữa', which makes the duration sound longer than the source."
+  },
+  "rust-async-executor": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Main weaknesses are the title 'Applied' rendered as 'Đã áp dụng' and 'Future executors' turned into 'Executor Future', which is slightly off and unnatural. Otherwise the technical content and terms are preserved consistently."
+  },
+  "rust-book-ownership": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is accurate and consistent, but there is slight translationese in segment 3 ('trong việc tự nhiên viết ra...') and a minor emphasis shift at the end where 'wouldn't work as well' becomes 'sẽ không ổn chút nào'."
+  },
+  "rust-book-panic": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch trung thành và thuật ngữ nhất quán; điểm yếu chính là một vài cụm hơi gượng như 'chỗ giữ chỗ' và 'code panic', nhưng nghĩa vẫn rõ ràng."
+  },
+  "so-branch-prediction": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The main weakness is a slight over-translation in the railroad analogy: 'yell at you to flip the switch' becomes 'mắng bạn té tát vì tội không gạt cần', shifting the driver's command into a scolding for not having flipped the switch; otherwise the message is accurate."
+  },
+  "so-regex-html": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The main weakness is slight translationese and a few softened word choices (e.g. 'consume HTML' rendered as 'xử lý HTML'); the humor is mostly retained but the literary punch of the `<center>` allusion is somewhat weakened."
+  },
+  "swift-modest-proposal": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The satirical tone and meaning are well preserved; only minor translationese in phrases like 'cái tính tiêu hoang vì...' and 'có thể được nêu ra' keeps the Vietnamese from being fully idiomatic."
+  },
+  "wodehouse-jeeves": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The translation is broadly faithful and readable, but some idiomatic or humorous expressions are paraphrased rather than recreated, such as 'pretty soft snap' and 'go to par,' which slightly flattens the tone; 'bigoted' as 'cố chấp' is also a minor lexical shift."
+  },
+  "wp-beans": {
+   "fidelity": 5,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is accurate and reads naturally; only a very slight softening in rendering “don’t give ’em any ideas” as “đừng có gợi ý cho người ta,” but it does not affect meaning or tone."
+  },
+  "wp-dont-bite-newcomers": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Bản dịch trung thành và giữ được giọng điệu; điểm yếu chính là một vài cách diễn đạt hơi dịch sát hoặc chưa dùng thuật ngữ wiki thông dụng, chẳng hạn 'lùi lại' cho 'reverting' và 'dòng chảy liên tục thông tin'."
+  },
+  "wp-not-a-dictionary": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Bản dịch giữ đúng nội dung và giọng trung tính; điểm yếu chính là 'phrasebook' được dịch thành 'sổ tay thành ngữ' (nên là 'sổ tay cụm từ/đàm thoại') và một vài câu còn hơi dịch sát."
+  },
+  "wp-template-regulars": {
+   "fidelity": 5,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is accurate and idiomatic, with no notable weakness; terms such as “three-revert rule” and “Ignore All Rules” are handled consistently."
+  }
+ },
+ "failed": [],
+ "usage": {
+  "input": 36491,
+  "cachedInput": 14080,
+  "output": 93337
+ },
+ "costUsd": 0.133271248,
+ "reasoning": {
+  "effort": "medium",
+  "reserveTokens": 16000
+ }
+}
