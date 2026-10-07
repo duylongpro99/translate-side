@@ -1,0 +1,83 @@
+[
+ {
+  "id": "24xu7dcb877",
+  "kind": "p",
+  "translate": true,
+  "source": "A common point of discussion among Go programmers, especially those new to the language, is how to handle errors. The conversation often turns into a lament at the number of times the sequence",
+  "text": "Một chủ đề thường được bàn luận giữa các lập trình viên Go, đặc biệt là những người mới bắt đầu với ngôn ngữ này, là cách xử lý lỗi. Cuộc trò chuyện thường biến thành lời than phiền về số lần xuất hiện của đoạn mã",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0f6pwa101wv",
+  "kind": "code",
+  "translate": false,
+  "source": "if err != nil {\n\treturn err\n}",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "0jsacq46yht",
+  "kind": "p",
+  "translate": true,
+  "source": "shows up. We recently scanned all the open source projects we could find and discovered that this snippet occurs only once per page or two, less often than some would have you believe. Still, if the perception persists that one must type `if err != nil` all the time, something must be wrong, and the obvious target is Go itself.",
+  "text": "xuất hiện. Gần đây, chúng tôi đã quét tất cả các dự án mã nguồn mở mà chúng tôi có thể tìm thấy và phát hiện ra rằng đoạn mã này chỉ xuất hiện khoảng một hoặc hai lần trên mỗi trang, ít hơn nhiều so với những gì một số người muốn bạn tin. Tuy nhiên, nếu vẫn tồn tại quan niệm rằng ta phải gõ `if err != nil` mọi lúc, thì chắc chắn có điều gì đó không ổn, và mục tiêu hiển nhiên chính là bản thân Go.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0628atqclhx",
+  "kind": "p",
+  "translate": true,
+  "source": "This is unfortunate, misleading, and easily corrected. Perhaps what is happening is that programmers new to Go ask, \"How does one handle errors?\", learn this pattern, and stop there. In other languages, one might use a try-catch block or other such mechanism to handle errors. Therefore, the programmer thinks, when I would have used a try-catch in my old language, I will just type `if err != nil` in Go. Over time the Go code collects many such snippets, and the result feels clumsy.",
+  "text": "Điều này thật đáng tiếc, gây hiểu lầm và dễ dàng khắc phục. Có lẽ điều đang xảy ra là các lập trình viên mới học Go hỏi: \"Làm thế nào để xử lý lỗi?\", họ học mẫu hình này và dừng lại ở đó. Trong các ngôn ngữ khác, người ta có thể sử dụng khối try-catch hoặc cơ chế tương tự để xử lý lỗi. Do đó, lập trình viên nghĩ rằng, khi trước đây tôi sẽ dùng try-catch trong ngôn ngữ cũ của mình, thì bây giờ tôi chỉ cần gõ `if err != nil` trong Go. Theo thời gian, mã Go tích lũy nhiều đoạn mã như vậy, và kết quả cảm thấy vụng về.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1r2j5o4c19l",
+  "kind": "p",
+  "translate": true,
+  "source": "Regardless of whether this explanation fits, it is clear that these Go programmers miss a fundamental point about errors: *Errors are values.*",
+  "text": "Bất kể lời giải thích này có phù hợp hay không, rõ ràng là những lập trình viên Go này bỏ sót một điểm cơ bản về lỗi: *Lỗi là giá trị.*",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "11ukrk7qm5b",
+  "kind": "p",
+  "translate": true,
+  "source": "Values can be programmed, and since errors are values, errors can be programmed.",
+  "text": "Giá trị có thể được lập trình hóa, và vì lỗi là giá trị, nên lỗi cũng có thể được lập trình hóa.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1nbjt7m127q",
+  "kind": "p",
+  "translate": true,
+  "source": "Here's a simple example from the `bufio` package's [`Scanner`](https://pkg.go.dev/bufio#Scanner) type. Its `Scan` method performs the underlying I/O, which can of course lead to an error. Yet the `Scan` method does not expose an error at all. Instead, it returns a boolean, and a separate method, to be run at the end of the scan, reports whether an error occurred. Client code looks like this:",
+  "text": "Đây là một ví dụ đơn giản từ kiểu [`Scanner`](https://pkg.go.dev/bufio#Scanner) trong gói `bufio`. Phương thức `Scan` thực hiện thao tác I/O bên dưới, điều mà dĩ nhiên có thể dẫn đến lỗi. Tuy nhiên, phương thức `Scan` hoàn toàn không trả về lỗi. Thay vào đó, nó trả về một giá trị boolean, và một phương thức riêng biệt, được gọi khi quá trình quét kết thúc, báo cáo xem liệu có lỗi xảy ra hay không. Mã phía client trông như sau:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "247khvu92x8",
+  "kind": "code",
+  "translate": false,
+  "source": "scanner := bufio.NewScanner(input)\nfor scanner.Scan() {\n\ttoken := scanner.Text()\n\t// process token\n}\nif err := scanner.Err(); err != nil {\n\t// process the error\n}",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "220y5pelo9o",
+  "kind": "p",
+  "translate": true,
+  "source": "Sure, there is a nil check for an error, but it appears and executes only once. With the real API, the client's code therefore feels more natural: loop until done, then worry about errors. Error handling does not obscure the flow of control.",
+  "text": "Chắc chắn, vẫn có một phép kiểm tra nil cho lỗi, nhưng nó chỉ xuất hiện và được thực thi đúng một lần. Với API thực tế, mã của client do đó cảm thấy tự nhiên hơn: lặp cho đến khi xong, rồi lo lắng về các lỗi. Việc xử lý lỗi không làm che mờ luồng điều khiển.",
+  "attempt": 1,
+  "error": null
+ }
+]

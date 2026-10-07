@@ -1,0 +1,20 @@
+[
+ {
+  "id": "11509lki53c",
+  "kind": "p",
+  "translate": true,
+  "source": "You can't parse [X]HTML with regex. Because HTML can't be parsed by regex. Regex is not a tool that can be used to correctly parse HTML. As I have answered in HTML-and-regex questions here so many times before, the use of regex will not allow you to consume HTML. Regular expressions are a tool that is insufficiently sophisticated to understand the constructs employed by HTML. HTML is not a regular language and hence cannot be parsed by regular expressions. Regex queries are not equipped to break down HTML into its meaningful parts. Even enhanced irregular regular expressions as used by Perl are not up to the task of parsing HTML. You will never make me crack. HTML is a language of sufficient complexity that it cannot be parsed by regular expressions. Even Jon Skeet cannot parse HTML using regular expressions. Every time you attempt to parse HTML with regular expressions, the unholy child weeps the blood of virgins, and Russian hackers pwn your webapp. Parsing HTML with regex summons tainted souls into the realm of the living. HTML and regex go together like love, marriage, and ritual infanticide. The `<center>` cannot hold it is too late. The force of regex and HTML together in the same conceptual space will destroy your mind like so much watery putty.",
+  "text": "Bạn không thể phân tích cú pháp [X]HTML bằng regex. Vì HTML không thể được phân tích cú pháp bằng regex. Regex không phải là công cụ có thể dùng để phân tích cú pháp HTML một cách chính xác. Như tôi đã trả lời vô số lần trước đây trong các câu hỏi về HTML và regex, việc sử dụng regex sẽ không cho phép bạn xử lý HTML. Biểu thức chính quy là một công cụ thiếu tinh vi để hiểu các cấu trúc mà HTML sử dụng. HTML không phải là một ngôn ngữ chính quy, do đó không thể được phân tích cú pháp bằng biểu thức chính quy. Các truy vấn regex không đủ khả năng để chia nhỏ HTML thành các phần có ý nghĩa. Ngay cả những biểu thức chính quy bất thường nâng cao như được sử dụng bởi Perl cũng không đủ sức để phân tích cú pháp HTML. Bạn sẽ không bao giờ khiến tôi thay đổi quan điểm này. HTML là một ngôn ngữ đủ phức tạp đến mức không thể được phân tích cú pháp bằng biểu thức chính quy. Ngay cả Jon Skeet cũng không thể phân tích cú pháp HTML bằng biểu thức chính quy. Mỗi khi bạn cố gắng phân tích cú pháp HTML bằng biểu thức chính quy, đứa con tà ác khóc ra máu trinh nữ, và các hacker Nga chiếm quyền kiểm soát webapp của bạn. Việc phân tích cú pháp HTML bằng regex triệu hồi những linh hồn ô uế vào cõi sống. HTML và regex đi đôi với nhau như tình yêu, hôn nhân và tập tục giết trẻ sơ sinh. Thẻ `<center>` không thể chứa nổi điều đó, quá muộn rồi. Lực lượng kết hợp của regex và HTML trong cùng một không gian khái niệm sẽ phá hủy tâm trí bạn như một đống bột nhão loãng.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1gby3c4p8z8",
+  "kind": "p",
+  "translate": true,
+  "source": "Have you tried using an XML parser instead?",
+  "text": "Bạn đã thử dùng một trình phân tích XML chưa?",
+  "attempt": 1,
+  "error": null
+ }
+]

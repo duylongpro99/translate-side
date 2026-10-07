@@ -1,0 +1,92 @@
+[
+ {
+  "id": "0l2cd93bbs6",
+  "kind": "heading",
+  "translate": true,
+  "source": "Pods",
+  "text": "Pod",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0srfmoe3mj1",
+  "kind": "p",
+  "translate": true,
+  "source": "*Pods* are the smallest deployable units of computing that you can create and manage in Kubernetes.",
+  "text": "*Pod* là đơn vị triển khai nhỏ nhất trong Kubernetes mà bạn có thể tạo và quản lý.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0gwzzn1lw1r",
+  "kind": "p",
+  "translate": true,
+  "source": "A *Pod* (as in a pod of whales or pea pod) is a group of one or more containers, with shared storage and network resources, and a specification for how to run the containers. A Pod's contents are always co-located and co-scheduled, and run in a shared context. A Pod models an application-specific \"logical host\": it contains one or more application containers which are relatively tightly coupled. In non-cloud contexts, applications executed on the same physical or virtual machine are analogous to cloud applications executed on the same logical host.",
+  "text": "Một *Pod* (giống như một đàn cá voi hoặc một quả đậu) là một nhóm gồm một hoặc nhiều container, dùng chung tài nguyên lưu trữ và mạng, cùng với đặc tả về cách chạy các container đó. Nội dung của một Pod luôn được đặt cùng chỗ và lên lịch cùng lúc, chạy trong một bối cảnh chia sẻ. Một Pod mô hình hóa một \"máy chủ logic\" dành riêng cho ứng dụng: nó chứa một hoặc nhiều container ứng dụng có mối liên kết chặt chẽ với nhau. Trong các môi trường không phải đám mây, các ứng dụng chạy trên cùng một máy vật lý hoặc máy ảo tương tự như các ứng dụng đám mây chạy trên cùng một máy chủ logic.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1v7b96sntiu",
+  "kind": "p",
+  "translate": true,
+  "source": "As well as application containers, a Pod can contain init containers that run during Pod startup. You can also inject ephemeral containers for debugging a running Pod.",
+  "text": "Ngoài các container ứng dụng, một Pod cũng có thể chứa các init container chạy trong quá trình khởi động Pod. Bạn cũng có thể chèn các ephemeral container để gỡ lỗi một Pod đang chạy.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0njowdul4i9",
+  "kind": "heading",
+  "translate": true,
+  "source": "What is a Pod?",
+  "text": "Pod là gì?",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "02jf9dejjkl",
+  "kind": "p",
+  "translate": true,
+  "source": "The shared context of a Pod is a set of Linux namespaces, cgroups, and potentially other facets of isolation - the same things that isolate a container. Within a Pod's context, the individual applications may have further sub-isolations applied.",
+  "text": "Bối cảnh chia sẻ của một Pod là một tập hợp các namespace Linux, cgroup và có thể bao gồm các khía cạnh cô lập khác - giống như những thứ dùng để cô lập một container. Trong bối cảnh của một Pod, các ứng dụng riêng lẻ có thể áp dụng thêm các mức cô lập con.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0bxbr7kk3lo",
+  "kind": "p",
+  "translate": true,
+  "source": "A Pod is similar to a set of containers with shared namespaces and shared filesystem volumes.",
+  "text": "Một Pod tương tự như một nhóm các container dùng chung namespace và volume hệ thống tệp.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "210iu5cvo09",
+  "kind": "p",
+  "translate": true,
+  "source": "Pods in a Kubernetes cluster are used in two main ways:",
+  "text": "Các Pod trong một cụm Kubernetes được sử dụng theo hai cách chính:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "2852rh0qf5n",
+  "kind": "li",
+  "translate": true,
+  "source": "*Pods that run a single container*. The \"one-container-per-Pod\" model is the most common Kubernetes use case; in this case, you can think of a Pod as a wrapper around a single container; Kubernetes manages Pods rather than managing the containers directly.",
+  "text": "*Pod chạy một container duy nhất*. Mô hình \"một container cho mỗi Pod\" là trường hợp sử dụng phổ biến nhất trong Kubernetes; trong trường hợp này, bạn có thể coi một Pod như một lớp bọc quanh một container duy nhất; Kubernetes quản lý các Pod thay vì quản lý trực tiếp các container.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1a4sn5ryn2p",
+  "kind": "li",
+  "translate": true,
+  "source": "*Pods that run multiple containers that need to work together*. A Pod can encapsulate an application composed of [link]multiple co-located containers[/link] that are tightly coupled and need to share resources. These co-located containers form a single cohesive unit.",
+  "text": "*Pod chạy nhiều container cần hoạt động cùng nhau*. Một Pod có thể đóng gói một ứng dụng được cấu thành từ [link]nhiều container cùng chỗ[/link], có mối liên kết chặt chẽ và cần chia sẻ tài nguyên. Các container cùng chỗ này tạo thành một đơn vị thống nhất.",
+  "attempt": 1,
+  "error": null
+ }
+]
