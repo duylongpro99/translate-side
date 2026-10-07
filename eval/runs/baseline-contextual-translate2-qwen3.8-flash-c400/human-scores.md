@@ -65,13 +65,11 @@ CODE | }
 EN | Sure, there is a nil check for an error, but it appears and executes only once. With the real API, the client's code therefore feels more natural: loop until done, then worry about errors. Error handling does not obscure the flow of control.
 VI | Ừ thì, có một bước kiểm tra nil, nhưng nó chỉ xuất hiện và thực thi đúng một lần. Với API thực tế, code của bên gọi do đó tự nhiên hơn: lặp cho đến khi xong, rồi mới lo về lỗi. Việc xử lý lỗi không làm che mờ luồng điều khiển.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.5
+naturalness: 3.5
+tone: 4.0
+terminology: 3.5
+notes: Faithful and complete, but adds parenthetical explanations such as “kiểu quét”, “vào/ra” and an explanation of `if err != nil`; technical Vietnamese is somewhat translationese.---
 
 ## go-share-memory
 tech-blog · Share Memory By Communicating · https://go.dev/blog/codelab-share
@@ -94,13 +92,11 @@ CODE |     polling    bool
 CODE |     lastError  error
 CODE | }
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.5
+naturalness: 3.3
+tone: 4.0
+terminology: 3.3
+notes: Meaning is preserved, but “nguyên ngữ đồng thời” is an awkward rendering of concurrency primitives; several technical terms are over-translated.---
 
 ## rust-async-await-primer
 tech-blog · Async-await on stable Rust! · https://blog.rust-lang.org/2019/11/07/Async-await-stable/
@@ -140,13 +136,11 @@ VI | Sự khác biệt còn lại giữa futures trong Rust và futures trong JS
 EN | In contrast, in Rust, calling an async function does not do any scheduling in and of itself, which means that we can compose a complex nest of futures without incurring a per-future cost. As an end-user, though, the main thing you'll notice is that *futures feel "lazy"*: they don't do anything until you await them.
 VI | Ngược lại, trong Rust, việc gọi một hàm async không tự nó thực hiện bất kỳ việc lập lịch nào, nghĩa là chúng ta có thể xây dựng một cấu trúc lồng ghép phức tạp gồm nhiều futures mà không phải chịu chi phí cho từng future. Tuy nhiên, với tư cách là người dùng cuối, điều bạn sẽ nhận thấy rõ nhất là *futures có cảm giác "lazy"* (chỉ thực thi khi được yêu cầu): chúng không làm gì cho đến khi bạn await chúng.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.5
+naturalness: 3.4
+tone: 4.0
+terminology: 3.4
+notes: Good coverage of the concepts, but “bất đồng bộ - chờ”, “đối tượng tương lai”, and “chi phí bằng không” feel explanatory/literal for a developer audience.---
 
 ## rust-async-ecosystem
 tech-blog · Async-await on stable Rust! (ecosystem) · https://blog.rust-lang.org/2019/11/07/Async-await-stable/
@@ -172,13 +166,11 @@ VI | sử dụng [link]wasm-bindgen-futures[/link], bạn thậm chí có thể 
 EN | the [link]hyper library[/link] has [link]migrated[/link] to adopt standard Rust futures.
 VI | thư viện [link]hyper[/link] đã [link]chuyển đổi[/link] để áp dụng chuẩn futures của Rust.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.5
+naturalness: 3.5
+tone: 4.1
+terminology: 3.5
+notes: Names and links are preserved, but phrases such as “ổn định hóa”, “cầu nối giữa” and translated MVP terminology reduce naturalness.---
 
 ## so-branch-prediction
 tech-blog · Why is processing a sorted array faster than processing an unsorted array? · https://stackoverflow.com/a/11227902
@@ -219,13 +211,11 @@ CODE |     sum += data[c];
 EN | Notice that the data is evenly distributed between 0 and 255. When the data is sorted, roughly the first half of the iterations will not enter the if-statement. After that, they will all enter the if-statement. This is very friendly to the branch predictor since the branch consecutively goes the same direction many times.
 VI | Hãy để ý rằng dữ liệu được phân bố đều (data is evenly distributed) trong khoảng từ 0 đến 255. Khi dữ liệu đã được sắp xếp, khoảng một nửa số vòng lặp đầu tiên sẽ không đi vào câu lệnh if. Sau đó, tất cả đều sẽ đi vào câu lệnh if. Điều này rất thân thiện với bộ dự đoán nhánh vì nhánh liên tục đi cùng một hướng nhiều lần.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.5
+naturalness: 3.7
+tone: 4.1
+terminology: 3.8
+notes: The railroad analogy is conveyed well; some sentences are literal and “branch prediction” terminology could stay closer to common developer usage.---
 
 ## docker-multistage
 docs · Multi-stage builds · https://docs.docker.com/build/building/multi-stage/
@@ -274,13 +264,11 @@ VI | Kết quả cuối cùng là một hình ảnh sản xuất nhỏ gọn, ch
 EN | How does it work? The second `FROM` instruction starts a new build stage with the `scratch` image as its base. The `COPY --from=0` line copies just the built artifact from the previous stage into this new stage. The Go SDK and any intermediate artifacts are left behind, and not saved in the final image.
 VI | Nó hoạt động như thế nào? Chỉ thị `FROM` thứ hai bắt đầu một giai đoạn xây dựng mới với hình ảnh `scratch` làm cơ sở. Dòng `COPY --from=0` chỉ sao chép đối tượng đã xây dựng từ giai đoạn trước vào giai đoạn mới này. SDK Go và mọi đối tượng trung gian đều bị loại bỏ và không được lưu trong hình ảnh cuối cùng.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.7
+naturalness: 3.8
+tone: 4.1
+terminology: 3.8
+notes: Technically clear and faithful. “image”, “build”, “artifact” are mostly appropriate, though some prose remains literal.---
 
 ## k8s-pods
 docs · Pods · https://kubernetes.io/docs/concepts/workloads/pods/
@@ -315,13 +303,11 @@ VI | *Pod chạy một container duy nhất*. Mô hình một container mỗi Po
 EN | *Pods that run multiple containers that need to work together*. A Pod can encapsulate an application composed of [link]multiple co-located containers[/link] that are tightly coupled and need to share resources. These co-located containers form a single cohesive unit.
 VI | *Pod chạy nhiều container cần phối hợp với nhau*. Một Pod có thể bao chứa một ứng dụng được tạo thành từ [link]nhiều container đồng vị trí[/link] có liên kết chặt chẽ và cần chia sẻ tài nguyên. Các container đồng vị trí này tạo thành một đơn vị thống nhất.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.7
+naturalness: 3.8
+tone: 4.1
+terminology: 3.8
+notes: Strong technical fidelity; terminology is understandable but some Kubernetes wording is more translated than community-standard.---
 
 ## mdn-closures
 docs · Closures · https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures
@@ -354,13 +340,11 @@ VI | `init()` tạo ra một biến cục bộ tên là `name` và một hàm t�
 EN | If you run this code in your console, you can see that the `console.log()` statement within the `displayName()` function successfully displays the value of the `name` variable, which is declared in its parent function. This is an example of *lexical scoping*, which describes how a parser resolves variable names when functions are nested. The word *lexical* refers to the fact that lexical scoping uses the location where a variable is declared within the source code to determine where that variable is available. Nested functions have access to variables declared in their outer scope.
 VI | Nếu bạn chạy đoạn mã này trong console, bạn sẽ thấy rằng câu lệnh `console.log()` bên trong hàm `displayName()` hiển thị thành công giá trị của biến `name`, biến được khai báo trong hàm cha của nó. Đây là một ví dụ về *Phạm vi từ vựng (lexical scoping)*, mô tả cách trình phân tích cú pháp (parser) phân giải tên biến khi các hàm được lồng vào nhau. Từ *lexical* ám chỉ thực tế rằng phạm vi từ vựng sử dụng vị trí khai báo biến trong mã nguồn (source code) để xác định biến đó khả dụng ở đâu. Các hàm lồng nhau (nested functions) có quyền truy cập vào các biến được khai báo trong phạm vi ngoài của chúng.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.6
+naturalness: 3.7
+tone: 4.0
+terminology: 3.7
+notes: Concepts are preserved; several explanatory phrases sound translated rather than native technical Vietnamese.---
 
 ## mdn-using-promises
 docs · Using promises · https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises
@@ -409,13 +393,11 @@ CODE |     }, failureCallback);
 CODE |   }, failureCallback);
 CODE | }, failureCallback);
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.6
+naturalness: 3.7
+tone: 4.0
+terminology: 3.7
+notes: Faithful overall. Technical vocabulary is mostly safe, but some sentences use literal Vietnamese structure.---
 
 ## rust-async-executor
 docs · Applied: Build an Executor (Asynchronous Programming in Rust) · https://rust-lang.github.io/async-book/02_execution/04_executor.html
@@ -450,13 +432,11 @@ VI | Executor của chúng ta sẽ hoạt động bằng cách gửi các task c
 EN | In this design, the executor itself just needs the receiving end of the task channel. The user will get a sending end so that they can spawn new futures. Tasks themselves are just futures that can reschedule themselves, so we'll store them as a future paired with a sender that the task can use to requeue itself.
 VI | Trong thiết kế này, bản thân Executor chỉ cần đầu nhận của kênh task. Người dùng sẽ nhận được đầu gửi để có thể tạo mới các future. Bản thân các task chỉ là những future có thể tự lập lịch lại, vì vậy chúng ta sẽ lưu trữ chúng dưới dạng một future được ghép với một sender mà task có thể sử dụng để tự xếp hàng lại.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.5
+naturalness: 3.6
+tone: 4.0
+terminology: 3.5
+notes: Good conceptual fidelity, but Rust execution terminology is sometimes translated too literally and the prose is somewhat stiff.---
 
 ## rust-book-ownership
 docs · What Is Ownership? · https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
@@ -473,13 +453,11 @@ VI | Vì ownership là một khái niệm mới đối với nhiều lập trìn
 EN | Both the stack and the heap are parts of memory available to your code to use at runtime, but they are structured in different ways. The stack stores values in the order it gets them and removes the values in the opposite order. This is referred to as *last in, first out (LIFO)*. Think of a stack of plates: When you add more plates, you put them on top of the pile, and when you need a plate, you take one off the top. Adding or removing plates from the middle or bottom wouldn’t work as well!
 VI | Cả stack (ngăn xếp) và heap (bộ nhớ động) đều là những phần bộ nhớ mà mã nguồn của bạn có thể sử dụng trong thời gian chạy, nhưng chúng được cấu trúc theo những cách khác nhau. Stack lưu trữ các giá trị theo thứ tự mà nó nhận được và loại bỏ chúng theo thứ tự ngược lại. Điều này được gọi là *vào sau ra trước (LIFO)*. Hãy nghĩ đến một chồng đĩa: Khi bạn thêm đĩa, bạn đặt chúng lên trên cùng của chồng, và khi cần một chiếc, bạn lấy một chiếc từ trên cùng xuống. Thêm hay lấy đĩa từ giữa hoặc dưới cùng sẽ không tiện lợi như vậy!
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.7
+naturalness: 3.6
+tone: 4.1
+terminology: 3.5
+notes: Core Rust concepts are retained, but “ownership/quyền sở hữu” treatment is more explanatory than a technical reader needs.---
 
 ## rust-book-panic
 docs · To panic! or Not to panic! · https://doc.rust-lang.org/book/ch09-03-to-panic-or-not-to-panic.html
@@ -505,13 +483,11 @@ VI | Tương tự, các phương thức `unwrap` và `expect` rất hữu ích k
 EN | If a method call fails in a test, you’d want the whole test to fail, even if that method isn’t the functionality under test. Because `panic!` is how a test is marked as a failure, calling `unwrap` or `expect` is exactly what should happen.
 VI | Nếu một lời gọi phương thức thất bại trong một test, bạn sẽ muốn toàn bộ test đó thất bại, ngay cả khi phương thức đó không phải là chức năng đang được kiểm thử. Vì `panic!` là cách một test được đánh dấu là thất bại, nên việc gọi `unwrap` hay `expect` chính xác là những gì cần xảy ra.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.6
+naturalness: 3.7
+tone: 4.1
+terminology: 3.6
+notes: Faithful explanation of panic/error handling; some wording is textbook-like and technical terms could be kept in English.---
 
 ## wp-not-a-dictionary
 docs · Wikipedia:Wikipedia is not a dictionary · https://en.wikipedia.org/wiki/Wikipedia:Wikipedia_is_not_a_dictionary
@@ -525,13 +501,11 @@ VI | Cả mục từ điển trên Wiktionary lẫn bài bách khoa toàn thư t
 EN | Each article in an encyclopedia is about a person, people, a concept, a place, an event, a thing, etc., whereas a dictionary entry is primarily about a word, an idiom, or a term and its meaning(s), usage and history.
 VI | Mỗi bài trong bách khoa toàn thư nói về một người, nhóm người, một khái niệm, một địa điểm, một sự kiện, một đồ vật, v.v., trong khi một mục từ điển chủ yếu nói về một từ, một thành ngữ hoặc một thuật ngữ cùng ý nghĩa, cách dùng và lịch sử của nó.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.5
+naturalness: 3.7
+tone: 4.1
+terminology: 3.8
+notes: Argument is preserved, but Wikipedia-specific wording is occasionally translated too literally.---
 
 ## go-gofmt
 opinion · go fmt your code · https://go.dev/blog/gofmt
@@ -557,13 +531,11 @@ VI | dễ *bảo trì* hơn: những thay đổi mang tính cơ học trong mã 
 EN | *uncontroversial*: never have a debate about spacing or brace position ever again!
 VI | *không gây tranh cãi*: không bao giờ phải tranh luận về khoảng trắng hay vị trí dấu ngoặc nữa!
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.6
+naturalness: 3.8
+tone: 4.2
+terminology: 3.8
+notes: Clear and faithful; Go terminology is mostly appropriate, though a few phrases read like direct translation.---
 
 ## go2-here-we-come
 opinion · Go 2, here we come! · https://go.dev/blog/go2-here-we-come
@@ -580,13 +552,11 @@ VI | Một điểm khác biệt lớn giữa Go 1 và Go 2 là ai sẽ ảnh hư
 EN | In 2015 we introduced the proposal process to gather a specific kind of feedback: proposals for language and library changes. A committee composed of senior Go team members has been reviewing, categorizing, and deciding on incoming proposals on a regular basis. That has worked pretty well, but as part of that process we have ignored all proposals that are not backward-compatible, simply labeling them Go 2 instead.
 VI | Năm 2015, chúng tôi giới thiệu quy trình đề xuất để thu thập một loại phản hồi cụ thể: các đề xuất thay đổi ngôn ngữ và thư viện. Một ủy ban gồm các thành viên cấp cao của nhóm Go đã thường xuyên xem xét, phân loại và đưa ra quyết định về các đề xuất gửi đến. Cách làm này hoạt động khá tốt, nhưng trong khuôn khổ quy trình đó, chúng tôi đã bỏ qua tất cả các đề xuất không tương thích ngược, chỉ đơn giản gắn nhãn chúng là Go 2.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.6
+naturalness: 3.8
+tone: 4.2
+terminology: 3.9
+notes: Meaning and opinionated tone are preserved; some phrases such as “tên gọi hữu ích” and “đến qua các bước tăng dần” are stiff.---
 
 ## wp-dont-bite-newcomers
 opinion · Wikipedia:Please do not bite the newcomers · https://en.wikipedia.org/wiki/Wikipedia:Please_do_not_bite_the_newcomers
@@ -603,13 +573,11 @@ VI | Những tương tác ban đầu định hình kỳ vọng cho toàn bộ c�
 EN | Next time you feel frustrated with a newcomer's mistake, take it as an opportunity to nurture potential contributors. Consider improving upon a newcomer's edit rather than reverting it. Wikipedia needs a constant stream of new information, experience, and ideas. Guide newcomers patiently and thoroughly: kindness and patience is a necessity for Wikipedia's survival.
 VI | Lần tới khi bạn cảm thấy bực bội trước lỗi của một người mới, hãy xem đó là cơ hội để ươm mầm những đóng góp tiềm năng. Thay vì hoàn tác sửa đổi của họ, hãy cân nhắc việc cải thiện nó. Wikipedia cần dòng chảy liên tục của thông tin, kinh nghiệm và ý tưởng mới. Hãy hướng dẫn người mới một cách kiên nhẫn và kỹ lưỡng: sự tử tế và kiên nhẫn là điều thiết yếu cho sự tồn tại của Wikipedia.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.6
+naturalness: 3.8
+tone: 4.3
+terminology: 4.0
+notes: Welcoming tone comes through well; some Wikipedia/community terminology is overly literal.---
 
 ## wp-template-regulars
 opinion · Wikipedia:Don't template the regulars · https://en.wikipedia.org/wiki/Wikipedia:Don%27t_template_the_regulars
@@ -626,13 +594,11 @@ VI | Vấn đề với các mẫu tin nhắn trên trang thảo luận người 
 EN | Template warnings are very generic, and sometimes out of date. Sometimes a template says never to do something which is nevertheless allowed in certain circumstances. Theoretically speaking, all things are allowed in some conceivable circumstance under Ignore All Rules. Sometimes Wikipedia has multiple policies which are contradictory. If a policy violation is not clear-cut, an amicable resolution to the problem is going to require a human explanation, not an automated template.
 VI | Các cảnh báo dạng mẫu rất chung chung, và đôi khi đã lỗi thời. Thỉnh thoảng một mẫu tin nhắn nói rằng không bao giờ được làm một việc nào đó, nhưng thực ra việc đó vẫn được phép trong một số trường hợp nhất định. Về mặt lý thuyết, mọi thứ đều được phép trong một số hoàn cảnh có thể hình dung được theo Bỏ qua mọi quy tắc. Đôi khi Wikipedia có nhiều chính sách mâu thuẫn với nhau. Nếu một vi phạm chính sách không rõ ràng, việc giải quyết hòa bình vấn đề sẽ đòi hỏi một lời giải thích từ con người, chứ không phải một mẫu tin nhắn tự động.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.5
+naturalness: 3.7
+tone: 4.2
+terminology: 3.8
+notes: Policy content is faithful, but some long sentences and terms are translationese-heavy.---
 
 ## bierce-devils-dictionary
 humor · The Devil's Dictionary (selected entries) · https://www.gutenberg.org/ebooks/972
@@ -658,13 +624,11 @@ VI | POLITICS, danh từ. Cuộc xung đột lợi ích đội lốt cuộc đ�
 EN | POLITICIAN, n. An eel in the fundamental mud upon which the superstructure of organized society is reared. When he wriggles he mistakes the agitation of his tail for the trembling of the edifice.
 VI | POLITICIAN, danh từ. Con lươn trong lớp bùn nền tảng mà trên đó tòa nhà xã hội có tổ chức được dựng lên. Khi nó quẫy, nó nhầm lẫn sự vẫy đuôi của mình với sự rung chuyển của cả tòa nhà.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.4
+naturalness: 3.5
+tone: 3.7
+terminology: 3.7
+notes: Meaning is mostly preserved, but the deadpan wit is weakened by literal phrasing and some awkward dictionary terminology.---
 
 ## pep20-zen
 humor · PEP 20 – The Zen of Python · https://peps.python.org/pep-0020/
@@ -732,13 +696,11 @@ VI | Nếu việc triển khai dễ giải thích, thì đó có thể là một
 EN | Namespaces are one honking great idea -- let's do more of those!
 VI | Không gian tên (namespace) là một ý tưởng cực kỳ tuyệt vời -- hãy tạo thêm nhiều cái như vậy!
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.6
+naturalness: 3.5
+tone: 4.0
+terminology: 3.7
+notes: Most aphorisms are accurate, but the title/technical naming and several short aphorisms are translated too literally; “namespaces” need not be explained.---
 
 ## so-regex-html
 humor · RegEx match open tags except XHTML self-contained tags · https://stackoverflow.com/a/1732454
@@ -749,13 +711,11 @@ VI | Bạn không thể phân tích cú pháp [X]HTML bằng regex. Bởi vì HT
 EN | Have you tried using an XML parser instead?
 VI | Bạn đã thử dùng trình phân tích XML thay thế chưa?
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.6
+naturalness: 3.6
+tone: 3.6
+terminology: 4.0
+notes: Technical content is accurate and regex/HTML terminology is good, but the deliberately absurd humor becomes flatter in Vietnamese.---
 
 ## swift-modest-proposal
 humor · A Modest Proposal (closing section) · https://www.gutenberg.org/ebooks/1080
@@ -766,13 +726,11 @@ VI | Tôi không thể nghĩ ra bất kỳ sự phản đối nào có khả nă
 EN | Therefore I repeat, let no man talk to me of these and the like expedients, till he hath at least some glympse of hope, that there will ever be some hearty and sincere attempt to put them into practice.
 VI | Vì vậy, tôi nhắc lại, đừng ai nói với tôi về những biện pháp này và những thứ tương tự, cho đến khi người đó có ít nhất một tia hy vọng rằng sẽ luôn có một nỗ lực nhiệt thành và chân thành nhằm đưa chúng vào thực tiễn.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.5
+naturalness: 3.5
+tone: 3.8
+terminology: 3.6
+notes: Meaning is largely intact, but the long satirical sentence is heavy in Vietnamese and the satire loses some sharpness.---
 
 ## wodehouse-jeeves
 humor · My Man Jeeves (Corky and his uncle Mr. Worple) · https://www.gutenberg.org/ebooks/8164
@@ -789,13 +747,11 @@ VI | Ông chú của Corky, bạn thấy đấy, không muốn cậu ấy trở 
 EN | Mr. Worple was peculiar in this respect. As a rule, from what I’ve observed, the American captain of industry doesn’t do anything out of business hours. When he has put the cat out and locked up the office for the night, he just relapses into a state of coma from which he emerges only to start being a captain of industry again. But Mr. Worple in his spare time was what is known as an ornithologist. He had written a book called *American Birds*, and was writing another, to be called *More American Birds*.
 VI | Ông Worple thì kỳ quặc ở điểm này. Theo như tôi quan sát, thường thì một đại gia công nghiệp (captain of industry) người Mỹ chẳng làm gì ngoài giờ làm việc cả. Khi đã thả mèo ra ngoài và khóa cửa văn phòng cho buổi tối, ông ta chỉ đơn giản lịm đi vào trạng thái hôn mê, rồi tỉnh dậy cũng chỉ để bắt đầu làm đại gia công nghiệp trở lại. Nhưng ông Worple, trong thời gian rảnh rỗi, lại là một người mà người ta gọi là nhà điểu học (ornithologist). Ông đã viết một cuốn sách mang tên *Các loài chim Mỹ*, và đang viết thêm một cuốn nữa, sẽ mang tên *Thêm các loài chim Mỹ*.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
-
----
+fidelity: 4.3
+naturalness: 3.4
+tone: 3.5
+terminology: 3.5
+notes: Readable and broadly faithful, but idiomatic comic voice is weakened by literal choices such as “nhẹ lương cao” and explanatory wording.---
 
 ## wp-beans
 humor · Wikipedia:Don't stuff beans up your nose · https://en.wikipedia.org/wiki/Wikipedia:Don%27t_stuff_beans_up_your_nose
@@ -812,8 +768,8 @@ VI | Trong sự nhiệt thành muốn ngăn cản hành động thiếu khôn ng
 EN | For example, if you are warning a vandal for one type of disruptive behavior, don't be tempted to go further and warn them in advance against something else that you think they might try next. It may not have occurred to them until you told them about it.
 VI | Ví dụ, nếu bạn đang cảnh báo một kẻ phá hoại về một loại hành vi gây rối, đừng bị cám dỗ mà đi xa hơn, cảnh báo trước cho họ về một thứ khác mà bạn nghĩ họ có thể sẽ thử tiếp theo. Có thể họ chưa hề nghĩ đến điều đó cho đến khi bạn nhắc cho họ biết.
 
-fidelity: 
-naturalness: 
-tone: 
-terminology: 
-notes: 
+fidelity: 4.5
+naturalness: 3.6
+tone: 3.9
+terminology: 3.8
+notes: The joke and lesson survive, but “đừng gợi ý cho họ” is less idiomatic than a contextual equivalent such as “đừng mách nước cho họ”.

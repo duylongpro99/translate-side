@@ -56,3 +56,18 @@ Scores are 1–5 means over the passages scored (n). Columns after the first sho
 
 - **M2 baseline (M2-D22): contextual@2 c1500**, `eval/runs/baseline-contextual-translate2-qwen3.8-flash`. This is the run M6's regression gate will defend. The c400 run (`eval/runs/baseline-contextual-translate2-qwen3.8-flash-c400`, see its README.md) is kept as a reference run, not as the baseline.
 - **Plan §3 #1 is pending (M2-D21):** it waits for the human scores on the three sheets (frozen single-pass, contextual c1500, contextual c400).
+
+## Human result (user scores, three sheets)
+
+Means over 23 passages, as the harness reads the sheets (scores are one-decimal and the harness rounds each to the nearest half; unrounded means differ by at most 0.07). Full table with judge calibration: `m2-final-report-human.md`.
+
+| human | single-pass@1 | contextual@2 c1500 | contextual@2 c400 |
+|---|---|---|---|
+| fidelity | 4.50 | 4.57 (+0.07) | 4.50 (+0.00) |
+| naturalness | 4.39 | 4.11 (-0.28) | 3.61 (-0.78) |
+| tone | 4.41 | 4.24 (-0.17) | 3.96 (-0.46) |
+| terminology | 4.20 | 4.07 (-0.13) | 3.72 (-0.48) |
+| overall | 4.38 | 4.24 (-0.13) | 3.95 (-0.43) |
+
+- Plan §3 #1 on the three named dimensions (contextual ≥ single-pass on fidelity, tone, terminology), human means: c1500 is above on fidelity (+0.07) and below on tone (-0.17) and terminology (-0.13); c400 equals on fidelity and is below on tone (-0.46) and terminology (-0.48). The judge on the same two dimensions is within noise at c1500 and below at c400. The §3 #1 decision is the user's (M2-D21).
+- Judge vs human (rounded scores, MAD / bias judge-minus-human / within 1 point): c1500 overall 0.58 / +0.17 / 96%. Terminology is the weakest dimension (c1500 MAD 0.89, bias +0.67; c400 MAD 0.98, bias +0.72, within 1 only 65%); the judge scores tone and terminology higher than the human and fidelity lower.
