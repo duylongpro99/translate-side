@@ -1,9 +1,9 @@
 // The `translate` role → a client (DESIGN.md §4.3.5 Resolve, M1 stub; user decision M1-D13): the
-// hard-wired profile (APIBOX by default, M2-D11), its key from storage.local, and the host
+// hard-wired profile (APIBOX by default, M2-D11; the profile's quirks over the connection's, M2-D16), its key from storage.local, and the host
 // permission for its origin.
 import type { browser } from 'wxt/browser';
 import { createClient } from '@/llm/client';
-import { DEFAULT_CONNECTION, hasHostPermission, resolveConnection, resolveProfile } from '@/shared/settings';
+import { DEFAULT_CONNECTION, hasHostPermission, resolveConnection, resolveProfile, withProfileQuirks } from '@/shared/settings';
 import type { ClientResult } from './jobs.ts';
 
 type Browser = typeof browser;
@@ -20,5 +20,5 @@ export async function translateClient(api: Browser): Promise<ClientResult> {
   if (!(await hasHostPermission(api, conn.baseUrl))) {
     return { ok: false, error: { kind: 'cors', cause: 'permission', message: `No access to ${new URL(conn.baseUrl).hostname}` } };
   }
-  return { ok: true, client: createClient(conn, profile.model), profile };
+  return { ok: true, client: createClient(withProfileQuirks(conn, profile), profile.model), profile };
 }

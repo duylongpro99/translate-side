@@ -1,10 +1,10 @@
 // Settings v0 (plan M1-E9, user decision M1-D13): one hard-wired connection and its model profile,
 // the API key in storage.local under `secret:<connectionId>` (DESIGN.md §4.3.4), and the target and
-// source languages. The default is APIBOX with ds/deepseek-v4-pro (M2-D11, M2-D14); ds/deepseek-flash
-// (M2-D13) and the Gemini preset stay defined. Provider choice, presets, Test connection and routing are M4.
+// source languages. The default is APIBOX with qwen3.8-flash (M2-D11, M2-D16); ds/deepseek-v4-pro
+// (M2-D14), ds/deepseek-flash (M2-D13) and the Gemini preset stay defined. Provider choice, presets, Test connection and routing are M4.
 import type { browser } from 'wxt/browser';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
-import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, GEMINI_OPENAI_BASE_URL } from '@/llm/presets';
+import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS, GEMINI_OPENAI_BASE_URL } from '@/llm/presets';
 import type { ModelRole, Protocol, AuthStyle, Quirks, ResolvedConnection } from '@/llm/types';
 
 type Browser = typeof browser;
@@ -29,6 +29,8 @@ export interface ModelProfile {
   chunkTokens: number;
   /** USD per million tokens. */
   pricing?: { inPerM: number; cachedInPerM: number; outPerM: number };
+  /** This model's quirks, over the connection's (key by key): e.g. its thinking policy (M2-D16). */
+  quirks?: Quirks;
 }
 
 export const GEMINI_CONNECTION: ProviderConnection = {
@@ -77,7 +79,7 @@ export const APIBOX_FLASH_PROFILE: ModelProfile = {
   pricing: { inPerM: 0.1, cachedInPerM: 0.002, outPerM: 0.4 },
 };
 
-/** The translator from M2-D14 on, thinking off like flash (probed 2026-10-07). */
+/** The M2-D14 translator, kept selectable: thinking off like flash (probed 2026-10-07). */
 export const APIBOX_PRO_PROFILE: ModelProfile = {
   id: 'apibox-deepseek-v4-pro',
   connectionId: APIBOX_CONNECTION.id,
@@ -87,9 +89,24 @@ export const APIBOX_PRO_PROFILE: ModelProfile = {
   pricing: { inPerM: 0.44, cachedInPerM: 0.0146, outPerM: 1.32 },
 };
 
-/** The connection and profile the extension uses (M2-D11, M2-D14). */
+/**
+ * The translator from M2-D16 on: chunk 1 thinking off (a fast first segment), later chunks
+ * "minimal", analyze off, and `max_completion_tokens` as the guard against runaway thinking
+ * (src/llm/presets.ts).
+ */
+export const APIBOX_QWEN_PROFILE: ModelProfile = {
+  id: 'apibox-qwen3.8-flash',
+  connectionId: APIBOX_CONNECTION.id,
+  model: 'qwen3.8-flash',
+  maxConcurrency: 2,
+  chunkTokens: 1200,
+  pricing: { inPerM: 0.032, cachedInPerM: 0.0032, outPerM: 0.094 },
+  quirks: APIBOX_QWEN_QUIRKS,
+};
+
+/** The connection and profile the extension uses (M2-D11, M2-D16). */
 export const DEFAULT_CONNECTION = APIBOX_CONNECTION;
-export const DEFAULT_PROFILE = APIBOX_PRO_PROFILE;
+export const DEFAULT_PROFILE = APIBOX_QWEN_PROFILE;
 /** The origin pattern the extension asks for when the key is saved (§4.3.3 step 3, §8), from the base URL. */
 export const DEFAULT_ORIGIN = originPattern(DEFAULT_CONNECTION.baseUrl);
 /** "api.ai-box.vn": how the settings and the panel name the host they need access to. */
@@ -98,8 +115,13 @@ export const DEFAULT_HOST = new URL(DEFAULT_CONNECTION.baseUrl).hostname;
 /** §4.3.1 Routing, stubbed: `analyze` is unset, so it defaults to `translate` (§4.3.1); `review` is M7. */
 export const ROUTING: { translate: string; analyze?: string } = { translate: DEFAULT_PROFILE.id };
 
-const PROFILES = new Map([GEMINI_PROFILE, APIBOX_FLASH_PROFILE, APIBOX_PRO_PROFILE].map((p) => [p.id, p]));
+const PROFILES = new Map([GEMINI_PROFILE, APIBOX_FLASH_PROFILE, APIBOX_PRO_PROFILE, APIBOX_QWEN_PROFILE].map((p) => [p.id, p]));
 const CONNECTIONS = new Map([GEMINI_CONNECTION, APIBOX_CONNECTION].map((c) => [c.id, c]));
+
+/** The connection a client for `profile` is built with: the profile's quirks over the connection's. */
+export function withProfileQuirks(conn: ResolvedConnection, profile: ModelProfile): ResolvedConnection {
+  return profile.quirks === undefined ? conn : { ...conn, quirks: { ...conn.quirks, ...profile.quirks } };
+}
 
 /** §4.3.5 Resolve, M1 stub: no site overrides and no tab override yet. */
 export function resolveProfile(role: ModelRole): { profile: ModelProfile; connection: ProviderConnection } {

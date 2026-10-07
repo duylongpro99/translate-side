@@ -24,3 +24,18 @@ export const APIBOX_DEEPSEEK_QUIRKS: Quirks = { reasoning: { control: 'effort', 
  * being cut by thinking that counts against max_tokens.
  */
 export const APIBOX_JUDGE_QUIRKS: Quirks = { reasoning: { control: 'effort', lowest: 'medium', reserveTokens: 16000 } };
+
+/**
+ * APIBOX's qwen3.8-flash, the translator from M2-D16, probed 2026-10-07. It thinks by default
+ * (`reasoning_content`); `reasoning_effort` "none" switches it off, "minimal" and "low" still think
+ * but bound nothing: a hard prompt at "minimal" thought for minutes. `max_tokens` does not bound the
+ * thinking, `thinking_budget` and `reasoning.max_tokens` are ignored; `max_completion_tokens` caps
+ * thinking and text together (finish "length"). So: chunk 1 thinking off for a fast first segment,
+ * later chunks "minimal" (M2-D16), analyze off; `max_completion_tokens` with a reserve is the guard
+ * against runaway thinking (a call that hits it ends `max_tokens`, and the engine's repair path takes over).
+ */
+export const QWEN_THINKING_RESERVE_TOKENS = 3000;
+export const APIBOX_QWEN_QUIRKS: Quirks = {
+  maxTokensParam: 'max_completion_tokens',
+  reasoning: { control: 'effort', lowest: 'off', reserveTokens: 0, byChunk: [{ fromChunk: 1, lowest: 'minimal', reserveTokens: QWEN_THINKING_RESERVE_TOKENS }] },
+};

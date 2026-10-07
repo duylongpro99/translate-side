@@ -97,9 +97,12 @@ export function callBudget(wire: WireChunk, reasoningReserveTokens: number): num
 /**
  * The request one translate call sends (the strategy and the harness's nonce probe share it, so
  * they cannot drift). `context` (translate@2) is the `<context>` block, put before the segments.
+ * `chunkIndex` lets the client's profile pick its thinking for this chunk (M2-D16); the prompt
+ * does not depend on it.
  */
-export function translateRequest(client: Pick<LLMClient, 'model' | 'reasoningReserveTokens'>, system: string, wire: WireChunk, signal: AbortSignal, context = ''): NormalizedRequest {
+export function translateRequest(client: Pick<LLMClient, 'model' | 'reasoningReserveTokens'>, system: string, wire: WireChunk, signal: AbortSignal, context = '', chunkIndex?: number): NormalizedRequest {
   return {
+    ...(chunkIndex === undefined ? {} : { chunkIndex }),
     model: client.model,
     system,
     messages: [{ role: 'user', content: context === '' ? formatWire(wire) : `${context}\n\n${formatWire(wire)}` }],
@@ -189,7 +192,7 @@ export function createTranslateStage(strategyId: string, brief?: BriefWait, prom
       } else {
         system = renderSystemPrompt(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
       }
-      const call: ChunkCall = (wire) => client.stream(translateRequest(client, system, wire, ctx.signal, context));
+      const call: ChunkCall = (wire) => client.stream(translateRequest(client, system, wire, ctx.signal, context, work.chunk.index));
       const gen = translateChunk(toWire(work.chunk.segments), call, {
         producedBy: { strategy: strategyId, stage: 'translate', model: client.model },
         revision: REVISION,

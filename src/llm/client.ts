@@ -6,6 +6,7 @@
 // use is ever fetched. Import this file, not ./index.ts (which re-exports the adapters
 // statically), from code that should stay light.
 
+import { reserveTokensOf } from './reasoning.ts';
 import type { AdapterOptions } from './sdk.ts';
 import type { LLMClient, Protocol, ProtocolAdapter, ResolvedConnection } from './types.ts';
 
@@ -56,7 +57,7 @@ export function createAdapter(protocol: Protocol, options: AdapterOptions = {}):
 export function bindClient(adapter: ProtocolAdapter, conn: ResolvedConnection, model: string): LLMClient {
   return {
     model,
-    reasoningReserveTokens: conn.quirks.reasoning?.reserveTokens ?? 0,
+    reasoningReserveTokens: reserveTokensOf(conn.quirks.reasoning),
     stream(req) {
       if (req.model !== model) throw new Error(`request model ${req.model} differs from the client's ${model}`);
       return adapter.stream(conn, req);

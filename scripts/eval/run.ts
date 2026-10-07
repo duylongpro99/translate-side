@@ -14,17 +14,19 @@
 // `--prompt translate@1` runs contextual as Phase B did. single-pass stays on translate@1 (the
 // frozen baseline). `--style`, `--gloss` and `--glossary` (term, or term=rendering; a bare term is
 // "keep as is") are the job options the panel takes from the settings (M2-E6).
-// Providers (M2-D11, M2-D14): `apibox` (default; AIBOX_API_KEY, ds/deepseek-v4-pro, thinking off;
-// `--model ds/deepseek-flash` is the M2-D13 translator),
+// Providers (M2-D11, M2-D16): `apibox` (default; AIBOX_API_KEY, qwen3.8-flash with the app's
+// per-chunk thinking: chunk 1 off, later chunks "minimal", analyze off; `--model ds/deepseek-v4-pro`
+// (M2-D14) and `--model ds/deepseek-flash` (M2-D13) run thinking off),
 // `gemini` (GEMINI_API_KEY, gemini-3.5-flash-lite: the historical baseline), `anthropic`.
 // summary.json records `promptHash` (the translate system prompt rendered with no context, so a
-// rule edited in place shows as a new hash) and `strategyVersion`.
+// rule edited in place shows as a new hash), `strategyVersion` and `thinking` (the translate calls'
+// policy); calls.jsonl records each call's chunk and reasoning tokens, and summary.md flags outliers.
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
-import type { LLMClient, ResolvedConnection, StopReason } from '@/llm/types';
+import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS, createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
+import type { LLMClient, Quirks, ResolvedConnection, StopReason } from '@/llm/types';
 import { ANALYZE_PROMPT_ID, chunkLimits, chunkSegments, createContextual, CONTEXTUAL_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, TRANSLATE_V2_PROMPT_ID, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, SINGLE_PASS_ID, toWire, renderSystemPrompt, renderSystemPromptV2, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type Segment, type StyleMode, type TranslationJob } from '@/engine/index';
 import type { ModelRole } from '@/llm/types';
 import { costUsd, priceFor } from './pricing.ts';
@@ -86,6 +88,8 @@ interface CallRecord {
   usage?: { input: number; output: number; cachedInput?: number } | undefined;
   /** `completion_tokens_details.reasoning_tokens`, where the provider reports it (part of `usage.output`). */
   reasoningTokens?: number | undefined;
+  /** The chunk a translate call was for (picks the thinking, M2-D16). */
+  chunkIndex?: number | undefined;
   stop?: string | undefined;
   error?: string | undefined;
 }
@@ -113,7 +117,7 @@ const tapReasoning: typeof fetch = async (input, init) => {
   return new Response(theirs, { status: res.status, statusText: res.statusText, headers: res.headers });
 };
 
-function connection(): { client: LLMClient; label: string; translateClient?: LLMClient } {
+function connection(): { client: LLMClient; label: string; translateClient?: LLMClient; thinking: { reasoning: Quirks['reasoning'] | undefined; maxTokensParam: Quirks['maxTokensParam'] | undefined } | null } {
   if (opt.mock) {
     // Echoes every <seg> with "vi:" in front. Multi-line segments are legal on the wire, so this
     // does not go through the line-based test helper.
@@ -138,21 +142,28 @@ function connection(): { client: LLMClient; label: string; translateClient?: LLM
         yield { type: 'done', stopReason: 'end' };
       },
     };
-    return { client: c, label: 'mock' };
+    return { client: c, label: 'mock', thinking: null };
   }
   const preset = PROVIDERS[opt.provider as string];
   if (preset === undefined) throw new Error(`--provider expects ${Object.keys(PROVIDERS).join(', ')}`);
   const key = process.env[preset.keyName];
   if (!key) throw new Error(`${preset.keyName} is not set (.env or the environment)`);
-  const conn: ResolvedConnection = { id: `eval-${opt.provider}`, ...preset.conn, apiKey: key, hasHostPermission: async () => true };
   const model = opt.model ?? preset.model;
+  // The model's quirks over the connection's, as the app's profile does (settings.ts withProfileQuirks).
+  const conn: ResolvedConnection = { id: `eval-${opt.provider}`, ...preset.conn, quirks: { ...preset.conn.quirks, ...preset.modelQuirks?.[model] }, apiKey: key, hasHostPermission: async () => true };
   const options = { fetch: tapReasoning };
-  return { client: createClient(conn, model, options), label: `${opt.provider}/${model}`, ...(REASONING === undefined ? {} : { translateClient: createClient({ ...conn, quirks: { ...conn.quirks, reasoning: REASONING } }, model, options) }) };
+  const translateConn = REASONING === undefined ? conn : { ...conn, quirks: { ...conn.quirks, reasoning: REASONING } };
+  return {
+    client: createClient(conn, model, options),
+    label: `${opt.provider}/${model}`,
+    ...(REASONING === undefined ? {} : { translateClient: createClient(translateConn, model, options) }),
+    thinking: { reasoning: translateConn.quirks.reasoning, maxTokensParam: translateConn.quirks.maxTokensParam },
+  };
 }
 
 /** The live providers: where the key is read, the connection, the default model (M2-D11, M2-D14). */
-const PROVIDERS: Record<string, { keyName: string; conn: Pick<ResolvedConnection, 'protocol' | 'baseUrl' | 'auth' | 'quirks'>; model: string }> = {
-  apibox: { keyName: 'AIBOX_API_KEY', conn: { protocol: 'openai-chat', baseUrl: APIBOX_BASE_URL, auth: { style: 'bearer' }, quirks: APIBOX_DEEPSEEK_QUIRKS }, model: 'ds/deepseek-v4-pro' },
+const PROVIDERS: Record<string, { keyName: string; conn: Pick<ResolvedConnection, 'protocol' | 'baseUrl' | 'auth' | 'quirks'>; model: string; modelQuirks?: Record<string, Quirks> }> = {
+  apibox: { keyName: 'AIBOX_API_KEY', conn: { protocol: 'openai-chat', baseUrl: APIBOX_BASE_URL, auth: { style: 'bearer' }, quirks: APIBOX_DEEPSEEK_QUIRKS }, model: 'qwen3.8-flash', modelQuirks: { 'qwen3.8-flash': APIBOX_QWEN_QUIRKS } },
   gemini: { keyName: 'GEMINI_API_KEY', conn: { protocol: 'openai-chat', baseUrl: GEMINI_OPENAI_BASE_URL, auth: { style: 'bearer' }, quirks: {} }, model: 'gemini-3.5-flash-lite' },
   anthropic: { keyName: 'ANTHROPIC_API_KEY', conn: { protocol: 'anthropic-messages', baseUrl: 'https://api.anthropic.com', auth: { style: 'x-api-key' }, quirks: {} }, model: 'claude-haiku-4-5-20251001' },
 };
@@ -163,7 +174,7 @@ function recording(inner: LLMClient, calls: CallRecord[], doc: () => string, rol
     model: inner.model,
     reasoningReserveTokens: inner.reasoningReserveTokens,
     async *stream(req) {
-      const rec: CallRecord = { doc: doc(), ...(role === undefined ? {} : { role }), n: calls.length + 1, ms: 0, system: req.system, maxOutputTokens: req.maxOutputTokens, user: req.messages.map((m) => m.content).join('\n'), text: '' };
+      const rec: CallRecord = { doc: doc(), ...(role === undefined ? {} : { role }), ...(req.chunkIndex === undefined ? {} : { chunkIndex: req.chunkIndex }), n: calls.length + 1, ms: 0, system: req.system, maxOutputTokens: req.maxOutputTokens, user: req.messages.map((m) => m.content).join('\n'), text: '' };
       calls.push(rec);
       const t0 = Date.now();
       try {
@@ -207,7 +218,7 @@ function loadDoc(slug: string): FixtureDoc {
   const p = loadPassage(ROOT, slug);
   return { slug, url: p.meta.url, title: p.meta.title, lang: p.lang, segments: p.segments };
 }
-const { client: baseClient, label, translateClient } = connection();
+const { client: baseClient, label, translateClient, thinking } = connection();
 const price = priceFor(baseClient.model, opt.price);
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 const outDir = path.resolve(opt.out ?? path.join(ROOT, 'eval-results', `${stamp}_${label.replace(/\W+/g, '-')}`));
@@ -381,6 +392,20 @@ if (opt['probe-nonce']) {
 }
 
 for (const c of calls) c.reasoningTokens = await reasoningByUser.get(c.user);
+/**
+ * Runaway thinking (M2-D16): qwen's effort levels bound nothing, so every call's reasoning tokens
+ * are kept, and a call at REASONING_OUTLIER_TOKENS or more, or one that hit its token cap while
+ * thinking, is flagged in summary.md.
+ */
+const REASONING_OUTLIER_TOKENS = 2000;
+const thinkingCalls = calls.filter((c) => (c.reasoningTokens ?? 0) > 0);
+const reasoningStats = {
+  calls: thinkingCalls.length,
+  tokens: thinkingCalls.reduce((n, c) => n + (c.reasoningTokens ?? 0), 0),
+  max: Math.max(0, ...thinkingCalls.map((c) => c.reasoningTokens ?? 0)),
+  outlierTokens: REASONING_OUTLIER_TOKENS,
+  outliers: thinkingCalls.filter((c) => (c.reasoningTokens ?? 0) >= REASONING_OUTLIER_TOKENS || c.stop === 'max_tokens').map((c) => ({ doc: c.doc, n: c.n, chunkIndex: c.chunkIndex ?? null, reasoningTokens: c.reasoningTokens, output: c.usage?.output ?? null, stop: c.stop ?? null, ms: c.ms })),
+};
 fs.writeFileSync(path.join(outDir, 'calls.jsonl'), calls.map((c) => JSON.stringify(c)).join('\n') + '\n');
 const sum = (f: (r: DocResult) => number): number => results.reduce((n, r) => n + f(r), 0);
 const total = { translatable: sum((r) => r.translatable), lost: sum((r) => r.lost), failed: sum((r) => r.failed), repaired: sum((r) => r.repaired), calls: sum((r) => r.calls), input: sum((r) => r.input), cachedInput: sum((r) => r.cachedInput), output: sum((r) => r.output), wallMs: sum((r) => r.wallMs), costUsd: price ? sum((r) => r.costUsd ?? 0) : null };
@@ -443,7 +468,7 @@ const nonce = probes.length ? { echoed: probes.reduce((n, p) => n + p.echoed, 0)
 const briefs = results.flatMap((r) => (r.brief ? [r.brief] : []));
 // M2-D9: one-chunk documents make no brief call (`skipped`); they are counted apart.
 const briefTotals = briefs.length ? { docs: briefs.length, ok: briefs.filter((b) => b.ok).length, skipped: briefs.filter((b) => b.skipped).length, input: briefs.reduce((n, b) => n + b.input, 0), output: briefs.reduce((n, b) => n + b.output, 0), costUsd: price ? costUsd(price, { input: briefs.reduce((n, b) => n + b.input, 0), cachedInput: 0, output: briefs.reduce((n, b) => n + b.output, 0) }) : null } : null;
-const summary = { run: stamp, set: opt.set, strategy: STRATEGY, strategyVersion, prompt: TRANSLATE_PROMPT, promptHash, prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, label, ...(REASONING === undefined ? {} : { reasoning: { effort: REASONING.lowest, reserveTokens: REASONING.reserveTokens } }), brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
+const summary = { run: stamp, set: opt.set, strategy: STRATEGY, strategyVersion, prompt: TRANSLATE_PROMPT, promptHash, prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, label, thinking, reasoning: reasoningStats, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
 fs.writeFileSync(path.join(outDir, 'summary.json'), `${JSON.stringify(summary, null, 1)}\n`);
 const money = (n: number | null): string => (n === null ? 'n/a' : `$${n.toFixed(5)}`);
 const md = [
@@ -459,6 +484,7 @@ const md = [
   ...(briefTotals ? [`Brief (${ANALYZE_PROMPT_ID}): parsed for ${briefTotals.ok}/${briefTotals.docs - briefTotals.skipped} docs asked (${briefTotals.skipped} one-chunk docs skipped, M2-D9); ${briefTotals.input} in / ${briefTotals.output} out tokens, ${money(briefTotals.costUsd)} (in the totals above). Per doc: ${results.map((r) => `${r.slug} ${r.brief?.ok ? 'ok' : r.brief?.skipped ? 'skipped' : 'none'} ${r.brief?.ms === null || r.brief === undefined ? '–' : `${(r.brief.ms / 1000).toFixed(1)}s`}`).join(', ')}.`] : []),
   `Characters per token (provider-counted; the engine assumes ${CHARS_PER_TOKEN}): input ${charsPerToken.input?.toFixed(2) ?? '–'}, output ${charsPerToken.output?.toFixed(2) ?? '–'} over ${charsPerToken.calls} calls.`,
   `S2 thresholds on ${thresholds.chunks} chunks / ${thresholds.segments} segments: ${thresholds.chunksWithFixes} chunks with parser fixes ${JSON.stringify(thresholds.fixKinds)}, ${thresholds.rerequested} re-requested, ${thresholds.merged} flagged merged; length ratio vs chunk median: max ${thresholds.maxRatio.toFixed(2)}, over 1.2/1.4/${MERGE_FACTOR}: ${Object.values(thresholds.over).join('/')}; ${MAX_TAG}-char tag hold-back: ${thresholds.partialTag} partial tags; highest answer/max_tokens ${thresholds.maxBudgetUse.toFixed(2)}.`,
+  thinking?.reasoning ? `Thinking (translate calls): ${JSON.stringify(thinking.reasoning)}${thinking.maxTokensParam ? `, cap via ${thinking.maxTokensParam}` : ''}. Reasoning: ${reasoningStats.tokens} tokens over ${reasoningStats.calls} calls, max ${reasoningStats.max}; ${reasoningStats.outliers.length ? `OUTLIERS (≥ ${REASONING_OUTLIER_TOKENS} reasoning tokens or cut by the cap): ${reasoningStats.outliers.map((o) => `${o.doc} call ${o.n} (chunk ${o.chunkIndex ?? '–'}) ${o.reasoningTokens} tokens, ${(o.ms / 1000).toFixed(1)}s, stop ${o.stop}`).join('; ')}` : `no outliers (≥ ${REASONING_OUTLIER_TOKENS})`}.` : 'Thinking: none.',
   nonce ? `Nonce copy: ${nonce.echoed}/${nonce.opens} opening tags carried the nonce (${nonce.opens ? ((100 * nonce.echoed) / nonce.opens).toFixed(1) : '–'}%).` : 'Nonce probe not run (--probe-nonce).',
   ...results.filter((r) => r.errors.length).map((r) => `\n${r.slug} errors: ${r.errors.join('; ')}`),
   '',

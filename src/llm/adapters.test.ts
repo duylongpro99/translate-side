@@ -4,7 +4,7 @@ import { fakeSleep } from '../engine/testing.ts';
 import { createAnthropicAdapter } from './anthropic.ts';
 import { bindClient, createAdapter, createClient } from './client.ts';
 import { createOpenAIAdapter } from './openai.ts';
-import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS } from './presets.ts';
+import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS } from './presets.ts';
 import { anthropicStream, connection, mockFetch, openaiStream, sse, withOverrides, type Overrides, type ScriptedResponse } from './testing.ts';
 import type { LLMClient, NormalizedEvent, NormalizedRequest, ProtocolAdapter, ResolvedConnection } from './types.ts';
 
@@ -406,6 +406,30 @@ describe('openai-chat adapter (wire details)', () => {
     expect(events.filter((e) => e.type === 'text')).toEqual([{ type: 'text', delta: 'Xin chào' }]);
     expect(events).toContainEqual({ type: 'usage', input: 21, output: 14 });
     expect(bindClient(createOpenAIAdapter({ fetch: f.fetch }), c, 'ds/deepseek-flash').reasoningReserveTokens).toBe(0);
+  });
+
+  it('APIBOX qwen preset (M2-D16): chunk 0 and analyze thinking off, later chunks "minimal"; max_completion_tokens caps the thinking', async () => {
+    const f = mockFetch(Array.from({ length: 4 }, () => ({ status: 200, body: openaiStream({ text: ['x'] }) })));
+    const c = conn({ baseUrl: APIBOX_BASE_URL, quirks: { ...APIBOX_QWEN_QUIRKS } });
+    const adapter = createOpenAIAdapter({ fetch: f.fetch });
+    for (const extra of [{}, { chunkIndex: 0 }, { chunkIndex: 1 }, { chunkIndex: 7 }]) await collect(adapter.stream(c, request('qwen3.8-flash', extra)));
+    expect(f.requests.map((r) => (r.body as { reasoning_effort?: string }).reasoning_effort)).toEqual(['none', 'none', 'minimal', 'minimal']);
+    for (const r of f.requests) {
+      expect(r.body).toMatchObject({ max_completion_tokens: 64 });
+      expect(r.body).not.toHaveProperty('max_tokens');
+      // The chunk index picks the setting; it is never sent.
+      expect(r.body).not.toHaveProperty('chunkIndex');
+    }
+    // The client reports the largest reserve, so a thinking chunk's call is not cut short.
+    expect(bindClient(adapter, c, 'qwen3.8-flash').reasoningReserveTokens).toBe(3000);
+  });
+
+  it('a per-chunk policy on the budget control: Anthropic thinks only from the policy chunk on', async () => {
+    const f = mockFetch(Array.from({ length: 2 }, () => ({ status: 200, body: anthropicStream({ text: ['x'] }) })));
+    const c = conn({ protocol: 'anthropic-messages', baseUrl: 'https://api.anthropic.com', quirks: { reasoning: { control: 'budget', lowest: 'off', reserveTokens: 0, byChunk: [{ fromChunk: 2, lowest: 1024, reserveTokens: 1024 }] } } });
+    const adapter = createAnthropicAdapter({ fetch: f.fetch });
+    for (const chunkIndex of [1, 2]) await collect(adapter.stream(c, request('claude-haiku-4-5-20251001', { chunkIndex })));
+    expect(f.requests.map((r) => (r.body as { thinking?: unknown }).thinking)).toEqual([{ type: 'disabled' }, { type: 'enabled', budget_tokens: 1024 }]);
   });
 
   it('§4.2.4: a 400 about max_tokens flips to max_completion_tokens, resends once, and saves the quirk on the connection', async () => {

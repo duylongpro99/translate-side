@@ -38,6 +38,12 @@ export interface Quirks {
     lowest: string | number | 'off';
     /** Added to maxOutputTokens; 0 when `lowest` is "off". */
     reserveTokens: number;
+    /**
+     * Per-chunk policy (M2-D16): a request whose `chunkIndex` is at least `fromChunk` sends the last
+     * such entry's `lowest` and counts its `reserveTokens` instead; requests without a `chunkIndex`
+     * (analyze) and earlier chunks use the fields above. `control` is shared (src/llm/reasoning.ts).
+     */
+    byChunk?: readonly { fromChunk: number; lowest: string | number | 'off'; reserveTokens: number }[];
   };
 }
 
@@ -77,6 +83,8 @@ export interface NormalizedRequest {
   cacheHint?: 'system';
   /** For the brief call. */
   jsonMode?: boolean;
+  /** The chunk's position in its document (translate calls): picks `Quirks.reasoning.byChunk`. Not sent. */
+  chunkIndex?: number;
   signal: AbortSignal;
 }
 
@@ -140,7 +148,10 @@ export interface LLMClient {
    * must be equal; the adapter sends `req.model`), `producedBy` and usage.
    */
   readonly model: string;
-  /** `quirks.reasoning.reserveTokens`, or 0: the engine adds it to maxOutputTokens (§5.7). */
+  /**
+   * `quirks.reasoning.reserveTokens` (the largest of a per-chunk policy's), or 0: the engine adds it
+   * to maxOutputTokens (§5.7).
+   */
   readonly reasoningReserveTokens: number;
   stream(req: NormalizedRequest): AsyncIterable<NormalizedEvent>;
 }

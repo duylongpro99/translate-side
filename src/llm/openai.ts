@@ -9,6 +9,7 @@
 import OpenAI, { APIError } from 'openai';
 import type { ChatCompletionChunk, ChatCompletionCreateParamsStreaming, ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import type { ReasoningEffort } from 'openai/resources/shared';
+import { reasoningFor } from './reasoning.ts';
 import { classifySdkError, headerOverrides, preflight, streamAttempts, type AdapterOptions, type QuirkFlip, type SdkApiError, FLIP_TEMPERATURE } from './sdk.ts';
 import type { ModelInfo, NormalizedEvent, NormalizedRequest, ProbeResult, ProtocolAdapter, Quirks, ResolvedConnection, StopReason } from './types.ts';
 
@@ -85,7 +86,7 @@ export function toOpenAIParams(req: NormalizedRequest, quirks: Quirks): ChatComp
   params[quirks.maxTokensParam ?? 'max_tokens'] = req.maxOutputTokens;
   if (quirks.supportsStreamUsage !== false) params.stream_options = { include_usage: true };
   if (req.temperature !== undefined && quirks.supportsTemperature !== false) params.temperature = req.temperature;
-  const reasoning = quirks.reasoning;
+  const reasoning = reasoningFor(quirks.reasoning, req);
   // The lowest effort the model accepts (§5.7); "off" is `none` where the endpoint can switch thinking off.
   if (reasoning !== undefined && reasoning.control === 'effort') params.reasoning_effort = (reasoning.lowest === 'off' ? 'none' : String(reasoning.lowest)) as ReasoningEffort;
   if (req.jsonMode === true && quirks.supportsJsonMode !== false) params.response_format = { type: 'json_object' };

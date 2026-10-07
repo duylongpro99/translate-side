@@ -122,6 +122,8 @@ describe('single-pass: the translate call (M1-E5)', () => {
     const events = await collect(createEngine(deps(client)).translate(j, new AbortController().signal));
     expect(client.requests).toHaveLength(3);
     expect(new Set(client.requests.map((r) => r.system)).size).toBe(1);
+    // Each call names its chunk, so the client's profile can pick its thinking per chunk (M2-D16).
+    expect(client.requests.map((r) => r.chunkIndex)).toEqual([0, 1, 2]);
     // Local ids restart at 1 per chunk; the events carry the document's ids.
     expect(client.requests.map((r) => r.messages[0]?.content)).toEqual(['<seg id="1">One sentence.</seg>', '<seg id="1">Two *sentences* here.</seg>', '<seg id="1">Three.</seg>']);
     expect(finals(events).map(([id, text]) => [id, text])).toEqual([['a', 'vi:One sentence.'], ['b', 'vi:Two *sentences* here.'], ['c', 'vi:Three.']]);
@@ -140,6 +142,7 @@ describe('single-pass: the translate call (M1-E5)', () => {
     expect(repair?.maxOutputTokens).toBe(callBudget(toWire(rest), 0));
     expect(repair?.maxOutputTokens ?? Infinity).toBeLessThan(first?.maxOutputTokens ?? 0);
     expect(repair?.system).toBe(first?.system);
+    expect([first?.chunkIndex, repair?.chunkIndex]).toEqual([0, 0]);
     expect(finals(events)).toEqual([['a', 'vi:One sentence.', 1], ['b', 'vi:Two *sentences* here.', 2], ['c', 'vi:Three.', 2]]);
     expect(failures(events)).toEqual([]);
     expect(events.filter((e) => e.type === 'usage')).toHaveLength(2);

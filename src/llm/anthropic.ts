@@ -6,6 +6,7 @@
 
 import Anthropic, { APIError } from '@anthropic-ai/sdk';
 import type { MessageCreateParamsStreaming, RawMessageStreamEvent, StopReason as AnthropicStopReason, TextBlockParam } from '@anthropic-ai/sdk/resources/messages';
+import { reasoningFor } from './reasoning.ts';
 import { classifySdkError, headerOverrides, preflight, streamAttempts, type AdapterOptions, type QuirkFlip, type SdkApiError, FLIP_TEMPERATURE } from './sdk.ts';
 import type { ModelInfo, NormalizedEvent, NormalizedRequest, ProbeResult, ProtocolAdapter, Quirks, ResolvedConnection, StopReason } from './types.ts';
 
@@ -67,7 +68,7 @@ export function toAnthropicParams(req: NormalizedRequest, quirks: Quirks): Messa
     if (req.cacheHint === 'system' && quirks.supportsCacheControl !== false) block.cache_control = { type: 'ephemeral' };
     params.system = [block];
   }
-  const reasoning = quirks.reasoning;
+  const reasoning = reasoningFor(quirks.reasoning, req);
   let thinking = false;
   if (reasoning !== undefined && reasoning.control === 'budget') {
     if (reasoning.lowest === 'off') params.thinking = { type: 'disabled' };
