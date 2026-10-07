@@ -15,7 +15,7 @@ export { GLOSS_RULES, STYLE_LABELS, STYLE_RULES, TRANSLATE_PROMPT_ID, TRANSLATE_
 export { BRIEF_PROVIDER_ID, DEFAULT_GLOSS, GLOSSARY_PROVIDER_ID, neutralizeContextTags, renderContextBlock, renderSystemPromptV2, type SystemPromptV2Vars } from './context/assemble.ts';
 export { CONTEXT_BUDGET_TOKENS, DEFAULT_CONTEXT_PROVIDERS, PERSONAL_GLOSSARY_PROMPT_TOKENS, gatherContext, personalGlossaryTokens } from './context/budget.ts';
 export { documentBriefProvider, renderBrief } from './context/brief.ts';
-export { glossaryHash, glossaryProvider, keepsTerm, mentions, mergeGlossary, renderGlossaryEntry, termPattern } from './context/glossary.ts';
+export { fitGlossary, glossaryHash, glossaryProvider, keepsTerm, mentions, mergeGlossary, renderGlossaryEntry, termPattern, usedTermsLine } from './context/glossary.ts';
 export { CONTEXT_TAIL_MAX_TOKENS, CONTEXT_TAIL_PARAGRAPHS, CONTEXT_TAIL_PROVIDER_ID, contextTailProvider } from './context/tail.ts';
 export { ANALYZE_EXCERPT_TOKENS, ANALYZE_OUTLINE_MAX, ANALYZE_PROMPT_ID, analyzeExcerpt, analyzeInput, analyzeV1, neutralizeDelimiters } from './prompts/analyze.ts';
 export { ANALYZE_MAX_OUTPUT_TOKENS, ANALYZE_TEMPERATURE, analyzeRequest, analyzeStage, briefCacheKey } from './stages/analyze.ts';

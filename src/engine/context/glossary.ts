@@ -5,7 +5,7 @@
 // - document-scoped, the glossary list (translate@2's GLOSSARY slot). It depends only on memory,
 //   so it is the same for every briefed chunk. The user's entries come first, so they get the
 //   budget first; entries that don't fit are cut from the end (the brief's terms before any of the
-//   user's), the same cut for every chunk. The options page warns when the user's entries alone
+//   user's), the same cut for every chunk, keeping room for the chunk snippet below (fitGlossary). The options page warns when the user's entries alone
 //   pass PERSONAL_GLOSSARY_PROMPT_TOKENS (budget.ts);
 // - chunk-scoped, the listed terms that already occur in the source before this chunk, so the
 //   model glosses a term only at its first occurrence in the document (plan M2 §5, M2-D1). It is
@@ -78,32 +78,47 @@ export function segmentsBefore(segments: readonly Segment[], chunk: readonly Seg
   return (at < 0 ? [] : segments.slice(0, at)).filter((s) => s.translate);
 }
 
+/** The chunk snippet naming the listed terms already used before the chunk. */
+export function usedTermsLine(terms: readonly string[]): string {
+  return `${USED_TERMS_HEAD}${terms.map((t) => neutralizeContextTags(t.trim())).join(', ')}`;
+}
+
+/**
+ * The entries the glossary list keeps within `maxTokens`, in order, cut from the end. Room is kept
+ * for the used-terms line naming every listed term (review N1): a big glossary, which fills its
+ * share, is where the model most needs that line not to gloss a term again. The reserve is for the
+ * worst case, so the cut depends only on the entries, the same for every chunk (byte-stable list).
+ */
+export function fitGlossary(entries: readonly GlossaryEntry[], maxTokens: number): { listed: GlossaryEntry[]; lines: string[]; tokens: number } {
+  const listed: GlossaryEntry[] = [];
+  const lines: string[] = [];
+  let list = 0;
+  let tokens = 0;
+  for (const e of entries) {
+    const line = renderGlossaryEntry(e);
+    const withLine = list + estimateTokens(`${line}\n`);
+    const total = withLine + estimateTokens(usedTermsLine([...listed, e].map((x) => x.term)));
+    if (total > maxTokens) break;
+    listed.push(e);
+    lines.push(line);
+    list = withLine;
+    tokens = total;
+  }
+  return { listed, lines, tokens };
+}
+
 export const glossaryProvider: ContextProvider = {
   id: GLOSSARY_PROVIDER_ID,
   async provide(q) {
     const entries = mergeGlossary(q.memory.glossary, q.memory.brief?.glossary ?? []);
-    if (entries.length === 0) return [];
-    const lines: string[] = [];
-    let left = q.maxTokens;
-    const listed: GlossaryEntry[] = [];
-    for (const e of entries) {
-      const line = renderGlossaryEntry(e);
-      const cost = estimateTokens(`${line}\n`);
-      if (cost > left) break;
-      lines.push(line);
-      listed.push(e);
-      left -= cost;
-    }
+    const { listed, lines } = fitGlossary(entries, q.maxTokens);
     if (lines.length === 0) return [];
     const out: ContextSnippet[] = [{ providerId: GLOSSARY_PROVIDER_ID, scope: 'document', text: lines.join('\n') }];
     // One pattern per term over the text before the chunk, joined once ("\n" is a word boundary,
-    // so no match spans two segments).
+    // so no match spans two segments). Its room was kept by fitGlossary.
     const before = segmentsBefore(q.segments, q.chunk).map((s) => s.text).join('\n');
-    const used = before === '' ? [] : listed.filter((e) => termPattern(e.term)?.test(before)).map((e) => neutralizeContextTags(e.term.trim()));
-    if (used.length) {
-      const text = `${USED_TERMS_HEAD}${used.join(', ')}`;
-      if (estimateTokens(text) <= left) out.push({ providerId: GLOSSARY_PROVIDER_ID, scope: 'chunk', text });
-    }
+    const used = before === '' ? [] : listed.filter((e) => termPattern(e.term)?.test(before)).map((e) => e.term);
+    if (used.length) out.push({ providerId: GLOSSARY_PROVIDER_ID, scope: 'chunk', text: usedTermsLine(used) });
     return out;
   },
 };

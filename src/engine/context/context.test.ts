@@ -12,7 +12,7 @@ import type { ContextProvider, ContextQuery, DocumentBrief, EngineEvent, Glossar
 import { neutralizeContextTags, renderContextBlock, renderSystemPromptV2 } from './assemble.ts';
 import { BRIEF_MAX_TOKENS, documentBriefProvider, renderBrief } from './brief.ts';
 import { CONTEXT_BUDGET_TOKENS, DEFAULT_CONTEXT_PROVIDERS, PERSONAL_GLOSSARY_PROMPT_TOKENS, gatherContext, personalGlossaryTokens } from './budget.ts';
-import { KEEP_AS_IS_MARK, USED_TERMS_HEAD, glossaryHash, glossaryProvider, mentions, mergeGlossary, renderGlossaryEntry, termPattern } from './glossary.ts';
+import { KEEP_AS_IS_MARK, USED_TERMS_HEAD, fitGlossary, glossaryHash, glossaryProvider, mentions, mergeGlossary, renderGlossaryEntry, termPattern, usedTermsLine } from './glossary.ts';
 import { CONTEXT_TAIL_MAX_TOKENS, contextTailProvider } from './tail.ts';
 
 const seg = (id: string, text: string, over: Partial<Segment> = {}): Segment => ({ id, kind: 'p', text, inlineMarkup: text, domPath: `p[${id}]`, translate: true, ...over });
@@ -124,7 +124,8 @@ describe('GlossaryProvider (personal + auto)', () => {
 
   it('cuts entries from the end when the list does not fit (the user\'s entries survive)', async () => {
     const personal = [{ term: 'deploy', rendering: 'deploy' }];
-    const got = await glossaryProvider.provide(query({ memory: withBrief(personal), maxTokens: estimateTokens('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)\n') }));
+    const maxTokens = estimateTokens('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)\n') + estimateTokens(usedTermsLine(['deploy']));
+    const got = await glossaryProvider.provide(query({ memory: withBrief(personal), maxTokens }));
     expect(got).toEqual([{ providerId: 'glossary', scope: 'document', text: '- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)' }]);
   });
 });
@@ -177,13 +178,55 @@ describe('review fixes: hostile brief text, term matching, the personal glossary
     expect(estimateTokens(worst)).toBeLessThanOrEqual(BRIEF_MAX_TOKENS);
     expect(PERSONAL_GLOSSARY_PROMPT_TOKENS).toBe(CONTEXT_BUDGET_TOKENS - BRIEF_MAX_TOKENS);
     const personal = Array.from({ length: 3 }, (_, i) => ({ term: `term${i}`, rendering: `rendering number ${i}` }));
-    expect(personalGlossaryTokens(personal)).toBe(personal.reduce((n, e) => n + estimateTokens(`${renderGlossaryEntry(e)}\n`), 0));
+    expect(personalGlossaryTokens(personal)).toBe(personal.reduce((n, e) => n + estimateTokens(`${renderGlossaryEntry(e)}\n`), 0) + estimateTokens(usedTermsLine(personal.map((e) => e.term))));
+    expect(personalGlossaryTokens([])).toBe(0);
     const got = await glossaryProvider.provide(query({ memory: withBrief(personal), maxTokens: personalGlossaryTokens(personal) }));
     expect(got[0]?.text).toBe(personal.map(renderGlossaryEntry).join('\n'));
     // Through the budget: a full-size brief cannot squeeze the glossary below its share.
     const big: DocumentBrief = { ...BRIEF, genre: 'g'.repeat(300), audience: 'a'.repeat(300), purpose: 'p'.repeat(300), tone: 't'.repeat(300) };
     const gathered = await gatherContext(DEFAULT_CONTEXT_PROVIDERS, { ...query({ memory: withBrief(personal, big) }) });
     expect(gathered.find((s) => s.providerId === 'glossary' && s.scope === 'document')?.text.startsWith(personal.map(renderGlossaryEntry).join('\n'))).toBe(true);
+  });
+});
+
+describe('review round 4: the used-terms line survives a full glossary (N1)', () => {
+  // Enough entries to fill the share many times over; each term occurs before the last chunk.
+  const many = Array.from({ length: 200 }, (_, i) => ({ term: `term${i}`, rendering: `rendering for term number ${i}` }));
+  const segments = [seg('a', many.map((e) => e.term).join(' ')), seg('b', 'More text.'), seg('c', 'The end.')];
+
+  it('keeps room for the line naming every listed term, so it is never dropped when the list fills its share', async () => {
+    for (const maxTokens of [60, 200, 1100]) {
+      const got = await glossaryProvider.provide(query({ segments, chunk: segments.slice(2), memory: createWorkingMemory(many), maxTokens }));
+      const list = got.find((s) => s.scope === 'document')?.text ?? '';
+      const used = got.find((s) => s.scope === 'chunk')?.text ?? '';
+      const listed = list.split('\n').length;
+      expect(listed).toBeGreaterThan(0);
+      expect(listed).toBeLessThan(many.length);
+      expect(used).toBe(usedTermsLine(many.slice(0, listed).map((e) => e.term)));
+      expect(estimateTokens(list) + estimateTokens(used)).toBeLessThanOrEqual(maxTokens);
+    }
+  });
+
+  it('cuts the list the same for every chunk (the system block stays byte-stable)', async () => {
+    const memory = createWorkingMemory(many);
+    const first = await glossaryProvider.provide(query({ segments, chunk: segments.slice(0, 1), memory, maxTokens: 300 }));
+    const last = await glossaryProvider.provide(query({ segments, chunk: segments.slice(2), memory, maxTokens: 300 }));
+    expect(first).toHaveLength(1);
+    expect(last[0]).toEqual(first[0]);
+    expect(fitGlossary(many, 300).lines.join('\n')).toBe(first[0]?.text);
+  });
+
+  it('passes the budget whole: with a full-size brief and a big glossary, the line still reaches the prompt', async () => {
+    const big: DocumentBrief = { ...BRIEF, genre: 'g'.repeat(300), audience: 'a'.repeat(300), purpose: 'p'.repeat(300), tone: 't'.repeat(300) };
+    const gathered = await gatherContext(DEFAULT_CONTEXT_PROVIDERS, query({ segments, chunk: segments.slice(2), memory: withBrief(many, big) }));
+    expect(gathered.find((s) => s.providerId === 'glossary' && s.scope === 'chunk')?.text.startsWith(USED_TERMS_HEAD)).toBe(true);
+  });
+
+  it('counts the reserve in the personal share the options page warns about', () => {
+    const fit = fitGlossary(many, PERSONAL_GLOSSARY_PROMPT_TOKENS);
+    expect(personalGlossaryTokens(fit.listed)).toBe(fit.tokens);
+    expect(fit.tokens).toBeLessThanOrEqual(PERSONAL_GLOSSARY_PROMPT_TOKENS);
+    expect(personalGlossaryTokens(many.slice(0, fit.listed.length + 1))).toBeGreaterThan(PERSONAL_GLOSSARY_PROMPT_TOKENS);
   });
 });
 

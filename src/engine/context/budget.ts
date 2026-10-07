@@ -6,7 +6,7 @@
 import { estimateTokens } from '../tokens.ts';
 import type { ContextProvider, ContextQuery, ContextSnippet, GlossaryEntry } from '../types.ts';
 import { BRIEF_MAX_TOKENS, documentBriefProvider } from './brief.ts';
-import { glossaryProvider, renderGlossaryEntry } from './glossary.ts';
+import { glossaryProvider, renderGlossaryEntry, usedTermsLine } from './glossary.ts';
 import { contextTailProvider } from './tail.ts';
 
 /** Context tokens per chunk, all providers together (DESIGN §6: system ~1k, context ~300). */
@@ -18,9 +18,15 @@ export const CONTEXT_BUDGET_TOKENS = 1500;
  */
 export const PERSONAL_GLOSSARY_PROMPT_TOKENS = CONTEXT_BUDGET_TOKENS - BRIEF_MAX_TOKENS;
 
-/** What the personal glossary takes in a prompt, as the glossary provider lists it. */
+/**
+ * What the personal glossary takes in a prompt, as the glossary provider lists it, with the room
+ * it keeps for the used-terms line (fitGlossary): over PERSONAL_GLOSSARY_PROMPT_TOKENS, entries
+ * are cut.
+ */
 export function personalGlossaryTokens(entries: readonly GlossaryEntry[]): number {
-  return entries.reduce((n, e) => n + estimateTokens(`${renderGlossaryEntry(e)}\n`), 0);
+  if (entries.length === 0) return 0;
+  const list = entries.reduce((n, e) => n + estimateTokens(`${renderGlossaryEntry(e)}\n`), 0);
+  return list + estimateTokens(usedTermsLine(entries.map((e) => e.term)));
 }
 
 /** v1 providers (§5.4), document-scoped ones first so the system block can't depend on the chunk. */
