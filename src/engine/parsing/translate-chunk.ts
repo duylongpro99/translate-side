@@ -17,6 +17,7 @@
 // Usage from both calls is passed on as `usage` events. An abort propagates as a throw.
 
 import type { LLMError, ModelRole, NormalizedEvent, StopReason } from '../../llm/types.ts';
+import { BUDGET_MESSAGE } from '../budget.ts';
 import type { EngineEvent } from '../types.ts';
 import { copiesNeighbour, type Rendered } from './duplicate.ts';
 import { planRepair, type RepairPlan, type RepairRule } from './repair.ts';
@@ -37,6 +38,11 @@ export interface TranslateChunkOptions {
    * chunk (the context tail) that no segment may copy, besides the call's own earlier segments.
    */
   neighbours?: readonly Rendered[];
+  /**
+   * The job's budget (§5.6), asked before the repair call: once exhausted, the segments left fail
+   * with BUDGET_MESSAGE instead of being re-requested.
+   */
+  exhausted?: () => boolean;
 }
 
 /** Not exported from engine/index.ts: the test seam of the fuzz mutation checks (repair.ts). */
@@ -162,6 +168,10 @@ export async function* translateChunkWith(chunk: WireChunk, call: ChunkCall, opt
     yield* fail(todo, first.error);
     return report;
   }
+  if (options.exhausted?.() === true) {
+    yield* fail(todo, { kind: 'unknown', message: BUDGET_MESSAGE });
+    return report;
+  }
   // The repair may not copy the first pass's accepted segments either.
   const accepted = chunk.segments.flatMap((e) => (first.accepted.has(e.n) ? [{ source: e.segment.inlineMarkup, translation: first.accepted.get(e.n) ?? '' }] : []));
   const repairOptions = options.neighbours === undefined ? options : { ...options, neighbours: [...options.neighbours, ...accepted] };
@@ -176,6 +186,26 @@ export async function* translateChunkWith(chunk: WireChunk, call: ChunkCall, opt
   const error: LLMError = repair.error ?? { kind: 'unknown', message: UNREADABLE_MESSAGE, raw: { first: first.plan, repair: repair.plan } };
   yield* fail(lost, error);
   return report;
+}
+
+/** What one re-request (the check stage's, stages/check.ts) brought back. */
+export interface RerequestResult {
+  /** Wire ids the parser accepted (repair plan clean) → trimmed text. */
+  accepted: Map<number, string>;
+  report: CallReport;
+  error?: LLMError;
+}
+
+/**
+ * One call with only `chunk`'s segments (their original wire ids), parsed and planned like a
+ * repair: no finals, no partials (the segments are already shown), usage passed on. The caller
+ * decides what to accept. `attempt` goes to `call` (above 1: the base thinking setting).
+ */
+export async function* rerequestSegments(chunk: WireChunk, call: ChunkCall, options: TranslateChunkOptions, attempt: number): AsyncGenerator<EngineEvent, RerequestResult> {
+  // No copy guard here: the caller checks the texts against their neighbours itself.
+  const plain: TranslateChunkOptions = { producedBy: options.producedBy, revision: options.revision, role: options.role };
+  const out = yield* runCall(chunk, attempt, call, plain, false, new Set(chunk.segments.map((e) => e.n)));
+  return { accepted: out.accepted, report: strip(out), ...(out.error === undefined ? {} : { error: out.error }) };
 }
 
 function strip(outcome: CallOutcome): CallReport {

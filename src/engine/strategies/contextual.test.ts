@@ -4,14 +4,15 @@ import { createEngine } from '../engine.ts';
 import { ANALYZE_EXCERPT_TOKENS, ANALYZE_PROMPT_ID, analyzeExcerpt, analyzeInput, neutralizeDelimiters } from '../prompts/analyze.ts';
 import { createDefaultPromptRegistry } from '../prompts/index.ts';
 import { ANALYZE_MAX_OUTPUT_TOKENS, briefCacheKey } from '../stages/analyze.ts';
-import { fakeClient, fakeSleep, failed, renderLines, success, translatorClient, type FakeClient } from '../testing.ts';
+import { fakeClient, fakeSleep, failed, renderLines, success, translatorClient, wireLines, type FakeClient } from '../testing.ts';
 import { estimateTokens } from '../tokens.ts';
 import type { EngineEvent, Segment, StageContext, TranslationJob } from '../types.ts';
 import { createBudget } from '../budget.ts';
 import { createWorkingMemory } from '../memory.ts';
 import { runStages } from '../runner.ts';
 import type { ChunkOutcome } from './single-pass.ts';
-import { BRIEF_FREE_CHUNKS, CONTEXTUAL_ID, contextual, contextualStages, createContextual, isOneChunk, losesMarkers, markerCounts } from './contextual.ts';
+import { BRIEF_FREE_CHUNKS, CONTEXTUAL_ID, contextual, contextualStages, createContextual, isOneChunk, regresses } from './contextual.ts';
+import { markerCounts } from '../check/checks.ts';
 import { chunkLimits, chunkSegments } from '../chunker.ts';
 import { singlePass } from './single-pass.ts';
 
@@ -416,12 +417,14 @@ describe('contextual: the copy guard (translate@2 only, round 14 NB1)', () => {
     noFailures(events);
   });
 
-  it('translate@1 does not: one call, both accepted', async () => {
+  it('translate@1 does not: the translate call accepts both; the check stage (M2-D19) re-requests the copy', async () => {
     const translate = copier();
     const engine = createEngine({ llm: () => translate, now: () => 0, sleep: fakeSleep(), strategies: [createContextual('translate@1')], prompts: createDefaultPromptRegistry(), random: () => 0 });
     const events = await collect(engine.translate(oneChunk(), new AbortController().signal));
-    expect(translate.requests).toHaveLength(1);
-    expect(finals(events).map((e) => [e.id, e.text])).toEqual([['a', same], ['b', same]]);
+    expect(translate.requests).toHaveLength(2);
+    expect(wireLines(translate.requests[1]?.messages.at(-1)?.content ?? '').map((l) => l.n)).toEqual([2]);
+    expect(finals(events).map((e) => [e.id, e.attempt ?? 1, e.producedBy.stage])).toEqual([['a', 1, 'translate'], ['b', 1, 'translate'], ['b', 2, 'check']]);
+    noFailures(events);
   });
 });
 
@@ -429,7 +432,7 @@ describe('contextual: chunk 0 again with the brief, as revision 2 (M2-D17)', () 
   const words = (r: { messages: { content: string }[] }) => r.messages.at(-1)?.content ?? '';
 
   it('translates chunk 0 again once the brief lands, with the brief in its prompt, and replaces it as revision 2', async () => {
-    const translate = translatorClient((lines, call) => ({ text: lines.map((l) => `<seg id="${l.n}">r${call}:${l.source.slice(0, 2)}</seg>`).join('\n'), stopReason: 'end' as const }));
+    const translate = translatorClient((lines, call) => ({ text: lines.map((l) => `<seg id="${l.n}">r${call}:${l.source}</seg>`).join('\n'), stopReason: 'end' as const }));
     const events = await run(fakeClient([success(JSON.stringify(BRIEF))]), translate, longJob());
     expect(translate.requests).toHaveLength(LONG_CHUNKS + 1);
     const revise = translate.requests.filter((r) => words(r).includes('P0 '));
@@ -454,12 +457,12 @@ describe('contextual: chunk 0 again with the brief, as revision 2 (M2-D17)', () 
     const translate = translatorClient((lines) => {
       calls++;
       // The system block names the brief only on the second pass of chunk 0 and on later chunks.
-      return lines[0]?.source.startsWith('P0') && calls > 1 ? { text: 'garbage', stopReason: 'end' as const } : { text: lines.map((l) => `<seg id="${l.n}">vi:${l.source.slice(0, 2)}</seg>`).join('\n'), stopReason: 'end' as const };
+      return lines[0]?.source.startsWith('P0') && calls > 1 ? { text: 'garbage', stopReason: 'end' as const } : { text: lines.map((l) => `<seg id="${l.n}">vi:${l.source}</seg>`).join('\n'), stopReason: 'end' as const };
     });
     const events = await run(fakeClient([success(JSON.stringify(BRIEF))]), translate, longJob());
     noFailures(events);
     expect(finals(events).filter((e) => e.revision === 2)).toEqual([]);
-    expect(finals(events).filter((e) => e.id === 'p0').map((e) => e.text)).toEqual(['vi:P0']);
+    expect(finals(events).filter((e) => e.id === 'p0').map((e) => e.text)).toEqual([`vi:${longSegments[0]?.inlineMarkup ?? ''}`]);
   });
 
   it('starts only once chunk 0\'s own call is over, inside the job\'s maxConcurrency (round 14, NB2)', async () => {
@@ -502,13 +505,22 @@ describe('contextual: chunk 0 again with the brief, as revision 2 (M2-D17)', () 
     }
   });
 
-  it('counts inline markers per kind: fewer of any kind is a loss, whatever the others do (round 15)', () => {
+  it('counts inline markers per kind, asterisks inside code spans not as emphasis (round 15, Phase D)', () => {
     expect(markerCounts('Gọi `poll` rồi `wake()`, xem [link]tài liệu[/link], *lười* và **rất** nhanh.')).toEqual({ code: 2, link: 1, emphasis: 2 });
-    expect(losesMarkers('crate `futures` cho trait `ArcWake`', 'crate futures cho trait ArcWake')).toBe(true);
-    expect(losesMarkers('dùng `poll`', 'gọi `poll` ngay')).toBe(false);
+    expect(markerCounts('`a*b*c` và `*p`')).toEqual({ code: 2, link: 0, emphasis: 0 });
+  });
+
+  it('a revision 2 regresses when it fails a post-check against the source that revision 1 passes (Phase D)', () => {
+    const src = 'Depend on the `futures` crate for `ArcWake`.';
+    expect(regresses(src, 'Phụ thuộc vào crate `futures` cho `ArcWake`.', 'Phụ thuộc vào crate futures cho ArcWake.', 'vi')).toBe(true);
+    expect(regresses(src, 'Phụ thuộc vào crate `futures` cho `ArcWake`.', 'Dùng crate `futures` để có `ArcWake`.', 'vi')).toBe(false);
+    // Compared with the source, not with revision 1: a revision 1 that had lost the spans itself is no yardstick.
+    expect(regresses(src, 'Phụ thuộc vào crate futures cho ArcWake.', 'Dùng crate futures để có ArcWake.', 'vi')).toBe(false);
+    // Revision 1 invented a span; revision 2 has exactly the source's: not a loss.
+    expect(regresses('Use the `poll` method.', 'Dùng phương thức `poll` của `Future`.', 'Dùng phương thức `poll`.', 'vi')).toBe(false);
     // One more backtick span does not make up for a lost link.
-    expect(losesMarkers('xem [link]tài liệu[/link]', 'xem `docs` và tài liệu')).toBe(true);
-    expect(losesMarkers('*lười*', '**lười**')).toBe(false);
+    expect(regresses('Read [link]the docs[/link] first.', 'Hãy đọc [link]tài liệu[/link] trước.', 'Hãy đọc `docs` trước.', 'vi')).toBe(true);
+    expect(regresses('Futures are *lazy*.', 'Các future *lười*.', 'Các future **lười**.', 'vi')).toBe(false);
   });
 
   it('keeps revision 1 for a segment whose revision 2 lost inline markers; replaces the rest (round 15)', async () => {
@@ -531,7 +543,7 @@ describe('contextual: chunk 0 again with the brief, as revision 2 (M2-D17)', () 
       m3: 'Hãy đọc tài liệu trước.',
       // No markers either way: replaced.
       m4: 'Chỉ có chữ thường.',
-      p1: 'vi2:P1',
+      p1: `vi2:${longSegments[1]?.inlineMarkup ?? ''}`,
     };
     const translate = translatorClient((lines) => {
       if (lines[0]?.source.startsWith('Depend')) firstChunkCalls++;

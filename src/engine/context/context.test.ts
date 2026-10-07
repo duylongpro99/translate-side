@@ -12,7 +12,7 @@ import type { ContextProvider, ContextQuery, DocumentBrief, EngineEvent, Glossar
 import { neutralizeContextTags, renderContextBlock, renderSystemPromptV2 } from './assemble.ts';
 import { BRIEF_MAX_TOKENS, documentBriefProvider, renderBrief } from './brief.ts';
 import { CONTEXT_BUDGET_TOKENS, DEFAULT_CONTEXT_PROVIDERS, PERSONAL_GLOSSARY_PROMPT_TOKENS, gatherContext, personalGlossaryTokens } from './budget.ts';
-import { KEEP_AS_IS_MARK, KEEP_ENGLISH_MARK, USED_TERMS_HEAD, fitGlossary, glossaryHash, glossaryProvider, mentions, mergeGlossary, renderGlossaryEntry, termPattern, usedTermsLine } from './glossary.ts';
+import { KEEP_AS_IS_MARK, KEEP_ENGLISH_MARK, USED_TERMS_HEAD, codeTerms, fitGlossary, glossaryHash, glossaryProvider, mentions, mergeGlossary, renderGlossaryEntry, termPattern, usedTermsLine } from './glossary.ts';
 import { CONTEXT_TAIL_MAX_TOKENS, contextTailProvider } from './tail.ts';
 
 const seg = (id: string, text: string, over: Partial<Segment> = {}): Segment => ({ id, kind: 'p', text, inlineMarkup: text, domPath: `p[${id}]`, translate: true, ...over });
@@ -144,6 +144,17 @@ describe('GlossaryProvider (personal + auto)', () => {
     expect(GLOSS_RULES.first).toContain('a term it translates is written as rendered, with the English original in parentheses');
     // A kept term is listed as itself, so the line never reads as "write the English" for a translated one.
     expect(usedTermsLine([{ term: 'Future', rendering: '' }, { term: 'deploy', rendering: 'triển khai' }])).toBe(`${USED_TERMS_HEAD}Future → Future; deploy → triển khai`);
+  });
+
+  it('shows a term that is code in the source in backticks, in the list and the used-terms line (Phase D)', async () => {
+    const segments = [seg('a', 'Edit `Cargo.toml` and run the executor.'), seg('b', 'Now.')];
+    const memory = withBrief([], { ...BRIEF, glossary: [{ term: 'Cargo.toml', rendering: 'Cargo.toml' }, { term: 'executor', rendering: 'bộ thực thi' }] });
+    const got = await glossaryProvider.provide(query({ segments, chunk: segments.slice(1), memory }));
+    expect(got[0]?.text).toContain('- `Cargo.toml` → `Cargo.toml` ');
+    expect(got[0]?.text).toContain('- executor → bộ thực thi ');
+    expect(got.find((s) => s.scope === 'chunk')?.text).toBe(`${USED_TERMS_HEAD}executor → bộ thực thi`);
+    expect(codeTerms(segments)).toEqual(new Set(['Cargo.toml']));
+    expect(usedTermsLine([{ term: 'Cargo.toml', rendering: '' }], codeTerms(segments))).toBe(`${USED_TERMS_HEAD}\`Cargo.toml\` → \`Cargo.toml\``);
   });
 
   it('cuts entries from the end when the list does not fit (the user\'s entries survive)', async () => {

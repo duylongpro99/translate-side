@@ -131,7 +131,7 @@ export type EngineEvent =
    * Contextual only: a chunk's prompt is about to be built, with or without the brief (plan M2-D6,
    * ChunkOutcome.briefed). For the harness and diagnostics; the panel ignores it.
    * With `revise`: contextual's second pass of the chunk (M2-D17) is over, and `kept` lists the
-   * segments whose revision 2 was dropped because it lost inline markers (round 15).
+   * segments whose revision 2 was dropped because it failed a post-check revision 1 passed (round 15, Phase D).
    */
   | { type: 'chunk'; index: number; briefed: boolean; revise?: { kept: string[] } }
   /** Shown in UI, cached. */
@@ -209,7 +209,7 @@ export interface WorkingMemory {
    * Latest final text per segment id, kept by the engine from `segment.final` events: the "last
    * good revision" a failing stage falls back to (§5.6).
    */
-  translated: Map<string, { text: string; revision: number }>;
+  translated: Map<string, { text: string; revision: number; attempt?: number }>;
   /** How often each glossary term was used so far. */
   termUsage: Map<string, number>;
 }

@@ -12,6 +12,8 @@
 //   (plan M2 §5, M2-D1) and keeps rendering it as listed. It is computed from the source in page
 //   order, so it doesn't depend on which chunk finished first. Headings and inline code are not
 //   running text: the gloss rule puts no gloss there, so a term seen only there is still unglossed.
+// A term (or a keep-as-is rendering) that is the content of a backtick span somewhere in the
+// document is shown in backticks in both snippets, so the model keeps it as code (Phase D).
 import { cyrb53 } from '../hash.ts';
 import { estimateTokens } from '../tokens.ts';
 import type { ContextProvider, ContextSnippet, GlossaryEntry, Segment } from '../types.ts';
@@ -56,10 +58,27 @@ export type GlossarySource = 'personal' | 'brief';
 /** The head of the chunk snippet listing the terms used before this chunk (no gloss for them). */
 export const USED_TERMS_HEAD = 'Glossary terms already used earlier in the document, so already glossed: write each exactly as rendered after its arrow, with no gloss and no parentheses after it, in every segment below, headings included: ';
 
+/**
+ * The contents of the document's backtick spans: a glossary term equal to one is code in the
+ * source, so the list shows it in backticks (Phase D: the brief listed `Cargo.toml` bare, and the
+ * model followed it and dropped the backticks).
+ */
+export function codeTerms(segments: readonly Segment[]): Set<string> {
+  const out = new Set<string>();
+  for (const s of segments) for (const m of s.inlineMarkup.matchAll(/`([^`]+)`/g)) out.add((m[1] ?? '').trim());
+  return out;
+}
+
+/** `text` as the list shows it: in backticks when it is code in the source. */
+function shown(text: string, code: ReadonlySet<string>): string {
+  const t = text.trim();
+  return code.has(t) ? `\`${t}\`` : t;
+}
+
 /** One glossary line. Tags are neutralised: the brief's terms are model output over page text (§8). */
-export function renderGlossaryEntry(e: GlossaryEntry, from: GlossarySource = 'personal'): string {
-  const term = neutralizeContextTags(e.term.trim());
-  const head = keepsTerm(e) ? `- ${term} → ${term} ${from === 'personal' ? KEEP_AS_IS_MARK : KEEP_ENGLISH_MARK}` : `- ${term} → ${neutralizeContextTags(e.rendering.trim())} ${RENDER_MARK}`;
+export function renderGlossaryEntry(e: GlossaryEntry, from: GlossarySource = 'personal', code: ReadonlySet<string> = new Set()): string {
+  const term = neutralizeContextTags(shown(e.term, code));
+  const head = keepsTerm(e) ? `- ${term} → ${term} ${from === 'personal' ? KEEP_AS_IS_MARK : KEEP_ENGLISH_MARK}` : `- ${term} → ${neutralizeContextTags(shown(e.rendering, code))} ${RENDER_MARK}`;
   const note = e.note?.trim();
   return note ? `${head} — ${neutralizeContextTags(note)}` : head;
 }
@@ -106,10 +125,10 @@ export function runningTextBefore(segments: readonly Segment[], chunk: readonly 
 }
 
 /** The chunk snippet naming the listed terms already used before the chunk, each with its rendering. */
-export function usedTermsLine(entries: readonly Pick<GlossaryEntry, 'term' | 'rendering'>[]): string {
+export function usedTermsLine(entries: readonly Pick<GlossaryEntry, 'term' | 'rendering'>[], code: ReadonlySet<string> = new Set()): string {
   const item = (e: Pick<GlossaryEntry, 'term' | 'rendering'>) => {
-    const term = neutralizeContextTags(e.term.trim());
-    return `${term} → ${keepsTerm({ term: e.term, rendering: e.rendering }) ? term : neutralizeContextTags(e.rendering.trim())}`;
+    const term = neutralizeContextTags(shown(e.term, code));
+    return `${term} → ${keepsTerm({ term: e.term, rendering: e.rendering }) ? term : neutralizeContextTags(shown(e.rendering, code))}`;
   };
   return `${USED_TERMS_HEAD}${entries.map(item).join('; ')}`;
 }
@@ -120,15 +139,20 @@ export function usedTermsLine(entries: readonly Pick<GlossaryEntry, 'term' | 're
  * share, is where the model most needs that line not to gloss a term again. The reserve is for the
  * worst case, so the cut depends only on the entries, the same for every chunk (byte-stable list).
  */
-export function fitGlossary(entries: readonly GlossaryEntry[], maxTokens: number, sourceOf: (e: GlossaryEntry) => GlossarySource = () => 'personal'): { listed: GlossaryEntry[]; lines: string[]; tokens: number } {
+export function fitGlossary(
+  entries: readonly GlossaryEntry[],
+  maxTokens: number,
+  sourceOf: (e: GlossaryEntry) => GlossarySource = () => 'personal',
+  code: ReadonlySet<string> = new Set(),
+): { listed: GlossaryEntry[]; lines: string[]; tokens: number } {
   const listed: GlossaryEntry[] = [];
   const lines: string[] = [];
   let list = 0;
   let tokens = 0;
   for (const e of entries) {
-    const line = renderGlossaryEntry(e, sourceOf(e));
+    const line = renderGlossaryEntry(e, sourceOf(e), code);
     const withLine = list + estimateTokens(`${line}\n`);
-    const total = withLine + estimateTokens(usedTermsLine([...listed, e]));
+    const total = withLine + estimateTokens(usedTermsLine([...listed, e], code));
     if (total > maxTokens) break;
     listed.push(e);
     lines.push(line);
@@ -143,13 +167,15 @@ export const glossaryProvider: ContextProvider = {
   async provide(q) {
     const entries = mergeGlossary(q.memory.glossary, q.memory.brief?.glossary ?? []);
     const personal = new Set(q.memory.glossary.map((e) => key(e.term)));
-    const { listed, lines } = fitGlossary(entries, q.maxTokens, (e) => (personal.has(key(e.term)) ? 'personal' : 'brief'));
+    // From every segment of the document, not the chunk: the list stays the same for every chunk.
+    const code = codeTerms(q.segments);
+    const { listed, lines } = fitGlossary(entries, q.maxTokens, (e) => (personal.has(key(e.term)) ? 'personal' : 'brief'), code);
     if (lines.length === 0) return [];
     const out: ContextSnippet[] = [{ providerId: GLOSSARY_PROVIDER_ID, scope: 'document', text: lines.join('\n') }];
     // One pattern per term over the running text before the chunk. Its room was kept by fitGlossary.
     const before = runningTextBefore(q.segments, q.chunk);
     const used = before === '' ? [] : listed.filter((e) => termPattern(e.term)?.test(before));
-    if (used.length) out.push({ providerId: GLOSSARY_PROVIDER_ID, scope: 'chunk', text: usedTermsLine(used) });
+    if (used.length) out.push({ providerId: GLOSSARY_PROVIDER_ID, scope: 'chunk', text: usedTermsLine(used, code) });
     return out;
   },
 };

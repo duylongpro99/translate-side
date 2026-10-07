@@ -2,6 +2,9 @@
 
 import type { Budget, BudgetLimits } from './types.ts';
 
+/** The failure of a segment no call was made for because the job's budget was spent (§5.6). */
+export const BUDGET_MESSAGE = 'The job budget was exhausted before this segment was translated';
+
 export function createBudget(limits: BudgetLimits, now: () => number): Budget {
   const startedAt = now();
   const spent = { input: 0, output: 0, cachedInput: 0 };

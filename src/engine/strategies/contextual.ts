@@ -23,18 +23,20 @@
 // is over, only for segments it translated cleanly; a segment it fails keeps revision 1, and no
 // `segment.failed` goes out for it. It is a work item of the translate stage, right after chunk 0,
 // so it takes one of the job's maxConcurrency slots like a chunk; it starts once chunk 0's own
-// call is over and the analyze stage has settled, so revision 2 never races revision 1. A revision
-// 2 with fewer inline markers of any kind than the revision 1 it would replace (backtick spans,
-// links, emphasis) is dropped and revision 1 stays: seen live, a glossary rendered without
+// call is over and the analyze stage has settled, so revision 2 never races revision 1 (the slot is
+// held while it waits for the brief). A revision 2 that fails a post-check against the source
+// (check/checks.ts: markers, code spans, URLs, numbers, length, script) that the revision 1 it
+// would replace passes is dropped and revision 1 stays: seen live, a glossary rendered without
 // backticks drew code spans out of the text (round 14). The pass then reports the dropped ids
-// (the `chunk` event's `revise.kept`).
+// (the `chunk` event's `revise.kept`). The check stage then checks whichever revision stands.
 import { chunkLimits, chunkSegments } from '../chunker.ts';
 import { ANALYZE_PROMPT_ID } from '../prompts/analyze.ts';
 import { TRANSLATE_V2_PROMPT_ID } from '../prompts/translate.ts';
 import { defineStage, multiplex, runStages, type AnyStage } from '../runner.ts';
 import { analyzeStage } from '../stages/analyze.ts';
 import type { EngineEvent, StageContext, Strategy, TranslationJob } from '../types.ts';
-import { checkStage, chunkStage, createTranslateRun, createTranslateStage, untilSettledOrAborted, type BriefWait, type ChunkOutcome, type ChunkWork, type TranslateRun } from './single-pass.ts';
+import { checkSegment } from '../check/checks.ts';
+import { chunkStage, createStrategyCheckStage, createTranslateRun, createTranslateStage, untilSettledOrAborted, type BriefWait, type ChunkOutcome, type ChunkWork, type TranslateRun } from './single-pass.ts';
 
 export const CONTEXTUAL_ID = 'contextual';
 /** 2: translate@2 with the context providers (M2-E3). 1 was Phase B's translate@1 with the brief unused. */
@@ -55,17 +57,15 @@ interface ReviseWork {
 
 type ContextualWork = ChunkWork | ReviseWork;
 
-/** Inline markers of a translation, per kind: backtick spans, links, emphasis (`*…*` or `**…**`). */
-export function markerCounts(text: string): { code: number; link: number; emphasis: number } {
-  const count = (re: RegExp) => text.match(re)?.length ?? 0;
-  return { code: count(/`[^`]+`/g), link: count(/\[link\][\s\S]*?\[\/link\]/g), emphasis: count(/\*\*[^*]+\*\*|\*[^*]+\*/g) };
-}
-
-/** Whether `revised` lost a marker of some kind that `draft` had (round 15). */
-export function losesMarkers(draft: string, revised: string): boolean {
-  const before = markerCounts(draft);
-  const after = markerCounts(revised);
-  return after.code < before.code || after.link < before.link || after.emphasis < before.emphasis;
+/**
+ * Whether `revised` fails a post-check (check/checks.ts) that `draft` passes, both against the
+ * segment's source: a revision 2 that loses a code span, a link, emphasis, a URL or a number the
+ * source has, where revision 1 kept it (round 15; compared with the source since Phase D, so a
+ * revision 1 that had lost or invented a marker itself is no yardstick).
+ */
+export function regresses(source: string, draft: string, revised: string, targetLang: string): boolean {
+  const before = new Set(checkSegment(source, draft, targetLang).map((f) => f.kind));
+  return checkSegment(source, revised, targetLang).some((f) => !before.has(f.kind));
 }
 
 /**
@@ -86,9 +86,10 @@ async function* revise(again: TranslateRun, work: ChunkWork, ctx: StageContext):
     else if (e.type === 'segment.final' && clean.has(e.id)) last.set(e.id, e);
   }
   const kept: string[] = [];
+  const source = new Map(work.chunk.segments.map((s) => [s.id, s.inlineMarkup]));
   for (const e of last.values()) {
     const draft = ctx.memory.translated.get(e.id);
-    if (draft !== undefined && draft.revision < e.revision && losesMarkers(draft.text, e.text)) kept.push(e.id);
+    if (draft !== undefined && draft.revision < e.revision && regresses(source.get(e.id) ?? '', draft.text, e.text, work.doc.targetLang)) kept.push(e.id);
     else yield e;
   }
   yield { type: 'chunk', index: work.chunk.index, briefed: ctx.memory.brief !== undefined, revise: { kept } };
@@ -105,7 +106,8 @@ export function isOneChunk(job: TranslationJob): boolean {
  * once the brief has settled.
  */
 export function contextualStages(brief: BriefWait, translatePrompt: string = CONTEXTUAL_TRANSLATE_PROMPT_ID, revises?: (ctx: StageContext) => boolean): readonly AnyStage[] {
-  if (revises === undefined) return [chunkStage, createTranslateStage(CONTEXTUAL_ID, brief, translatePrompt), checkStage];
+  const check = createStrategyCheckStage(CONTEXTUAL_ID, translatePrompt);
+  if (revises === undefined) return [chunkStage, createTranslateStage(CONTEXTUAL_ID, brief, translatePrompt), check];
   const first = createTranslateRun(CONTEXTUAL_ID, brief, translatePrompt);
   const again = createTranslateRun(CONTEXTUAL_ID, undefined, translatePrompt, REVISED_REVISION);
   // Settles when a brief-free chunk's first call is over (by index).
@@ -150,7 +152,7 @@ export function contextualStages(brief: BriefWait, translatePrompt: string = CON
       }
     },
   });
-  return [chunk, translate, checkStage];
+  return [chunk, translate, check];
 }
 
 /** `contextual` sending `translatePrompt` (the harness's `--prompt`); same id, so it replaces the default in an engine. */

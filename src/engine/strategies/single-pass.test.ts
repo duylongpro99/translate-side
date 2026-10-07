@@ -213,14 +213,16 @@ describe('single-pass: the translate call (M1-E5)', () => {
   });
 });
 
-describe('single-pass: no copy guard (round 14, NB1)', () => {
-  it('accepts a segment whose text repeats an earlier one: no repair call, as in M1', async () => {
+describe('single-pass: no copy guard in the translate stage (round 14, NB1)', () => {
+  it('the translate call accepts a segment whose text repeats an earlier one, as in M1; the check stage re-requests it (M2-D19)', async () => {
     const segments = [seg('a', 'Ownership is a set of rules that govern how a Rust program manages memory.'), seg('b', 'Some languages have garbage collection that regularly looks for no-longer-used memory.')];
     const same = 'Quyền sở hữu là một tập hợp quy tắc chi phối cách chương trình Rust quản lý bộ nhớ.';
-    const client = translatorClient((lines) => renderLines(lines, () => same));
+    const fixed = 'Một số ngôn ngữ có bộ thu gom rác thường xuyên tìm bộ nhớ không còn được dùng.';
+    const client = translatorClient((lines, call) => renderLines(lines, () => (call === 1 ? same : fixed)));
     const events = await collect(createEngine(deps(client)).translate(job(segments), new AbortController().signal));
-    expect(client.requests).toHaveLength(1);
-    expect(finals(events)).toEqual([['a', same, 1], ['b', same, 1]]);
+    expect(client.requests).toHaveLength(2);
+    expect(finals(events)).toEqual([['a', same, 1], ['b', same, 1], ['b', fixed, 2]]);
+    expect(failures(events)).toEqual([]);
   });
 });
 
@@ -265,10 +267,10 @@ describe('single-pass: budget', () => {
   });
 });
 
-describe('single-pass: check stage (count only) and the strategy\'s summary', () => {
+describe('single-pass: check stage (count) and the strategy\'s summary', () => {
   it('counts the segments sent, final and failed', async () => {
     const { summary } = await runDirect(job(three), translatorClient());
-    expect(summary).toEqual({ segments: 3, final: 3, failed: 0, unaccounted: [] });
+    expect(summary).toEqual({ segments: 3, final: 3, failed: 0, unaccounted: [], rerequested: {}, repaired: 0, checkFailed: [] });
   });
 
   it('fails a segment the translate stage left unaccounted (should not happen) with UNCHECKED_MESSAGE', async () => {
@@ -287,7 +289,7 @@ describe('single-pass: check stage (count only) and the strategy\'s summary', ()
       events.push(r.value);
     }
     expect(failures(events)).toEqual([['b', 'unknown', UNCHECKED_MESSAGE]]);
-    expect(summary).toEqual({ segments: 3, final: 1, failed: 2, unaccounted: ['b'] });
+    expect(summary).toEqual({ segments: 3, final: 1, failed: 2, unaccounted: ['b'], rerequested: {}, repaired: 0, checkFailed: [] });
   });
 });
 
@@ -319,7 +321,7 @@ describe('single-pass: working memory after a failed repair (carry-over b)', () 
     expect(finals(events)).toEqual([['a', 'vi:One sentence.', 1], ['b', 'vi:Two.', 1], ['c', 'vi:Three.', 1], ['b', 'vi2:Two *sentences* here.', 2], ['c', 'vi2:Three.', 2]]);
     expect(failures(events)).toEqual([['a', 'unknown', UNREADABLE_MESSAGE]]);
     expect(seen).toHaveLength(1);
-    expect([...(seen[0] ?? new Map()).entries()]).toEqual([['b', { text: 'vi2:Two *sentences* here.', revision: 1 }], ['c', { text: 'vi2:Three.', revision: 1 }]]);
+    expect([...(seen[0] ?? new Map()).entries()]).toEqual([['b', { text: 'vi2:Two *sentences* here.', revision: 1, attempt: 2 }], ['c', { text: 'vi2:Three.', revision: 1, attempt: 2 }]]);
   });
 
   it('directly: only this strategy\'s revision is dropped; a later stage\'s revision is kept', async () => {

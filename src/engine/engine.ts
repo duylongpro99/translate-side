@@ -51,7 +51,7 @@ export function createEngine(deps: EngineDeps): TranslationEngine {
         else if (event.type === 'segment.final') {
           const known = ctx.memory.translated.get(event.id);
           if (known === undefined || event.revision >= known.revision) {
-            ctx.memory.translated.set(event.id, { text: event.text, revision: event.revision });
+            ctx.memory.translated.set(event.id, { text: event.text, revision: event.revision, ...(event.attempt === undefined ? {} : { attempt: event.attempt }) });
           }
           failed.delete(event.id);
         } else if (event.type === 'segment.failed') failed.add(event.id);

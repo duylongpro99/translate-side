@@ -1,9 +1,10 @@
-// `single-pass` (DESIGN.md §5.3 "Planned strategies", plan M1-E5): translate(chunk) + check
-// (count only). Stages:
+// `single-pass` (DESIGN.md §5.3 "Planned strategies", plan M1-E5): translate(chunk) + check.
+// Stages:
 //   chunk      document → ChunkWork[]      the chunker (M1-E2) over the job's segments
 //   translate  chunk    → ChunkOutcome     translateChunk (M1-E3) with one repair round; this
 //                                          stage builds the prompt and the per-call budget
-//   check      document → CheckSummary     every segment sent came back final or failed
+//   check      document → CheckSummary     every segment sent came back final or failed, and
+//                                          the post-checks with one re-request (stages/check.ts)
 // The translate stage's `call` (translate-chunk.ts ChunkCall) owns the prompt and maxOutputTokens:
 // the system block is `translate@1` rendered once per chunk (identical for every chunk of a
 // document, the caching prefix), the user message is the wire chunk, and maxOutputTokens follows
@@ -11,7 +12,7 @@
 // on the repair (a smaller budget, so a repair can't be cut by the first pass's size).
 
 import type { LLMClient, LLMError, NormalizedRequest } from '../../llm/types.ts';
-import { maxOutputTokens } from '../budget.ts';
+import { BUDGET_MESSAGE, maxOutputTokens } from '../budget.ts';
 import { chunkLimits, chunkSegments, type Chunk } from '../chunker.ts';
 import { formatWire, toWire, type WireChunk } from '../parsing/wire.ts';
 import { translateChunk, type ChunkCall, type ChunkReport } from '../parsing/translate-chunk.ts';
@@ -22,6 +23,8 @@ import { CONTEXT_TAIL_PARAGRAPHS } from '../context/tail.ts';
 import type { Rendered } from '../parsing/duplicate.ts';
 import { STYLE_LABELS, TRANSLATE_PROMPT_ID, languageLabel } from '../prompts/translate.ts';
 import { defineStage, defineStrategy, type AnyStage } from '../runner.ts';
+import { createCheckStage } from '../stages/check.ts';
+import type { CheckKind } from '../check/checks.ts';
 import { estimateTokens } from '../tokens.ts';
 import type { EngineEvent, JobOptions, Segment, StageContext, Strategy, TranslationJob, WorkingMemory } from '../types.ts';
 
@@ -33,8 +36,8 @@ const REVISION = 1;
 /** S2 ran translate@1 at 0.2; carried over until the harness says otherwise. */
 export const TRANSLATE_TEMPERATURE = 0.2;
 
-export const BUDGET_MESSAGE = 'The job budget was exhausted before this segment was translated';
-export const UNCHECKED_MESSAGE = 'The segment was neither translated nor reported failed';
+export { BUDGET_MESSAGE } from '../budget.ts';
+export { CHECK_MESSAGE, UNCHECKED_MESSAGE } from '../stages/check.ts';
 
 export interface ChunkWork {
   chunk: Chunk;
@@ -50,6 +53,8 @@ export interface ChunkOutcome {
   final: string[];
   failed: string[];
   report?: ChunkReport;
+  /** The chunk's work, for the check stage's re-request (absent only in hand-made outcomes). */
+  work?: ChunkWork;
   /**
    * Contextual only: whether the brief was in working memory when this chunk's prompt was built.
    * The first chunk does not wait for the brief (plan M2-D6), so it is false there unless the job
@@ -72,6 +77,12 @@ export interface CheckSummary {
   failed: number;
   /** Ids the check stage had to fail itself (should be empty). */
   unaccounted: string[];
+  /** Post-check failures that led to a re-request, per check kind (a segment may count under several). */
+  rerequested: Partial<Record<CheckKind, number>>;
+  /** Re-requested segments that came back passing every check. */
+  repaired: number;
+  /** Re-requested segments that still failed: `segment.failed` (CHECK_MESSAGE or the call's error). */
+  checkFailed: string[];
 }
 
 export interface SystemPromptVars {
@@ -179,10 +190,50 @@ export function createTranslateStage(strategyId: string, brief?: BriefWait, prom
   });
 }
 
+/** What one chunk's translate calls go through: the first pass, its repair, the check stage's re-request. */
+export interface PreparedChunk {
+  model: string;
+  call: ChunkCall;
+  /** translate@2 only: the context tail's translated paragraphs, for the copy guard (translate-chunk.ts). */
+  neighbours?: Rendered[];
+}
+
+/**
+ * Builds a chunk's prompt from `memory` (one snapshot, so a brief landing meanwhile reaches all of
+ * it or none) and returns the call that sends it. The source language is the job's, or, when the
+ * shell could not tell it, the one the brief read (plan M2 §5).
+ */
+export async function prepareChunk(work: ChunkWork, ctx: StageContext, memory: Readonly<WorkingMemory>, promptId: string): Promise<PreparedChunk> {
+  const client = ctx.llm('translate');
+  const prompt = ctx.prompts.get(promptId);
+  const sourceLang = work.doc.sourceLang.trim() || (memory.brief?.language ?? '');
+  const render = (vars: Readonly<Record<string, string>>) => prompt.render(vars);
+  let system: string;
+  let context = '';
+  let neighbours: Rendered[] | undefined;
+  if (prompt.name === 'translate' && prompt.version >= 2) {
+    // The tail's translated paragraphs: no segment of this chunk may come back as one of them.
+    neighbours = segmentsBefore(work.doc.segments, work.chunk.segments)
+      .slice(-CONTEXT_TAIL_PARAGRAPHS)
+      .flatMap((s) => {
+        const t = memory.translated.get(s.id)?.text;
+        return t === undefined ? [] : [{ source: s.inlineMarkup, translation: t }];
+      });
+    const { segments, ...doc } = work.doc;
+    const snippets = await gatherContext(ctx.context, { doc, chunk: work.chunk.segments, targetLang: work.doc.targetLang, segments, memory, options: work.options });
+    system = renderSystemPromptV2(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style, gloss: work.options.gloss ?? DEFAULT_GLOSS, snippets });
+    context = renderContextBlock(snippets);
+  } else {
+    system = renderSystemPrompt(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
+  }
+  const call: ChunkCall = (wire, attempt) => client.stream(translateRequest(client, system, wire, ctx.signal, context, work.chunk.index, attempt));
+  return { model: client.model, call, ...(neighbours === undefined ? {} : { neighbours }) };
+}
+
 /** The translate stage's work for one chunk, typed (createTranslateStage wraps it; contextual's revise pass calls it). */
 export function createTranslateRun(strategyId: string, brief?: BriefWait, promptId: string = TRANSLATE_PROMPT_ID, revision: number = REVISION): TranslateRun {
   return async function* (work, ctx) {
-    const outcome: ChunkOutcome = { index: work.chunk.index, ids: work.chunk.segments.map((s) => s.id), final: [], failed: [] };
+    const outcome: ChunkOutcome = { index: work.chunk.index, ids: work.chunk.segments.map((s) => s.id), final: [], failed: [], work };
     if (brief !== undefined && work.chunk.index >= brief.freeChunks) await untilSettledOrAborted(brief.settled, ctx.signal);
     // One snapshot for the whole prompt: a brief landing while this chunk's prompt is being built
     // must not reach part of it (the language, the providers) and miss `briefed`.
@@ -199,34 +250,13 @@ export function createTranslateRun(strategyId: string, brief?: BriefWait, prompt
       }
       return outcome;
     }
-    const client = ctx.llm('translate');
-    const prompt = ctx.prompts.get(promptId);
-    const sourceLang = work.doc.sourceLang.trim() || (memory.brief?.language ?? '');
-    const render = (vars: Readonly<Record<string, string>>) => prompt.render(vars);
-    let system: string;
-    let context = '';
-    let neighbours: Rendered[] | undefined;
-    if (prompt.name === 'translate' && prompt.version >= 2) {
-      // The tail's translated paragraphs: no segment of this chunk may come back as one of them.
-      neighbours = segmentsBefore(work.doc.segments, work.chunk.segments)
-        .slice(-CONTEXT_TAIL_PARAGRAPHS)
-        .flatMap((s) => {
-          const t = memory.translated.get(s.id)?.text;
-          return t === undefined ? [] : [{ source: s.inlineMarkup, translation: t }];
-        });
-      const { segments, ...doc } = work.doc;
-      const snippets = await gatherContext(ctx.context, { doc, chunk: work.chunk.segments, targetLang: work.doc.targetLang, segments, memory, options: work.options });
-      system = renderSystemPromptV2(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style, gloss: work.options.gloss ?? DEFAULT_GLOSS, snippets });
-      context = renderContextBlock(snippets);
-    } else {
-      system = renderSystemPrompt(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
-    }
-    const call: ChunkCall = (wire, attempt) => client.stream(translateRequest(client, system, wire, ctx.signal, context, work.chunk.index, attempt));
+    const { model, call, neighbours } = await prepareChunk(work, ctx, memory, promptId);
     const gen = translateChunk(toWire(work.chunk.segments), call, {
-      producedBy: { strategy: strategyId, stage: 'translate', model: client.model },
+      producedBy: { strategy: strategyId, stage: 'translate', model },
       revision,
       role: 'translate',
       ...(neighbours === undefined ? {} : { neighbours }),
+      exhausted: () => ctx.budget.exhausted(),
     });
     const shown = new Set<string>();
     for (;;) {
@@ -253,28 +283,12 @@ export function createTranslateRun(strategyId: string, brief?: BriefWait, prompt
   };
 }
 
-export const checkStage = defineStage<ChunkOutcome[], CheckSummary>({
-  id: 'check',
-  scope: 'document',
-  async *run(outcomes) {
-    // Count only (plan M1-E5): every segment sent is final or failed. Marker, code and length
-    // checks are M2 (§5.7 Step 4).
-    const summary: CheckSummary = { segments: 0, final: 0, failed: 0, unaccounted: [] };
-    for (const o of outcomes) {
-      const done = new Set([...o.final, ...o.failed]);
-      summary.segments += o.ids.length;
-      summary.final += o.final.length;
-      summary.failed += o.failed.length;
-      for (const id of o.ids) {
-        if (done.has(id)) continue;
-        summary.unaccounted.push(id);
-        summary.failed++;
-        yield { type: 'segment.failed', id, error: { kind: 'unknown', message: UNCHECKED_MESSAGE } };
-      }
-    }
-    yield summary;
-  },
-});
+/** The check stage of a strategy whose chunks go through `promptId` (stages/check.ts). */
+export function createStrategyCheckStage(strategyId: string, promptId: string = TRANSLATE_PROMPT_ID): AnyStage {
+  return createCheckStage(strategyId, (work, ctx) => prepareChunk(work, ctx, { ...ctx.memory }, promptId));
+}
+
+export const checkStage = createStrategyCheckStage(SINGLE_PASS_ID);
 
 /** Ids of the translate-able segments of a job, as the chunker sends them (for tests and the harness). */
 export function translatable(segments: readonly Segment[]): string[] {
