@@ -5,15 +5,21 @@
 // Run: pnpm run eval -- [--provider gemini|anthropic] [--model id] [--docs a,b] [--mock]
 //      [--set fixtures|eval] [--strategy single-pass|contextual] [--probe-nonce] [--chunk-tokens n]
 //      [--concurrency n] [--target vi] [--price in,cached,out]
+//      [--prompt translate@1|translate@2] [--style natural|faithful|simplified] [--gloss first|off]
+//      [--glossary "deploy,executor=bộ thực thi"]
 // `contextual` (plan M2) adds the brief call: <slug>.brief.json holds the parsed brief (or null),
 // calls.jsonl tags each call with its role, and summary.json records the strategy and the prompt
 // versions so the comparison report (pnpm run eval:report) can tell runs apart.
+// `--prompt` (plan M2-E3 A/B): the translate prompt; contextual defaults to translate@2, and
+// `--prompt translate@1` runs contextual as Phase B did. single-pass stays on translate@1 (the
+// frozen baseline). `--style`, `--gloss` and `--glossary` (term, or term=rendering; a bare term is
+// "keep as is") are the job options the panel takes from the settings (M2-E6).
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
 import type { LLMClient, ResolvedConnection, StopReason } from '@/llm/types';
-import { ANALYZE_PROMPT_ID, chunkLimits, chunkSegments, contextual, CONTEXTUAL_ID, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, SINGLE_PASS_ID, toWire, renderSystemPrompt, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, type DocumentBrief, type EngineEvent, type Segment, type TranslationJob } from '@/engine/index';
+import { ANALYZE_PROMPT_ID, chunkLimits, chunkSegments, createContextual, CONTEXTUAL_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, TRANSLATE_V2_PROMPT_ID, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, SINGLE_PASS_ID, toWire, renderSystemPrompt, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type Segment, type StyleMode, type TranslationJob } from '@/engine/index';
 import type { ModelRole } from '@/llm/types';
 import { costUsd, priceFor } from './pricing.ts';
 import { EVAL_SLUGS } from './docs.ts';
@@ -39,6 +45,10 @@ const { values: opt } = parseArgs({
     concurrency: { type: 'string', default: '2' },
     target: { type: 'string', default: 'vi' },
     price: { type: 'string' },
+    prompt: { type: 'string' },
+    style: { type: 'string', default: 'natural' },
+    gloss: { type: 'string', default: 'first' },
+    glossary: { type: 'string', default: '' },
   },
 });
 
@@ -84,7 +94,9 @@ function connection(): { client: LLMClient; label: string } {
           yield { type: 'done', stopReason: 'end' };
           return;
         }
-        const out = user.replace(/<seg id="(\d+)"( n="[^"]*")?>([\s\S]*?)<\/seg>(?=\n<seg id=|$)/g, (_m, id: string, n: string | undefined, body: string) => `<seg id="${id}"${n ?? ''}>vi:${body}</seg>`);
+        // Only the segments are answered: translate@2's <context> block before them is not echoed.
+        const segs = user.slice(user.indexOf('<seg id='));
+        const out = segs.replace(/<seg id="(\d+)"( n="[^"]*")?>([\s\S]*?)<\/seg>(?=\n<seg id=|$)/g, (_m, id: string, n: string | undefined, body: string) => `<seg id="${id}"${n ?? ''}>vi:${body}</seg>`);
         yield { type: 'text', delta: out };
         yield { type: 'usage', input: Math.ceil(user.length / 3.5), output: Math.ceil(out.length / 3.5) };
         yield { type: 'done', stopReason: 'end' };
@@ -134,8 +146,24 @@ const sleep = (ms: number, signal: AbortSignal): Promise<void> =>
 
 const STRATEGY = opt.strategy as string;
 if (STRATEGY !== SINGLE_PASS_ID && STRATEGY !== CONTEXTUAL_ID) throw new Error('--strategy expects single-pass or contextual');
+const TRANSLATE_PROMPT = opt.prompt ?? (STRATEGY === CONTEXTUAL_ID ? CONTEXTUAL_TRANSLATE_PROMPT_ID : TRANSLATE_PROMPT_ID);
+if (TRANSLATE_PROMPT !== TRANSLATE_PROMPT_ID && TRANSLATE_PROMPT !== TRANSLATE_V2_PROMPT_ID) throw new Error('--prompt expects translate@1 or translate@2');
+if (STRATEGY === SINGLE_PASS_ID && TRANSLATE_PROMPT !== TRANSLATE_PROMPT_ID) throw new Error('single-pass sends translate@1 (the frozen baseline); use --strategy contextual for translate@2');
 /** The prompt versions this run sends (summary.json; the report labels runs by them). */
-const PROMPTS = STRATEGY === CONTEXTUAL_ID ? { translate: TRANSLATE_PROMPT_ID, analyze: ANALYZE_PROMPT_ID } : { translate: TRANSLATE_PROMPT_ID };
+const PROMPTS = STRATEGY === CONTEXTUAL_ID ? { translate: TRANSLATE_PROMPT, analyze: ANALYZE_PROMPT_ID } : { translate: TRANSLATE_PROMPT };
+const STYLE = opt.style as StyleMode;
+if (!['natural', 'faithful', 'simplified'].includes(STYLE)) throw new Error('--style expects natural, faithful or simplified');
+const GLOSS = opt.gloss as GlossMode;
+if (GLOSS !== 'first' && GLOSS !== 'off') throw new Error('--gloss expects first or off');
+/** `deploy,executor=bộ thực thi`: a bare term is kept as is. */
+const GLOSSARY: GlossaryEntry[] = (opt.glossary as string)
+  .split(',')
+  .map((x) => x.trim())
+  .filter(Boolean)
+  .map((x) => {
+    const [term = '', rendering] = x.split('=').map((y) => y.trim());
+    return { term, rendering: rendering || term };
+  });
 const evalSet = opt.set === 'eval';
 if (!evalSet && opt.set !== 'fixtures') throw new Error('--set expects fixtures or eval');
 const slugs = opt.docs ? opt.docs.split(',') : evalSet ? listPassageIds(ROOT) : [...EVAL_SLUGS];
@@ -153,7 +181,7 @@ fs.mkdirSync(outDir, { recursive: true });
 const calls: CallRecord[] = [];
 let current = '';
 // One recording client per role, as the shell routes them (analyze defaults to translate, §4.3.1).
-const engine = createEngine({ llm: (role) => recording(baseClient, calls, () => current, role), now: Date.now, sleep, strategies: [singlePass, contextual], prompts: createDefaultPromptRegistry() });
+const engine = createEngine({ llm: (role) => recording(baseClient, calls, () => current, role), now: Date.now, sleep, strategies: [singlePass, createContextual(TRANSLATE_PROMPT)], prompts: createDefaultPromptRegistry() });
 const chunkTokens = Number(opt['chunk-tokens']);
 
 interface DocResult {
@@ -175,6 +203,9 @@ interface DocResult {
   errors: string[];
   /** Contextual only: did the brief parse, the brief call's wall time and tokens (included in the totals above). */
   brief?: { ok: boolean; ms: number | null; input: number; output: number };
+  /** Chunks (first-pass translate calls) and how many of them carried the brief in their system block. */
+  chunks: number;
+  briefedChunks: number;
 }
 
 async function runDoc(slug: string): Promise<DocResult> {
@@ -185,7 +216,7 @@ async function runDoc(slug: string): Promise<DocResult> {
     doc: { url: doc.url, title: doc.title, sourceLang: doc.lang, targetLang: opt.target as string, outline: doc.segments.filter((s) => s.kind === 'heading').map((s) => s.text), segments: doc.segments },
     priority: [],
     strategy: STRATEGY,
-    options: { style: 'natural', glossary: [], maxConcurrency: Number(opt.concurrency), chunkTokens },
+    options: { style: STYLE, gloss: GLOSS, glossary: GLOSSARY, maxConcurrency: Number(opt.concurrency), chunkTokens },
   };
   const finals = new Map<string, { text: string; attempt: number }>();
   const failed = new Map<string, string>();
@@ -217,6 +248,8 @@ async function runDoc(slug: string): Promise<DocResult> {
   const wallMs = Date.now() - t0;
   const want = doc.segments.filter((s) => s.translate);
   const analyzeCall = calls.slice(callsBefore).find((c) => c.role === 'analyze');
+  const chunkWires = chunkSegments(doc.segments, chunkLimits(chunkTokens)).map((ch) => formatWire(toWire(ch.segments)));
+  const firstPass = calls.slice(callsBefore).filter((c) => c.role === 'translate' && chunkWires.some((w) => c.user.endsWith(w)));
   if (STRATEGY === CONTEXTUAL_ID) fs.writeFileSync(path.join(outDir, `${slug}.brief.json`), `${JSON.stringify(brief, null, 1)}\n`);
   fs.writeFileSync(
     path.join(outDir, `${slug}.output.json`),
@@ -241,6 +274,8 @@ async function runDoc(slug: string): Promise<DocResult> {
     costUsd: price ? costUsd(price, usage) : null,
     errors: [...new Set(failed.values())],
     ...(STRATEGY === CONTEXTUAL_ID ? { brief: { ok: brief !== null, ms: analyzeCall?.ms ?? null, ...analyzeUsage } } : {}),
+    chunks: firstPass.length,
+    briefedChunks: firstPass.filter((c) => !c.system.includes('Document brief:\n(none)')).length,
   };
 }
 
@@ -325,7 +360,8 @@ for (const slug of slugs) {
   const doc = loadDoc(slug);
   for (const chunk of chunkSegments(doc.segments, chunkLimits(chunkTokens))) {
     const wire = toWire(chunk.segments);
-    const call = calls.find((c) => c.doc === slug && c.user === formatWire(wire));
+    // translate@2 puts its <context> block before the segments.
+    const call = calls.find((c) => c.doc === slug && c.role !== 'analyze' && c.user.endsWith(formatWire(wire)));
     if (call === undefined) continue;
     const res = parseOutput(call.text, wire.segments.map((e) => e.n), (call.stop as StopReason | undefined) ?? 'other', { grammar: wire.grammar, ...(wire.nonce === undefined ? {} : { nonce: wire.nonce }) });
     const source = new Map(wire.segments.map((e) => [e.n, e.segment.inlineMarkup]));
@@ -351,18 +387,18 @@ for (const slug of slugs) {
 const nonce = probes.length ? { echoed: probes.reduce((n, p) => n + p.echoed, 0), opens: probes.reduce((n, p) => n + p.opens, 0), perDoc: probes } : null;
 const briefs = results.flatMap((r) => (r.brief ? [r.brief] : []));
 const briefTotals = briefs.length ? { docs: briefs.length, ok: briefs.filter((b) => b.ok).length, input: briefs.reduce((n, b) => n + b.input, 0), output: briefs.reduce((n, b) => n + b.output, 0), costUsd: price ? costUsd(price, { input: briefs.reduce((n, b) => n + b.input, 0), cachedInput: 0, output: briefs.reduce((n, b) => n + b.output, 0) }) : null } : null;
-const summary = { run: stamp, set: opt.set, strategy: STRATEGY, prompt: TRANSLATE_PROMPT_ID, prompts: PROMPTS, label, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
+const summary = { run: stamp, set: opt.set, strategy: STRATEGY, prompt: TRANSLATE_PROMPT, prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, label, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, nonce, charsPerToken, thresholds };
 fs.writeFileSync(path.join(outDir, 'summary.json'), `${JSON.stringify(summary, null, 1)}\n`);
 const money = (n: number | null): string => (n === null ? 'n/a' : `$${n.toFixed(5)}`);
 const md = [
   `# Eval run ${stamp}`,
   '',
-  `Strategy \`${STRATEGY}\` (${Object.values(PROMPTS).join(', ')}), model \`${label}\`, target \`${opt.target}\`, chunk ${chunkTokens} tokens, ${opt.concurrency} in flight. ${price && !price.verified ? 'Price is an UNVERIFIED placeholder (scripts/eval/pricing.ts).' : ''}`,
+  `Strategy \`${STRATEGY}\` (${Object.values(PROMPTS).join(', ')}), style ${STYLE}, gloss ${GLOSS}, personal glossary ${GLOSSARY.length ? GLOSSARY.map((e) => (e.rendering === e.term ? e.term : `${e.term}=${e.rendering}`)).join(', ') : 'none'}, model \`${label}\`, target \`${opt.target}\`, chunk ${chunkTokens} tokens, ${opt.concurrency} in flight. ${price && !price.verified ? 'Price is an UNVERIFIED placeholder (scripts/eval/pricing.ts).' : ''}`,
   '',
-  '| doc | segments | lost | repaired | calls | input | cached | output | wall s | first final s | cost |',
-  '|---|---|---|---|---|---|---|---|---|---|---|',
-  ...results.map((r) => `| ${r.slug} | ${r.translatable} | ${r.lost} | ${r.repaired} | ${r.calls} | ${r.input} | ${r.cachedInput} | ${r.output} | ${(r.wallMs / 1000).toFixed(1)} | ${r.firstFinalMs === null ? '–' : (r.firstFinalMs / 1000).toFixed(1)} | ${money(r.costUsd)} |`),
-  `| **total** | ${total.translatable} | ${total.lost} | ${total.repaired} | ${total.calls} | ${total.input} | ${total.cachedInput} | ${total.output} | ${(total.wallMs / 1000).toFixed(1)} | | ${money(total.costUsd)} |`,
+  '| doc | segments | lost | repaired | chunks (briefed) | calls | input | cached | output | wall s | first final s | cost |',
+  '|---|---|---|---|---|---|---|---|---|---|---|---|',
+  ...results.map((r) => `| ${r.slug} | ${r.translatable} | ${r.lost} | ${r.repaired} | ${r.chunks} (${r.briefedChunks}) | ${r.calls} | ${r.input} | ${r.cachedInput} | ${r.output} | ${(r.wallMs / 1000).toFixed(1)} | ${r.firstFinalMs === null ? '–' : (r.firstFinalMs / 1000).toFixed(1)} | ${money(r.costUsd)} |`),
+  `| **total** | ${total.translatable} | ${total.lost} | ${total.repaired} | ${sum((r) => r.chunks)} (${sum((r) => r.briefedChunks)}) | ${total.calls} | ${total.input} | ${total.cachedInput} | ${total.output} | ${(total.wallMs / 1000).toFixed(1)} | | ${money(total.costUsd)} |`,
   '',
   ...(briefTotals ? [`Brief (${ANALYZE_PROMPT_ID}): parsed for ${briefTotals.ok}/${briefTotals.docs} docs; ${briefTotals.input} in / ${briefTotals.output} out tokens, ${money(briefTotals.costUsd)} (in the totals above). Per doc: ${results.map((r) => `${r.slug} ${r.brief?.ok ? 'ok' : 'none'} ${r.brief?.ms === null || r.brief === undefined ? '–' : `${(r.brief.ms / 1000).toFixed(1)}s`}`).join(', ')}.`] : []),
   `Characters per token (provider-counted; the engine assumes ${CHARS_PER_TOKEN}): input ${charsPerToken.input?.toFixed(2) ?? '–'}, output ${charsPerToken.output?.toFixed(2) ?? '–'} over ${charsPerToken.calls} calls.`,

@@ -37,6 +37,10 @@ describe('renderReport', () => {
     expect(runLabel(summary())).toBe('single-pass / translate@1 / x');
     expect(runLabel(summary({ strategy: 'single-pass', prompt: 'translate@1', prompts: { translate: 'translate@1' } }))).toBe('single-pass / translate@1 / x');
     expect(runLabel(summary({ strategy: 'contextual', prompt: 'translate@1', prompts: { translate: 'translate@1', analyze: 'analyze@1' } }))).toBe('contextual / translate@1+analyze@1 / x');
+    // Phase C: settings that differ from the defaults are named, so A/B columns never share a name.
+    const c2 = { strategy: 'contextual', prompt: 'translate@2', prompts: { translate: 'translate@2', analyze: 'analyze@1' } };
+    expect(runLabel(summary({ ...c2, style: 'natural', gloss: 'first', glossary: 0, chunkTokens: 1500 }))).toBe('contextual / translate@2+analyze@1 / x');
+    expect(runLabel(summary({ ...c2, style: 'faithful', gloss: 'off', glossary: 1, chunkTokens: 400 }))).toBe('contextual / translate@2+analyze@1 / x / faithful, gloss off, glossary 1, chunk 400');
   });
   it('warns with passage and dimension for each skipped human value', () => {
     const withIssue = run({ humanIssues: [{ id: 'p1', dimension: 'tone', value: '9' }] });

@@ -23,6 +23,11 @@ export interface RunSummary {
   label: string;
   model: string;
   target: string;
+  /** Style mode, gloss setting and personal glossary size (M2 Phase C on); absent = natural, first, none. */
+  style?: string;
+  gloss?: string;
+  glossary?: number;
+  chunkTokens?: number;
   total: { translatable: number; lost: number; failed: number; repaired: number; calls: number; input: number; cachedInput: number; output: number; wallMs: number; costUsd: number | null };
   docs: { slug: string }[];
 }
@@ -70,5 +75,12 @@ export function loadRun(dir: string): Run {
 export function runLabel(s: RunSummary): string {
   const translate = s.prompt ?? 'translate@1';
   const others = Object.values(s.prompts ?? {}).filter((p) => p !== translate);
-  return `${s.strategy ?? 'single-pass'} / ${[translate, ...others].join('+')} / ${s.model}`;
+  // Settings that differ from the defaults are named too, so two runs never share a column name.
+  const extra = [
+    s.style && s.style !== 'natural' ? s.style : '',
+    s.gloss && s.gloss !== 'first' ? `gloss ${s.gloss}` : '',
+    s.glossary ? `glossary ${s.glossary}` : '',
+    s.chunkTokens !== undefined && s.chunkTokens !== 1500 ? `chunk ${s.chunkTokens}` : '',
+  ].filter(Boolean);
+  return `${s.strategy ?? 'single-pass'} / ${[translate, ...others].join('+')} / ${s.model}${extra.length ? ` / ${extra.join(', ')}` : ''}`;
 }
