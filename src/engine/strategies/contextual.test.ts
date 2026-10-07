@@ -11,7 +11,8 @@ import { createBudget } from '../budget.ts';
 import { createWorkingMemory } from '../memory.ts';
 import { runStages } from '../runner.ts';
 import type { ChunkOutcome } from './single-pass.ts';
-import { BRIEF_FREE_CHUNKS, CONTEXTUAL_ID, contextual, contextualStages, createContextual, isOneChunk } from './contextual.ts';
+import { BRIEF_FREE_CHUNKS, CONTEXTUAL_ID, contextual, contextualStages, createContextual, isOneChunk, losesMarkers, markerCounts } from './contextual.ts';
+import { chunkLimits, chunkSegments } from '../chunker.ts';
 import { singlePass } from './single-pass.ts';
 
 const seg = (id: string, text: string, over: Partial<Segment> = {}): Segment => ({ id, kind: 'p', text, inlineMarkup: text, domPath: `p[${id}]`, translate: true, ...over });
@@ -179,8 +180,10 @@ describe('contextual: analyze → chunk → translate → check', () => {
 
   it('reports per chunk whether its prompt had the brief (the `chunk` event, ChunkOutcome.briefed); single-pass reports none', async () => {
     const events = await run(fakeClient([success(JSON.stringify(BRIEF))]), translatorClient(), longJob());
-    const chunks = events.flatMap((e) => (e.type === 'chunk' ? [[e.index, e.briefed]] : [])).sort((a, b) => Number(a[0]) - Number(b[0]));
+    const chunks = events.flatMap((e) => (e.type === 'chunk' && e.revise === undefined ? [[e.index, e.briefed]] : [])).sort((a, b) => Number(a[0]) - Number(b[0]));
     expect(chunks).toEqual(Array.from({ length: LONG_CHUNKS }, (_, i) => [i, i >= BRIEF_FREE_CHUNKS]));
+    // Chunk 0's second pass (M2-D17) reports once it is over: with the brief, nothing kept back.
+    expect(events.filter((e) => e.type === 'chunk' && e.revise !== undefined)).toEqual([{ type: 'chunk', index: 0, briefed: true, revise: { kept: [] } }]);
     const single = await run(fakeClient([]), translatorClient(), { ...longJob(), strategy: 'single-pass' });
     expect(single.filter((e) => e.type === 'chunk')).toEqual([]);
   });
@@ -497,6 +500,53 @@ describe('contextual: chunk 0 again with the brief, as revision 2 (M2-D17)', () 
       expect(finals(events).filter((e) => e.id === 'p0').map((e) => e.revision)).toEqual([1, 2]);
       noFailures(events);
     }
+  });
+
+  it('counts inline markers per kind: fewer of any kind is a loss, whatever the others do (round 15)', () => {
+    expect(markerCounts('Gọi `poll` rồi `wake()`, xem [link]tài liệu[/link], *lười* và **rất** nhanh.')).toEqual({ code: 2, link: 1, emphasis: 2 });
+    expect(losesMarkers('crate `futures` cho trait `ArcWake`', 'crate futures cho trait ArcWake')).toBe(true);
+    expect(losesMarkers('dùng `poll`', 'gọi `poll` ngay')).toBe(false);
+    // One more backtick span does not make up for a lost link.
+    expect(losesMarkers('xem [link]tài liệu[/link]', 'xem `docs` và tài liệu')).toBe(true);
+    expect(losesMarkers('*lười*', '**lười**')).toBe(false);
+  });
+
+  it('keeps revision 1 for a segment whose revision 2 lost inline markers; replaces the rest (round 15)', async () => {
+    const mixed = [
+      seg('m1', 'Depend on the `futures` crate for `ArcWake`.'),
+      seg('m2', 'Futures are *lazy*.'),
+      seg('m3', 'Read [link]the docs[/link] first.'),
+      seg('m4', 'Plain words only.'),
+      ...longSegments.slice(1),
+    ];
+    const j = longJob({ segments: mixed });
+    expect(chunkSegments(mixed, chunkLimits(j.options.chunkTokens))[0]?.segments.map((s) => s.id)).toEqual(['m1', 'm2', 'm3', 'm4', 'p1']);
+    let firstChunkCalls = 0;
+    const revised: Record<string, string> = {
+      // Lost both backtick spans (the live case): revision 1 stays.
+      m1: 'Phụ thuộc vào crate futures để có ArcWake.',
+      // Same markers, other words: replaced.
+      m2: 'Các future vốn *lười*.',
+      // Lost the link: revision 1 stays.
+      m3: 'Hãy đọc tài liệu trước.',
+      // No markers either way: replaced.
+      m4: 'Chỉ có chữ thường.',
+      p1: 'vi2:P1',
+    };
+    const translate = translatorClient((lines) => {
+      if (lines[0]?.source.startsWith('Depend')) firstChunkCalls++;
+      const second = firstChunkCalls === 2 && lines[0]?.source.startsWith('Depend');
+      return renderLines(lines, (source, n) => (second ? (revised[mixed[n - 1]?.id ?? ''] ?? '') : `vi:${source}`));
+    });
+    const events = await run(fakeClient([success(JSON.stringify(BRIEF))]), translate, j);
+    expect(firstChunkCalls).toBe(2);
+    const of = (id: string) => finals(events).filter((e) => e.id === id).map((e) => [e.revision, e.text]);
+    expect(of('m1')).toEqual([[1, 'vi:Depend on the `futures` crate for `ArcWake`.']]);
+    expect(of('m2')).toEqual([[1, 'vi:Futures are *lazy*.'], [2, 'Các future vốn *lười*.']]);
+    expect(of('m3')).toEqual([[1, 'vi:Read [link]the docs[/link] first.']]);
+    expect(of('m4')).toEqual([[1, 'vi:Plain words only.'], [2, 'Chỉ có chữ thường.']]);
+    expect(events.filter((e) => e.type === 'chunk' && e.revise !== undefined)).toEqual([{ type: 'chunk', index: 0, briefed: true, revise: { kept: ['m1', 'm3'] } }]);
+    noFailures(events);
   });
 
   it('no second pass without a brief, with a brief the job brought, under translate@1, or for a one-chunk document', async () => {

@@ -23,7 +23,11 @@
 // is over, only for segments it translated cleanly; a segment it fails keeps revision 1, and no
 // `segment.failed` goes out for it. It is a work item of the translate stage, right after chunk 0,
 // so it takes one of the job's maxConcurrency slots like a chunk; it starts once chunk 0's own
-// call is over and the analyze stage has settled, so revision 2 never races revision 1.
+// call is over and the analyze stage has settled, so revision 2 never races revision 1. A revision
+// 2 with fewer inline markers of any kind than the revision 1 it would replace (backtick spans,
+// links, emphasis) is dropped and revision 1 stays: seen live, a glossary rendered without
+// backticks drew code spans out of the text (round 14). The pass then reports the dropped ids
+// (the `chunk` event's `revise.kept`).
 import { chunkLimits, chunkSegments } from '../chunker.ts';
 import { ANALYZE_PROMPT_ID } from '../prompts/analyze.ts';
 import { TRANSLATE_V2_PROMPT_ID } from '../prompts/translate.ts';
@@ -51,10 +55,24 @@ interface ReviseWork {
 
 type ContextualWork = ChunkWork | ReviseWork;
 
+/** Inline markers of a translation, per kind: backtick spans, links, emphasis (`*…*` or `**…**`). */
+export function markerCounts(text: string): { code: number; link: number; emphasis: number } {
+  const count = (re: RegExp) => text.match(re)?.length ?? 0;
+  return { code: count(/`[^`]+`/g), link: count(/\[link\][\s\S]*?\[\/link\]/g), emphasis: count(/\*\*[^*]+\*\*|\*[^*]+\*/g) };
+}
+
+/** Whether `revised` lost a marker of some kind that `draft` had (round 15). */
+export function losesMarkers(draft: string, revised: string): boolean {
+  const before = markerCounts(draft);
+  const after = markerCounts(revised);
+  return after.code < before.code || after.link < before.link || after.emphasis < before.emphasis;
+}
+
 /**
  * M2-D17: `work` again as revision 2. Holds the call's events until it is over and passes on usage
- * and the last final of each segment the pass translated cleanly; partials and failures stay
- * inside (the revision-1 text stands).
+ * and the last final of each segment the pass translated cleanly, unless it lost markers that the
+ * revision 1 in memory had; partials and failures stay inside (the revision-1 text stands). Ends
+ * with the `chunk` event naming the segments kept at revision 1 for lost markers.
  */
 async function* revise(again: TranslateRun, work: ChunkWork, ctx: StageContext): AsyncGenerator<EngineEvent> {
   const held: EngineEvent[] = [];
@@ -62,12 +80,18 @@ async function* revise(again: TranslateRun, work: ChunkWork, ctx: StageContext):
   let next = await gen.next();
   for (; next.done !== true; next = await gen.next()) held.push(next.value);
   const clean = new Set(next.value.final);
-  const last = new Map<string, EngineEvent>();
+  const last = new Map<string, EngineEvent & { type: 'segment.final' }>();
   for (const e of held) {
     if (e.type === 'usage') yield e;
     else if (e.type === 'segment.final' && clean.has(e.id)) last.set(e.id, e);
   }
-  yield* last.values();
+  const kept: string[] = [];
+  for (const e of last.values()) {
+    const draft = ctx.memory.translated.get(e.id);
+    if (draft !== undefined && draft.revision < e.revision && losesMarkers(draft.text, e.text)) kept.push(e.id);
+    else yield e;
+  }
+  yield { type: 'chunk', index: work.chunk.index, briefed: ctx.memory.brief !== undefined, revise: { kept } };
 }
 
 /** Whether the document is a single chunk at the job's chunk size (the chunk stage cuts it the same way). */

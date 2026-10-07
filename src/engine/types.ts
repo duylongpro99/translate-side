@@ -130,8 +130,10 @@ export type EngineEvent =
   /**
    * Contextual only: a chunk's prompt is about to be built, with or without the brief (plan M2-D6,
    * ChunkOutcome.briefed). For the harness and diagnostics; the panel ignores it.
+   * With `revise`: contextual's second pass of the chunk (M2-D17) is over, and `kept` lists the
+   * segments whose revision 2 was dropped because it lost inline markers (round 15).
    */
-  | { type: 'chunk'; index: number; briefed: boolean }
+  | { type: 'chunk'; index: number; briefed: boolean; revise?: { kept: string[] } }
   /** Shown in UI, cached. */
   | { type: 'artifact'; kind: 'brief' | 'glossary'; data: unknown }
   /** `input` includes cached tokens; `cachedInput` is how many were cache reads (plan M1 §5). */

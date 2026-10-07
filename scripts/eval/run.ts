@@ -249,6 +249,8 @@ interface DocResult {
   brief?: { ok: boolean; skipped: boolean; ms: number | null; input: number; output: number };
   /** Segments replaced by a revision 2 (contextual's chunk-0 second pass, M2-D17). */
   revised: number;
+  /** Segments that pass translated, kept at revision 1 because its text lost inline markers (round 15). */
+  reviseKept: number;
   /** Chunks (first-pass translate calls) and how many of them carried the brief in their system block. */
   chunks: number;
   briefedChunks: number;
@@ -273,6 +275,7 @@ async function runDoc(slug: string): Promise<DocResult> {
   let brief: DocumentBrief | null = null;
   let firstFinalMs: number | null = null;
   const briefedChunks = new Set<number>();
+  let reviseKept = 0;
   const t0 = Date.now();
   for await (const e of engine.translate(job, new AbortController().signal) as AsyncIterable<EngineEvent>) {
     if (e.type === 'segment.final') {
@@ -293,7 +296,9 @@ async function runDoc(slug: string): Promise<DocResult> {
       failed.set(e.id, `${e.error.kind}: ${e.error.message}`);
       finals.delete(e.id);
     } else if (e.type === 'chunk') {
-      if (e.briefed) briefedChunks.add(e.index);
+      // The second pass's report (M2-D17) is not a chunk of the first pass.
+      if (e.revise !== undefined) reviseKept += e.revise.kept.length;
+      else if (e.briefed) briefedChunks.add(e.index);
     } else if (e.type === 'artifact' && e.kind === 'brief') {
       brief = e.data as DocumentBrief;
     } else if (e.type === 'usage') {
@@ -334,6 +339,7 @@ async function runDoc(slug: string): Promise<DocResult> {
     lost: want.filter((s) => !finals.has(s.id)).length,
     repaired: [...finals.values()].filter((f) => f.attempt > 1).length,
     revised: [...finals.values()].filter((f) => f.revision > 1).length,
+    reviseKept,
     calls: calls.length - callsBefore,
     ...usage,
     wallMs,
@@ -385,7 +391,7 @@ for (const [i, slug] of slugs.entries()) {
   if (i > 0 && pauseMs > 0) await new Promise((r) => setTimeout(r, pauseMs));
   const r = await runDoc(slug);
   results.push(r);
-  console.log(`${slug.padEnd(34)} final ${r.final}/${r.translatable} lost ${r.lost} repaired ${r.repaired}${r.revised ? ` revised ${r.revised}` : ''} calls ${r.calls} in ${r.input} out ${r.output} ${(r.wallMs / 1000).toFixed(1)}s ${r.costUsd === null ? 'cost n/a' : `$${r.costUsd.toFixed(5)}`}${price && !price.verified ? ' (UNVERIFIED price)' : ''}`);
+  console.log(`${slug.padEnd(34)} final ${r.final}/${r.translatable} lost ${r.lost} repaired ${r.repaired}${r.revised ? ` revised ${r.revised}` : ''}${r.reviseKept ? ` revise-kept ${r.reviseKept}` : ''} calls ${r.calls} in ${r.input} out ${r.output} ${(r.wallMs / 1000).toFixed(1)}s ${r.costUsd === null ? 'cost n/a' : `$${r.costUsd.toFixed(5)}`}${price && !price.verified ? ' (UNVERIFIED price)' : ''}`);
 }
 const probes: NonceProbe[] = [];
 if (opt['probe-nonce']) {
@@ -412,7 +418,7 @@ const reasoningStats = {
 };
 fs.writeFileSync(path.join(outDir, 'calls.jsonl'), calls.map((c) => JSON.stringify(c)).join('\n') + '\n');
 const sum = (f: (r: DocResult) => number): number => results.reduce((n, r) => n + f(r), 0);
-const total = { translatable: sum((r) => r.translatable), lost: sum((r) => r.lost), failed: sum((r) => r.failed), repaired: sum((r) => r.repaired), revised: sum((r) => r.revised), calls: sum((r) => r.calls), input: sum((r) => r.input), cachedInput: sum((r) => r.cachedInput), output: sum((r) => r.output), wallMs: sum((r) => r.wallMs), costUsd: price ? sum((r) => r.costUsd ?? 0) : null };
+const total = { translatable: sum((r) => r.translatable), lost: sum((r) => r.lost), failed: sum((r) => r.failed), repaired: sum((r) => r.repaired), revised: sum((r) => r.revised), reviseKept: sum((r) => r.reviseKept), calls: sum((r) => r.calls), input: sum((r) => r.input), cachedInput: sum((r) => r.cachedInput), output: sum((r) => r.output), wallMs: sum((r) => r.wallMs), costUsd: price ? sum((r) => r.costUsd ?? 0) : null };
 // chars/3.5 check (tokens.ts): characters per token as the provider counted them, over the
 // translation calls (system + user text in, answer text out). Nonce probes are left out.
 const counted = calls.filter((c) => !c.doc.endsWith('#nonce') && c.role !== 'analyze' && c.usage !== undefined);
