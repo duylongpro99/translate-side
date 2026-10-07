@@ -55,7 +55,14 @@ Scores are 1–5 means over the passages scored (n). Columns after the first sho
 ## M2 baseline and status
 
 - **M2 baseline (M2-D22): contextual@2 c1500**, `eval/runs/baseline-contextual-translate2-qwen3.8-flash`. This is the run M6's regression gate will defend. The c400 run (`eval/runs/baseline-contextual-translate2-qwen3.8-flash-c400`, see its README.md) is kept as a reference run, not as the baseline.
-- **Plan §3 #1 is pending (M2-D21):** it waits for the human scores on the three sheets (frozen single-pass, contextual c1500, contextual c400).
+- **Plan §3 #1 decision (M2-D23): not met, on both human and judge scores.** M2 closes with this recorded as a known gap. `contextual` stays the default strategy. See "Human result" below for the numbers.
+- The harness rounds each human score to the nearest 0.5, so the human means above are on rounded scores.
+
+### Carried forward
+
+- Tone and terminology at c1500 (human: tone -0.17, terminology -0.13 vs single-pass).
+- Multi-chunk quality at c400: gloss and terminology drift across chunks, and naturalness (human naturalness -0.78, terminology -0.48).
+- Judge mis-calibration: compared with the human, the judge runs high on tone and terminology and low on fidelity, so it cannot yet stand in for human scores as a gate.
 
 ## Human result (user scores, three sheets)
 
