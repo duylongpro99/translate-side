@@ -29,7 +29,21 @@ export interface RunSummary {
   glossary?: number;
   chunkTokens?: number;
   total: { translatable: number; lost: number; failed: number; repaired: number; calls: number; input: number; cachedInput: number; output: number; wallMs: number; costUsd: number | null };
-  docs: { slug: string }[];
+  docs: DocSummary[];
+}
+
+/** One passage's line in summary.json; the totals are the sums of these (report-core compares runs on their common passages). */
+export interface DocSummary {
+  slug: string;
+  translatable?: number;
+  lost?: number;
+  repaired?: number;
+  calls?: number;
+  input?: number;
+  cachedInput?: number;
+  output?: number;
+  wallMs?: number;
+  costUsd?: number | null;
 }
 
 export interface JudgeFile {

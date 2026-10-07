@@ -33,6 +33,30 @@ describe('renderReport', () => {
     expect(md).toContain('## human overall by category');
     expect(md).toContain('| docs (1) | 3.00 | 4.00 (+1.00) |');
   });
+  it('compares runs on the passages they all translated, and says which run covers fewer (review F2)', () => {
+    const doc = (slug: string, costUsd: number, calls = 1) => ({ slug, translatable: 2, lost: 0, repaired: 0, calls, input: 100, cachedInput: 0, output: 50, wallMs: 1000, costUsd });
+    const base = run(
+      { outputs: { a: [], b: [], c: [] }, human: { a: { fidelity: 3 }, b: { fidelity: 3 }, c: { fidelity: 1 } } },
+      { docs: [doc('a', 0.01), doc('b', 0.01), doc('c', 0.05)], total: { translatable: 6, lost: 0, failed: 0, repaired: 0, calls: 3, input: 300, cachedInput: 0, output: 150, wallMs: 3000, costUsd: 0.07 } },
+    );
+    const next = run(
+      { outputs: { a: [], b: [] }, human: { a: { fidelity: 4 }, b: { fidelity: 4 } } },
+      { strategy: 'contextual', prompt: 'translate@2', docs: [doc('a', 0.015, 2), doc('b', 0.015, 2)], total: { translatable: 4, lost: 0, failed: 0, repaired: 0, calls: 4, input: 200, cachedInput: 0, output: 100, wallMs: 2000, costUsd: 0.03 } },
+    );
+    const md = renderReport({ runs: [base, next], categories: { a: 'docs', b: 'humor', c: 'docs' } });
+    expect(md).toContain('every row below is over the 2 passages all of them translated: single-pass / translate@1 / x 3, contextual / translate@2 / x 2');
+    expect(md).toContain('| passages translated | 3, 2 compared | 2, 2 compared (fewer) |');
+    // Like for like: $0.02 vs $0.03 over a and b, not $0.07 over three passages.
+    expect(md).toContain('| translation cost | $0.0200 | $0.0300 (×1.50) |');
+    expect(md).toContain('| LLM calls | 2 | 4 |');
+    expect(md).toContain('| segments lost after repair | 0/4 | 0/4 |');
+    expect(md).toContain('| human fidelity | 3.00 n=2 | 4.00 (+1.00) n=2 |');
+    expect(md).toContain('| docs (1) | 3.00 | 4.00 (+1.00) |');
+    // Runs over the same passages: the whole-run totals, no note.
+    const same = renderReport({ runs: [run({}), run({}, {}, 0.02)], categories });
+    expect(same).not.toContain('compared');
+    expect(same).toContain('| translation cost | $0.0100 | $0.0200 (×2.00) |');
+  });
   it('labels a run by strategy, its prompt versions (translate first) and model', () => {
     expect(runLabel(summary())).toBe('single-pass / translate@1 / x');
     expect(runLabel(summary({ strategy: 'single-pass', prompt: 'translate@1', prompts: { translate: 'translate@1' } }))).toBe('single-pass / translate@1 / x');

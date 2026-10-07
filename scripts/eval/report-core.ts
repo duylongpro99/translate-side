@@ -2,7 +2,7 @@
 // `translate@2` runs join the table later with no change here. The first run is the baseline: later columns show the change.
 import { DIMENSIONS } from './rubric.ts';
 import { agreement, aggregate, type Aggregate, type ScoreSet } from './scores.ts';
-import { runLabel, type Run } from './runs.ts';
+import { runLabel, type Run, type RunSummary } from './runs.ts';
 
 export interface ReportInput {
   runs: Run[];
@@ -28,10 +28,57 @@ function scoreRows(title: string, sets: (ScoreSet | undefined)[]): string[] {
   return rows;
 }
 
-export function renderReport({ runs, categories }: ReportInput): string {
-  const [first] = runs;
+type Totals = RunSummary['total'];
+
+/** The passages a run translated: its summary's docs, or its output files for runs without them. */
+export function passagesOf(r: Run): string[] {
+  return r.summary.docs.length ? r.summary.docs.map((d) => d.slug) : Object.keys(r.outputs);
+}
+
+/** The passages every run translated, in the first run's order. */
+export function commonPassages(runs: readonly Run[]): string[] {
+  const [first, ...rest] = runs;
+  if (first === undefined) return [];
+  const others = rest.map((r) => new Set(passagesOf(r)));
+  return passagesOf(first).filter((id) => others.every((s) => s.has(id)));
+}
+
+/** A run's totals over `ids`: its own totals when it translated exactly those, else the sum of their doc lines. */
+export function totalsOn(r: Run, ids: readonly string[]): Totals {
+  const own = passagesOf(r);
+  if (own.length === ids.length && ids.every((id) => own.includes(id))) return r.summary.total;
+  const want = new Set(ids);
+  const docs = r.summary.docs.filter((d) => want.has(d.slug));
+  const sum = (k: Exclude<keyof Totals, 'costUsd' | 'failed'>) => docs.reduce((n, d) => n + (d[k] ?? 0), 0);
+  const costs = docs.map((d) => d.costUsd);
+  return {
+    translatable: sum('translatable'),
+    lost: sum('lost'),
+    failed: 0,
+    repaired: sum('repaired'),
+    calls: sum('calls'),
+    input: sum('input'),
+    cachedInput: sum('cachedInput'),
+    output: sum('output'),
+    wallMs: sum('wallMs'),
+    costUsd: costs.some((c) => c === null || c === undefined) ? null : costs.reduce<number>((n, c) => n + (c ?? 0), 0),
+  };
+}
+
+/** The scores of `ids` only. */
+const pick = (set: ScoreSet | undefined, ids: readonly string[]): ScoreSet | undefined => (set === undefined ? undefined : Object.fromEntries(ids.filter((id) => id in set).map((id) => [id, set[id]])) as ScoreSet);
+
+export function renderReport({ runs: all, categories }: ReportInput): string {
+  const [first] = all;
   if (first === undefined) throw new Error('no runs to compare');
-  const baseCost = first.summary.total.costUsd;
+  // Runs over different passage sets are compared on the passages they all translated (review F2):
+  // scores, segments, calls, tokens, cost and its ratio, wall time. The table says which runs cover more.
+  const common = commonPassages(all);
+  const counts = all.map((r) => passagesOf(r).length);
+  const partial = counts.some((n) => n !== common.length);
+  const runs = all.map((r) => (partial ? { ...r, human: pick(r.human, common), judge: r.judge && { ...r.judge, scores: pick(r.judge.scores, common) ?? {} } } : r));
+  const totals = all.map((r) => totalsOn(r, common));
+  const baseCost = totals[0]?.costUsd;
   const head = ['| |', ...runs.map((r) => ` ${runLabel(r.summary)} |`)].join('');
   const rule = `|---|${runs.map(() => '---|').join('')}`;
   const judgeSets = runs.map((r) => r.judge?.scores);
@@ -40,6 +87,12 @@ export function renderReport({ runs, categories }: ReportInput): string {
     '',
     `Scores are 1–5 means over the passages scored (n). Columns after the first show the change from the first run (${runLabel(first.summary)}). Human scores are the source of truth; judge scores are shown for regression checks until calibrated.`,
     '',
+    ...(partial
+      ? [
+          `The runs cover different passages, so every row below is over the ${common.length} passages all of them translated: ${all.map((r, i) => `${runLabel(r.summary)} ${counts[i]}`).join(', ')}.`,
+          '',
+        ]
+      : []),
     head,
     rule,
     ...scoreRows('human', runs.map((r) => r.human)),
@@ -51,15 +104,15 @@ export function renderReport({ runs, categories }: ReportInput): string {
       })
       .join(' | ')} |`,
     `| judge model | ${runs.map((r) => (r.judge ? `${r.judge.judgeModel} (${r.judge.prompt})` : '–')).join(' | ')} |`,
-    `| passages translated | ${runs.map((r) => Object.keys(r.outputs).length).join(' | ')} |`,
-    `| segments lost after repair | ${runs.map((r) => `${r.summary.total.lost}/${r.summary.total.translatable}`).join(' | ')} |`,
-    `| segments repaired | ${runs.map((r) => r.summary.total.repaired).join(' | ')} |`,
-    `| LLM calls | ${runs.map((r) => r.summary.total.calls).join(' | ')} |`,
-    `| input / output tokens | ${runs.map((r) => `${r.summary.total.input} / ${r.summary.total.output}`).join(' | ')} |`,
-    `| translation cost | ${runs.map((r, i) => `${money(r.summary.total.costUsd)}${i > 0 && r.summary.total.costUsd !== null && baseCost ? ` (×${(r.summary.total.costUsd / baseCost).toFixed(2)})` : ''}`).join(' | ')} |`,
-    `| wall time (s) | ${runs.map((r) => (r.summary.total.wallMs / 1000).toFixed(0)).join(' | ')} |`,
+    `| passages translated | ${counts.map((n) => (partial ? `${n}, ${common.length} compared${n > common.length ? '' : ' (fewer)'}` : `${n}`)).join(' | ')} |`,
+    `| segments lost after repair | ${totals.map((t) => `${t.lost}/${t.translatable}`).join(' | ')} |`,
+    `| segments repaired | ${totals.map((t) => t.repaired).join(' | ')} |`,
+    `| LLM calls | ${totals.map((t) => t.calls).join(' | ')} |`,
+    `| input / output tokens | ${totals.map((t) => `${t.input} / ${t.output}`).join(' | ')} |`,
+    `| translation cost | ${totals.map((t, i) => `${money(t.costUsd)}${i > 0 && t.costUsd !== null && baseCost ? ` (×${(t.costUsd / baseCost).toFixed(2)})` : ''}`).join(' | ')} |`,
+    `| wall time (s) | ${totals.map((t) => (t.wallMs / 1000).toFixed(0)).join(' | ')} |`,
   ];
-  if (runs.some((r) => r.judge)) lines.push(`| judge cost | ${runs.map((r) => (r.judge ? money(r.judge.costUsd) : '–')).join(' | ')} |`);
+  if (runs.some((r) => r.judge)) lines.push(`| judge cost${partial ? ' (whole run)' : ''} | ${runs.map((r) => (r.judge ? money(r.judge.costUsd) : '–')).join(' | ')} |`);
 
   const cats = [...new Set(Object.values(categories))].sort();
   if (cats.length) {
@@ -67,13 +120,14 @@ export function renderReport({ runs, categories }: ReportInput): string {
       if (!sets.some(Boolean)) continue;
       lines.push('', `## ${name} overall by category`, '', head, rule);
       for (const c of cats) {
-        const ids = Object.keys(categories).filter((id) => categories[id] === c);
+        const ids = Object.keys(categories).filter((id) => categories[id] === c && (!partial || common.includes(id)));
+        if (ids.length === 0) continue;
         const aggs = sets.map((s) => (s ? aggregate(s, ids) : undefined));
         lines.push(`| ${c} (${ids.length}) | ${aggs.map((a, i) => cell(a?.overall, aggs[0]?.overall, i === 0)).join(' | ')} |`);
       }
     }
   }
-  const unscored = runs.map((r) => (r.human && aggregate(r.human).overall !== undefined ? '' : `- ${runLabel(r.summary)}: no human scores yet (fill in ${r.dir}/human-scores.md)`)).filter(Boolean);
+  const unscored = all.map((r) => (r.human && aggregate(r.human).overall !== undefined ? '' : `- ${runLabel(r.summary)}: no human scores yet (fill in ${r.dir}/human-scores.md)`)).filter(Boolean);
   if (unscored.length) lines.push('', ...unscored);
   for (const r of runs) {
     if (!r.humanIssues?.length) continue;
