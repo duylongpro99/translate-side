@@ -1,0 +1,74 @@
+[
+ {
+  "id": "26z0eymc186",
+  "kind": "heading",
+  "translate": true,
+  "source": "Applied: Build an Executor",
+  "text": "Đã áp dụng: Xây dựng một Executor",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1m4ot57wqaz",
+  "kind": "p",
+  "translate": true,
+  "source": "Rust's `Future`s are lazy: they won't do anything unless actively driven to completion. One way to drive a future to completion is to `.await` it inside an `async` function, but that just pushes the problem one level up: who will run the futures returned from the top-level `async` functions? The answer is that we need a `Future` executor.",
+  "text": "`Future` trong Rust có tính lười (lazy): chúng sẽ không làm gì cả trừ khi được chủ động đẩy đến khi hoàn thành. Một cách để đẩy một future đến khi hoàn thành là `.await` nó bên trong một hàm `async`, nhưng điều đó chỉ đẩy vấn đề lên một cấp: ai sẽ chạy các future được trả về từ các hàm `async` ở cấp cao nhất? Câu trả lời là chúng ta cần một executor cho `Future`.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "17m8vmf3zmr",
+  "kind": "p",
+  "translate": true,
+  "source": "`Future` executors take a set of top-level `Future`s and run them to completion by calling `poll` whenever the `Future` can make progress. Typically, an executor will `poll` a future once to start off. When `Future`s indicate that they are ready to make progress by calling `wake()`, they are placed back onto a queue and `poll` is called again, repeating until the `Future` has completed.",
+  "text": "Executor `Future` nhận một tập hợp các `Future` ở cấp cao nhất và chạy chúng đến khi hoàn thành bằng cách gọi `poll` mỗi khi `Future` có thể tiến triển. Thông thường, executor sẽ `poll` một future một lần để khởi động. Khi các `Future` báo hiệu rằng chúng sẵn sàng tiến triển bằng cách gọi `wake()`, chúng được đưa trở lại hàng đợi và `poll` được gọi lại, lặp đi lặp lại cho đến khi `Future` hoàn thành.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0k38harg4b7",
+  "kind": "p",
+  "translate": true,
+  "source": "In this section, we'll write our own simple executor capable of running a large number of top-level futures to completion concurrently.",
+  "text": "Trong phần này, chúng ta sẽ viết một executor đơn giản của riêng mình có khả năng chạy đồng thời một số lượng lớn các future cấp cao nhất đến khi hoàn thành.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0tnmhcdbuam",
+  "kind": "p",
+  "translate": true,
+  "source": "For this example, we depend on the `futures` crate for the `ArcWake` trait, which provides an easy way to construct a `Waker`. Edit `Cargo.toml` to add a new dependency:",
+  "text": "Đối với ví dụ này, chúng ta phụ thuộc vào crate `futures` cho trait `ArcWake`, cung cấp một cách dễ dàng để tạo một `Waker`. Chỉnh sửa `Cargo.toml` để thêm một dependency mới:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1udzil0p3zn",
+  "kind": "code",
+  "translate": false,
+  "source": "[package]\nname = \"timer_future\"\nversion = \"0.1.0\"\nauthors = [\"XYZ Author\"]\nedition = \"2021\"\n\n[dependencies]\nfutures = \"0.3\"",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "2frt6mpn5cn",
+  "kind": "p",
+  "translate": true,
+  "source": "Our executor will work by sending tasks to run over a channel. The executor will pull events off of the channel and run them. When a task is ready to do more work (is awoken), it can schedule itself to be polled again by putting itself back onto the channel.",
+  "text": "Executor của chúng ta sẽ hoạt động bằng cách gửi các task cần chạy qua một channel. Executor sẽ lấy các sự kiện ra khỏi channel và chạy chúng. Khi một task sẵn sàng làm thêm việc (được đánh thức), nó có thể tự lên lịch để được poll lại bằng cách đưa chính nó trở lại channel.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1yh9lxb5qn4",
+  "kind": "p",
+  "translate": true,
+  "source": "In this design, the executor itself just needs the receiving end of the task channel. The user will get a sending end so that they can spawn new futures. Tasks themselves are just futures that can reschedule themselves, so we'll store them as a future paired with a sender that the task can use to requeue itself.",
+  "text": "Trong thiết kế này, bản thân executor chỉ cần đầu nhận của channel task. Người dùng sẽ nhận được đầu gửi để họ có thể spawn các future mới. Bản thân các task chỉ là những future có thể tự lên lịch lại, vì vậy chúng ta sẽ lưu chúng dưới dạng một future đi kèm với một sender mà task có thể dùng để tự đưa mình trở lại hàng đợi.",
+  "attempt": 1,
+  "error": null
+ }
+]

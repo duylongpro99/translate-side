@@ -1,0 +1,20 @@
+[
+ {
+  "id": "11509lki53c",
+  "kind": "p",
+  "translate": true,
+  "source": "You can't parse [X]HTML with regex. Because HTML can't be parsed by regex. Regex is not a tool that can be used to correctly parse HTML. As I have answered in HTML-and-regex questions here so many times before, the use of regex will not allow you to consume HTML. Regular expressions are a tool that is insufficiently sophisticated to understand the constructs employed by HTML. HTML is not a regular language and hence cannot be parsed by regular expressions. Regex queries are not equipped to break down HTML into its meaningful parts. Even enhanced irregular regular expressions as used by Perl are not up to the task of parsing HTML. You will never make me crack. HTML is a language of sufficient complexity that it cannot be parsed by regular expressions. Even Jon Skeet cannot parse HTML using regular expressions. Every time you attempt to parse HTML with regular expressions, the unholy child weeps the blood of virgins, and Russian hackers pwn your webapp. Parsing HTML with regex summons tainted souls into the realm of the living. HTML and regex go together like love, marriage, and ritual infanticide. The `<center>` cannot hold it is too late. The force of regex and HTML together in the same conceptual space will destroy your mind like so much watery putty.",
+  "text": "Bạn không thể parse [X]HTML bằng regex. Bởi vì HTML không thể được parse bằng regex. Regex không phải là công cụ có thể dùng để parse HTML một cách chính xác. Như tôi đã trả lời trong các câu hỏi về HTML-và-regex ở đây không biết bao nhiêu lần rồi, việc dùng regex sẽ không cho phép bạn xử lý HTML. Biểu thức chính quy là một công cụ không đủ tinh vi để hiểu các cấu trúc mà HTML sử dụng. HTML không phải là một ngôn ngữ chính quy, và do đó không thể được parse bằng biểu thức chính quy. Các truy vấn regex không được trang bị để phân tách HTML thành những phần có ý nghĩa của nó. Ngay cả những biểu thức chính quy bất quy tắc được tăng cường như loại Perl dùng cũng không đủ sức để parse HTML. Bạn sẽ không bao giờ khiến tôi khuất phục được đâu. HTML là một ngôn ngữ có độ phức tạp đủ lớn đến mức không thể được parse bằng biểu thức chính quy. Ngay cả Jon Skeet cũng không thể parse HTML bằng biểu thức chính quy. Mỗi lần bạn cố parse HTML bằng biểu thức chính quy, đứa con bất thiện lại khóc ra máu của các trinh nữ, và hacker Nga pwn cái webapp của bạn. Parse HTML bằng regex là triệu hồi những linh hồn ô uế vào cõi người sống. HTML và regex đi với nhau như tình yêu, hôn nhân, và tục giết trẻ sơ sinh trong nghi lễ. Cái `<center>` không thể giữ được nữa, đã quá muộn rồi. Sức mạnh của regex và HTML cùng tồn tại trong một không gian khái niệm sẽ phá hủy tâm trí bạn như thể nó là một đống bùn nhão nhoét.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1gby3c4p8z8",
+  "kind": "p",
+  "translate": true,
+  "source": "Have you tried using an XML parser instead?",
+  "text": "Bạn đã thử dùng trình parse XML thay thế chưa?",
+  "attempt": 1,
+  "error": null
+ }
+]

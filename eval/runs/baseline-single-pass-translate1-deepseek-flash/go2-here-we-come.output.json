@@ -1,0 +1,38 @@
+[
+ {
+  "id": "1dxf9gi27az",
+  "kind": "heading",
+  "translate": true,
+  "source": "Background",
+  "text": "Bối cảnh",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "04xcwexvbtv",
+  "kind": "p",
+  "translate": true,
+  "source": "At GopherCon 2017, Russ Cox officially started the thought process on the next big version of Go with his talk [link]The Future of Go[/link]. We have called this future language informally Go 2, even though we understand now that it will arrive in incremental steps rather than with a big bang and a single major release. Still, Go 2 is a useful moniker, if only to have a way to talk about that future language, so let’s keep using it for now.",
+  "text": "Tại GopherCon 2017, Russ Cox chính thức khởi động quá trình suy nghĩ về phiên bản lớn tiếp theo của Go qua bài nói chuyện [link]Tương lai của Go[/link]. Chúng tôi vẫn gọi ngôn ngữ tương lai này một cách không chính thức là Go 2, dù giờ đây chúng tôi hiểu rằng nó sẽ đến theo từng bước tăng dần chứ không phải bằng một vụ nổ lớn và một bản phát hành chính duy nhất. Dẫu vậy, Go 2 vẫn là một cách gọi hữu ích, chỉ để có cách nói về ngôn ngữ tương lai đó, nên cứ tạm dùng nó trong lúc này.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "273pgrzf6kd",
+  "kind": "p",
+  "translate": true,
+  "source": "A major difference between Go 1 and Go 2 is who is going to influence the design and how decisions are made. Go 1 was a small team effort with modest outside influence; Go 2 will be much more community-driven. After almost 10 years of exposure, we have learned a lot about the language and libraries that we didn’t know in the beginning, and that was only possible through feedback from the Go community.",
+  "text": "Một khác biệt lớn giữa Go 1 và Go 2 là ai sẽ gây ảnh hưởng đến thiết kế và các quyết định được đưa ra như thế nào. Go 1 là nỗ lực của một nhóm nhỏ với ảnh hưởng từ bên ngoài khiêm tốn; Go 2 sẽ do cộng đồng dẫn dắt nhiều hơn hẳn. Sau gần 10 năm tiếp xúc, chúng tôi đã học được rất nhiều về ngôn ngữ và các thư viện mà ban đầu chúng tôi chưa biết, và điều đó chỉ có thể có được nhờ phản hồi từ cộng đồng Go.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "16itucjs458",
+  "kind": "p",
+  "translate": true,
+  "source": "In 2015 we introduced the proposal process to gather a specific kind of feedback: proposals for language and library changes. A committee composed of senior Go team members has been reviewing, categorizing, and deciding on incoming proposals on a regular basis. That has worked pretty well, but as part of that process we have ignored all proposals that are not backward-compatible, simply labeling them Go 2 instead.",
+  "text": "Năm 2015, chúng tôi giới thiệu quy trình đề xuất để thu thập một loại phản hồi cụ thể: các đề xuất thay đổi ngôn ngữ và thư viện. Một ủy ban gồm các thành viên cấp cao của nhóm Go đã thường xuyên xem xét, phân loại và quyết định các đề xuất gửi đến. Cách đó đã hoạt động khá tốt, nhưng trong quy trình đó, chúng tôi đã bỏ qua mọi đề xuất không tương thích ngược, chỉ đơn giản gán nhãn chúng là Go 2.",
+  "attempt": 1,
+  "error": null
+ }
+]

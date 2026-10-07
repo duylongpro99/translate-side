@@ -1,0 +1,47 @@
+[
+ {
+  "id": "1fthzveolun",
+  "kind": "p",
+  "translate": true,
+  "source": "Traditional threading models (commonly used when writing Java, C++, and Python programs, for example) require the programmer to communicate between threads using shared memory. Typically, shared data structures are protected by locks, and threads will contend over those locks to access the data. In some cases, this is made easier by the use of thread-safe data structures such as Python's Queue.",
+  "text": "Các mô hình luồng truyền thống (thường được dùng khi viết các chương trình Java, C++, và Python chẳng hạn) yêu cầu lập trình viên phải giao tiếp giữa các luồng thông qua bộ nhớ chia sẻ. Thông thường, các cấu trúc dữ liệu chia sẻ được bảo vệ bằng khóa (lock), và các luồng sẽ tranh nhau giành những khóa đó để truy cập dữ liệu. Trong một số trường hợp, điều này trở nên dễ dàng hơn nhờ dùng các cấu trúc dữ liệu an toàn với luồng như Queue của Python.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "010l5a29kyh",
+  "kind": "p",
+  "translate": true,
+  "source": "Go's concurrency primitives - goroutines and channels - provide an elegant and distinct means of structuring concurrent software. Instead of explicitly using locks to mediate access to shared data, Go encourages the use of channels to pass references to data between goroutines. This approach ensures that only one goroutine has access to the data at a given time. The concept is summarized in the document [link]Effective Go[/link] (a must-read for any Go programmer):",
+  "text": "Các nguyên thủy đồng thời của Go - goroutine và channel - mang đến một cách thanh lịch và khác biệt để tổ chức phần mềm đồng thời. Thay vì dùng khóa một cách tường minh để điều phối việc truy cập dữ liệu chia sẻ, Go khuyến khích dùng channel để truyền tham chiếu đến dữ liệu giữa các goroutine. Cách tiếp cận này đảm bảo rằng tại một thời điểm chỉ có một goroutine được truy cập dữ liệu. Khái niệm này được tóm gọn trong tài liệu [link]Effective Go[/link] (thứ mà bất kỳ lập trình viên Go nào cũng phải đọc):",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1qwud19y53x",
+  "kind": "quote",
+  "translate": true,
+  "source": "Do not communicate by sharing memory; instead, share memory by communicating.",
+  "text": "Đừng giao tiếp bằng cách chia sẻ bộ nhớ; thay vào đó, hãy chia sẻ bộ nhớ bằng cách giao tiếp.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0kl60kcvzxs",
+  "kind": "p",
+  "translate": true,
+  "source": "Consider a program that polls a list of URLs. In a traditional threading environment, one might structure its data like so:",
+  "text": "Hãy xét một chương trình thăm dò (poll) một danh sách các URL. Trong môi trường luồng truyền thống, người ta có thể tổ chức dữ liệu của nó như sau:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0yejnd048t1",
+  "kind": "code",
+  "translate": false,
+  "source": "type Resource struct {\n    url        string\n    polling    bool\n    lastError  error\n}",
+  "text": null,
+  "attempt": null,
+  "error": null
+ }
+]

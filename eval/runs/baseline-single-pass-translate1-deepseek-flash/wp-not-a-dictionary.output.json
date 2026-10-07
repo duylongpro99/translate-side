@@ -1,0 +1,29 @@
+[
+ {
+  "id": "1i01cqbep43",
+  "kind": "p",
+  "translate": true,
+  "source": "Wikipedia is not a dictionary, phrasebook, or a slang, jargon, or usage guide. Instead, the goal of this project is to create an encyclopedia. Our sister project Wiktionary aims to create a dictionary. It is the \"lexical companion to Wikipedia\", and the two often link to each other. Wiktionary welcomes all editors who wish to write a dictionary.",
+  "text": "Wikipedia không phải là từ điển, sổ tay thành ngữ, hay cẩm nang về tiếng lóng, thuật ngữ chuyên ngành hay cách dùng từ. Thay vào đó, mục tiêu của dự án này là tạo ra một bách khoa toàn thư. Dự án chị em của chúng ta là Wiktionary hướng đến việc tạo ra một từ điển. Đây là \"người bạn đồng hành về mặt từ vựng của Wikipedia\", và cả hai thường liên kết với nhau. Wiktionary chào đón tất cả những biên tập viên muốn viết từ điển.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0ephejzt990",
+  "kind": "p",
+  "translate": true,
+  "source": "Both dictionary entries at Wiktionary and encyclopedia articles at Wikipedia may start as stubs, but they are works in progress, to be expanded. Wikipedia articles should begin with a good definition, but they should provide other types of information about that topic as well. The full articles that Wikipedia's stubs grow into are very different from dictionary entries.",
+  "text": "Cả mục từ trong Wiktionary lẫn bài viết bách khoa trong Wikipedia đều có thể bắt đầu dưới dạng bài sơ khai, nhưng chúng là những tác phẩm đang được hoàn thiện để mở rộng thêm. Bài viết Wikipedia nên bắt đầu bằng một định nghĩa tốt, nhưng cũng nên cung cấp các loại thông tin khác về chủ đề đó. Những bài viết hoàn chỉnh mà các bài sơ khai của Wikipedia phát triển thành rất khác so với mục từ trong từ điển.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "25h5d8jyswo",
+  "kind": "p",
+  "translate": true,
+  "source": "Each article in an encyclopedia is about a person, people, a concept, a place, an event, a thing, etc., whereas a dictionary entry is primarily about a word, an idiom, or a term and its meaning(s), usage and history.",
+  "text": "Mỗi bài viết trong bách khoa toàn thư nói về một người, một nhóm người, một khái niệm, một địa điểm, một sự kiện, một sự vật, v.v., trong khi mục từ trong từ điển chủ yếu nói về một từ, một thành ngữ hay một thuật ngữ cùng (các) nghĩa, cách dùng và lịch sử của nó.",
+  "attempt": 1,
+  "error": null
+ }
+]
