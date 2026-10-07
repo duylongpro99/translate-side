@@ -4,6 +4,7 @@
 
 import type { LLMClient, ModelRole } from '../llm/types.ts';
 import { createBudget } from './budget.ts';
+import { DEFAULT_CONTEXT_PROVIDERS } from './context/budget.ts';
 import { createWorkingMemory } from './memory.ts';
 import { withRetry, type RetryPolicy } from './retry.ts';
 import type {
@@ -26,6 +27,7 @@ export interface EngineDeps {
   sleep: (ms: number, signal: AbortSignal) => Promise<void>;
   strategies: readonly Strategy[];
   prompts: PromptRegistry;
+  /** Context providers (§5.4) for prompts that use them (translate@2). Default: the v1 three (context/budget.ts). */
   context?: readonly ContextProvider[];
   retry?: RetryPolicy;
   /** For backoff jitter; deterministic in tests. */
@@ -103,7 +105,7 @@ function createStageContext(deps: EngineDeps, job: TranslationJob, signal: Abort
       return client;
     },
     memory: { ...createWorkingMemory(job.options.glossary), ...(job.options.brief ? { brief: job.options.brief } : {}) },
-    context: [...(deps.context ?? [])],
+    context: [...(deps.context ?? DEFAULT_CONTEXT_PROVIDERS)],
     prompts: deps.prompts,
     budget: createBudget(job.options.budget ?? {}, deps.now),
     signal,

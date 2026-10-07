@@ -15,6 +15,8 @@ import { maxOutputTokens } from '../budget.ts';
 import { chunkLimits, chunkSegments, type Chunk } from '../chunker.ts';
 import { formatWire, toWire, type WireChunk } from '../parsing/wire.ts';
 import { translateChunk, type ChunkCall, type ChunkReport } from '../parsing/translate-chunk.ts';
+import { DEFAULT_GLOSS, renderContextBlock, renderSystemPromptV2 } from '../context/assemble.ts';
+import { gatherContext } from '../context/budget.ts';
 import { STYLE_LABELS, TRANSLATE_PROMPT_ID, languageLabel } from '../prompts/translate.ts';
 import { defineStage, defineStrategy, type AnyStage } from '../runner.ts';
 import { estimateTokens } from '../tokens.ts';
@@ -92,12 +94,15 @@ export function callBudget(wire: WireChunk, reasoningReserveTokens: number): num
   return maxOutputTokens({ sourceTokens, segments: wire.segments.length, reasoningReserveTokens });
 }
 
-/** The request one translate call sends (the strategy and the harness's nonce probe share it, so they cannot drift). */
-export function translateRequest(client: Pick<LLMClient, 'model' | 'reasoningReserveTokens'>, system: string, wire: WireChunk, signal: AbortSignal): NormalizedRequest {
+/**
+ * The request one translate call sends (the strategy and the harness's nonce probe share it, so
+ * they cannot drift). `context` (translate@2) is the `<context>` block, put before the segments.
+ */
+export function translateRequest(client: Pick<LLMClient, 'model' | 'reasoningReserveTokens'>, system: string, wire: WireChunk, signal: AbortSignal, context = ''): NormalizedRequest {
   return {
     model: client.model,
     system,
-    messages: [{ role: 'user', content: formatWire(wire) }],
+    messages: [{ role: 'user', content: context === '' ? formatWire(wire) : `${context}\n\n${formatWire(wire)}` }],
     maxOutputTokens: callBudget(wire, client.reasoningReserveTokens),
     temperature: TRANSLATE_TEMPERATURE,
     cacheHint: 'system',
@@ -140,13 +145,17 @@ function untilSettledOrAborted(promise: Promise<void>, signal: AbortSignal): Pro
  *
  * With `brief` (contextual), a chunk from index `brief.freeChunks` on waits until the analyze
  * stage is over before it builds its prompt; the outcome records whether the brief was there.
+ *
+ * `promptId` picks the prompt: `translate@1` (default) is sent exactly as in M1, brief and
+ * glossary "(none)"; `translate@2` gathers the context providers' snippets (ctx.context) for the
+ * chunk and assembles the byte-stable system block and the `<context>` block (context/assemble.ts).
  */
-export function createTranslateStage(strategyId: string, brief?: BriefWait): AnyStage {
+export function createTranslateStage(strategyId: string, brief?: BriefWait, promptId: string = TRANSLATE_PROMPT_ID): AnyStage {
   return defineStage<ChunkWork, ChunkOutcome>({
     id: 'translate',
     scope: 'chunk',
     role: 'translate',
-    promptId: TRANSLATE_PROMPT_ID,
+    promptId,
     async *run(work, ctx) {
       const outcome: ChunkOutcome = { index: work.chunk.index, ids: work.chunk.segments.map((s) => s.id), final: [], failed: [] };
       if (brief !== undefined) {
@@ -163,10 +172,20 @@ export function createTranslateStage(strategyId: string, brief?: BriefWait): Any
         return;
       }
       const client = ctx.llm('translate');
-      const prompt = ctx.prompts.get(TRANSLATE_PROMPT_ID);
+      const prompt = ctx.prompts.get(promptId);
       const sourceLang = work.doc.sourceLang.trim() || (ctx.memory.brief?.language ?? '');
-      const system = renderSystemPrompt((vars) => prompt.render(vars), { sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
-      const call: ChunkCall = (wire) => client.stream(translateRequest(client, system, wire, ctx.signal));
+      const render = (vars: Readonly<Record<string, string>>) => prompt.render(vars);
+      let system: string;
+      let context = '';
+      if (prompt.name === 'translate' && prompt.version >= 2) {
+        const { segments, ...doc } = work.doc;
+        const snippets = await gatherContext(ctx.context, { doc, chunk: work.chunk.segments, targetLang: work.doc.targetLang, segments, memory: ctx.memory, options: work.options });
+        system = renderSystemPromptV2(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style, gloss: work.options.gloss ?? DEFAULT_GLOSS, snippets });
+        context = renderContextBlock(snippets);
+      } else {
+        system = renderSystemPrompt(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
+      }
+      const call: ChunkCall = (wire) => client.stream(translateRequest(client, system, wire, ctx.signal, context));
       const gen = translateChunk(toWire(work.chunk.segments), call, {
         producedBy: { strategy: strategyId, stage: 'translate', model: client.model },
         revision: REVISION,

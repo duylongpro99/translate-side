@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { PROMPTS, createDefaultPromptRegistry } from './index.ts';
-import { STYLE_LABELS, TRANSLATE_PROMPT_ID, languageLabel, translateV1 } from './translate.ts';
+import { STYLE_LABELS, TRANSLATE_PROMPT_ID, languageLabel, translateV1, translateV2 } from './translate.ts';
 
 const vars = { TARGET_LANG: 'Vietnamese', SOURCE_LANG: 'English', STYLE: 'Natural', BRIEF: '(none)', GLOSSARY: '(none)' };
 
 describe('translate@1', () => {
-  it('is registered as the default registry\'s latest translate prompt', () => {
+  it('stays registered next to translate@2, the latest', () => {
     expect(translateV1.id).toBe(TRANSLATE_PROMPT_ID);
     expect(TRANSLATE_PROMPT_ID).toBe('translate@1');
     expect(PROMPTS).toContain(translateV1);
     const reg = createDefaultPromptRegistry();
     expect(reg.get('translate@1')).toBe(translateV1);
-    expect(reg.latest('translate')).toBe(translateV1);
+    expect(reg.latest('translate')).toBe(translateV2);
   });
 
   it('has exactly the five slots and renders with none left open', () => {

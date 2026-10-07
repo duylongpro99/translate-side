@@ -57,9 +57,21 @@ export interface DocMeta {
   outline: string[];
 }
 
+export type StyleMode = 'natural' | 'faithful' | 'simplified';
+
+/**
+ * Term glosses (plan M2 §5, decision M2-D1): `first` = a short gloss in parentheses at a term's
+ * first occurrence in the document only, for glossary terms and terms with no common equivalent;
+ * `off` = never.
+ */
+export type GlossMode = 'first' | 'off';
+
 export interface JobOptions {
-  style: 'natural' | 'faithful' | 'simplified';
+  style: StyleMode;
+  /** The user's personal glossary (settings). It takes priority over the brief's terms. */
   glossary: GlossaryEntry[];
+  /** Absent = `first` (DEFAULT_GLOSS). Prompts before `translate@2` ignore it. */
+  gloss?: GlossMode;
   /** Parallel chunk requests: the profile's `maxConcurrency` (§4.3.1). The engine owns chunking (plan M1 §5). */
   maxConcurrency: number;
   /** Target chunk size in source tokens: the profile's `chunkTokens` (§4.3.1). */
@@ -197,14 +209,39 @@ export interface WorkingMemory {
 
 export interface ContextSnippet {
   providerId: string;
+  /**
+   * `document`: the same for every chunk of the document once the brief is known, so it goes in
+   * the system block (the prompt-caching prefix, §5.7). `chunk`: about this chunk only, so it goes
+   * in the user message and never breaks the prefix.
+   */
+  scope: 'document' | 'chunk';
   text: string;
+}
+
+/** What a provider is asked (§5.4's query, plus what the v1 providers read). */
+export interface ContextQuery {
+  doc: DocMeta;
+  chunk: Segment[];
+  targetLang: string;
+  /** This provider's share of the context budget (providers/budget.ts). */
+  maxTokens: number;
+  /** Every segment of the document in page order: the chunk's neighbours. */
+  segments: readonly Segment[];
+  /** Brief, glossary and the text translated so far. Read only. */
+  memory: Readonly<WorkingMemory>;
+  options: JobOptions;
 }
 
 /** §5.4. */
 export interface ContextProvider {
   id: string;
-  /** Prompt-ready snippets relevant to this chunk, within a token budget. */
-  provide(q: { doc: DocMeta; chunk: Segment[]; targetLang: string; maxTokens: number }): Promise<ContextSnippet[]>;
+  /** Most tokens this provider may use, whatever is left of the budget (the context tail's ~300). */
+  maxTokens?: number;
+  /**
+   * Prompt-ready snippets relevant to this chunk, within `q.maxTokens`. Document-scoped snippets
+   * must depend on nothing chunk-specific, so the system block stays byte-identical across chunks.
+   */
+  provide(q: ContextQuery): Promise<ContextSnippet[]>;
 }
 
 /** A versioned prompt asset (§5.5). */

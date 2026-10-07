@@ -3,9 +3,9 @@
 
 import { analyzeV1 } from './analyze.ts';
 import { createPromptRegistry } from './registry.ts';
-import { translateV1 } from './translate.ts';
+import { translateV1, translateV2 } from './translate.ts';
 
-export const PROMPTS = [translateV1, analyzeV1] as const;
+export const PROMPTS = [translateV1, translateV2, analyzeV1] as const;
 
 export function createDefaultPromptRegistry() {
   return createPromptRegistry(PROMPTS);

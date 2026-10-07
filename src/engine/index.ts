@@ -11,11 +11,16 @@ export { createBudget, maxOutputTokens } from './budget.ts';
 export { createWorkingMemory } from './memory.ts';
 export { createPromptRegistry, definePrompt } from './prompts/registry.ts';
 export { PROMPTS, createDefaultPromptRegistry } from './prompts/index.ts';
-export { STYLE_LABELS, TRANSLATE_PROMPT_ID, languageLabel, translateV1 } from './prompts/translate.ts';
+export { GLOSS_RULES, STYLE_LABELS, STYLE_RULES, TRANSLATE_PROMPT_ID, TRANSLATE_V2_PROMPT_ID, languageLabel, translateV1, translateV2 } from './prompts/translate.ts';
+export { BRIEF_PROVIDER_ID, DEFAULT_GLOSS, GLOSSARY_PROVIDER_ID, neutralizeContextTags, renderContextBlock, renderSystemPromptV2, type SystemPromptV2Vars } from './context/assemble.ts';
+export { CONTEXT_BUDGET_TOKENS, DEFAULT_CONTEXT_PROVIDERS, gatherContext } from './context/budget.ts';
+export { documentBriefProvider, renderBrief } from './context/brief.ts';
+export { glossaryHash, glossaryProvider, keepsTerm, mentions, mergeGlossary, renderGlossaryEntry } from './context/glossary.ts';
+export { CONTEXT_TAIL_MAX_TOKENS, CONTEXT_TAIL_PARAGRAPHS, CONTEXT_TAIL_PROVIDER_ID, contextTailProvider } from './context/tail.ts';
 export { ANALYZE_EXCERPT_TOKENS, ANALYZE_OUTLINE_MAX, ANALYZE_PROMPT_ID, analyzeExcerpt, analyzeInput, analyzeV1, neutralizeDelimiters } from './prompts/analyze.ts';
 export { ANALYZE_MAX_OUTPUT_TOKENS, ANALYZE_TEMPERATURE, analyzeRequest, analyzeStage, briefCacheKey } from './stages/analyze.ts';
 export { BRIEF_FIELD_MAX, BRIEF_GLOSSARY_MAX, normalizeBrief, parseBrief } from './parsing/brief.ts';
-export { BRIEF_FREE_CHUNKS, CONTEXTUAL_CACHE_KEY, CONTEXTUAL_ID, CONTEXTUAL_VERSION, contextual, contextualStages } from './strategies/contextual.ts';
+export { BRIEF_FREE_CHUNKS, CONTEXTUAL_CACHE_KEY, CONTEXTUAL_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, CONTEXTUAL_VERSION, contextual, contextualStages, createContextual } from './strategies/contextual.ts';
 export {
   BUDGET_MESSAGE,
   SINGLE_PASS_CACHE_KEY,

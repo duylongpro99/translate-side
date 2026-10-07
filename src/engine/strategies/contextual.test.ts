@@ -100,7 +100,7 @@ describe('contextual: analyze → chunk → translate → check', () => {
     expect(starts).toEqual(expect.arrayContaining([
       ['analyze', { promptId: ANALYZE_PROMPT_ID }],
       ['chunk', undefined],
-      ['translate', { promptId: 'translate@1' }],
+      ['translate', { promptId: 'translate@2' }],
       ['check', undefined],
     ]));
     expect(starts.filter(([s]) => s !== 'analyze').map(([s]) => s)).toEqual(['chunk', 'translate', 'check']);
