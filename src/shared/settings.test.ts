@@ -4,7 +4,8 @@ import { costUsd, formatUsd } from './cost.ts';
 import { APIBOX_DEEPSEEK_QUIRKS } from '@/llm/presets';
 import {
   APIBOX_CONNECTION,
-  APIBOX_PROFILE,
+  APIBOX_FLASH_PROFILE,
+  APIBOX_PRO_PROFILE,
   DEFAULT_CONNECTION,
   DEFAULT_HOST,
   DEFAULT_ORIGIN,
@@ -62,20 +63,21 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
     expect(originPattern(GEMINI_CONNECTION.baseUrl)).toBe(GEMINI_ORIGIN);
   });
 
-  it('defaults to APIBOX with ds/deepseek-flash, thinking off; origin and host come from the base URL (M2-D11, M2-D13)', () => {
+  it('defaults to APIBOX with ds/deepseek-v4-pro, thinking off, flash kept; origin and host come from the base URL (M2-D11, M2-D14)', () => {
     expect(DEFAULT_CONNECTION).toBe(APIBOX_CONNECTION);
-    expect(DEFAULT_PROFILE).toBe(APIBOX_PROFILE);
+    expect(DEFAULT_PROFILE).toBe(APIBOX_PRO_PROFILE);
     expect(APIBOX_CONNECTION).toMatchObject({ protocol: 'openai-chat', baseUrl: 'https://api.ai-box.vn/v1', auth: { style: 'bearer' } });
     expect(APIBOX_CONNECTION.quirks).toEqual({ reasoning: { control: 'effort', lowest: 'off', reserveTokens: 0 } });
     expect(APIBOX_CONNECTION.quirks).toBe(APIBOX_DEEPSEEK_QUIRKS);
-    expect(APIBOX_PROFILE).toMatchObject({ model: 'ds/deepseek-flash', maxConcurrency: 2, connectionId: APIBOX_CONNECTION.id });
+    expect(APIBOX_PRO_PROFILE).toMatchObject({ model: 'ds/deepseek-v4-pro', maxConcurrency: 2, connectionId: APIBOX_CONNECTION.id });
+    expect(APIBOX_FLASH_PROFILE).toMatchObject({ model: 'ds/deepseek-flash', maxConcurrency: 2, connectionId: APIBOX_CONNECTION.id });
     expect(DEFAULT_ORIGIN).toBe('https://api.ai-box.vn/*');
     expect(DEFAULT_HOST).toBe('api.ai-box.vn');
   });
 
   it("prices each profile exactly as the harness does (scripts/eval/pricing.ts)", () => {
     const u = { input: 3340, cachedInput: 1000, output: 2868 };
-    for (const profile of [GEMINI_PROFILE, APIBOX_PROFILE]) {
+    for (const profile of [GEMINI_PROFILE, APIBOX_FLASH_PROFILE, APIBOX_PRO_PROFILE]) {
       const p = PRICES[profile.model];
       expect(p).toBeDefined();
       expect(profile.pricing).toEqual({ inPerM: p?.input, cachedInPerM: p?.cachedInput, outPerM: p?.output });
@@ -85,9 +87,9 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
   });
 
   it('routes translate, and analyze to the translate profile (stub)', () => {
-    expect(resolveProfile('translate')).toEqual({ profile: APIBOX_PROFILE, connection: APIBOX_CONNECTION });
+    expect(resolveProfile('translate')).toEqual({ profile: APIBOX_PRO_PROFILE, connection: APIBOX_CONNECTION });
     // §4.3.1: an unset analyze route defaults to translate.
-    expect(resolveProfile('analyze').profile).toBe(APIBOX_PROFILE);
+    expect(resolveProfile('analyze').profile).toBe(APIBOX_PRO_PROFILE);
     expect(() => resolveProfile('review')).toThrow(/review/);
   });
 

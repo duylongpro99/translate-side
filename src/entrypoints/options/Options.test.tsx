@@ -68,7 +68,7 @@ describe('options v0 (plan M1-E9)', () => {
     await flush();
     expect(f.local.get(`secret:${DEFAULT_CONNECTION.id}`)).toBe('AIzaSyExampleKey1234');
     expect(root.querySelector('#key-h')?.textContent).toBe('APIBOX');
-    expect(root.textContent).toContain('ds/deepseek-flash');
+    expect(root.textContent).toContain('ds/deepseek-v4-pro');
     expect(f.sync.size).toBe(0);
     expect(root.querySelector('[data-testid=masked-key]')?.textContent).toBe('AIz…1234');
     expect(root.innerHTML).not.toContain('AIzaSyExampleKey1234');

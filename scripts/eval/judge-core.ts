@@ -7,8 +7,9 @@ import { parseJudgeReply, type Scores } from './scores.ts';
 
 /**
  * Pinned judge: a fixed model ID so scores stay comparable between runs (plan §5). User decision M2-D13:
- * ds/deepseek-v4-pro on APIBOX, stronger than the translator (ds/deepseek-flash); it replaced gemini-3.7-flash
- * (M2-D2), whose scores are not comparable with its own. Change it only together with re-scoring the baseline.
+ * ds/deepseek-v4-pro on APIBOX, thinking at effort medium; it replaced gemini-3.7-flash (M2-D2), whose
+ * scores are not comparable with its own. From M2-D14 the translator is the same model with thinking off, so
+ * the judge is a thinking one rather than a stronger one. Change it only together with re-scoring the baseline.
  * `--model` overrides for a trial; `--provider gemini --model gemini-3.7-flash` reproduces the old judge.
  */
 export const JUDGE_MODEL = 'ds/deepseek-v4-pro';

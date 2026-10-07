@@ -18,9 +18,9 @@ export const PRICES: Record<string, Price> = {
   // completion_ratio, cache reads = input × cache_ratio; group "default" ratio 1. These are the gateway's nominal USD:
   // what a quota dollar costs at top-up is set by the gateway (its /api/status says price 7.3, presumably CNY per
   // dollar), so `verified: false` until the user confirms. Ratios between runs are exact either way.
-  // ds/deepseek-flash: model_ratio 0.05, completion_ratio 4, cache_ratio 0.02.
+  // ds/deepseek-flash (the M2-D13 translator): model_ratio 0.05, completion_ratio 4, cache_ratio 0.02.
   'ds/deepseek-flash': { input: 0.1, cachedInput: 0.002, output: 0.4, verified: false },
-  // ds/deepseek-v4-pro (the judge, M2-D13): model_ratio 0.22, completion_ratio 3, cache_ratio 0.033181818182.
+  // ds/deepseek-v4-pro (the judge, M2-D13; the translator from M2-D14): model_ratio 0.22, completion_ratio 3, cache_ratio 0.033181818182.
   'ds/deepseek-v4-pro': { input: 0.44, cachedInput: 0.0146, output: 1.32, verified: false },
   // The offline `--mock` run: no money is spent.
   mock: { input: 0, cachedInput: 0, output: 0, verified: true },

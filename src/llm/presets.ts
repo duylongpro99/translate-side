@@ -12,7 +12,8 @@ export const APIBOX_BASE_URL = 'https://api.ai-box.vn/v1';
  * APIBOX's DeepSeek models (ds/deepseek-flash, ds/deepseek-v4-pro), probed 2026-10-07: both think
  * by default, and the thinking (`delta.reasoning_content`, never shown as text) counts against
  * `max_tokens`. A 200-token translation came back empty, cut by `length`. `reasoning_effort: "none"`
- * switches it off (no reasoning tokens at all), "low" still thinks. Temperature, the stream usage
+ * switches it off (no reasoning tokens at all; for v4-pro also re-probed on a 911-token
+ * streamed translation, finish "stop"), "low" still thinks. Temperature, the stream usage
  * chunk and `response_format: json_object` all work. So: thinking off, no reserve (DESIGN §4.2.4, §5.7).
  */
 export const APIBOX_DEEPSEEK_QUIRKS: Quirks = { reasoning: { control: 'effort', lowest: 'off', reserveTokens: 0 } };

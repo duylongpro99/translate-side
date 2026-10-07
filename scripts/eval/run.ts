@@ -14,7 +14,8 @@
 // `--prompt translate@1` runs contextual as Phase B did. single-pass stays on translate@1 (the
 // frozen baseline). `--style`, `--gloss` and `--glossary` (term, or term=rendering; a bare term is
 // "keep as is") are the job options the panel takes from the settings (M2-E6).
-// Providers (M2-D11, M2-D13): `apibox` (default; AIBOX_API_KEY, ds/deepseek-flash, thinking off),
+// Providers (M2-D11, M2-D14): `apibox` (default; AIBOX_API_KEY, ds/deepseek-v4-pro, thinking off;
+// `--model ds/deepseek-flash` is the M2-D13 translator),
 // `gemini` (GEMINI_API_KEY, gemini-3.5-flash-lite: the historical baseline), `anthropic`.
 // summary.json records `promptHash` (the translate system prompt rendered with no context, so a
 // rule edited in place shows as a new hash) and `strategyVersion`.
@@ -121,9 +122,9 @@ function connection(): { client: LLMClient; label: string } {
   return { client: createClient(conn, model), label: `${opt.provider}/${model}` };
 }
 
-/** The live providers: where the key is read, the connection, the default model (M2-D11, M2-D13). */
+/** The live providers: where the key is read, the connection, the default model (M2-D11, M2-D14). */
 const PROVIDERS: Record<string, { keyName: string; conn: Pick<ResolvedConnection, 'protocol' | 'baseUrl' | 'auth' | 'quirks'>; model: string }> = {
-  apibox: { keyName: 'AIBOX_API_KEY', conn: { protocol: 'openai-chat', baseUrl: APIBOX_BASE_URL, auth: { style: 'bearer' }, quirks: APIBOX_DEEPSEEK_QUIRKS }, model: 'ds/deepseek-flash' },
+  apibox: { keyName: 'AIBOX_API_KEY', conn: { protocol: 'openai-chat', baseUrl: APIBOX_BASE_URL, auth: { style: 'bearer' }, quirks: APIBOX_DEEPSEEK_QUIRKS }, model: 'ds/deepseek-v4-pro' },
   gemini: { keyName: 'GEMINI_API_KEY', conn: { protocol: 'openai-chat', baseUrl: GEMINI_OPENAI_BASE_URL, auth: { style: 'bearer' }, quirks: {} }, model: 'gemini-3.5-flash-lite' },
   anthropic: { keyName: 'ANTHROPIC_API_KEY', conn: { protocol: 'anthropic-messages', baseUrl: 'https://api.anthropic.com', auth: { style: 'x-api-key' }, quirks: {} }, model: 'claude-haiku-4-5-20251001' },
 };
