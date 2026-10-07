@@ -35,15 +35,23 @@ export function keepsTerm(e: GlossaryEntry): boolean {
   return e.rendering.trim() === '' || e.rendering.trim() === e.term.trim();
 }
 
-/** How a keep-as-is entry is marked in the glossary list: never translated, never glossed. */
+/** How the user's keep-as-is entry is marked in the glossary list: never translated, never glossed. */
 export const KEEP_AS_IS_MARK = '(keep as is: write it exactly like this, never translate it, never gloss it)';
+/**
+ * How the brief's keep-in-English entry is marked (round 8, M2-D1 "first occurrence only, for
+ * glossary terms and terms with no common equivalent"): kept, and glossed once at its first use.
+ */
+export const KEEP_ENGLISH_MARK = '(keep it in English; if it is a technical term, gloss it once at its first use in the document)';
+
+/** Where a glossary entry comes from: the user's settings, or the brief's terms. */
+export type GlossarySource = 'personal' | 'brief';
 /** The head of the chunk snippet listing the terms used before this chunk (no gloss for them). */
 export const USED_TERMS_HEAD = 'Terms already used earlier in the document, so already glossed: write each with no gloss and no parentheses after it in every segment below, headings included: ';
 
 /** One glossary line. Tags are neutralised: the brief's terms are model output over page text (§8). */
-export function renderGlossaryEntry(e: GlossaryEntry): string {
+export function renderGlossaryEntry(e: GlossaryEntry, from: GlossarySource = 'personal'): string {
   const term = neutralizeContextTags(e.term.trim());
-  const head = keepsTerm(e) ? `- ${term} → ${term} ${KEEP_AS_IS_MARK}` : `- ${term} → ${neutralizeContextTags(e.rendering.trim())}`;
+  const head = keepsTerm(e) ? `- ${term} → ${term} ${from === 'personal' ? KEEP_AS_IS_MARK : KEEP_ENGLISH_MARK}` : `- ${term} → ${neutralizeContextTags(e.rendering.trim())}`;
   const note = e.note?.trim();
   return note ? `${head} — ${neutralizeContextTags(note)}` : head;
 }
@@ -89,13 +97,13 @@ export function usedTermsLine(terms: readonly string[]): string {
  * share, is where the model most needs that line not to gloss a term again. The reserve is for the
  * worst case, so the cut depends only on the entries, the same for every chunk (byte-stable list).
  */
-export function fitGlossary(entries: readonly GlossaryEntry[], maxTokens: number): { listed: GlossaryEntry[]; lines: string[]; tokens: number } {
+export function fitGlossary(entries: readonly GlossaryEntry[], maxTokens: number, sourceOf: (e: GlossaryEntry) => GlossarySource = () => 'personal'): { listed: GlossaryEntry[]; lines: string[]; tokens: number } {
   const listed: GlossaryEntry[] = [];
   const lines: string[] = [];
   let list = 0;
   let tokens = 0;
   for (const e of entries) {
-    const line = renderGlossaryEntry(e);
+    const line = renderGlossaryEntry(e, sourceOf(e));
     const withLine = list + estimateTokens(`${line}\n`);
     const total = withLine + estimateTokens(usedTermsLine([...listed, e].map((x) => x.term)));
     if (total > maxTokens) break;
@@ -111,7 +119,8 @@ export const glossaryProvider: ContextProvider = {
   id: GLOSSARY_PROVIDER_ID,
   async provide(q) {
     const entries = mergeGlossary(q.memory.glossary, q.memory.brief?.glossary ?? []);
-    const { listed, lines } = fitGlossary(entries, q.maxTokens);
+    const personal = new Set(q.memory.glossary.map((e) => key(e.term)));
+    const { listed, lines } = fitGlossary(entries, q.maxTokens, (e) => (personal.has(key(e.term)) ? 'personal' : 'brief'));
     if (lines.length === 0) return [];
     const out: ContextSnippet[] = [{ providerId: GLOSSARY_PROVIDER_ID, scope: 'document', text: lines.join('\n') }];
     // One pattern per term over the text before the chunk, joined once ("\n" is a word boundary,
