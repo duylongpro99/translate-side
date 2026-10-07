@@ -7,9 +7,11 @@
 //   budget first; entries that don't fit are cut from the end (the brief's terms before any of the
 //   user's), the same cut for every chunk, keeping room for the chunk snippet below (fitGlossary). The options page warns when the user's entries alone
 //   pass PERSONAL_GLOSSARY_PROMPT_TOKENS (budget.ts);
-// - chunk-scoped, the listed terms that already occur in the source before this chunk, so the
-//   model glosses a term only at its first occurrence in the document (plan M2 §5, M2-D1). It is
-//   computed from the source in page order, so it doesn't depend on which chunk finished first.
+// - chunk-scoped, the listed terms that already occur in the running text before this chunk, each
+//   with its rendering, so the model glosses a term only at its first occurrence in the document
+//   (plan M2 §5, M2-D1) and keeps rendering it as listed. It is computed from the source in page
+//   order, so it doesn't depend on which chunk finished first. Headings and inline code are not
+//   running text: the gloss rule puts no gloss there, so a term seen only there is still unglossed.
 import { cyrb53 } from '../hash.ts';
 import { estimateTokens } from '../tokens.ts';
 import type { ContextProvider, ContextSnippet, GlossaryEntry, Segment } from '../types.ts';
@@ -43,15 +45,21 @@ export const KEEP_AS_IS_MARK = '(keep as is: write it exactly like this, never t
  */
 export const KEEP_ENGLISH_MARK = '(keep it in English, and add a short gloss in parentheses at its first use in the document, once)';
 
+/**
+ * How an entry with a rendering is marked (round 12: a briefed chunk wrote "deploy" bare against
+ * "deploy → triển khai"): the rendering, every time.
+ */
+export const RENDER_MARK = '(always write it this way, in every segment)';
+
 /** Where a glossary entry comes from: the user's settings, or the brief's terms. */
 export type GlossarySource = 'personal' | 'brief';
 /** The head of the chunk snippet listing the terms used before this chunk (no gloss for them). */
-export const USED_TERMS_HEAD = 'Terms already used earlier in the document, so already glossed: write each with no gloss and no parentheses after it in every segment below, headings included: ';
+export const USED_TERMS_HEAD = 'Glossary terms already used earlier in the document, so already glossed: write each exactly as rendered after its arrow, with no gloss and no parentheses after it, in every segment below, headings included: ';
 
 /** One glossary line. Tags are neutralised: the brief's terms are model output over page text (§8). */
 export function renderGlossaryEntry(e: GlossaryEntry, from: GlossarySource = 'personal'): string {
   const term = neutralizeContextTags(e.term.trim());
-  const head = keepsTerm(e) ? `- ${term} → ${term} ${from === 'personal' ? KEEP_AS_IS_MARK : KEEP_ENGLISH_MARK}` : `- ${term} → ${neutralizeContextTags(e.rendering.trim())}`;
+  const head = keepsTerm(e) ? `- ${term} → ${term} ${from === 'personal' ? KEEP_AS_IS_MARK : KEEP_ENGLISH_MARK}` : `- ${term} → ${neutralizeContextTags(e.rendering.trim())} ${RENDER_MARK}`;
   const note = e.note?.trim();
   return note ? `${head} — ${neutralizeContextTags(note)}` : head;
 }
@@ -86,9 +94,24 @@ export function segmentsBefore(segments: readonly Segment[], chunk: readonly Seg
   return (at < 0 ? [] : segments.slice(0, at)).filter((s) => s.translate);
 }
 
-/** The chunk snippet naming the listed terms already used before the chunk. */
-export function usedTermsLine(terms: readonly string[]): string {
-  return `${USED_TERMS_HEAD}${terms.map((t) => neutralizeContextTags(t.trim())).join(', ')}`;
+/**
+ * The running text before the chunk, where a first use gets its gloss: no headings, and no inline
+ * code (backtick spans). One segment per line ("\n" is a word boundary, so no match spans two).
+ */
+export function runningTextBefore(segments: readonly Segment[], chunk: readonly Segment[]): string {
+  return segmentsBefore(segments, chunk)
+    .filter((s) => s.kind !== 'heading' && s.kind !== 'code')
+    .map((s) => s.inlineMarkup.replace(/`[^`\n]*`/g, ' '))
+    .join('\n');
+}
+
+/** The chunk snippet naming the listed terms already used before the chunk, each with its rendering. */
+export function usedTermsLine(entries: readonly Pick<GlossaryEntry, 'term' | 'rendering'>[]): string {
+  const item = (e: Pick<GlossaryEntry, 'term' | 'rendering'>) => {
+    const term = neutralizeContextTags(e.term.trim());
+    return `${term} → ${keepsTerm({ term: e.term, rendering: e.rendering }) ? term : neutralizeContextTags(e.rendering.trim())}`;
+  };
+  return `${USED_TERMS_HEAD}${entries.map(item).join('; ')}`;
 }
 
 /**
@@ -105,7 +128,7 @@ export function fitGlossary(entries: readonly GlossaryEntry[], maxTokens: number
   for (const e of entries) {
     const line = renderGlossaryEntry(e, sourceOf(e));
     const withLine = list + estimateTokens(`${line}\n`);
-    const total = withLine + estimateTokens(usedTermsLine([...listed, e].map((x) => x.term)));
+    const total = withLine + estimateTokens(usedTermsLine([...listed, e]));
     if (total > maxTokens) break;
     listed.push(e);
     lines.push(line);
@@ -123,10 +146,9 @@ export const glossaryProvider: ContextProvider = {
     const { listed, lines } = fitGlossary(entries, q.maxTokens, (e) => (personal.has(key(e.term)) ? 'personal' : 'brief'));
     if (lines.length === 0) return [];
     const out: ContextSnippet[] = [{ providerId: GLOSSARY_PROVIDER_ID, scope: 'document', text: lines.join('\n') }];
-    // One pattern per term over the text before the chunk, joined once ("\n" is a word boundary,
-    // so no match spans two segments). Its room was kept by fitGlossary.
-    const before = segmentsBefore(q.segments, q.chunk).map((s) => s.text).join('\n');
-    const used = before === '' ? [] : listed.filter((e) => termPattern(e.term)?.test(before)).map((e) => e.term);
+    // One pattern per term over the running text before the chunk. Its room was kept by fitGlossary.
+    const before = runningTextBefore(q.segments, q.chunk);
+    const used = before === '' ? [] : listed.filter((e) => termPattern(e.term)?.test(before));
     if (used.length) out.push({ providerId: GLOSSARY_PROVIDER_ID, scope: 'chunk', text: usedTermsLine(used) });
     return out;
   },

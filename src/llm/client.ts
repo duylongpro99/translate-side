@@ -57,7 +57,7 @@ export function createAdapter(protocol: Protocol, options: AdapterOptions = {}):
 export function bindClient(adapter: ProtocolAdapter, conn: ResolvedConnection, model: string): LLMClient {
   return {
     model,
-    reasoningReserveTokens: reserveTokensOf(conn.quirks.reasoning),
+    reasoningReserveTokens: (req) => reserveTokensOf(conn.quirks.reasoning, req),
     stream(req) {
       if (req.model !== model) throw new Error(`request model ${req.model} differs from the client's ${model}`);
       return adapter.stream(conn, req);

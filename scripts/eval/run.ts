@@ -99,31 +99,13 @@ if (fs.existsSync(path.join(ROOT, '.env'))) process.loadEnvFile(path.join(ROOT, 
 /** `--reasoning`: the translate calls' thinking, sent as `reasoning_effort` (OpenAI-compatible providers). */
 const REASONING = opt.reasoning === undefined ? undefined : { control: 'effort' as const, lowest: opt.reasoning, reserveTokens: Number(opt['reasoning-reserve']) };
 
-/**
- * Reasoning tokens per request, keyed by its user message(s) as `recording` joins them: the adapter
- * does not report them, so the OpenAI-compatible stream's usage chunk is read from a copy of the body.
- */
-const reasoningByUser = new Map<string, Promise<number | undefined>>();
-const tapReasoning: typeof fetch = async (input, init) => {
-  const res = await fetch(input, init);
-  if (typeof init?.body !== 'string' || res.body === null) return res;
-  const user = (JSON.parse(init.body) as { messages?: { role: string; content: string }[] }).messages?.filter((m) => m.role === 'user').map((m) => m.content).join('\n');
-  if (user === undefined) return res;
-  const [mine, theirs] = res.body.tee();
-  reasoningByUser.set(user, new Response(mine).text().then((t) => {
-    const m = /"reasoning_tokens":\s*(\d+)/.exec(t.slice(t.lastIndexOf('"usage"')));
-    return m ? Number(m[1]) : undefined;
-  }, () => undefined));
-  return new Response(theirs, { status: res.status, statusText: res.statusText, headers: res.headers });
-};
-
 function connection(): { client: LLMClient; label: string; translateClient?: LLMClient; thinking: { reasoning: Quirks['reasoning'] | undefined; maxTokensParam: Quirks['maxTokensParam'] | undefined } | null } {
   if (opt.mock) {
     // Echoes every <seg> with "vi:" in front. Multi-line segments are legal on the wire, so this
     // does not go through the line-based test helper.
     const c: LLMClient = {
       model: 'mock',
-      reasoningReserveTokens: 0,
+      reasoningReserveTokens: () => 0,
       async *stream(req) {
         const user = req.messages.map((m) => m.content).join('\n');
         if (user.startsWith('<document>')) {
@@ -151,12 +133,11 @@ function connection(): { client: LLMClient; label: string; translateClient?: LLM
   const model = opt.model ?? preset.model;
   // The model's quirks over the connection's, as the app's profile does (settings.ts withProfileQuirks).
   const conn: ResolvedConnection = { id: `eval-${opt.provider}`, ...preset.conn, quirks: { ...preset.conn.quirks, ...preset.modelQuirks?.[model] }, apiKey: key, hasHostPermission: async () => true };
-  const options = { fetch: tapReasoning };
   const translateConn = REASONING === undefined ? conn : { ...conn, quirks: { ...conn.quirks, reasoning: REASONING } };
   return {
-    client: createClient(conn, model, options),
+    client: createClient(conn, model),
     label: `${opt.provider}/${model}`,
-    ...(REASONING === undefined ? {} : { translateClient: createClient(translateConn, model, options) }),
+    ...(REASONING === undefined ? {} : { translateClient: createClient(translateConn, model) }),
     thinking: { reasoning: translateConn.quirks.reasoning, maxTokensParam: translateConn.quirks.maxTokensParam },
   };
 }
@@ -172,7 +153,7 @@ const PROVIDERS: Record<string, { keyName: string; conn: Pick<ResolvedConnection
 function recording(inner: LLMClient, calls: CallRecord[], doc: () => string, role?: ModelRole): LLMClient {
   return {
     model: inner.model,
-    reasoningReserveTokens: inner.reasoningReserveTokens,
+    reasoningReserveTokens: (req) => inner.reasoningReserveTokens(req),
     async *stream(req) {
       const rec: CallRecord = { doc: doc(), ...(role === undefined ? {} : { role }), ...(req.chunkIndex === undefined ? {} : { chunkIndex: req.chunkIndex }), n: calls.length + 1, ms: 0, system: req.system, maxOutputTokens: req.maxOutputTokens, user: req.messages.map((m) => m.content).join('\n'), text: '' };
       calls.push(rec);
@@ -180,7 +161,11 @@ function recording(inner: LLMClient, calls: CallRecord[], doc: () => string, rol
       try {
         for await (const e of inner.stream(req)) {
           if (e.type === 'text') rec.text += e.delta;
-          else if (e.type === 'usage') rec.usage = { input: e.input, output: e.output, ...(e.cachedInput === undefined ? {} : { cachedInput: e.cachedInput }) };
+          else if (e.type === 'usage') {
+            rec.usage = { input: e.input, output: e.output, ...(e.cachedInput === undefined ? {} : { cachedInput: e.cachedInput }) };
+            // Per call, from the call's own usage (repairs and retries of the same text don't mix).
+            if (e.reasoningOutput !== undefined) rec.reasoningTokens = e.reasoningOutput;
+          }
           else if (e.type === 'done') rec.stop = e.stopReason;
           else rec.error = `${e.error.kind}: ${e.error.message}`;
           yield e;
@@ -391,7 +376,6 @@ if (opt['probe-nonce']) {
   }
 }
 
-for (const c of calls) c.reasoningTokens = await reasoningByUser.get(c.user);
 /**
  * Runaway thinking (M2-D16): qwen's effort levels bound nothing, so every call's reasoning tokens
  * are kept, and a call at REASONING_OUTLIER_TOKENS or more, or one that hit its token cap while

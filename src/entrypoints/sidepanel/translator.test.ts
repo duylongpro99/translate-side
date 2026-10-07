@@ -346,7 +346,7 @@ describe('translator wiring (plan M1-E8)', () => {
       const f = fakeApi();
       const hanging: LLMClient = {
         model: 'm',
-        reasoningReserveTokens: 0,
+        reasoningReserveTokens: () => 0,
         // eslint-disable-next-line require-yield
         async *stream(req) {
           await new Promise((_, reject) => req.signal.addEventListener('abort', () => reject(req.signal.reason), { once: true }));
@@ -520,7 +520,7 @@ describe('translator wiring (plan M1-E8)', () => {
         const gate = new Promise<void>((done) => (release = done));
         const client: LLMClient = {
           model: r.c.model,
-          reasoningReserveTokens: r.c.reasoningReserveTokens,
+          reasoningReserveTokens: (req) => r.c.reasoningReserveTokens(req),
           async *stream(req) {
             if (!req.messages[0]?.content.startsWith('<document>')) {
               await new Promise<void>((done, fail) => {

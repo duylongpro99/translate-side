@@ -9,7 +9,7 @@ function scripted(answers: NormalizedEvent[][]): LLMClient & { calls: number } {
   const c = {
     calls: 0,
     model: 'm',
-    reasoningReserveTokens: 0,
+    reasoningReserveTokens: () => 0,
     async *stream() {
       yield* answers[Math.min(c.calls++, answers.length - 1)] as NormalizedEvent[];
     },

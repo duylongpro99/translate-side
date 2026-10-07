@@ -86,7 +86,7 @@ function instrumented(inner: LLMClient, { hold = false } = {}) {
   const signals: AbortSignal[] = [];
   const client: LLMClient = {
     model: inner.model,
-    reasoningReserveTokens: 0,
+    reasoningReserveTokens: () => 0,
     async *stream(req: NormalizedRequest) {
       signals.push(req.signal);
       active++;
@@ -261,7 +261,7 @@ describe('Jobs (plan M1-E8)', () => {
     let calls = 0;
     const bad: LLMClient = {
       model: 'm',
-      reasoningReserveTokens: 0,
+      reasoningReserveTokens: () => 0,
       async *stream() {
         calls++;
         await settle(5);
@@ -434,7 +434,7 @@ describe('Jobs: contextual (plan M2-E1) and same-language skip (M2-E5)', () => {
     // The first run gets its brief, then every translate call fails (not retried): segments are left to resume.
     const broken: LLMClient = {
       model: first.model,
-      reasoningReserveTokens: 0,
+      reasoningReserveTokens: () => 0,
       async *stream(req) {
         if (isAnalyze(req)) yield* first.stream(req);
         else yield { type: 'error', error: { kind: 'bad_request', status: 400, message: 'down' } };

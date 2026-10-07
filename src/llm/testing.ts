@@ -124,7 +124,7 @@ export function anthropicStream(s: AnthropicScript): string {
 export interface OpenAIScript {
   text?: string[];
   reasoning?: string[];
-  usage?: { prompt_tokens: number; completion_tokens: number; cached_tokens?: number } | null;
+  usage?: { prompt_tokens: number; completion_tokens: number; cached_tokens?: number; reasoning_tokens?: number } | null;
   finish_reason?: string;
   /** Sent as a `data: {"error": …}` line before [DONE]. */
   error?: unknown;
@@ -155,7 +155,7 @@ export function openaiStream(s: OpenAIScript): string {
           created: 0,
           model: 'm',
           choices: [],
-          usage: { prompt_tokens: u.prompt_tokens, completion_tokens: u.completion_tokens, total_tokens: u.prompt_tokens + u.completion_tokens, ...(u.cached_tokens === undefined ? {} : { prompt_tokens_details: { cached_tokens: u.cached_tokens } }) },
+          usage: { prompt_tokens: u.prompt_tokens, completion_tokens: u.completion_tokens, total_tokens: u.prompt_tokens + u.completion_tokens, ...(u.cached_tokens === undefined ? {} : { prompt_tokens_details: { cached_tokens: u.cached_tokens } }), ...(u.reasoning_tokens === undefined ? {} : { completion_tokens_details: { reasoning_tokens: u.reasoning_tokens } }) },
         },
       });
     }

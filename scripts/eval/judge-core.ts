@@ -62,7 +62,7 @@ export async function askJudge(llm: LLMClient, system: string, user: string, usa
   for (let attempt = 0; attempt < 6; attempt++) {
     let text = '';
     last = undefined;
-    for await (const e of llm.stream({ model: llm.model, system, messages: [{ role: 'user', content: user }], maxOutputTokens: 1200 + llm.reasoningReserveTokens, temperature: 0, signal: new AbortController().signal })) {
+    for await (const e of llm.stream({ model: llm.model, system, messages: [{ role: 'user', content: user }], maxOutputTokens: 1200 + llm.reasoningReserveTokens({}), temperature: 0, signal: new AbortController().signal })) {
       if (e.type === 'text') text += e.delta;
       else if (e.type === 'usage') {
         usage.input += e.input;

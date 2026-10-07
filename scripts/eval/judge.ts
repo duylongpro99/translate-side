@@ -31,7 +31,7 @@ function client(): LLMClient {
   if (opt.mock) {
     return {
       model: model,
-      reasoningReserveTokens: 0,
+      reasoningReserveTokens: () => 0,
       async *stream() {
         yield { type: 'text', delta: '```json\n{"fidelity": 4, "naturalness": 3, "tone": 4, "terminology": 5, "comment": "mock"}\n```' };
         yield { type: 'usage', input: 100, output: 20 };

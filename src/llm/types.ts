@@ -41,7 +41,8 @@ export interface Quirks {
     /**
      * Per-chunk policy (M2-D16): a request whose `chunkIndex` is at least `fromChunk` sends the last
      * such entry's `lowest` and counts its `reserveTokens` instead; requests without a `chunkIndex`
-     * (analyze) and earlier chunks use the fields above. `control` is shared (src/llm/reasoning.ts).
+     * (analyze), earlier chunks and `baseReasoning` requests (a repair) use the fields above.
+     * `control` is shared (src/llm/reasoning.ts).
      */
     byChunk?: readonly { fromChunk: number; lowest: string | number | 'off'; reserveTokens: number }[];
   };
@@ -85,8 +86,16 @@ export interface NormalizedRequest {
   jsonMode?: boolean;
   /** The chunk's position in its document (translate calls): picks `Quirks.reasoning.byChunk`. Not sent. */
   chunkIndex?: number;
+  /**
+   * Send the base thinking setting whatever the chunk (thinking off for a per-chunk policy that
+   * starts off): the repair after a cut must not repeat the thinking that used up the cap. Not sent.
+   */
+  baseReasoning?: boolean;
   signal: AbortSignal;
 }
+
+/** What picks a request's thinking setting (src/llm/reasoning.ts). */
+export type ReserveQuery = Pick<NormalizedRequest, 'chunkIndex' | 'baseReasoning'>;
 
 export type StopReason = 'end' | 'max_tokens' | 'refusal' | 'other';
 
@@ -99,11 +108,12 @@ export type StopReason = 'end' | 'max_tokens' | 'refusal' | 'other';
  * that is `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`; for OpenAI,
  * `prompt_tokens`. `cachedInput` is the subset read from the prompt cache (Anthropic
  * `cache_read_input_tokens`, OpenAI `prompt_tokens_details.cached_tokens`); cache writes are in
- * `input` but not in `cachedInput`.
+ * `input` but not in `cachedInput`. `reasoningOutput` is the thinking part of `output`, where the
+ * endpoint reports it (OpenAI-compatible `completion_tokens_details.reasoning_tokens`).
  */
 export type NormalizedEvent =
   | { type: 'text'; delta: string }
-  | { type: 'usage'; input: number; output: number; cachedInput?: number }
+  | { type: 'usage'; input: number; output: number; cachedInput?: number; reasoningOutput?: number }
   | { type: 'done'; stopReason: StopReason }
   | { type: 'error'; error: LLMError };
 
@@ -149,10 +159,10 @@ export interface LLMClient {
    */
   readonly model: string;
   /**
-   * `quirks.reasoning.reserveTokens` (the largest of a per-chunk policy's), or 0: the engine adds it
-   * to maxOutputTokens (§5.7).
+   * The thinking reserve of the setting `req` will be sent with (`quirks.reasoning`, per chunk
+   * under a per-chunk policy), or 0: the engine adds it to maxOutputTokens (§5.7).
    */
-  readonly reasoningReserveTokens: number;
+  reasoningReserveTokens(req: ReserveQuery): number;
   stream(req: NormalizedRequest): AsyncIterable<NormalizedEvent>;
 }
 

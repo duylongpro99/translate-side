@@ -74,7 +74,7 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
     expect(APIBOX_QWEN_PROFILE).toMatchObject({ model: 'qwen3.8-flash', maxConcurrency: 2, connectionId: APIBOX_CONNECTION.id });
     expect(APIBOX_QWEN_PROFILE.quirks).toEqual({
       maxTokensParam: 'max_completion_tokens',
-      reasoning: { control: 'effort', lowest: 'off', reserveTokens: 0, byChunk: [{ fromChunk: 1, lowest: 'minimal', reserveTokens: 3000 }] },
+      reasoning: { control: 'effort', lowest: 'off', reserveTokens: 0, byChunk: [{ fromChunk: 1, lowest: 'minimal', reserveTokens: 6000 }] },
     });
     expect(APIBOX_PRO_PROFILE).toMatchObject({ model: 'ds/deepseek-v4-pro', maxConcurrency: 2, connectionId: APIBOX_CONNECTION.id });
     expect(APIBOX_PRO_PROFILE.quirks).toBeUndefined();

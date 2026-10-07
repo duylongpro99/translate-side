@@ -26,7 +26,7 @@ export const PERSONAL_GLOSSARY_PROMPT_TOKENS = CONTEXT_BUDGET_TOKENS - BRIEF_MAX
 export function personalGlossaryTokens(entries: readonly GlossaryEntry[]): number {
   if (entries.length === 0) return 0;
   const list = entries.reduce((n, e) => n + estimateTokens(`${renderGlossaryEntry(e)}\n`), 0);
-  return list + estimateTokens(usedTermsLine(entries.map((e) => e.term)));
+  return list + estimateTokens(usedTermsLine(entries));
 }
 
 /** v1 providers (§5.4), document-scoped ones first so the system block can't depend on the chunk. */

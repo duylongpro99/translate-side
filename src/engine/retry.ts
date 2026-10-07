@@ -66,7 +66,8 @@ type Usage = Extract<NormalizedEvent, { type: 'usage' }>;
 function addUsage(sum: Usage | undefined, next: Usage): Usage {
   if (sum === undefined) return next;
   const cached = sum.cachedInput === undefined && next.cachedInput === undefined ? {} : { cachedInput: (sum.cachedInput ?? 0) + (next.cachedInput ?? 0) };
-  return { type: 'usage', input: sum.input + next.input, output: sum.output + next.output, ...cached };
+  const reasoning = sum.reasoningOutput === undefined && next.reasoningOutput === undefined ? {} : { reasoningOutput: (sum.reasoningOutput ?? 0) + (next.reasoningOutput ?? 0) };
+  return { type: 'usage', input: sum.input + next.input, output: sum.output + next.output, ...cached, ...reasoning };
 }
 
 const retrying = new WeakSet<LLMClient>();
@@ -84,7 +85,7 @@ export function withRetry(client: LLMClient, options: RetryOptions): LLMClient {
   const random = options.random ?? Math.random;
   const wrapped: LLMClient = {
     model: client.model,
-    reasoningReserveTokens: client.reasoningReserveTokens,
+    reasoningReserveTokens: (req) => client.reasoningReserveTokens(req),
     async *stream(req: NormalizedRequest): AsyncGenerator<NormalizedEvent> {
       let usage: Usage | undefined;
       for (let retries = 0; ; retries++) {

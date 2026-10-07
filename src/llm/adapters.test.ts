@@ -4,7 +4,7 @@ import { fakeSleep } from '../engine/testing.ts';
 import { createAnthropicAdapter } from './anthropic.ts';
 import { bindClient, createAdapter, createClient } from './client.ts';
 import { createOpenAIAdapter } from './openai.ts';
-import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS } from './presets.ts';
+import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS, QWEN_THINKING_RESERVE_TOKENS } from './presets.ts';
 import { anthropicStream, connection, mockFetch, openaiStream, sse, withOverrides, type Overrides, type ScriptedResponse } from './testing.ts';
 import type { LLMClient, NormalizedEvent, NormalizedRequest, ProtocolAdapter, ResolvedConnection } from './types.ts';
 
@@ -212,7 +212,7 @@ describe.each(harnesses)('$name adapter (shared contract)', (h) => {
   it('bindClient: the model is the client’s, and a different req.model is a programming error', () => {
     const client: LLMClient = bindClient(h.adapter(mockFetch([]).fetch), h.conn({ quirks: { reasoning: { control: 'effort', lowest: 'low', reserveTokens: 256 } } }), h.model);
     expect(client.model).toBe(h.model);
-    expect(client.reasoningReserveTokens).toBe(256);
+    expect(client.reasoningReserveTokens({})).toBe(256);
     expect(() => client.stream(request('other-model'))).toThrow(/differs/);
   });
 });
@@ -405,23 +405,35 @@ describe('openai-chat adapter (wire details)', () => {
     expect(f.requests[0]?.body).toMatchObject({ model: 'ds/deepseek-flash', reasoning_effort: 'none', temperature: 0.2, stream_options: { include_usage: true } });
     expect(events.filter((e) => e.type === 'text')).toEqual([{ type: 'text', delta: 'Xin chào' }]);
     expect(events).toContainEqual({ type: 'usage', input: 21, output: 14 });
-    expect(bindClient(createOpenAIAdapter({ fetch: f.fetch }), c, 'ds/deepseek-flash').reasoningReserveTokens).toBe(0);
+    expect(bindClient(createOpenAIAdapter({ fetch: f.fetch }), c, 'ds/deepseek-flash').reasoningReserveTokens({ chunkIndex: 3 })).toBe(0);
   });
 
-  it('APIBOX qwen preset (M2-D16): chunk 0 and analyze thinking off, later chunks "minimal"; max_completion_tokens caps the thinking', async () => {
-    const f = mockFetch(Array.from({ length: 4 }, () => ({ status: 200, body: openaiStream({ text: ['x'] }) })));
+  it('APIBOX qwen preset (M2-D16): chunk 0, analyze and repairs thinking off, later chunks "minimal"; max_completion_tokens caps the thinking', async () => {
+    const extras = [{}, { chunkIndex: 0 }, { chunkIndex: 1 }, { chunkIndex: 7 }, { chunkIndex: 1, baseReasoning: true }];
+    const f = mockFetch(extras.map(() => ({ status: 200, body: openaiStream({ text: ['x'] }) })));
     const c = conn({ baseUrl: APIBOX_BASE_URL, quirks: { ...APIBOX_QWEN_QUIRKS } });
     const adapter = createOpenAIAdapter({ fetch: f.fetch });
-    for (const extra of [{}, { chunkIndex: 0 }, { chunkIndex: 1 }, { chunkIndex: 7 }]) await collect(adapter.stream(c, request('qwen3.8-flash', extra)));
-    expect(f.requests.map((r) => (r.body as { reasoning_effort?: string }).reasoning_effort)).toEqual(['none', 'none', 'minimal', 'minimal']);
+    for (const extra of extras) await collect(adapter.stream(c, request('qwen3.8-flash', extra)));
+    expect(f.requests.map((r) => (r.body as { reasoning_effort?: string }).reasoning_effort)).toEqual(['none', 'none', 'minimal', 'minimal', 'none']);
     for (const r of f.requests) {
       expect(r.body).toMatchObject({ max_completion_tokens: 64 });
       expect(r.body).not.toHaveProperty('max_tokens');
-      // The chunk index picks the setting; it is never sent.
+      // The chunk index and the repair flag pick the setting; neither is sent.
       expect(r.body).not.toHaveProperty('chunkIndex');
+      expect(r.body).not.toHaveProperty('baseReasoning');
     }
-    // The client reports the largest reserve, so a thinking chunk's call is not cut short.
-    expect(bindClient(adapter, c, 'qwen3.8-flash').reasoningReserveTokens).toBe(3000);
+    // The reserve is the one of the setting sent: only a thinking chunk's call pays for it.
+    const client = bindClient(adapter, c, 'qwen3.8-flash');
+    expect(extras.map((e) => client.reasoningReserveTokens(e))).toEqual([0, 0, QWEN_THINKING_RESERVE_TOKENS, QWEN_THINKING_RESERVE_TOKENS, 0]);
+    expect(QWEN_THINKING_RESERVE_TOKENS).toBeGreaterThanOrEqual(6000);
+  });
+
+  it('reports the thinking part of the output as reasoningOutput, per call (round 12, NB5)', async () => {
+    const f = mockFetch([{ status: 200, body: openaiStream({ text: ['x'], usage: { prompt_tokens: 30, completion_tokens: 900, reasoning_tokens: 850 } }) }, { status: 200, body: openaiStream({ text: ['x'] }) }]);
+    const adapter = createOpenAIAdapter({ fetch: f.fetch });
+    const c = conn({ quirks: { ...APIBOX_QWEN_QUIRKS } });
+    expect(await collect(adapter.stream(c, request('qwen3.8-flash', { chunkIndex: 1 })))).toContainEqual({ type: 'usage', input: 30, output: 900, reasoningOutput: 850 });
+    expect(await collect(adapter.stream(c, request('qwen3.8-flash')))).toContainEqual({ type: 'usage', input: 10, output: 5 });
   });
 
   it('a per-chunk policy on the budget control: Anthropic thinks only from the policy chunk on', async () => {

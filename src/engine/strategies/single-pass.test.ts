@@ -148,6 +148,21 @@ describe('single-pass: the translate call (M1-E5)', () => {
     expect(events.filter((e) => e.type === 'usage')).toHaveLength(2);
   });
 
+  it('per-chunk thinking: each call counts its own chunk\'s reserve, and a repair asks for the base setting and its reserve', async () => {
+    // A policy like APIBOX_QWEN_QUIRKS: chunk 0 and repairs think off, later chunks reserve 6000.
+    const reserve = (r: { chunkIndex?: number; baseReasoning?: boolean }) => (r.baseReasoning !== true && (r.chunkIndex ?? 0) >= 1 ? 6000 : 0);
+    const client = translatorClient((lines, call) => (call === 2 ? { text: '', stopReason: 'max_tokens' } : echoTranslator(lines)), { reasoningReserveTokens: reserve });
+    const events = await collect(createEngine(deps(client)).translate(job(three, { chunkTokens: 1 }), new AbortController().signal));
+    const [c0, c1, repair] = client.requests;
+    expect([c0?.chunkIndex, c1?.chunkIndex, repair?.chunkIndex]).toEqual([0, 1, 1]);
+    expect([c0?.baseReasoning, c1?.baseReasoning, repair?.baseReasoning]).toEqual([undefined, undefined, true]);
+    const wireB = toWire(three.slice(1, 2));
+    expect(c0?.maxOutputTokens).toBe(callBudget(toWire(three.slice(0, 1)), 0));
+    expect(c1?.maxOutputTokens).toBe(callBudget(wireB, 6000));
+    expect(repair?.maxOutputTokens).toBe(callBudget(wireB, 0));
+    expect(failures(events)).toEqual([]);
+  });
+
   it('a chunk with literal tags is sent with a nonce; an answer that echoes it is accepted', async () => {
     const literal = [seg('a', 'Plain.'), seg('b', 'Write <seg id="2"> to open a segment.'), seg('c', 'End.')];
     const client = translatorClient();

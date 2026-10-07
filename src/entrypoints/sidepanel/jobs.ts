@@ -159,7 +159,7 @@ export class Gate {
 export function meteredClient(inner: LLMClient, meter: { start(): void; end(unmetered: boolean): void }): LLMClient {
   return {
     model: inner.model,
-    reasoningReserveTokens: inner.reasoningReserveTokens,
+    reasoningReserveTokens: (req) => inner.reasoningReserveTokens(req),
     async *stream(req: NormalizedRequest) {
       let metered = false;
       meter.start();
@@ -179,7 +179,7 @@ export function meteredClient(inner: LLMClient, meter: { start(): void; end(unme
 export function gatedClient(inner: LLMClient, gate: Gate): LLMClient {
   return {
     model: inner.model,
-    reasoningReserveTokens: inner.reasoningReserveTokens,
+    reasoningReserveTokens: (req) => inner.reasoningReserveTokens(req),
     async *stream(req: NormalizedRequest) {
       await gate.wait(req.signal);
       yield* inner.stream(req);

@@ -26,14 +26,19 @@ describe('reasoningFor (per-chunk thinking, M2-D16)', () => {
     expect(reasoningFor({ ...policy, control: 'none' }, { chunkIndex: 9 })?.control).toBe('none');
   });
 
+  it('sends the base setting for a repair (baseReasoning), whatever the chunk', () => {
+    expect(reasoningFor(policy, { chunkIndex: 4, baseReasoning: true })).toEqual({ control: 'effort', lowest: 'off', reserveTokens: 0 });
+    expect(reasoningFor(policy, { chunkIndex: 4, baseReasoning: false })?.lowest).toBe('low');
+  });
+
   it('passes a plain setting through, and nothing when there is none', () => {
     expect(reasoningFor({ control: 'effort', lowest: 'off', reserveTokens: 0 }, { chunkIndex: 5 })).toEqual({ control: 'effort', lowest: 'off', reserveTokens: 0 });
     expect(reasoningFor(undefined, { chunkIndex: 1 })).toBeUndefined();
   });
 
-  it('reports the largest reserve the policy can send', () => {
-    expect(reserveTokensOf(policy)).toBe(5000);
-    expect(reserveTokensOf({ control: 'effort', lowest: 'low', reserveTokens: 256 })).toBe(256);
-    expect(reserveTokensOf(undefined)).toBe(0);
+  it('reports the reserve of the setting the request gets', () => {
+    expect([{}, { chunkIndex: 0 }, { chunkIndex: 2 }, { chunkIndex: 4 }, { chunkIndex: 4, baseReasoning: true }].map((r) => reserveTokensOf(policy, r))).toEqual([0, 0, 3000, 5000, 0]);
+    expect(reserveTokensOf({ control: 'effort', lowest: 'low', reserveTokens: 256 }, { chunkIndex: 1 })).toBe(256);
+    expect(reserveTokensOf(undefined, {})).toBe(0);
   });
 });

@@ -3,6 +3,11 @@
 
 import type { LLMClient, LLMError, NormalizedEvent, NormalizedRequest, StopReason } from '../llm/types.ts';
 
+/** A fixed reserve for every request, or a per-request one (a per-chunk thinking policy). */
+function reserveOf(reserve: number | LLMClient['reasoningReserveTokens'] | undefined): LLMClient['reasoningReserveTokens'] {
+  return typeof reserve === 'function' ? reserve : () => reserve ?? 0;
+}
+
 export interface FakeClient extends LLMClient {
   /** Every request, one entry per `stream()` call (= one attempt: adapters don't retry; this fake never quirk-flips). */
   readonly requests: NormalizedRequest[];
@@ -12,11 +17,11 @@ export interface FakeClient extends LLMClient {
  * A client that plays `attempts[i]` on the i-th `stream()` call (the last one repeats). Like a
  * real adapter it makes exactly one attempt per call and throws `signal.reason` on abort.
  */
-export function fakeClient(attempts: readonly (readonly NormalizedEvent[])[], options: { model?: string; reasoningReserveTokens?: number } = {}): FakeClient {
+export function fakeClient(attempts: readonly (readonly NormalizedEvent[])[], options: { model?: string; reasoningReserveTokens?: number | LLMClient['reasoningReserveTokens'] } = {}): FakeClient {
   const requests: NormalizedRequest[] = [];
   return {
     model: options.model ?? 'fake-model',
-    reasoningReserveTokens: options.reasoningReserveTokens ?? 0,
+    reasoningReserveTokens: reserveOf(options.reasoningReserveTokens),
     requests,
     async *stream(req) {
       const script = attempts[Math.min(requests.length, attempts.length - 1)] ?? [];
@@ -92,13 +97,13 @@ export const echoTranslator = (lines: readonly WireLine[]): string => renderLine
  */
 export function translatorClient(
   answer: (lines: WireLine[], call: number, req: NormalizedRequest) => TranslatorAnswer = echoTranslator,
-  options: { model?: string; reasoningReserveTokens?: number; deltaSize?: number } = {},
+  options: { model?: string; reasoningReserveTokens?: number | LLMClient['reasoningReserveTokens']; deltaSize?: number } = {},
 ): FakeClient {
   const requests: NormalizedRequest[] = [];
   const deltaSize = options.deltaSize ?? 7;
   return {
     model: options.model ?? 'fake-model',
-    reasoningReserveTokens: options.reasoningReserveTokens ?? 0,
+    reasoningReserveTokens: reserveOf(options.reasoningReserveTokens),
     requests,
     async *stream(req) {
       requests.push(req);

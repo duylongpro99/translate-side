@@ -67,7 +67,7 @@ describe('glossary merge (plan M2-E2, §5.7 "user overrides take priority")', ()
   it('renders "keep as is" entries (rendering = term, or empty) as an explicit do-not-translate', () => {
     expect(renderGlossaryEntry({ term: 'deploy', rendering: 'deploy' })).toBe('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)');
     expect(renderGlossaryEntry({ term: 'deploy', rendering: '' })).toBe('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)');
-    expect(renderGlossaryEntry({ term: 'executor', rendering: 'bộ thực thi', note: 'core concept' })).toBe('- executor → bộ thực thi — core concept');
+    expect(renderGlossaryEntry({ term: 'executor', rendering: 'bộ thực thi', note: 'core concept' })).toBe('- executor → bộ thực thi (always write it this way, in every segment) — core concept');
   });
 
   it('hashes the glossary for the cache key: order and content matter, whitespace does not', () => {
@@ -104,8 +104,8 @@ describe('GlossaryProvider (personal + auto)', () => {
   it('lists the merged glossary as a document snippet, and the terms already used before the chunk as a chunk snippet', async () => {
     const got = await glossaryProvider.provide(query({ memory: withBrief([{ term: 'deploy', rendering: 'deploy' }]) }));
     expect(got).toEqual([
-      { providerId: 'glossary', scope: 'document', text: '- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)\n- future → future (keep it in English, and add a short gloss in parentheses at its first use in the document, once) — keep English\n- executor → bộ thực thi' },
-      { providerId: 'glossary', scope: 'chunk', text: 'Terms already used earlier in the document, so already glossed: write each with no gloss and no parentheses after it in every segment below, headings included: future, executor' },
+      { providerId: 'glossary', scope: 'document', text: '- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)\n- future → future (keep it in English, and add a short gloss in parentheses at its first use in the document, once) — keep English\n- executor → bộ thực thi (always write it this way, in every segment)' },
+      { providerId: 'glossary', scope: 'chunk', text: `${USED_TERMS_HEAD}future → future; executor → bộ thực thi` },
     ]);
   });
 
@@ -119,12 +119,36 @@ describe('GlossaryProvider (personal + auto)', () => {
   it('only counts translatable segments before the chunk (not code, not the chunk itself)', async () => {
     const segments = [seg('code', 'let executor = Executor::new();', { kind: 'code', translate: false }), seg('a', 'A future.'), seg('b', 'An executor.')];
     const got = await glossaryProvider.provide(query({ segments, chunk: segments.slice(2), memory: withBrief() }));
-    expect(got.find((s) => s.scope === 'chunk')?.text).toBe('Terms already used earlier in the document, so already glossed: write each with no gloss and no parentheses after it in every segment below, headings included: future');
+    expect(got.find((s) => s.scope === 'chunk')?.text).toBe(`${USED_TERMS_HEAD}future → future`);
+  });
+
+  it('scans running text only: a term seen only in a heading or in inline code is not "already used" (round 12, NB3)', async () => {
+    const segments = [
+      seg('h', 'Executors and futures', { kind: 'heading', level: 2 }),
+      seg('a', 'Call `executor.run()` first.', { text: 'Call executor.run() first.' }),
+      seg('b', 'Now the executor.'),
+    ];
+    expect(await glossaryProvider.provide(query({ segments, chunk: segments.slice(2), memory: withBrief() }))).toHaveLength(1);
+    const later = [...segments, seg('c', 'A future, finally.'), seg('d', 'The end.')];
+    const got = await glossaryProvider.provide(query({ segments: later, chunk: later.slice(4), memory: withBrief() }));
+    expect(got.find((s) => s.scope === 'chunk')?.text).toBe(`${USED_TERMS_HEAD}future → future; executor → bộ thực thi`);
+  });
+
+  it('a briefed chunk gets the brief\'s rendering every time: in the list and in the used-terms line (round 12, "deploy" written bare)', async () => {
+    const segments = [seg('a', 'We deploy on Fridays.'), seg('b', 'Deploy again.')];
+    const got = await glossaryProvider.provide(query({ segments, chunk: segments.slice(1), memory: withBrief() }));
+    expect(got[0]?.text).toContain('- Deploy → triển khai (always write it this way, in every segment)');
+    expect(got.find((s) => s.scope === 'chunk')?.text).toBe(`${USED_TERMS_HEAD}Deploy → triển khai`);
+    expect(USED_TERMS_HEAD).toContain('write each exactly as rendered after its arrow');
+    // The rule asks for the rendering, the English only once in parentheses at the first use.
+    expect(GLOSS_RULES.first).toContain('a technical glossary term you translate is written as the glossary renders it, with the original English term in parentheses after its first use');
+    // A kept term is listed as itself, so the line never reads as "write the English" for a translated one.
+    expect(usedTermsLine([{ term: 'Future', rendering: '' }, { term: 'deploy', rendering: 'triển khai' }])).toBe(`${USED_TERMS_HEAD}Future → Future; deploy → triển khai`);
   });
 
   it('cuts entries from the end when the list does not fit (the user\'s entries survive)', async () => {
     const personal = [{ term: 'deploy', rendering: 'deploy' }];
-    const maxTokens = estimateTokens('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)\n') + estimateTokens(usedTermsLine(['deploy']));
+    const maxTokens = estimateTokens('- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)\n') + estimateTokens(usedTermsLine([{ term: 'deploy', rendering: 'deploy' }]));
     const got = await glossaryProvider.provide(query({ memory: withBrief(personal), maxTokens }));
     expect(got).toEqual([{ providerId: 'glossary', scope: 'document', text: '- deploy → deploy (keep as is: write it exactly like this, never translate it, never gloss it)' }]);
   });
@@ -170,7 +194,7 @@ describe('review fixes: hostile brief text, term matching, the personal glossary
     const segments = [seg('a', 'one async'), seg('b', 'fn two'), seg('c', 'Now.')];
     const memory = createWorkingMemory([{ term: 'async fn', rendering: 'async fn' }, { term: 'two', rendering: 'hai' }]);
     const got = await glossaryProvider.provide(query({ segments, chunk: segments.slice(2), memory }));
-    expect(got.find((s) => s.scope === 'chunk')?.text).toBe(`${USED_TERMS_HEAD}two`);
+    expect(got.find((s) => s.scope === 'chunk')?.text).toBe(`${USED_TERMS_HEAD}two → hai`);
   });
 
   it('gives the user\'s entries the glossary budget first; the share is what the largest brief leaves (review 6)', async () => {
@@ -178,7 +202,7 @@ describe('review fixes: hostile brief text, term matching, the personal glossary
     expect(estimateTokens(worst)).toBeLessThanOrEqual(BRIEF_MAX_TOKENS);
     expect(PERSONAL_GLOSSARY_PROMPT_TOKENS).toBe(CONTEXT_BUDGET_TOKENS - BRIEF_MAX_TOKENS);
     const personal = Array.from({ length: 3 }, (_, i) => ({ term: `term${i}`, rendering: `rendering number ${i}` }));
-    expect(personalGlossaryTokens(personal)).toBe(personal.reduce((n, e) => n + estimateTokens(`${renderGlossaryEntry(e)}\n`), 0) + estimateTokens(usedTermsLine(personal.map((e) => e.term))));
+    expect(personalGlossaryTokens(personal)).toBe(personal.reduce((n, e) => n + estimateTokens(`${renderGlossaryEntry(e)}\n`), 0) + estimateTokens(usedTermsLine(personal)));
     expect(personalGlossaryTokens([])).toBe(0);
     const got = await glossaryProvider.provide(query({ memory: withBrief(personal), maxTokens: personalGlossaryTokens(personal) }));
     expect(got[0]?.text).toBe(personal.map((e) => renderGlossaryEntry(e)).join('\n'));
@@ -195,14 +219,14 @@ describe('review round 4: the used-terms line survives a full glossary (N1)', ()
   const segments = [seg('a', many.map((e) => e.term).join(' ')), seg('b', 'More text.'), seg('c', 'The end.')];
 
   it('keeps room for the line naming every listed term, so it is never dropped when the list fills its share', async () => {
-    for (const maxTokens of [60, 200, 1100]) {
+    for (const maxTokens of [120, 300, 1100]) {
       const got = await glossaryProvider.provide(query({ segments, chunk: segments.slice(2), memory: createWorkingMemory(many), maxTokens }));
       const list = got.find((s) => s.scope === 'document')?.text ?? '';
       const used = got.find((s) => s.scope === 'chunk')?.text ?? '';
       const listed = list.split('\n').length;
       expect(listed).toBeGreaterThan(0);
       expect(listed).toBeLessThan(many.length);
-      expect(used).toBe(usedTermsLine(many.slice(0, listed).map((e) => e.term)));
+      expect(used).toBe(usedTermsLine(many.slice(0, listed)));
       expect(estimateTokens(list) + estimateTokens(used)).toBeLessThanOrEqual(maxTokens);
     }
   });
@@ -336,11 +360,11 @@ describe('translate@2 assembly (plan M2-E3)', () => {
     const system = renderSystemPromptV2(render, { ...base, snippets });
     expect(system).toContain('Document brief:\n<brief>\nGenre: technical blog post\nAudience: Rust developers');
     expect(system).toContain('(the user\'s entries come first and take priority):\n<glossary>\n- future → future (keep it in English, and add a short gloss in parentheses at its first use in the document, once) — keep English');
-    expect(system).not.toContain('Terms already used earlier');
+    expect(system).not.toContain(USED_TERMS_HEAD);
     expect(system).not.toContain('<source>');
     expect(system).not.toMatch(/\{[A-Z_]+\}/);
     const block = renderContextBlock(snippets);
-    expect(block).toMatch(/^<context>\nContext only: do not translate this block and do not output it\.\n\nTerms already used earlier/);
+    expect(block).toMatch(/^<context>\nContext only: do not translate this block and do not output it\.\n\nGlossary terms already used earlier/);
     expect(block).toContain('<source>An executor polls it.</source>');
     expect(block.endsWith('</context>')).toBe(true);
     expect(renderContextBlock(snippets.filter((s) => s.scope === 'document'))).toBe('');
@@ -373,7 +397,7 @@ describe('translate@2 assembly (plan M2-E3)', () => {
   it('glosses technical terms only: never an ordinary word, never a non-technical headword (round 6, M2-D1)', () => {
     const rule = GLOSS_RULES.first.replaceAll('{TARGET_LANG}', 'Vietnamese');
     expect(rule.startsWith('Glosses are for technical terms only.')).toBe(true);
-    expect(rule).toContain('Every technical term you leave in English (such as a programming concept that Vietnamese writing usually keeps in English) gets a short Vietnamese explanation in parentheses right after its first use in the document; a technical glossary term you translate gets the original English term in parentheses after its first use. Do this from the first segment on, also for terms the glossary does not list. Only once per term in the whole document, never again in later segments. Never put a gloss in a heading, or inside or right after code in backticks: if a term first appears in a heading or as code, gloss its first use in running text instead.');
+    expect(rule).toContain('Gloss only glossary terms: an entry marked to keep in English gets a short Vietnamese explanation in parentheses right after its first use in the document; a technical glossary term you translate is written as the glossary renders it, with the original English term in parentheses after its first use. Never gloss a term the glossary does not list. Only once per term in the whole document, never again in later segments. Never put a gloss in a heading, or inside or right after code in backticks: if a term first appears in a heading or as code, gloss its first use in running text instead.');
     expect(rule).toContain('Never gloss an ordinary word or phrase that has a common Vietnamese equivalent, even when the glossary lists it: translate it and put nothing after it, not the English original in parentheses either.');
     expect(rule).toContain('In dictionary entries, word lists and other headword-style text, write each headword in Vietnamese alone, without the original word in parentheses, unless it is a technical term: "BORE, n." becomes the translated headword and part of speech, never the translation followed by "(bore)".');
     // The earlier rules stay: keep-as-is never glossed, already-used terms never again.
@@ -395,15 +419,16 @@ describe('translate@2 assembly (plan M2-E3)', () => {
     const memory = withBrief([{ term: 'Future', rendering: 'Future' }], { ...BRIEF, glossary: [{ term: 'future', rendering: 'future' }, { term: 'runtime', rendering: 'runtime' }] });
     const [list] = await glossaryProvider.provide(query({ memory }));
     expect(list?.text).toBe(`- Future → Future ${KEEP_AS_IS_MARK}\n- runtime → runtime ${KEEP_ENGLISH_MARK}`);
-    // Chunk 1 has no brief: the rule alone asks for first-use glosses, from the first segment on.
-    expect(GLOSS_RULES.first).toContain('Do this from the first segment on, also for terms the glossary does not list.');
+    // Only listed terms are glossed (round 12, NB4): the used-terms line can track every one of them.
+    expect(GLOSS_RULES.first).toContain('Never gloss a term the glossary does not list.');
+    expect(GLOSS_RULES.first).not.toContain('also for terms the glossary does not list');
     // Later chunks: the used-terms line stops a second gloss.
     expect(GLOSS_RULES.first).toContain('A term the <context> block lists as already used was glossed before');
   });
 
   it('never glosses a term listed as already used, in any segment or heading (round 2: "Future (Future)")', () => {
     expect(GLOSS_RULES.first).toContain('A term the <context> block lists as already used was glossed before: write it with no gloss and no parentheses after it, in every segment and in headings, even if it looks new in these segments.');
-    expect(USED_TERMS_HEAD).toContain('no gloss and no parentheses after it in every segment below, headings included');
+    expect(USED_TERMS_HEAD).toContain('no gloss and no parentheses after it, in every segment below, headings included');
     expect(GLOSS_RULES.off).toBe('Glosses: never add glosses or explanations in parentheses after terms.');
   });
 
@@ -480,7 +505,7 @@ describe('contextual + translate@2 through the engine', () => {
       expect(user).toContain(`end${i - 1}.</source>`);
       // ~430 tokens of source: the tail is the paragraph's end, within its 300-token cap.
       expect(user.split('</context>')[0]?.length ?? 0).toBeLessThan(300 * 3.5 + 400);
-      expect(user).toContain('Terms already used earlier in the document, so already glossed: write each with no gloss and no parentheses after it in every segment below, headings included: future');
+      expect(user).toContain(`${USED_TERMS_HEAD}future → future`);
       expect(user).toMatch(/<\/context>\n\n<seg id="1">P\d /);
     }
   });

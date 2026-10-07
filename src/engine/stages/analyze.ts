@@ -7,7 +7,7 @@
 //
 // The stage only fills memory: it yields no output value, so the job passes through to the
 // next stage unchanged (runner.ts).
-import type { NormalizedRequest } from '../../llm/types.ts';
+import type { LLMClient, NormalizedRequest } from '../../llm/types.ts';
 import { cyrb53 } from '../hash.ts';
 import { parseBrief } from '../parsing/brief.ts';
 import { ANALYZE_PROMPT_ID, analyzeInput } from '../prompts/analyze.ts';
@@ -21,7 +21,7 @@ export const ANALYZE_TEMPERATURE = 0.2;
 
 /** The brief request for a document (the stage and the harness share it). */
 export function analyzeRequest(
-  client: { model: string; reasoningReserveTokens: number },
+  client: Pick<LLMClient, 'model' | 'reasoningReserveTokens'>,
   system: string,
   doc: Pick<DocMeta, 'title' | 'outline'>,
   segments: readonly Segment[],
@@ -31,7 +31,7 @@ export function analyzeRequest(
     model: client.model,
     system,
     messages: [{ role: 'user', content: analyzeInput(doc, segments) }],
-    maxOutputTokens: ANALYZE_MAX_OUTPUT_TOKENS + client.reasoningReserveTokens,
+    maxOutputTokens: ANALYZE_MAX_OUTPUT_TOKENS + client.reasoningReserveTokens({}),
     temperature: ANALYZE_TEMPERATURE,
     signal,
   };

@@ -44,7 +44,7 @@ function heldAnalyze() {
   const state = { started: 0, ended: false };
   const client: LLMClient = {
     model: 'brief-model',
-    reasoningReserveTokens: 0,
+    reasoningReserveTokens: () => 0,
     async *stream(req) {
       state.started++;
       const text = await new Promise<string | null>((resolve, reject) => {
@@ -194,7 +194,7 @@ describe('contextual: analyze → chunk → translate → check', () => {
     ['prose only', () => fakeClient([success('This is a blog post about futures.')])],
     ['a cut answer (max_tokens) even if it parses', () => fakeClient([[{ type: 'text', delta: JSON.stringify(BRIEF) }, { type: 'done', stopReason: 'max_tokens' }]])],
     ['a stream error after retries', () => fakeClient([[failed({ kind: 'bad_request', status: 400, message: 'nope' })]])],
-    ['a client that throws', () => ({ model: 'x', reasoningReserveTokens: 0, stream: () => { throw new Error('boom'); } }) as LLMClient],
+    ['a client that throws', () => ({ model: 'x', reasoningReserveTokens: () => 0, stream: () => { throw new Error('boom'); } }) as LLMClient],
     ['no model routed for analyze', () => () => { throw new Error('no model profile is routed for the analyze role'); }],
     ['a stream with no terminal event', () => fakeClient([[{ type: 'text', delta: JSON.stringify(BRIEF) } satisfies NormalizedEvent]])],
   ];
@@ -219,7 +219,7 @@ describe('contextual: analyze → chunk → translate → check', () => {
     const ac = new AbortController();
     const analyze: LLMClient = {
       model: 'x',
-      reasoningReserveTokens: 0,
+      reasoningReserveTokens: () => 0,
       async *stream(req) {
         ac.abort(new DOMException('cancelled', 'AbortError'));
         await Promise.resolve();

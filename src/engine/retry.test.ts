@@ -83,11 +83,11 @@ describe('withRetry', () => {
   });
 
   it('sums the usage of every attempt into one usage event before done (stream contract)', async () => {
-    const client = fakeClient([[{ type: 'usage', input: 7, output: 0, cachedInput: 4 }, failed(err('overloaded'))], success('ok')]);
+    const client = fakeClient([[{ type: 'usage', input: 7, output: 3, cachedInput: 4, reasoningOutput: 3 }, failed(err('overloaded'))], success('ok')]);
     const events = await collect(withRetry(client, { sleep: fakeSleep(), random: () => 0 }).stream(request()));
     expect(events).toEqual([
       { type: 'text', delta: 'ok' },
-      { type: 'usage', input: 17, output: 5, cachedInput: 4 },
+      { type: 'usage', input: 17, output: 8, cachedInput: 4, reasoningOutput: 3 },
       { type: 'done', stopReason: 'end' },
     ]);
   });
@@ -131,6 +131,6 @@ describe('withRetry', () => {
 
   it('keeps the model info of the wrapped client', () => {
     const wrapped = withRetry(fakeClient([success('x')], { model: 'm', reasoningReserveTokens: 256 }), { sleep: fakeSleep() });
-    expect([wrapped.model, wrapped.reasoningReserveTokens]).toEqual(['m', 256]);
+    expect([wrapped.model, wrapped.reasoningReserveTokens({})]).toEqual(['m', 256]);
   });
 });

@@ -32,9 +32,12 @@ export const APIBOX_JUDGE_QUIRKS: Quirks = { reasoning: { control: 'effort', low
  * thinking, `thinking_budget` and `reasoning.max_tokens` are ignored; `max_completion_tokens` caps
  * thinking and text together (finish "length"). So: chunk 1 thinking off for a fast first segment,
  * later chunks "minimal" (M2-D16), analyze off; `max_completion_tokens` with a reserve is the guard
- * against runaway thinking (a call that hits it ends `max_tokens`, and the engine's repair path takes over).
+ * against runaway thinking (a call that hits it ends `max_tokens`, and the engine's repair path takes over,
+ * sent with thinking off). The reserve counts only on the thinking chunks' calls. 6000: thinking at
+ * "minimal" reached 3117 tokens on a 400-token chunk (M2 round 11), and a one-segment tail chunk's
+ * cap is little more than the reserve.
  */
-export const QWEN_THINKING_RESERVE_TOKENS = 3000;
+export const QWEN_THINKING_RESERVE_TOKENS = 6000;
 export const APIBOX_QWEN_QUIRKS: Quirks = {
   maxTokensParam: 'max_completion_tokens',
   reasoning: { control: 'effort', lowest: 'off', reserveTokens: 0, byChunk: [{ fromChunk: 1, lowest: 'minimal', reserveTokens: QWEN_THINKING_RESERVE_TOKENS }] },

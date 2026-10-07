@@ -1,7 +1,8 @@
 // `openai-chat` adapter on the openai SDK, minimal (DESIGN.md §4.2.2 column openai-chat; user
 // decision M1-D5: enough for live calls against Gemini's OpenAI-compatible endpoint). `baseURL`
 // override, bearer auth (§4.2.3), system as the first message, streaming deltas, usage via
-// `stream_options.include_usage` (`prompt_tokens`; cachedInput = `prompt_tokens_details.cached_tokens`),
+// `stream_options.include_usage` (`prompt_tokens`; cachedInput = `prompt_tokens_details.cached_tokens`;
+// reasoningOutput = `completion_tokens_details.reasoning_tokens`),
 // the `max_tokens` / `max_completion_tokens` quirk, `GET /models`, probe. Presets, auto-detect
 // and provider management are M4. `maxRetries: 0`: the pipeline owns retries (src/engine/retry.ts).
 // `delta.reasoning` / `reasoning_content` is never emitted as text (S2 §5, §5.7).
@@ -107,7 +108,8 @@ async function* attempt(client: OpenAI, req: NormalizedRequest, quirks: Quirks):
     }
     if (chunk.usage !== null && chunk.usage !== undefined) {
       const cached = chunk.usage.prompt_tokens_details?.cached_tokens;
-      usage = { type: 'usage', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens, ...(cached === undefined ? {} : { cachedInput: cached }) };
+      const reasoning = chunk.usage.completion_tokens_details?.reasoning_tokens;
+      usage = { type: 'usage', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens, ...(cached === undefined ? {} : { cachedInput: cached }), ...(reasoning === undefined ? {} : { reasoningOutput: reasoning }) };
     }
   }
   if (usage !== undefined) yield usage;
