@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { TestResult } from '@/shared/connect';
 import { presetFor } from '@/shared/presets';
 import { ANTHROPIC_CONNECTION } from '@/shared/settings';
-import { draftFromConnection, draftFromPreset, fieldsFor, parseLines, quirksOf, testInputOf, toConnection, toProfile } from './form.ts';
+import { draftFromConnection, draftFromPreset, fieldsFor, originMoved, parseLines, quirksOf, testInputOf, toConnection, toProfile, usableStoredKey } from './form.ts';
 
 const passed = (over: Partial<Extract<TestResult, { ok: true }>> = {}): TestResult => ({ ok: true, protocol: 'openai-chat', detected: ['openai-chat'], baseUrl: 'https://gw.example.com/v1', models: [], fixes: [], checks: [], ...over });
 
@@ -69,5 +69,27 @@ describe('connection form (plan M4-E3)', () => {
     expect(toProfile(gw, 'anthropic/claude-haiku-4.5', 'p', [], [], 'anthropic-messages').protocolOverride).toBe('anthropic-messages');
     const single = toConnection(draftFromPreset('openai'), 's', undefined, passed(), { status: 'ok' });
     expect(toProfile(single, 'gpt-5-mini', 'p', [], [], 'anthropic-messages').protocolOverride).toBeUndefined();
+  });
+});
+
+describe('a connection moved to another origin (review C1 #1, §4.3.4)', () => {
+  const editing = { ...ANTHROPIC_CONNECTION, id: 'gw', baseUrl: 'https://gw.example.com/v1' };
+  const draft = (baseUrl: string) => ({ ...draftFromConnection(editing), baseUrl });
+
+  it('the same origin (other path, port or endpoint suffix) has not moved; another host or scheme has', () => {
+    expect(originMoved(draft('https://gw.example.com/v1'), editing)).toBe(false);
+    expect(originMoved(draft('https://gw.example.com/api/v1/chat/completions'), editing)).toBe(false);
+    expect(originMoved(draft('https://gw.example.com:8443/v1'), editing)).toBe(false);
+    expect(originMoved(draft('https://other.example.com/v1'), editing)).toBe(true);
+    expect(originMoved(draft('http://gw.example.com/v1'), editing)).toBe(true);
+    expect(originMoved(draft('not a url'), editing)).toBe(true);
+    expect(originMoved(draft('https://other.example.com/v1'), undefined)).toBe(false);
+  });
+
+  it('the stored key is offered only while the origin is the same', () => {
+    expect(usableStoredKey(draft('https://gw.example.com/v2'), editing, 'sk-stored')).toBe('sk-stored');
+    expect(usableStoredKey(draft('https://evil.example.net/v1'), editing, 'sk-stored')).toBeUndefined();
+    expect(testInputOf(draft('https://evil.example.net/v1'), usableStoredKey(draft('https://evil.example.net/v1'), editing, 'sk-stored')).apiKey).toBeUndefined();
+    expect(usableStoredKey(draft('https://anything.example/v1'), undefined, undefined)).toBeUndefined();
   });
 });

@@ -20,6 +20,7 @@ import {
   resolveRoute,
   resolveRouteIn,
   saveConnection,
+  saveConnectionStatus,
   saveLearnedQuirk,
   saveProfile,
   saveRouting,
@@ -702,5 +703,35 @@ describe('dual-protocol base URL at runtime (§4.2.5)', () => {
     const prof = (protocolOverride: 'anthropic-messages' | 'openai-chat'): ModelProfile => ({ id: 'p', connectionId: 'gw', model: 'm', maxConcurrency: 2, chunkTokens: 1200, protocolOverride });
     expect((await resolveConnection(f.api, gw, prof('anthropic-messages')))?.baseUrl).toBe('https://openrouter.ai/api');
     expect((await resolveConnection(f.api, gw, prof('openai-chat')))?.baseUrl).toBe('https://openrouter.ai/api/v1');
+  });
+});
+
+describe('saveConnectionStatus (the guide\'s auto re-test, review C1 #5)', () => {
+  it('writes only when the status changes, read fresh, keeping unknown fields', async () => {
+    const f = permApi({ sync: { schemaVersion: 1, 'conn:ollama-1': { ...OLLAMA, status: 'error', lastError: 'CORS blocked', lastErrorKind: 'cors-origin', future: 1 } } });
+    const before = f.sync.sets.length;
+    expect(await saveConnectionStatus(f.api, 'ollama-1', { status: 'error', lastError: 'CORS blocked', lastErrorKind: 'cors-origin' })).toBe(false);
+    expect(f.sync.sets.length).toBe(before);
+    expect(await saveConnectionStatus(f.api, 'ollama-1', { status: 'ok', lastError: 'ignored' })).toBe(true);
+    const stored = f.sync.data.get('conn:ollama-1') as Record<string, unknown>;
+    expect(stored).toMatchObject({ status: 'ok', future: 1, label: 'Home Ollama' });
+    expect(stored).not.toHaveProperty('lastError');
+    expect(stored).not.toHaveProperty('lastErrorKind');
+    expect(await saveConnectionStatus(f.api, 'ollama-1', { status: 'ok' })).toBe(false);
+  });
+
+  it('a change made elsewhere since the form opened is kept (fresh read, not the form\'s copy)', async () => {
+    const f = permApi({ sync: { schemaVersion: 1, 'conn:ollama-1': { ...OLLAMA, status: 'error', lastError: 'old' } } });
+    f.sync.data.set('conn:ollama-1', { ...OLLAMA, label: 'Renamed', status: 'error', lastError: 'old' });
+    expect(await saveConnectionStatus(f.api, 'ollama-1', { status: 'ok' })).toBe(true);
+    expect(f.sync.data.get('conn:ollama-1')).toMatchObject({ label: 'Renamed', status: 'ok' });
+  });
+
+  it('a built-in applying at read time is written from its constant; an unknown id writes nothing', async () => {
+    const f = permApi({ sync: { schemaVersion: 1 } });
+    expect(await saveConnectionStatus(f.api, APIBOX_CONNECTION.id, { status: 'error', lastError: 'Key invalid', lastErrorKind: 'auth' })).toBe(true);
+    expect(f.sync.data.get(`conn:${APIBOX_CONNECTION.id}`)).toMatchObject({ baseUrl: APIBOX_CONNECTION.baseUrl, status: 'error', lastError: 'Key invalid', lastErrorKind: 'auth' });
+    expect(await saveConnectionStatus(f.api, 'nope', { status: 'ok' })).toBe(false);
+    expect(f.sync.data.has('conn:nope')).toBe(false);
   });
 });
