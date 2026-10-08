@@ -127,7 +127,7 @@ const done = (tx: IDBTransaction): Promise<void> =>
     tx.onabort = () => reject(tx.error ?? new DOMException('aborted', 'AbortError'));
   });
 
-const rowBytes = (key: string, text: string) => 2 * (key.length + text.length) + 64;
+export const rowBytes = (key: string, text: string) => 2 * (key.length + text.length) + 64;
 
 export interface IdbCacheOptions {
   /** Default: the global `indexedDB`. */
@@ -153,7 +153,22 @@ export function openTranslationCache(options: IdbCacheOptions = {}): Translation
         d.createObjectStore('briefs', { keyPath: 'key' }).createIndex('used', 'used');
         d.createObjectStore('meta', { keyPath: 'key' });
       };
-      open.onsuccess = () => resolve(open.result);
+      open.onsuccess = () => {
+        const d = open.result;
+        // Another tab upgrades or deletes the database, or the browser drops the connection: let go
+        // and open again on the next call, rather than keeping a dead handle.
+        const forget = () => {
+          if (opening !== undefined) opening = undefined;
+          d.close();
+        };
+        d.onversionchange = forget;
+        d.onclose = () => (opening = undefined);
+        resolve(d);
+      };
+      open.onblocked = () => {
+        opening = undefined;
+        reject(new DOMException('the cache database is blocked', 'InvalidStateError'));
+      };
       open.onerror = () => {
         opening = undefined;
         reject(open.error);

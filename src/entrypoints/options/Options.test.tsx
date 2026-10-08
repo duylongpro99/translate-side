@@ -47,6 +47,13 @@ beforeEach(() => {
   root = document.createElement('div');
   document.body.replaceChildren(root);
 });
+const waitFor = async (cond: () => boolean, ms = 3000) => {
+  const end = Date.now() + ms;
+  while (!cond()) {
+    if (Date.now() > end) throw new Error('timed out');
+    await act(async () => new Promise((r) => setTimeout(r, 10)));
+  }
+};
 const flush = () => act(async () => new Promise((r) => setTimeout(r, 10)));
 
 describe('options v0 (plan M1-E9)', () => {
@@ -299,10 +306,10 @@ describe('options: translation cache (plan M3-E2)', () => {
     await cache.putMany(new Map([['a', { text: 'A', revision: 1, attempt: 1 }], ['b', { text: 'B', revision: 1, attempt: 1 }]]));
     await cache.putBrief('k', { genre: 'g', audience: 'a', purpose: 'p', tone: 't', glossary: [] });
     act(() => render(<Options api={fakeApi().api} cache={cache} />, root));
-    await flush();
+    await waitFor(() => /^2 translated/.test(root.querySelector('[data-testid=cache-stats]')?.textContent ?? ''));
     expect(root.querySelector('[data-testid=cache-stats]')?.textContent).toMatch(/^2 translated blocks and 1 document briefs, \d+ KB of 50\.0 MB/);
     act(() => (root.querySelector('[data-testid=cache-clear]') as HTMLButtonElement).click());
-    await flush();
+    await waitFor(() => /^0 translated blocks/.test(root.querySelector('[data-testid=cache-stats]')?.textContent ?? ''));
     expect(root.querySelector('[data-testid=cache-stats]')?.textContent).toMatch(/^0 translated blocks and 0 document briefs/);
     expect((await cache.stats()).entries).toBe(0);
   });

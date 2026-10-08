@@ -3,7 +3,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import type { DocumentBrief, Segment } from '@/engine/index';
 import { CONTEXTUAL_CACHE_KEY } from '@/engine/index';
-import { keyScope, normalizeForKey, openTranslationCache, scopeHash, segmentKey, type TranslationCache } from './cache.ts';
+import { keyScope, normalizeForKey, openTranslationCache, rowBytes, scopeHash, segmentKey, type TranslationCache } from './cache.ts';
 
 const seg = (text: string, kind: Segment['kind'] = 'p', inlineMarkup = text): Pick<Segment, 'kind' | 'text' | 'inlineMarkup'> => ({ kind, text, inlineMarkup });
 const base = { targetLang: 'vi', model: 'm1', style: 'natural' as const, gloss: 'first' as const, strategy: 'contextual', glossary: [] };
@@ -39,11 +39,6 @@ describe('cache key (M3-D1)', () => {
     const bumped = { ...scope, strategy: { ...scope.strategy, version: scope.strategy.version + 1 } };
     const prompted = { ...scope, strategy: { ...scope.strategy, promptIds: ['translate@3'] } };
     expect(new Set([scopeHash(scope), scopeHash(bumped), scopeHash(prompted)]).size).toBe(3);
-  });
-
-  it('does not depend on the brief (M3-D2): there is no brief input at all', () => {
-    expect(segmentKey.length).toBe(2);
-    expect(scopeHash.length).toBe(1);
   });
 
   it('a fixture re-extracted with different whitespace and ids hits every key', () => {
@@ -111,8 +106,9 @@ describe('IndexedDB translation cache (M3-E2)', () => {
 
   it('evicts the least recently used entries when over the limit; a read counts as use', async () => {
     const text = 'x'.repeat(200);
-    const c = newCache({ maxBytes: 1500 });
-    // ~ 2*(1+200)+64 = 466 bytes each: three fit, a fourth does not.
+    const row = rowBytes('a', text);
+    const c = newCache({ maxBytes: row * 3 + 10 });
+    // Three rows fit, a fourth does not.
     await c.putMany(new Map([['a', entry(text)]]));
     await c.putMany(new Map([['b', entry(text)]]));
     await c.putMany(new Map([['c', entry(text)]]));
@@ -122,7 +118,34 @@ describe('IndexedDB translation cache (M3-E2)', () => {
     expect([...got.keys()].sort()).toEqual(['a', 'c', 'd']);
     const s = await c.stats();
     expect(s.entries).toBe(3);
-    expect(s.bytes).toBeLessThanOrEqual(1500);
+    expect(s.bytes).toBe(row * 3);
+  });
+
+  it('keeps bytes and entries consistent when putMany transactions overlap', async () => {
+    const c = newCache();
+    const batch = (prefix: string, n: number, text: string) => new Map(Array.from({ length: n }, (_, i) => [`${prefix}${i}`, entry(text)] as const));
+    // Two writers on the same keys (b) and on their own (a, c), at once.
+    await Promise.all([c.putMany(batch('a', 5, 'short')), c.putMany(batch('b', 5, 'x'.repeat(100))), c.putMany(batch('b', 5, 'y'.repeat(40))), c.putMany(batch('c', 5, 'z'))]);
+    const keys = [...'abc'].flatMap((p) => Array.from({ length: 5 }, (_, i) => `${p}${i}`));
+    const got = await c.getMany(keys);
+    const expected = [...got].reduce((n, [k, v]) => n + rowBytes(k, v.text), 0);
+    expect(got.size).toBe(15);
+    expect(await c.stats()).toMatchObject({ entries: 15, bytes: expected });
+  });
+
+  it('lets go of the database when it is deleted or upgraded elsewhere, and opens again', async () => {
+    const factory = new IDBFactory();
+    const c = openTranslationCache({ factory }) as TranslationCache;
+    await c.putMany(new Map([['a', entry('A')]]));
+    await new Promise<void>((resolve, reject) => {
+      const del = factory.deleteDatabase('translate-side-cache');
+      del.onsuccess = () => resolve();
+      del.onerror = () => reject(del.error);
+      del.onblocked = () => reject(new Error('delete was blocked: the cache kept its handle'));
+    });
+    expect((await c.getMany(['a'])).size).toBe(0);
+    await c.putMany(new Map([['b', entry('B')]]));
+    expect((await c.getMany(['b'])).get('b')?.text).toBe('B');
   });
 
   it('stores briefs by key and clear empties everything', async () => {

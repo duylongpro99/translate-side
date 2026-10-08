@@ -220,6 +220,8 @@ export interface JobDeps {
   strategy?: StrategyId;
   /** The translation cache (M3-E2). Absent: every run goes to the model. */
   cache?: TranslationCache | undefined;
+  /** How long a run waits for the cache before it goes to the model without it (default 1500). */
+  cacheTimeoutMs?: number;
 }
 
 export interface JobDoc {
@@ -261,11 +263,13 @@ interface Job {
   /** Cache writes waiting for the end of this tick (coalesced), and the keys to drop. */
   writes: Map<string, CachedSegment>;
   drops: Set<string>;
+  /** Cache writes run one after another, so a later delete can't overtake an earlier put. */
+  chain: Promise<void>;
   flush?: boolean;
   /** A retranslate run: its stored finals replace whatever the cache has. */
   fresh?: boolean;
   /** The brief cache key of this document; undefined without a cache. */
-  briefKey?: string;
+  briefKey?: string | undefined;
 }
 
 export type JobsListener = (tabId: number, view: JobView | undefined) => void;
@@ -376,6 +380,7 @@ export class Jobs {
       keys: new Map(),
       writes: new Map(),
       drops: new Set(),
+      chain: Promise.resolve(),
       fresh,
       view: {
         status: 'running',
@@ -410,6 +415,9 @@ export class Jobs {
     this.patch(tabId, job, { model: client.model });
     await this.fromCache(tabId, job, { todo, translatable, model: client.model, fresh });
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
+    // The analyze call sees only the segments still to translate. A brief stored under the key of
+    // the whole page must come from the whole page, so a run that skips any segment stores none.
+    if (todo.size !== translatable.length) job.briefKey = undefined;
     if (todo.size === 0) {
       this.finish(tabId, job, 'done');
       return;
@@ -483,6 +491,7 @@ export class Jobs {
       keys: new Map(),
       writes: new Map(),
       drops: new Set(),
+      chain: Promise.resolve(),
       view: {
         status: 'skipped',
         paused: false,
@@ -510,6 +519,12 @@ export class Jobs {
     const job = this.jobs.get(tabId);
     if (!job || job.view.status === 'running') return Promise.resolve();
     return this.start(tabId, job.docId, job.doc, { resume: true });
+  }
+
+  /** Resolves when every cache write the jobs have queued so far has finished (tests, harness). */
+  async cacheIdle(): Promise<void> {
+    await Promise.resolve();
+    await Promise.all([...this.jobs.values()].map((j) => j.chain));
   }
 
   /** The tab's job document, for a restart with other languages. */
@@ -612,8 +627,15 @@ export class Jobs {
     if (run.fresh) return;
     try {
       const wanted = run.translatable.filter((s) => run.todo.has(s.id));
-      const hits = await cache.getMany([...new Set(wanted.map((s) => job.keys.get(s.id) as string))]);
-      const brief = job.view.brief ?? (await cache.getBrief(job.briefKey));
+      // A cache that never answers (a blocked or dead database) must not hold the translation.
+      const timedOut = Symbol('timeout');
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const lookup = Promise.all([cache.getMany([...new Set(wanted.map((s) => job.keys.get(s.id) as string))]), job.view.brief ?? cache.getBrief(job.briefKey)]);
+      const found = await Promise.race([lookup, new Promise<typeof timedOut>((resolve) => (timer = setTimeout(() => resolve(timedOut), this.deps.cacheTimeoutMs ?? 1500)))]);
+      clearTimeout(timer);
+      lookup.catch(() => {});
+      if (found === timedOut) return;
+      const [hits, brief] = found;
       if (job.controller.signal.aborted || this.jobs.get(tabId) !== job) return;
       const patch: Partial<JobView> = {};
       let shown = 0;
@@ -666,8 +688,8 @@ export class Jobs {
     const drops = [...job.drops];
     job.writes.clear();
     job.drops.clear();
-    void cache
-      .delete(drops)
+    job.chain = job.chain
+      .then(() => cache.delete(drops))
       .then(() => cache.putMany(writes, { replace: job.fresh === true }))
       .catch(() => {});
   }
