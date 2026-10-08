@@ -22,6 +22,7 @@ import { segmentsBefore } from '../context/glossary.ts';
 import { CONTEXT_TAIL_PARAGRAPHS } from '../context/tail.ts';
 import type { Rendered } from '../parsing/duplicate.ts';
 import { STYLE_LABELS, TRANSLATE_PROMPT_ID, languageLabel } from '../prompts/translate.ts';
+import { pickByPriority } from '../priority.ts';
 import { defineStage, defineStrategy, type AnyStage } from '../runner.ts';
 import { createCheckStage } from '../stages/check.ts';
 import type { CheckKind } from '../check/checks.ts';
@@ -67,8 +68,21 @@ export interface ChunkOutcome {
 export interface BriefWait {
   /** Settles when the analyze stage is over, brief or no brief. Never rejects. */
   settled: Promise<void>;
-  /** Chunks with an index below this go ahead without waiting (the first chunk). */
+  /**
+   * How many chunks go ahead without waiting: the first ones to start, which with viewport first
+   * (plan M3-E1) are the chunks on screen, not necessarily the first of the page.
+   */
   freeChunks: number;
+  /**
+   * Whether the chunk with this index goes ahead without waiting. Absent: an index below
+   * `freeChunks` (page order, as when nothing is on screen).
+   */
+  free?: (chunkIndex: number) => boolean;
+}
+
+/** The ids each chunk work carries, for pickByPriority. */
+export function chunkIds(works: readonly ChunkWork[]): string[][] {
+  return works.map((w) => w.chunk.segments.map((s) => s.id));
 }
 
 export interface CheckSummary {
@@ -167,8 +181,10 @@ export type TranslateRun = (work: ChunkWork, ctx: StageContext) => AsyncGenerato
  * like `contextual`, reuse it). The source language is the job's, or, when the shell could not
  * tell it, the one the brief read (plan M2 §5: the last link of the detection chain).
  *
- * With `brief` (contextual), a chunk from index `brief.freeChunks` on waits until the analyze
- * stage is over before it builds its prompt; the outcome records whether the brief was there.
+ * With `brief` (contextual), a chunk that is not brief-free (BriefWait.free) waits until the
+ * analyze stage is over before it builds its prompt; the outcome records whether the brief was there.
+ *
+ * Chunks start viewport first (the stage's `pick`, plan M3-E1).
  *
  * `revision` marks the finals (1, a draft; contextual's chunk-0 revise pass sends 2, M2-D17).
  *
@@ -189,6 +205,8 @@ export function createTranslateStage(strategyId: string, brief?: BriefWait, prom
       const outcome = yield* translate(work, ctx);
       yield outcome;
     },
+    // Viewport first (plan M3-E1).
+    pick: (works, pending, ctx) => pickByPriority(chunkIds(works), pending, ctx.priority?.() ?? []),
   });
 }
 
@@ -236,7 +254,7 @@ export async function prepareChunk(work: ChunkWork, ctx: StageContext, memory: R
 export function createTranslateRun(strategyId: string, brief?: BriefWait, promptId: string = TRANSLATE_PROMPT_ID, revision: number = REVISION): TranslateRun {
   return async function* (work, ctx) {
     const outcome: ChunkOutcome = { index: work.chunk.index, ids: work.chunk.segments.map((s) => s.id), final: [], failed: [], work };
-    if (brief !== undefined && work.chunk.index >= brief.freeChunks) await untilSettledOrAborted(brief.settled, ctx.signal);
+    if (brief !== undefined && !(brief.free?.(work.chunk.index) ?? work.chunk.index < brief.freeChunks)) await untilSettledOrAborted(brief.settled, ctx.signal);
     // One snapshot for the whole prompt: a brief landing while this chunk's prompt is being built
     // must not reach part of it (the language, the providers) and miss `briefed`.
     const memory: Readonly<WorkingMemory> = { ...ctx.memory };

@@ -8,7 +8,8 @@
 //
 // Latency (plan §8, user decision M2-D6): the brief call runs alongside the translation instead of
 // before it. The first chunk goes ahead without the brief; every later chunk waits until the
-// analyze stage is over, with or without a brief, so a failed or slow brief delays later chunks
+// analyze stage is over (plan M3-E1: "first" is the first chunk to start, which is the one on
+// screen when the job has a priority; the revise pass below follows it), with or without a brief, so a failed or slow brief delays later chunks
 // at most by the brief call itself and never fails the job. Each chunk's outcome records whether
 // the brief was there (ChunkOutcome.briefed). The `artifact` event goes out when the brief lands.
 // A one-chunk document skips the analyze stage altogether (user decision M2-D9): no brief, no
@@ -36,7 +37,8 @@ import { defineStage, multiplex, runStages, type AnyStage } from '../runner.ts';
 import { analyzeStage } from '../stages/analyze.ts';
 import type { EngineEvent, StageContext, Strategy, TranslationJob } from '../types.ts';
 import { checkSegment } from '../check/checks.ts';
-import { chunkStage, createStrategyCheckStage, createTranslateRun, createTranslateStage, untilSettledOrAborted, type BriefWait, type ChunkOutcome, type ChunkWork, type TranslateRun } from './single-pass.ts';
+import { pickByPriority } from '../priority.ts';
+import { createStrategyCheckStage, createTranslateRun, untilSettledOrAborted, type BriefWait, type ChunkOutcome, type ChunkWork, type TranslateRun } from './single-pass.ts';
 
 export const CONTEXTUAL_ID = 'contextual';
 /** 2: translate@2 with the context providers (M2-E3). 1 was Phase B's translate@1 with the brief unused. */
@@ -50,9 +52,9 @@ export const BRIEF_FREE_CHUNKS = 1;
 /** The revision chunk 0's second pass marks its finals with (M2-D17). */
 export const REVISED_REVISION = 2;
 
-/** M2-D17: the revise pass's work item, `chunk` again with the brief. */
+/** M2-D17: the revise pass's work item: the `revise`-th brief-free chunk again, with the brief. */
 interface ReviseWork {
-  revise: ChunkWork;
+  revise: number;
 }
 
 type ContextualWork = ChunkWork | ReviseWork;
@@ -104,11 +106,17 @@ export function isOneChunk(job: TranslationJob): boolean {
  * The translation stages, the translate stage waiting for the brief as `brief` says. With
  * `revises` (M2-D17), the brief-free chunks also go again as revision 2 when it says so, asked
  * once the brief has settled.
+ *
+ * Viewport first (plan M3-E1): chunks start in the order pickByPriority gives, and the brief-free
+ * chunks are the first `brief.freeChunks` to start, so the chunk on screen does not wait for the
+ * brief (plan M3 §8). With nothing on screen that is chunk 0, as in M2.
  */
 export function contextualStages(brief: BriefWait, translatePrompt: string = CONTEXTUAL_TRANSLATE_PROMPT_ID, revises?: (ctx: StageContext) => boolean): readonly AnyStage[] {
   const check = createStrategyCheckStage(CONTEXTUAL_ID, translatePrompt);
-  if (revises === undefined) return [chunkStage, createTranslateStage(CONTEXTUAL_ID, brief, translatePrompt), check];
-  const first = createTranslateRun(CONTEXTUAL_ID, brief, translatePrompt);
+  // The brief-free chunks, in the order they were picked (claimed by `pick` below).
+  const claimed: ChunkWork[] = [];
+  const wait: BriefWait = { settled: brief.settled, freeChunks: brief.freeChunks, free: (index) => claimed.some((w) => w.chunk.index === index) };
+  const first = createTranslateRun(CONTEXTUAL_ID, wait, translatePrompt);
   const again = createTranslateRun(CONTEXTUAL_ID, undefined, translatePrompt, REVISED_REVISION);
   // Settles when a brief-free chunk's first call is over (by index).
   const over = new Map<number, { done: Promise<void>; settle: () => void }>();
@@ -127,9 +135,8 @@ export function contextualStages(brief: BriefWait, translatePrompt: string = CON
     scope: 'document',
     async *run(job) {
       const works: ChunkWork[] = chunkSegments(job.doc.segments, chunkLimits(job.options.chunkTokens)).map((c) => ({ chunk: c, doc: job.doc, options: job.options }));
-      const free = works.slice(0, brief.freeChunks);
-      // The pool starts items in order: a revise item never starts before its chunk.
-      yield [...free, ...free.map((w) => ({ revise: w })), ...works.slice(brief.freeChunks)];
+      const reviseItems: ReviseWork[] = revises === undefined ? [] : Array.from({ length: Math.min(brief.freeChunks, works.length) }, (_, k) => ({ revise: k }));
+      yield [...works, ...reviseItems];
     },
   });
   const translate = defineStage<ContextualWork, ChunkOutcome>({
@@ -139,9 +146,11 @@ export function contextualStages(brief: BriefWait, translatePrompt: string = CON
     promptId: translatePrompt,
     async *run(work, ctx) {
       if ('revise' in work) {
-        await untilSettledOrAborted(firstOver(work.revise.chunk.index).done, ctx.signal);
+        const target = claimed[work.revise];
+        if (target === undefined || revises === undefined) return;
+        await untilSettledOrAborted(firstOver(target.chunk.index).done, ctx.signal);
         await untilSettledOrAborted(brief.settled, ctx.signal);
-        if (revises(ctx)) yield* revise(again, work.revise, ctx);
+        if (revises(ctx)) yield* revise(again, target, ctx);
         return;
       }
       try {
@@ -150,6 +159,25 @@ export function contextualStages(brief: BriefWait, translatePrompt: string = CON
       } finally {
         firstOver(work.chunk.index).settle();
       }
+    },
+    pick(items, pending, ctx) {
+      // A revise item starts right after the chunk it revises (M2-D17): it holds its slot while
+      // it waits, so a revision 2 never races its revision 1.
+      const ready = pending.find((i) => {
+        const item = items[i];
+        return item !== undefined && 'revise' in item && item.revise < claimed.length;
+      });
+      if (ready !== undefined) return ready;
+      const chunks = pending.filter((i) => {
+        const item = items[i];
+        return item !== undefined && !('revise' in item);
+      });
+      if (chunks.length === 0) return pending[0] as number;
+      const ids = items.map((item) => ('revise' in item ? [] : item.chunk.segments.map((s) => s.id)));
+      const next = pickByPriority(ids, chunks, ctx.priority?.() ?? []);
+      const work = items[next];
+      if (claimed.length < brief.freeChunks && work !== undefined && !('revise' in work)) claimed.push(work);
+      return next;
     },
   });
   return [chunk, translate, check];

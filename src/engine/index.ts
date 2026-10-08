@@ -9,6 +9,7 @@ export { defineStage, defineStrategy, isEngineEvent, multiplex, runStages, type 
 export { DEFAULT_RETRY_POLICY, decideRetry, withRetry, type RetryDecision, type RetryInfo, type RetryOptions, type RetryPolicy } from './retry.ts';
 export { BUDGET_MESSAGE, createBudget, maxOutputTokens } from './budget.ts';
 export { createWorkingMemory } from './memory.ts';
+export { pickByPriority } from './priority.ts';
 export { createPromptRegistry, definePrompt } from './prompts/registry.ts';
 export { PROMPTS, createDefaultPromptRegistry } from './prompts/index.ts';
 export { GLOSS_RULES, STYLE_LABELS, STYLE_RULES, TRANSLATE_PROMPT_ID, TRANSLATE_V2_PROMPT_ID, languageLabel, translateV1, translateV2 } from './prompts/translate.ts';
@@ -29,6 +30,7 @@ export {
   TRANSLATE_TEMPERATURE,
   callBudget,
   checkStage,
+  chunkIds,
   chunkStage,
   createStrategyCheckStage,
   prepareChunk,

@@ -7,7 +7,9 @@
 //   yields none, its input passes through unchanged (e.g. analyze, which only fills memory).
 // - A `chunk` or `segment` stage needs an array. It runs once per element, up to
 //   `concurrency` at a time, and the values each run yields are concatenated in element order
-//   (not completion order), so chunk ordering is the engine's and stays stable.
+//   (not completion order), so chunk ordering is the engine's and stays stable. Which element
+//   starts next is the stage's `pick` (viewport first, plan M3-E1), else element order; it is
+//   asked each time a slot frees, so a new priority reorders only the elements not started yet.
 // Events from concurrent runs are passed on as they arrive, each stage framed by
 // `stage` start/done events.
 //
@@ -92,7 +94,9 @@ async function* runEach(stage: AnyStage, input: unknown, ctx: StageContext, conc
   if (!Array.isArray(input)) throw new Error(`stage ${stage.id}: a ${stage.scope} stage needs an array input`);
   const items: readonly unknown[] = input;
   const outputs: unknown[][] = items.map(() => []);
-  for await (const { index, value } of multiplex(items, Math.max(1, Math.floor(concurrency)), (item) => run(stage, item, ctx), ctx.signal)) {
+  const { pick } = stage;
+  const order = pick === undefined ? undefined : (pending: readonly number[]) => pick.call(stage, items as never[], pending, ctx);
+  for await (const { index, value } of multiplex(items, Math.max(1, Math.floor(concurrency)), (item) => run(stage, item, ctx), ctx.signal, order)) {
     if (isEngineEvent(value)) yield value;
     else outputs[index]?.push(value);
   }
@@ -113,13 +117,16 @@ type Settled = { index: number; result: IteratorResult<unknown> } | { index: num
 
 /**
  * Runs `start(item)` for every item, at most `limit` at a time, and yields each value with the
- * index of the item that produced it, in arrival order.
+ * index of the item that produced it, in arrival order. Items start in order, or in the order
+ * `pick` gives: called with the indices not started yet each time a slot frees, it returns one
+ * of them (an index outside them falls back to the first).
  */
 export async function* multiplex<T>(
   items: readonly T[],
   limit: number,
   start: (item: T, index: number) => AsyncIterable<unknown>,
   signal: AbortSignal,
+  pick?: (pending: readonly number[]) => number,
 ): AsyncGenerator<{ index: number; value: unknown }> {
   const active = new Map<number, Active>();
   const pull = (index: number, iterator: AsyncIterator<unknown>): Promise<Settled> =>
@@ -127,11 +134,25 @@ export async function* multiplex<T>(
       (result) => ({ index, result }),
       (error: unknown) => ({ index, error }),
     );
-  let nextIndex = 0;
+  const pending = items.map((_, i) => i);
   let failure: { error: unknown } | undefined;
+  const take = (): number => {
+    let at = 0;
+    if (pick !== undefined) {
+      at = pending.indexOf(pick(pending));
+      if (at < 0) at = 0;
+    }
+    return pending.splice(at, 1)[0] as number;
+  };
   const fill = (): void => {
-    while (failure === undefined && !signal.aborted && active.size < limit && nextIndex < items.length) {
-      const index = nextIndex++;
+    while (failure === undefined && !signal.aborted && active.size < limit && pending.length > 0) {
+      let index: number;
+      try {
+        index = take();
+      } catch (error) {
+        failure = { error };
+        return;
+      }
       try {
         const iterator = start(items[index] as T, index)[Symbol.asyncIterator]();
         active.set(index, { iterator, next: pull(index, iterator) });

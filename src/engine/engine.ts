@@ -109,5 +109,6 @@ function createStageContext(deps: EngineDeps, job: TranslationJob, signal: Abort
     prompts: deps.prompts,
     budget: createBudget(job.options.budget ?? {}, deps.now),
     signal,
+    priority: job.livePriority ?? (() => job.priority),
   };
 }

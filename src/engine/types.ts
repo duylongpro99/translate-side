@@ -90,8 +90,15 @@ export interface TranslationJob {
     /** From the content script (§4.1). */
     segments: Segment[];
   };
-  /** Segment ids to do first (viewport). */
+  /** Segment ids to do first (viewport), in page order. */
   priority: string[];
+  /**
+   * The viewport now (plan M3-E1): read each time a chunk is about to start, so a scroll moves
+   * what is translated next. Pending chunks are reordered; chunks in flight are never aborted
+   * (M3-D3). Absent: `priority` for the whole job. A plain function, so the engine stays free of
+   * chrome.* and the DOM (§5.1).
+   */
+  livePriority?: () => readonly string[];
   strategy: StrategyId;
   options: JobOptions;
 }
@@ -174,6 +181,12 @@ export interface Stage<I, O> {
   /** "translate@3". */
   promptId?: string;
   run(input: I, ctx: StageContext): AsyncIterable<EngineEvent | O>;
+  /**
+   * `chunk` and `segment` stages: which pending element starts next when a slot frees (index into
+   * `items`, one of `pending`). Absent: element order. Only the start order changes; elements in
+   * flight are never touched.
+   */
+  pick?(items: readonly I[], pending: readonly number[], ctx: StageContext): number;
 }
 
 export interface StageContext {
@@ -187,6 +200,8 @@ export interface StageContext {
   /** Token/time limits for this job. */
   budget: Budget;
   signal: AbortSignal;
+  /** Segment ids to do first, as of now (the job's `livePriority`, else its `priority`). Absent: none. */
+  priority?: () => readonly string[];
 }
 
 export interface Strategy {
