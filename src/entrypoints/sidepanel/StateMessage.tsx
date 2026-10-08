@@ -1,3 +1,4 @@
+import { DENYLIST_MESSAGE, EXTRACTION_HINT } from '@/shared/snippet';
 import type { PanelView } from './controller.ts';
 
 // Loading, empty, error and access states (plan M0-E7; "can't read this page", criterion #4).
@@ -22,7 +23,7 @@ export function StateMessage({ view, onRetry }: { view: Exclude<PanelView, { kin
           <p class="state__title">Can't read this page</p>
           <p>
             {view.reason === 'denylisted'
-              ? 'Translate Side never reads this site (mail and sign-in pages are on a built-in denylist).'
+              ? DENYLIST_MESSAGE
               : 'Chrome does not let extensions read this page (browser pages, the Web Store and similar).'}
           </p>
         </div>
@@ -38,9 +39,9 @@ export function StateMessage({ view, onRetry }: { view: Exclude<PanelView, { kin
     case 'empty':
       return (
         <div class="state" data-state="empty">
-          <p class="state__title">Couldn't find the main text</p>
+          <p class="state__title">{EXTRACTION_HINT}</p>
           <p>This page has no article or docs content that Translate Side can find.</p>
-          <p class="state__hint">Translating a passage you select (right-click → Translate in side panel) comes in a later version.</p>
+          <p class="state__hint">Select the text, then right-click → Translate in side panel.</p>
         </div>
       );
     case 'error':

@@ -59,7 +59,7 @@ describe('panel states', () => {
     [{ kind: 'blocked', reason: 'inject-failed', detail: 'Cannot access a chrome:// URL' }, "Can't read this page"],
     [{ kind: 'blocked', reason: 'denylisted' }, 'never reads this site'],
     [{ kind: 'lost' }, 'Press Alt+T or click the toolbar icon'],
-    [{ kind: 'empty', url: 'https://x/' }, "Couldn't find the main text"],
+    [{ kind: 'empty', url: 'https://x/' }, "Couldn't read this page. Select text to translate it."],
     [{ kind: 'error', message: 'boom' }, 'boom'],
   ] as [PanelView, string][])('%o shows "%s"', (view, text) => {
     mount(view);

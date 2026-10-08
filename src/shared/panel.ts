@@ -3,8 +3,10 @@
 import type { browser } from 'wxt/browser';
 import { clearAccess, readAccess } from './access.ts';
 import { injectInto, type TabRef } from './inject.ts';
+import { anyDenylisted, clearSnippet, writeSnippet } from './snippet.ts';
 
 export const CONTEXT_MENU_ID = 'translate-side.open-panel';
+export const CONTEXT_MENU_TITLE = 'Translate in side panel';
 
 type Browser = typeof browser;
 
@@ -49,10 +51,10 @@ export function listenForActionClicks(api: Browser): void {
 export async function createContextMenu(api: Browser): Promise<void> {
   if (!api.contextMenus) return;
   await api.contextMenus.removeAll();
-  // Stub entry (M0-E2). Selection translation arrives later.
+  // On a selection it translates the selection (plan M3-E4); on the page it opens the panel.
   api.contextMenus.create({
     id: CONTEXT_MENU_ID,
-    title: 'Open Translate Side',
+    title: CONTEXT_MENU_TITLE,
     contexts: ['page', 'selection'],
   });
 }
@@ -62,9 +64,31 @@ export function listenForContextMenuClicks(api: Browser): void {
   if (!api.contextMenus) return;
   api.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId !== CONTEXT_MENU_ID) return;
-    // The click is a user gesture and grants activeTab, like the action (S5).
+    // The click is a user gesture and grants activeTab, like the action (S5). Open first, with no
+    // await before it (sidePanel.open needs the gesture); the selection is handed over beside it.
     void openPanelAndInject(api, tab);
+    void handOverSelection(api, tab, info);
   });
+}
+
+/**
+ * Leaves the selected text for the panel (plan M3-E4). Chrome hands it over with the click, so this
+ * works on a page where extraction fails and even where nothing can be injected. A selection from a
+ * denylisted site is not kept (M3-D13, DESIGN §8): the record only says it was blocked. Checks the
+ * tab, the page and the frame the text sits in, since an iframe can be a denylisted site.
+ * The worker translates nothing: the panel does, when it sees the record.
+ */
+export async function handOverSelection(api: Browser, tab: TabRef | undefined, info: { selectionText?: string | undefined; pageUrl?: string | undefined; frameUrl?: string | undefined }): Promise<void> {
+  const tabId = tab?.id;
+  const text = info.selectionText?.trim();
+  if (tabId === undefined || !text) return;
+  const url = info.pageUrl ?? tab?.url ?? '';
+  try {
+    if (anyDenylisted(tab?.url, info.pageUrl, info.frameUrl)) await writeSnippet(api, tabId, { url, blocked: 'denylisted' });
+    else await writeSnippet(api, tabId, { url, text });
+  } catch (err) {
+    logError('handing over the selection')(err);
+  }
 }
 
 /**
@@ -81,5 +105,6 @@ export function listenForTabLifecycle(api: Browser): void {
   });
   api.tabs.onRemoved.addListener((tabId) => {
     clearAccess(api, tabId).catch(logError('clearing tab access'));
+    clearSnippet(api, tabId).catch(logError('clearing the selection'));
   });
 }

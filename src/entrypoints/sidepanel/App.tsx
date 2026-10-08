@@ -7,7 +7,9 @@ import { readFollow, useScrollFollow, writeFollow } from './follow.ts';
 import { JobBar, type JobActions } from './JobBar.tsx';
 import type { Jobs, JobView } from './jobs.ts';
 import { SegmentList } from './SegmentList.tsx';
+import { SelectionView } from './SelectionView.tsx';
 import { StateMessage } from './StateMessage.tsx';
+import type { SnippetStore, SnippetView } from './snippet.ts';
 import type { ViewportStore } from './viewport.ts';
 
 /** What the panel needs from the translation side (translator.ts). Absent: the original only (M0). */
@@ -16,6 +18,8 @@ export interface TranslatorProps {
   actions(tabId: number): JobActions;
   /** What is on screen per tab, for the scroll follow (plan M3-E7). */
   viewports?: ViewportStore;
+  /** Selection mode (plan M3-E4): the selection of each tab, and the job that translates it. */
+  snippets?: { jobs: Jobs; store: SnippetStore; actions(tabId: number): JobActions; close(tabId: number): void };
 }
 
 const nextFrame = (fn: () => void) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 16));
@@ -45,6 +49,17 @@ function useJob(jobs: Jobs | undefined, tabId: number | undefined, docId: string
   return job;
 }
 
+function useSnippet(store: SnippetStore | undefined, tabId: number | undefined): SnippetView | undefined {
+  const [view, setView] = useState<SnippetView | undefined>(() => (store && tabId !== undefined ? store.get(tabId) : undefined));
+  useEffect(() => {
+    setView(store && tabId !== undefined ? store.get(tabId) : undefined);
+    return store?.subscribe((id, v) => {
+      if (id === tabId) setView(v);
+    });
+  }, [store, tabId]);
+  return view;
+}
+
 export function App({ controller, translator }: { controller: PanelController; translator?: TranslatorProps }) {
   const [view, setView] = useState<PanelView>(controller.view);
   const [tabId, setTabId] = useState<number | undefined>(controller.tabId);
@@ -59,6 +74,10 @@ export function App({ controller, translator }: { controller: PanelController; t
     [controller],
   );
   const job = useJob(translator?.jobs, tabId, view.kind === 'ready' ? view.docId : undefined);
+  const snippet = useSnippet(translator?.snippets?.store, tabId);
+  const snippetJob = useJob(translator?.snippets?.jobs, tabId, snippet?.docId);
+  // A site on the denylist is never read, selection included (M3-D13): its own message wins.
+  const selecting = snippet !== undefined && translator?.snippets !== undefined && !(view.kind === 'blocked' && view.reason === 'denylisted');
   // One-way page → panel (M3-E7); not over the dev view, whose blocks are not the reading list.
   useScrollFollow(translator?.viewports, tabId, view.kind === 'ready' ? view.docId : undefined, follow && !dev);
   const toggleFollow = () => {
@@ -104,7 +123,9 @@ export function App({ controller, translator }: { controller: PanelController; t
           ✕
         </button>
       </header>
-      {view.kind !== 'ready' ? (
+      {selecting && tabId !== undefined && snippet && translator?.snippets ? (
+        <SelectionView snippet={snippet} job={snippetJob} actions={translator.snippets.actions(tabId)} onClose={() => translator.snippets?.close(tabId)} pageReady={view.kind === 'ready'} />
+      ) : view.kind !== 'ready' ? (
         <StateMessage view={view} onRetry={() => controller.retry()} />
       ) : import.meta.env.DEV && dev ? (
         <DevView segments={view.result.segments} via={view.result.via} docId={view.docId} />

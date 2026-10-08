@@ -24,6 +24,7 @@ function fakeApi() {
         onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) },
       },
       local: { onChanged: listeners() },
+      session: { onChanged: listeners(), get: () => Promise.resolve({}), remove: () => Promise.resolve() },
     },
     permissions: { onAdded: listeners() },
     i18n: { getUILanguage: () => 'en' },

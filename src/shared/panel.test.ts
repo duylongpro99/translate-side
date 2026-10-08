@@ -134,6 +134,67 @@ describe('action and context menu', () => {
   });
 });
 
+describe('selection hand-over (plan M3-E4)', () => {
+  it('the menu is named for what it does', async () => {
+    const created: { title: string }[] = [];
+    const api = { contextMenus: { removeAll: () => Promise.resolve(), create: (o: { title: string }) => created.push(o) } } as unknown as Api;
+    await createContextMenu(api);
+    expect(created.map((c) => c.title)).toEqual(['Translate in side panel']);
+  });
+
+  it('a click on a selection opens the panel first and leaves the text for it, with the page it came from', async () => {
+    const f = fakeApi();
+    listenForContextMenuClicks(f.api);
+    f.fire('menu', { menuItemId: CONTEXT_MENU_ID, selectionText: '  Hello there.  ', pageUrl: 'https://example.com/a' }, { id: 4, url: 'https://example.com/a' });
+    await flush();
+    expect(f.calls[0]).toBe('open:4');
+    expect(f.store['snippet:4']).toMatchObject({ url: 'https://example.com/a', text: 'Hello there.' });
+    expect(f.store['snippet:4']).not.toHaveProperty('blocked');
+  });
+
+  it('works where nothing can be injected: the selection does not depend on the injection', async () => {
+    const f = fakeApi({ inject: () => Promise.reject(new Error('Cannot access contents of the page')) });
+    listenForContextMenuClicks(f.api);
+    f.fire('menu', { menuItemId: CONTEXT_MENU_ID, selectionText: 'text', pageUrl: 'https://example.com/' }, { id: 4, url: 'https://example.com/' });
+    await flush();
+    expect(f.store['snippet:4']).toMatchObject({ text: 'text' });
+  });
+
+  it('no selection: only the panel opens, no record', async () => {
+    const f = fakeApi();
+    listenForContextMenuClicks(f.api);
+    f.fire('menu', { menuItemId: CONTEXT_MENU_ID, pageUrl: 'https://example.com/' }, { id: 4, url: 'https://example.com/' });
+    f.fire('menu', { menuItemId: CONTEXT_MENU_ID, selectionText: '   ', pageUrl: 'https://example.com/' }, { id: 4, url: 'https://example.com/' });
+    await flush();
+    expect(Object.keys(f.store).filter((k) => k.startsWith('snippet:'))).toEqual([]);
+  });
+
+  it.each([
+    ['the tab', { id: 6, url: 'https://mail.google.com/mail/u/0/' }, { pageUrl: 'https://mail.google.com/mail/u/0/' }],
+    ['the page', { id: 6, url: 'https://example.com/' }, { pageUrl: 'https://login.microsoftonline.com/x' }],
+    ['a frame in an ordinary page', { id: 6, url: 'https://example.com/' }, { pageUrl: 'https://example.com/', frameUrl: 'https://accounts.google.com/signin' }],
+  ])('a selection from a denylisted site (%s) is never kept: the record says blocked and holds no text', async (_, tab, info) => {
+    const f = fakeApi();
+    listenForContextMenuClicks(f.api);
+    f.fire('menu', { menuItemId: CONTEXT_MENU_ID, selectionText: 'my secret mail', ...info }, tab);
+    await flush();
+    expect(f.store['snippet:6']).toMatchObject({ blocked: 'denylisted' });
+    expect(JSON.stringify(f.store)).not.toContain('my secret mail');
+  });
+
+  it('the record goes when its tab closes', async () => {
+    const f = fakeApi();
+    listenForContextMenuClicks(f.api);
+    listenForTabLifecycle(f.api);
+    f.fire('menu', { menuItemId: CONTEXT_MENU_ID, selectionText: 'x', pageUrl: 'https://example.com/' }, { id: 8, url: 'https://example.com/' });
+    await flush();
+    expect(f.store['snippet:8']).toBeDefined();
+    f.fire('removed', 8);
+    await flush();
+    expect(f.store['snippet:8']).toBeUndefined();
+  });
+});
+
 describe('tab lifecycle', () => {
   it('re-injects on load complete only into tabs it injected into before', async () => {
     const f = fakeApi();

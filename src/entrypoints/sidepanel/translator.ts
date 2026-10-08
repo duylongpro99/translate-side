@@ -8,7 +8,9 @@ import { DEFAULT_ORIGIN, GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences,
 import type { SessionHooks } from './controller.ts';
 import type { JobActions } from './JobBar.tsx';
 import { openTranslationCache } from '@/shared/cache';
+import { anyDenylisted, clearSnippet, readSnippet, tabIdFromSnippetKey, type SnippetRecord } from '@/shared/snippet';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
+import { snippetDocId, snippetView, SnippetStore } from './snippet.ts';
 import { translateClient } from './route.ts';
 import { ViewportStore } from './viewport.ts';
 
@@ -16,6 +18,8 @@ type Browser = typeof browser;
 
 export interface Translator {
   jobs: Jobs;
+  /** The selection, translated on its own (plan M3-E4): its jobs (one per tab, same Jobs class) and the records behind them. */
+  snippets: { jobs: Jobs; store: SnippetStore; actions(tabId: number): JobActions; close(tabId: number): void };
   /** What is on screen per tab (scroll follow, plan M3-E7). */
   viewports: ViewportStore;
   hooks: SessionHooks;
@@ -44,6 +48,9 @@ async function readSettings(api: Browser): Promise<Settings> {
 
 export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, options: TranslatorOptions = {}): Translator {
   const jobs = new Jobs({ translateClient: () => translateClient(api), cache: openTranslationCache(), ...deps });
+  // No cache: a selection is a one-off, and its text is not kept beyond the session.
+  const snippetJobs = new Jobs({ translateClient: () => translateClient(api), ...deps, cache: undefined });
+  const snippetStore = new SnippetStore();
   const viewports = new ViewportStore();
   const detector = 'detector' in options ? options.detector : chromeLanguageDetector();
   const mixed = options.mixedLanguage ?? MIXED_LANGUAGE_DETECTION;
@@ -168,6 +175,34 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     });
   };
 
+  /**
+   * A selection arrived (the worker left it in storage.session): translate it now, whatever the
+   * page is (plan M3-E4). The user's click was the explicit action that lets it go to the provider
+   * (§8); a record from a denylisted site, or whose url is one, is shown as blocked and never sent
+   * (M3-D13), however it got here. The same record twice is the same click.
+   */
+  const takeSnippet = async (tabId: number, record: SnippetRecord) => {
+    if (snippetStore.get(tabId)?.docId === snippetDocId(record)) return;
+    const blocked = record.blocked !== undefined || anyDenylisted(record.url);
+    const view = snippetView(blocked ? { at: record.at, url: record.url, blocked: 'denylisted' } : record);
+    snippetJobs.drop(tabId);
+    snippetStore.set(tabId, view);
+    if (view.blocked || view.segments.length === 0) return;
+    const settings = await readSettings(api);
+    // Detection only informs the prompt; a selection already in the target language is still translated (the user asked).
+    const { doc } = await docFor(settings, view.url, '', undefined, view.segments);
+    if (snippetStore.get(tabId)?.docId !== view.docId) return;
+    void snippetJobs.start(tabId, view.docId, doc);
+  };
+  const closeSnippet = (tabId: number) => {
+    snippetJobs.drop(tabId);
+    snippetStore.clear(tabId);
+    clearSnippet(api, tabId).catch(() => {});
+  };
+  const loadSnippet = (tabId: number) => {
+    readSnippet(api, tabId).then((record) => (record ? takeSnippet(tabId, record) : undefined)).catch(() => {});
+  };
+
   const hooks: SessionHooks = {
     ready(tabId, docId, result) {
       live.set(tabId, docId);
@@ -188,6 +223,8 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       jobs.cancel(tabId);
     },
     closed: (tabId) => {
+      snippetJobs.drop(tabId);
+      snippetStore.clear(tabId);
       live.delete(tabId);
       viewports.drop(tabId);
       used.delete(tabId);
@@ -195,7 +232,12 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     },
     active: (tabId) => {
       jobs.setActive(tabId);
-      if (tabId !== undefined) refresh(tabId);
+      snippetJobs.setActive(tabId);
+      if (tabId !== undefined) {
+        refresh(tabId);
+        // A selection made while this panel was closed or on another tab.
+        if (!snippetStore.get(tabId)) loadSnippet(tabId);
+      }
     },
     viewport: (tabId, docId, viewport) => {
       jobs.setViewport(tabId, docId, viewport.visible);
@@ -216,11 +258,33 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     },
   });
 
+  const snippetActions = (tabId: number): JobActions => ({
+    ...actions(tabId),
+    cancel: () => snippetJobs.cancel(tabId),
+    resume: () => void snippetJobs.resume(tabId),
+    retrySegment: (id) => void snippetJobs.retrySegment(tabId, id),
+    grantAccess: () => {
+      void api.permissions.request({ origins: [DEFAULT_ORIGIN] }).then((granted) => {
+        if (granted) void snippetJobs.resume(tabId);
+      });
+    },
+  });
+
   const watch = (activeTab: () => number | undefined) => {
     /** A job that stopped for want of a key or access starts again once that is fixed. */
     const retryStopped = () => {
       const tabId = activeTab();
-      if (tabId !== undefined && jobs.get(tabId)?.status === 'stopped') resume(tabId);
+      if (tabId === undefined) return;
+      if (jobs.get(tabId)?.status === 'stopped') resume(tabId);
+      if (snippetJobs.get(tabId)?.status === 'stopped') void snippetJobs.resume(tabId);
+    };
+    /** A selection left by the worker (a context-menu click) for any tab of this window. */
+    const onSession = (changes: Record<string, { newValue?: unknown }>) => {
+      for (const [key, change] of Object.entries(changes)) {
+        const tabId = tabIdFromSnippetKey(key);
+        if (tabId === null) continue;
+        if (change.newValue) void takeSnippet(tabId, change.newValue as SnippetRecord);
+      }
     };
     // Any connection's key: "Fix key" applies to whichever connection the job ran on (M3-E8).
     const onLocal = (changes: Record<string, unknown>) => {
@@ -232,18 +296,25 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       const tabId = activeTab();
       if (tabId !== undefined) refresh(tabId);
     };
-    const onPagehide = () => jobs.cancelAll();
+    const onPagehide = () => {
+      jobs.cancelAll();
+      snippetJobs.cancelAll();
+      // A selection belongs to this panel's session: a reopened panel starts clean.
+      for (const tabId of snippetStore.tabs()) clearSnippet(api, tabId).catch(() => {});
+    };
     api.storage.local.onChanged.addListener(onLocal);
     api.storage.sync.onChanged.addListener(onSync);
     api.permissions.onAdded.addListener(retryStopped);
+    api.storage.session.onChanged.addListener(onSession);
     addEventListener('pagehide', onPagehide);
     return () => {
       api.storage.local.onChanged.removeListener(onLocal);
       api.storage.sync.onChanged.removeListener(onSync);
       api.permissions.onAdded.removeListener(retryStopped);
+      api.storage.session.onChanged.removeListener(onSession);
       removeEventListener('pagehide', onPagehide);
     };
   };
 
-  return { jobs, viewports, hooks, actions, watch };
+  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, hooks, actions, watch };
 }
