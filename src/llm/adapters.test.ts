@@ -565,6 +565,19 @@ describe('openai-chat adapter (wire details)', () => {
     expect(d.quirks).toEqual({});
   });
 
+  it('review round 3: "Invalid role \'tool\'" does not fold the system prompt; an invalid role naming \'system\' does', async () => {
+    const wire = (m: string): ScriptedResponse => ({ status: 400, body: JSON.stringify({ error: { message: m } }) });
+    const a = mockFetch([wire("Invalid role 'tool'")]);
+    const ca = conn();
+    await collect(createOpenAIAdapter({ fetch: a.fetch }).stream(ca, request('m', { system: 'rules' })));
+    expect(a.requests).toHaveLength(1);
+    expect(ca.quirks).toEqual({});
+    const b = mockFetch([wire("Invalid role 'system' for this model"), { status: 200, body: openaiStream({ text: ['ok'] }) }]);
+    const cb = conn();
+    expect(text(await collect(createOpenAIAdapter({ fetch: b.fetch }).stream(cb, request('m', { system: 'rules' }))))).toBe('ok');
+    expect(cb.quirks.supportsSystemRole).toBe(false);
+  });
+
   it('N2: a 400 about the system role flips only when a system block was sent', async () => {
     const bad: ScriptedResponse = { status: 400, body: '{"error":{"message":"Developer instruction is not enabled for this model (system role)","type":"invalid_request_error"}}' };
     const f = mockFetch([bad]);

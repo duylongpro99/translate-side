@@ -47,7 +47,7 @@ const FLIPS: readonly QuirkFlip[] = [
     // Only a rejection of the role itself: "system"/"developer" role, message or instruction named
     // together with unsupported wording, or OpenAI's o1 "does not support 'system'" (a 400 that merely
     // mentions "system" must not fold the prompt).
-    test: /does\s+not\s+support\s+['"`](?:system|developer)['"`]|invalid\s+role|(?=.*(?:unsupported|not\s+(?:supported|enabled|allowed|permitted|available)|does\s+not\s+support|unrecognized))(?=.*\b(?:system|developer)\s+(?:role|message|instruction|prompt)s?\b)/is,
+    test: /does\s+not\s+support\s+['"`](?:system|developer)['"`]|invalid\s+role.{0,40}['"`](?:system|developer)['"`]|(?=.*(?:unsupported|not\s+(?:supported|enabled|allowed|permitted|available)|does\s+not\s+support|unrecognized))(?=.*\b(?:system|developer)\s+(?:role|message|instruction|prompt)s?\b)/is,
     apply: (q, req) => req.system !== '' && q.supportsSystemRole !== false && ((q.supportsSystemRole = false), true),
   },
 ];
