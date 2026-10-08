@@ -68,8 +68,8 @@ terms consistent, and rewrite idioms. That's the core of this design (§5).
 - **Scroll sync** (toggle): scrolling the page scrolls the panel, and the reverse.
 - **Hover link**: hovering a translated paragraph highlights the original in the page, and the
   reverse.
-- **Viewport first**: blocks visible on screen are translated first, then the rest of the page in
-  reading order.
+- **Viewport first**: blocks visible on screen are translated first, then the rest of the page,
+  reading on from the screen and then the part above it (decision M3-D9).
 - **Selection mode**: select text, then right-click **Translate in side panel**, for pages where
   extraction fails or when you only need one passage.
 - **Per-block actions**: *show original inline*, *retranslate*, *explain this* (a short note on
