@@ -40,6 +40,19 @@ export function checkKey(key: string): LLMError | null {
   return { kind: 'auth', message: "Key has characters that can't be sent" };
 }
 
+const HEADER_NAME = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+
+/** Row 0b's twin for `extraHeaders` and a custom auth header name: fetch throws on a bad name or value. */
+export function checkHeaders(headers: Record<string, string> | undefined, authHeaderName?: string): LLMError | null {
+  const entries = Object.entries(headers ?? {});
+  if (authHeaderName !== undefined) entries.push([authHeaderName, '']);
+  for (const [name, value] of entries) {
+    if (!HEADER_NAME.test(name)) return { kind: 'bad_request', message: `Header name "${name}" is not valid` };
+    if (!HEADER_SAFE.test(value)) return { kind: 'bad_request', message: `Header "${name}" has characters that can't be sent` };
+  }
+  return null;
+}
+
 // ---- After fetch: an HTTP error response (S4 rows 3–10, §4.3.5) ------------------------------
 
 export interface HttpErrorInput {

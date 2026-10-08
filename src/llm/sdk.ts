@@ -4,7 +4,7 @@
 // §4.2.4 quirk flip at most once per `stream()` call, `usage` always before the terminal event,
 // and a cancel that throws `signal.reason`.
 
-import { checkBaseUrl, checkKey, classifyFetchError, classifyHttpError, classifyStreamError, isQuirkFlipCandidate } from './errors.ts';
+import { checkBaseUrl, checkHeaders, checkKey, classifyFetchError, classifyHttpError, classifyStreamError, isQuirkFlipCandidate } from './errors.ts';
 import type { LLMError, NormalizedEvent, NormalizedRequest, Quirks, ResolvedConnection } from './types.ts';
 
 /** What both SDKs' `APIError` classes share. `status` is undefined for connection and mid-stream errors. */
@@ -52,6 +52,8 @@ export const FLIP_TEMPERATURE: QuirkFlip = {
 export function preflight(conn: ResolvedConnection): LLMError | null {
   const url = checkBaseUrl(conn.baseUrl);
   if (url !== null) return url;
+  const headers = checkHeaders(conn.extraHeaders, conn.auth.style === 'custom-header' ? (conn.auth.headerName ?? 'api-key') : undefined);
+  if (headers !== null) return headers;
   if (conn.auth.style === 'none') return null;
   if (conn.apiKey === undefined || conn.apiKey === '') return { kind: 'auth', message: 'Key invalid or missing' };
   return checkKey(conn.apiKey);

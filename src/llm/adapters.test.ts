@@ -129,6 +129,15 @@ describe.each(harnesses)('$name adapter (shared contract)', (h) => {
     expect(f.requests).toHaveLength(0);
   });
 
+  it('extraHeaders and a custom header name are checked before any request: bad_request naming the header, not an auth/key error', async () => {
+    const f = mockFetch([h.ok(['x'])]);
+    const adapter = h.adapter(f.fetch);
+    expect(await collect(adapter.stream(h.conn({ extraHeaders: { 'X-Tenant': 'caf\u0153\u2014' } }), request(h.model)))).toEqual([{ type: 'error', error: { kind: 'bad_request', message: 'Header "X-Tenant" has characters that can\'t be sent' } }]);
+    expect(await collect(adapter.stream(h.conn({ extraHeaders: { 'bad name': 'v' } }), request(h.model)))).toMatchObject([{ type: 'error', error: { kind: 'bad_request', message: 'Header name "bad name" is not valid' } }]);
+    expect(await collect(adapter.stream(h.conn({ auth: { style: 'custom-header', headerName: 'X Token' } }), request(h.model)))).toMatchObject([{ type: 'error', error: { kind: 'bad_request' } }]);
+    expect(f.requests).toHaveLength(0);
+  });
+
   it('S4 rows 1–2: a fetch TypeError is cors/permission without the host permission, network with it', async () => {
     const boom = (): ScriptedResponse => ({ throw: new TypeError('Failed to fetch') });
     const a = await collect(h.adapter(mockFetch([boom()]).fetch).stream(h.conn({ hasHostPermission: async () => false }), request(h.model)));
@@ -519,6 +528,25 @@ describe('openai-chat adapter (wire details)', () => {
     await collect(createOpenAIAdapter({ fetch: g.fetch }).stream(d, request('m')));
     expect(g.requests).toHaveLength(1);
     expect(d.quirks).toEqual({});
+  });
+
+  it('review 1: a value error ("max_tokens is too large") does not flip the max-tokens parameter or resend', async () => {
+    const bad: ScriptedResponse = { status: 400, body: '{"error":{"message":"max_tokens is too large: 999999. This model supports at most 16384 completion tokens.","type":"invalid_request_error"}}' };
+    const f = mockFetch([bad]);
+    const c = conn();
+    const events = await collect(createOpenAIAdapter({ fetch: f.fetch }).stream(c, request('m')));
+    expect(f.requests).toHaveLength(1);
+    expect(events).toMatchObject([{ type: 'error', error: { kind: 'bad_request' } }]);
+    expect(c.quirks).toEqual({});
+  });
+
+  it('review 2: an unrelated 400 that mentions "system" does not fold the system prompt', async () => {
+    const bad: ScriptedResponse = { status: 400, body: '{"error":{"message":"The system is overloaded with invalid input, try a shorter prompt","type":"invalid_request_error"}}' };
+    const f = mockFetch([bad]);
+    const c = conn();
+    await collect(createOpenAIAdapter({ fetch: f.fetch }).stream(c, request('m', { system: 'rules' })));
+    expect(f.requests).toHaveLength(1);
+    expect(c.quirks).toEqual({});
   });
 
   it('N2: a 400 about the system role flips only when a system block was sent', async () => {

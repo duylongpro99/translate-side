@@ -21,8 +21,10 @@ const FLIPS: readonly QuirkFlip[] = [
   FLIP_TEMPERATURE,
   {
     key: 'maxTokensParam',
-    // Always sent, under one name or the other.
-    test: /max_completion_tokens|max_tokens/i,
+    // Always sent, under one name or the other. Only "this parameter is not supported / use the
+    // other" wording flips: "max_tokens is too large" is a bad value, and flipping would resend the
+    // same number and save a wrong quirk.
+    test: /(?=.*(?:unsupported|not\s+supported|unrecognized|unknown\s+(?:parameter|name)|use\s+['"`]?max_(?:completion_)?tokens))(?=.*max_(?:completion_)?tokens)/is,
     apply: (q) => {
       q.maxTokensParam = (q.maxTokensParam ?? 'max_tokens') === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
       return true;
@@ -40,7 +42,9 @@ const FLIPS: readonly QuirkFlip[] = [
     },
   },
   { key: 'supportsJsonMode', test: /response_format/i, apply: (q, req) => req.jsonMode === true && q.supportsJsonMode !== false && ((q.supportsJsonMode = false), true) },
-  { key: 'supportsSystemRole', test: /\bsystem\b|developer/i, apply: (q, req) => req.system !== '' && q.supportsSystemRole !== false && ((q.supportsSystemRole = false), true) },
+  { key: 'supportsSystemRole', // Only a rejection of the role itself: "system"/"developer" role, message or instruction named
+  // together with unsupported wording (a 400 that merely mentions "system" must not fold the prompt).
+  test: /(?=.*(?:unsupported|not\s+(?:supported|enabled|allowed|permitted|available)|does\s+not\s+support|unrecognized|invalid))(?=.*\b(?:system|developer)\s+(?:role|message|instruction|prompt)s?\b)/is, apply: (q, req) => req.system !== '' && q.supportsSystemRole !== false && ((q.supportsSystemRole = false), true) },
 ];
 
 function clientFor(conn: ResolvedConnection, options: AdapterOptions): OpenAI {
