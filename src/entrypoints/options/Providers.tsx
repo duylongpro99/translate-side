@@ -27,6 +27,14 @@ const hostOf = (url: string) => {
     return url;
   }
 };
+/** The host a permission covers: match patterns have no port (settings.ts originPattern). */
+const hostnameOf = (url: string) => {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+};
 const newId = () => (globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 const perM = (n: number) => `$${Number(n.toFixed(3))}`;
 
@@ -99,6 +107,11 @@ export function ProvidersSection({ api, adapterFor = createAdapter, retestMs = R
     };
   }, [api]);
 
+  /** A form replaces the list: the note about the last action goes with it. */
+  const open = (next: View) => {
+    setNote(undefined);
+    setView(next);
+  };
   const done = (text?: string) => {
     setView({ kind: 'list' });
     setNote(text ? { text } : undefined);
@@ -124,8 +137,8 @@ export function ProvidersSection({ api, adapterFor = createAdapter, retestMs = R
         <ModelForm api={api} adapterFor={adapterFor} loaded={loaded} onDone={done} />
       ) : (
         <>
-          <Connections api={api} loaded={loaded} onAdd={() => setView({ kind: 'add' })} onEdit={(id, guide) => setView({ kind: 'edit', id, guide })} onNote={(text, warn) => (setNote({ text, warn }), void reload())} />
-          <Models api={api} loaded={loaded} onAdd={() => setView({ kind: 'model' })} onNote={(text, warn) => (setNote({ text, warn }), void reload())} />
+          <Connections api={api} loaded={loaded} onAdd={() => open({ kind: 'add' })} onEdit={(id, guide) => open({ kind: 'edit', id, guide })} onNote={(text, warn) => (setNote({ text, warn }), void reload())} />
+          <Models api={api} loaded={loaded} onAdd={() => open({ kind: 'model' })} onNote={(text, warn) => (setNote({ text, warn }), void reload())} />
           <RoutingView api={api} loaded={loaded} onNote={(text, warn) => (setNote({ text, warn }), void reload())} />
         </>
       )}
@@ -220,7 +233,8 @@ const BUILTIN_IDS = new Set(BUILTIN_CONNECTIONS.map((c) => c.id));
 // ---- Models -----------------------------------------------------------------------------------
 
 function priceText(p: ModelProfile, c: ProviderConnection | undefined): string {
-  if (c && isLocal(c)) return 'free · local';
+  // Ollama and LM Studio run here; a gateway that merely listens on localhost may still bill.
+  if (c && presetFor(c.presetId, c.protocol).local !== undefined) return 'free · local';
   const price = c ? pricingFor(p, c) : p.pricing;
   return price ? `${perM(price.inPerM)}/${perM(price.outPerM)} per M` : 'no price set';
 }
@@ -644,7 +658,7 @@ function ConnectionForm({
         <button type="button" onClick={onTest} disabled={test.kind === 'running'} data-testid="test-connection">
           {test.kind === 'running' ? 'Testing…' : 'Test connection'}
         </button>
-        <span class="opt__hint">Chrome asks for access to {hostOf(fixBaseUrl(draft.baseUrl).url) || 'the server'} only.</span>
+        <span class="opt__hint">Chrome asks for access to {hostnameOf(fixBaseUrl(draft.baseUrl).url) || 'the server'} only.</span>
       </div>
       {test.kind === 'done' ? <TestOutcome draft={draft} test={test} onFixKey={() => keyInput.current?.focus()} onRetry={onTest} onUseUrl={(url) => set({ baseUrl: url })} onGuide={() => setGuide(true)} /> : null}
       {guide && preset.local ? <CorsGuide local={preset.local} onClose={() => setGuide(false)} /> : null}

@@ -44,6 +44,11 @@ body {
   font: inherit;
   padding: 4px 6px;
 }
+.opt__row input[type='checkbox'],
+.opt__row input[type='radio'] {
+  flex: none;
+  min-width: 0;
+}
 .opt__hint,
 .opt__honest {
   color: var(--muted);
