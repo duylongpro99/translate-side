@@ -171,6 +171,7 @@ describe('translation in the panel (plan M1-E10)', () => {
         cancel: () => calls.push('cancel'),
         resume: () => calls.push('resume'),
         openOptions: () => calls.push('options'),
+        retrySegment: (id: string) => calls.push(`retry:${id}`),
         grantAccess: () => calls.push('grant'),
       }),
     };

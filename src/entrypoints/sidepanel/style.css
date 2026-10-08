@@ -240,6 +240,17 @@ body {
 .job__cost-note {
   color: var(--muted);
 }
+.job__backoff {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.job__button--fix {
+  border-color: var(--accent);
+}
 .job__button {
   font: inherit;
   padding: 3px 10px;
@@ -261,6 +272,16 @@ body {
 }
 .seg__note--failed {
   color: var(--danger);
+}
+.seg__retry {
+  font: inherit;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
 }
 
 /* About this document (plan M2-E1) */

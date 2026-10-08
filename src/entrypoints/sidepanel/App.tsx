@@ -118,7 +118,7 @@ export function App({ controller, translator }: { controller: PanelController; t
             </p>
           )}
           {job?.brief ? <AboutDocument brief={job.brief} sourceLang={job.sourceLang} /> : null}
-          <SegmentList segments={job?.segments ?? view.result.segments} states={job?.segs} />
+          <SegmentList segments={job?.segments ?? view.result.segments} states={job?.segs} {...(job && translator && tabId !== undefined ? { actions: { retry: translator.actions(tabId).retrySegment } } : {})} />
         </>
       )}
     </main>

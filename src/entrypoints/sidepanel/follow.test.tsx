@@ -62,7 +62,7 @@ describe('scroll follow in the panel (plan M3-E7)', () => {
     const view: PanelView = { kind: 'ready', docId: 'd', result: { ok: true, via: 'walk', url: 'https://x/', title: 'Page', segments } };
     const controller = { view, tabId: 7, subscribe: (fn: (v: PanelView, t: number | undefined) => void) => (fn(view, 7), () => undefined), retry: () => undefined };
     const jobs = { docOf: () => undefined, get: () => undefined, subscribe: () => () => undefined };
-    const translator: TranslatorProps = { jobs: jobs as unknown as Jobs, actions: () => ({ cancel() {}, resume() {}, openOptions() {}, grantAccess() {} }), viewports };
+    const translator: TranslatorProps = { jobs: jobs as unknown as Jobs, actions: () => ({ cancel() {}, resume() {}, openOptions() {}, retrySegment() {}, grantAccess() {} }), viewports };
     act(() => render(<App controller={controller as unknown as PanelController} translator={translator} />, root));
     // Layout: header 40 px tall; block b at 600 px from the window top, 100 px tall.
     (root.querySelector('.panel__header') as HTMLElement).getBoundingClientRect = () => rect(0, 40);

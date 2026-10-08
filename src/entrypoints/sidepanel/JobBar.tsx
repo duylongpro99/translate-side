@@ -1,6 +1,7 @@
+import { useEffect, useState } from 'preact/hooks';
 import { languageLabel } from '@/engine/index';
 import { formatUsd } from '@/shared/cost';
-import type { JobView } from './jobs.ts';
+import type { Backoff, JobView } from './jobs.ts';
 import { failureText } from './status.ts';
 
 // The job's status line (plan M1-E10): progress, Cancel, and the cost readout.
@@ -10,11 +11,43 @@ export interface JobActions {
   /** Translate what is left (after a cancel or failures), keeping the finals and the cost so far. */
   resume(): void;
   openOptions(): void;
+  /** Translate this one failed segment again (its inline Retry, M3-E8). */
+  retrySegment(id: string): void;
   /** Asks for the provider's host permission. Must run inside the click (a user gesture, §4.3.3). */
   grantAccess(): void;
 }
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
+
+/**
+ * One line per chunk waiting out a rate limit or a busy provider (plan M3-E8). With a Retry-After
+ * it counts down; without one the retry comes within the engine's backoff, so it only says so.
+ * Gone as soon as the chunk's next attempt starts.
+ */
+function BackoffNote({ entries }: { entries: readonly Backoff[] }) {
+  const [now, setNow] = useState(() => Date.now());
+  const counting = entries.some((e) => e.until !== undefined);
+  useEffect(() => {
+    if (!counting) return;
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, [counting]);
+  return (
+    <ul class="job__backoff" data-testid="job-backoff" aria-live="polite">
+      {entries.map((e) => {
+        const why = e.kind === 'rate_limit' ? 'Rate limited' : e.kind === 'network' ? 'Connection problem' : 'Provider busy';
+        const wait = e.until === undefined ? 'retrying shortly' : `retrying in ${Math.max(0, Math.ceil((e.until - now) / 1000))} s`;
+        return (
+          <li key={e.chunk} data-chunk={e.chunk} data-kind={e.kind}>
+            {why}
+            {e.chunk >= 0 ? ` · part ${e.chunk + 1}` : ''} · {wait}
+            {e.attempt > 1 ? ` (attempt ${e.attempt})` : ''}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 export function JobBar({ job, actions }: { job: JobView; actions: JobActions }) {
   const { final, failed, total } = job.counts;
@@ -49,6 +82,7 @@ export function JobBar({ job, actions }: { job: JobView; actions: JobActions }) 
           <button type="button" class="job__button" onClick={actions.cancel}>
             Cancel
           </button>
+          {job.backoff?.length ? <BackoffNote entries={job.backoff} /> : null}
         </div>
       );
     case 'done':
@@ -99,21 +133,23 @@ export function JobBar({ job, actions }: { job: JobView; actions: JobActions }) 
       const error = job.stopError;
       const fix =
         error?.kind === 'auth' ? (
-          <button type="button" class="job__button" onClick={actions.openOptions}>
-            Open settings
+          <button type="button" class="job__button job__button--fix" data-testid="fix-key" onClick={actions.openOptions} title={job.connection ? `Open the settings of ${job.connection.label}` : 'Open settings'}>
+            Fix key
           </button>
         ) : error?.kind === 'cors' && error.cause === 'permission' ? (
           <button type="button" class="job__button" onClick={actions.grantAccess}>
             Grant access
           </button>
         ) : (
-          <button type="button" class="job__button" onClick={actions.resume}>
-            Try again
+          <button type="button" class="job__button" data-testid="retry-page" onClick={actions.resume}>
+            {error?.kind === 'network' ? 'Retry' : 'Try again'}
           </button>
         );
+      // A dropped connection: what is translated stays, Retry does only the rest (M3-E8).
+      const text = error?.kind === 'network' ? `Lost the connection · ${final} of ${total} translated, the rest is waiting` : error ? capitalize(failureText(error)) : 'Stopped';
       return (
         <div {...attrs} role="alert">
-          <span class="job__text">{error ? capitalize(failureText(error)) : 'Stopped'}</span>
+          <span class="job__text">{text}</span>
           {cost}
           {fix}
         </div>

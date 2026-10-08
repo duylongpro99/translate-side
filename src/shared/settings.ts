@@ -133,7 +133,8 @@ export function resolveProfile(role: ModelRole): { profile: ModelProfile; connec
   return { profile, connection };
 }
 
-export const secretKey = (connectionId: string) => `secret:${connectionId}`;
+export const SECRET_PREFIX = 'secret:';
+export const secretKey = (connectionId: string) => `${SECRET_PREFIX}${connectionId}`;
 
 /** storage.local only, never sync (§4.3.4). Trimmed, as S4 requires. */
 export async function saveApiKey(api: Browser, connectionId: string, key: string): Promise<void> {

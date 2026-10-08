@@ -4,7 +4,7 @@
 import type { browser } from 'wxt/browser';
 import { chromeLanguageDetector, detectionSample, detectSourceLanguage, MIXED_LANGUAGE_DETECTION, sameLanguage, segmentsInLanguage, type LanguageDetectorPort } from '@/shared/language';
 import type { GlossaryEntry } from '@/engine/types';
-import { DEFAULT_CONNECTION, DEFAULT_ORIGIN, GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences, secretKey, type Preferences } from '@/shared/settings';
+import { DEFAULT_ORIGIN, GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences, SECRET_PREFIX, type Preferences } from '@/shared/settings';
 import type { SessionHooks } from './controller.ts';
 import type { JobActions } from './JobBar.tsx';
 import { openTranslationCache } from '@/shared/cache';
@@ -207,6 +207,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     cancel: () => jobs.cancel(tabId),
     resume: () => resume(tabId),
     openOptions: () => void api.runtime.openOptionsPage(),
+    retrySegment: (id) => void jobs.retrySegment(tabId, id),
     grantAccess: () => {
       // First call in the click handler: permissions.request needs the gesture (§4.3.3 step 3).
       void api.permissions.request({ origins: [DEFAULT_ORIGIN] }).then((granted) => {
@@ -221,8 +222,9 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       const tabId = activeTab();
       if (tabId !== undefined && jobs.get(tabId)?.status === 'stopped') resume(tabId);
     };
+    // Any connection's key: "Fix key" applies to whichever connection the job ran on (M3-E8).
     const onLocal = (changes: Record<string, unknown>) => {
-      if (secretKey(DEFAULT_CONNECTION.id) in changes) retryStopped();
+      if (Object.keys(changes).some((k) => k.startsWith(SECRET_PREFIX))) retryStopped();
     };
     /** Settings changed: the active tab's page is translated again if they concern it (refresh). */
     const onSync = (changes: Record<string, unknown>) => {

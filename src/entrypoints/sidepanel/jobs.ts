@@ -15,7 +15,8 @@
 // - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
-import { briefCacheKey, contextual, createDefaultPromptRegistry, createEngine, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob } from '@/engine/index';
+import { briefCacheKey, contextual, createDefaultPromptRegistry, createEngine, decideRetry, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob } from '@/engine/index';
+import type { SnippetRequest } from '@/engine/types';
 import type { LLMClient, LLMError, LLMErrorKind, NormalizedRequest } from '@/llm/types';
 import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
 import { costUsd, type UsageTotals } from '@/shared/cost';
@@ -51,6 +52,17 @@ export type JobStatus =
  */
 export const PANEL_STRATEGY: StrategyId = contextual.id;
 
+/** A chunk's request waiting out a rate limit or a provider/network hiccup before its retry (plan M3-E8). */
+export interface Backoff {
+  /** The chunk's place in the order the job's chunks started (NormalizedRequest.chunkIndex); -1 for the analyze call. */
+  chunk: number;
+  kind: LLMErrorKind;
+  /** Failed attempts of this request so far. */
+  attempt: number;
+  /** Epoch ms the provider asked us to wait until (Retry-After); absent when it gave no hint. */
+  until?: number;
+}
+
 export interface JobView {
   status: JobStatus;
   /** Running, but its tab is in the background: no new requests start (D14). */
@@ -83,6 +95,10 @@ export interface JobView {
   unmetered: number;
   /** The error that stopped the job (status `stopped`). */
   stopError?: LLMError;
+  /** The connection the job runs on, for "Fix key" (M3-E8). Absent until the client is resolved. */
+  connection?: { id: string; label: string };
+  /** Requests waiting out a retryable failure right now, one per chunk (M3-E8). Absent when none. */
+  backoff?: readonly Backoff[];
   /** Epoch ms: when this run started, when its first text became visible, when it ended. */
   startedAt: number;
   firstVisibleAt?: number;
@@ -94,8 +110,15 @@ export interface JobView {
   endedAt?: number;
 }
 
-/** These hit every request of the job alike, so the job stops at the first one (§4.3.5: "stop", no silent fallback). */
-const STOP_KINDS: ReadonlySet<LLMErrorKind> = new Set(['auth', 'quota', 'cors', 'model_not_found']);
+/**
+ * These hit every request of the job alike, so the job stops at the first one (§4.3.5: "stop", no
+ * silent fallback). `network` is here for the retries that ran out (the engine already backed off):
+ * the page is offline, so the rest would fail the same way; the finals stay and Retry runs the rest (M3-E8).
+ */
+const STOP_KINDS: ReadonlySet<LLMErrorKind> = new Set(['auth', 'quota', 'cors', 'model_not_found', 'network']);
+
+/** The errors the engine's retry waits out (retry.ts RETRYABLE): seen at the shell, they mean "backing off". */
+const BACKOFF_KINDS: ReadonlySet<LLMErrorKind> = new Set(['rate_limit', 'overloaded', 'network']);
 
 // ---- The panel rule for EngineEvents (§5.2), pure so it can be tested on its own --------------
 
@@ -204,10 +227,35 @@ export function gatedClient(inner: LLMClient, gate: Gate): LLMClient {
   };
 }
 
+/**
+ * Reports a request that failed in a way the engine's retry waits out (it sits outside this client
+ * and sleeps before the next attempt), and that its next attempt started (or that it ended). A
+ * request that already streamed text is never retried, so it is not reported. Plan M3-E8.
+ */
+export function backoffClient(inner: LLMClient, watch: { waiting(chunk: number, error: LLMError): void; started(chunk: number): void; streaming(chunk: number): void }): LLMClient {
+  return {
+    model: inner.model,
+    reasoningReserveTokens: (req) => inner.reasoningReserveTokens(req),
+    async *stream(req: NormalizedRequest) {
+      const chunk = req.chunkIndex ?? -1;
+      watch.started(chunk);
+      let text = false;
+      for await (const e of inner.stream(req)) {
+        if (e.type === 'text' && e.delta !== '' && !text) {
+          text = true;
+          watch.streaming(chunk);
+        }
+        if (e.type === 'error' && !text && BACKOFF_KINDS.has(e.error.kind)) watch.waiting(chunk, e.error);
+        yield e;
+      }
+    },
+  };
+}
+
 // ---- Jobs ---------------------------------------------------------------------------------
 
 /** What a job needs from the panel: the translate client for the routed profile, or why there is none. */
-export type ClientResult = { ok: true; client: LLMClient; profile: ModelProfile } | { ok: false; error: LLMError };
+export type ClientResult = { ok: true; client: LLMClient; profile: ModelProfile; connection?: { id: string; label: string } } | { ok: false; error: LLMError; connection?: { id: string; label: string } };
 
 export interface JobDeps {
   /** Resolves the `translate` role (§4.3.5): key, host permission, profile. Called once per run. */
@@ -270,6 +318,11 @@ interface Job {
   fresh?: boolean;
   /** The brief cache key of this document; undefined without a cache. */
   briefKey?: string | undefined;
+  /** Requests waiting out a retryable failure, and the failed attempts so far per chunk (M3-E8). */
+  backoff: Map<number, Backoff>;
+  failures: Map<number, number>;
+  /** Single-segment retries in flight, by segment id (M3-E8). */
+  retrying: Map<string, AbortController>;
 }
 
 export type JobsListener = (tabId: number, view: JobView | undefined) => void;
@@ -355,6 +408,7 @@ export class Jobs {
     // A replaced run's requests in flight end without usage; they are this page's spend too.
     const abandoned = costFrom && costFrom.view.status === 'running' ? costFrom.inflight : 0;
     if (prev?.view.status === 'running') prev.controller.abort(new DOMException('replaced', 'AbortError'));
+    if (prev) this.stopRetries(prev);
 
     // Segments already in the target language (per-segment detection) are shown as is, like code.
     const segments = doc.keep?.size ? doc.segments.map((s) => (s.translate && doc.keep?.has(s.id) ? { ...s, translate: false } : s)) : doc.segments;
@@ -381,6 +435,9 @@ export class Jobs {
       writes: new Map(),
       drops: new Set(),
       chain: Promise.resolve(),
+      backoff: new Map(),
+      failures: new Map(),
+      retrying: new Map(),
       fresh,
       view: {
         status: 'running',
@@ -407,6 +464,7 @@ export class Jobs {
     const signal = job.controller.signal;
     const resolved = await this.deps.translateClient();
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
+    if (resolved.connection) this.patch(tabId, job, { connection: resolved.connection });
     if (!resolved.ok) {
       this.finish(tabId, job, 'stopped', resolved.error);
       return;
@@ -422,15 +480,7 @@ export class Jobs {
       this.finish(tabId, job, 'done');
       return;
     }
-    const meter = {
-      start: () => void job.inflight++,
-      end: (unmetered: boolean) => {
-        job.inflight--;
-        if (unmetered) this.patch(tabId, job, { unmetered: job.view.unmetered + 1, cost: costUsd(profile.pricing, job.view.usage) });
-      },
-    };
-    const gated = gatedClient(meteredClient(client, meter), gate);
-    const engine = this.deps.engine?.(gated) ?? this.defaultEngine(gated);
+    const engine = this.engineFor(tabId, job, client, profile);
     const engineJob: TranslationJob = {
       doc: {
         url: doc.url,
@@ -476,6 +526,7 @@ export class Jobs {
   skip(tabId: number, docId: string, doc: JobDoc): void {
     const prev = this.jobs.get(tabId);
     if (prev?.view.status === 'running') prev.controller.abort(new DOMException('replaced', 'AbortError'));
+    if (prev) this.stopRetries(prev);
     const segs = new Map<string, SegState>();
     const keepCost = prev?.docId === docId ? prev : undefined;
     const now = this.now();
@@ -492,6 +543,9 @@ export class Jobs {
       writes: new Map(),
       drops: new Set(),
       chain: Promise.resolve(),
+      backoff: new Map(),
+      failures: new Map(),
+      retrying: new Map(),
       view: {
         status: 'skipped',
         paused: false,
@@ -536,9 +590,109 @@ export class Jobs {
   /** The Cancel button, a navigation, the tab closing. Finals stay; previews are dropped. */
   cancel(tabId: number): void {
     const job = this.jobs.get(tabId);
+    if (job) this.stopRetries(job);
     if (!job || job.view.status !== 'running') return;
     job.controller.abort(new DOMException('cancelled', 'AbortError'));
     this.finish(tabId, job, 'cancelled');
+  }
+
+  /**
+   * Translates one failed segment again (its inline Retry, M3-E8), and only that one: a single
+   * request through the engine's snippet path, folded into the job like any other result. Works
+   * on a running, finished or stopped job; Cancel and a navigation abort it. A failure puts the
+   * earlier error back.
+   */
+  async retrySegment(tabId: number, id: string): Promise<void> {
+    const job = this.jobs.get(tabId);
+    const before = job?.segs.get(id);
+    const segment = job?.view.segments.find((s) => s.id === id);
+    if (!job || !segment || before?.status !== 'failed' || job.retrying.has(id)) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    job.retrying.set(id, controller);
+    const settle = (state: SegState) => {
+      if (this.jobs.get(tabId) !== job) return;
+      job.segs.set(id, state);
+      this.remember(job, id, state);
+      this.patch(tabId, job, { counts: count(job.segs) });
+    };
+    settle({ status: 'pending' });
+    try {
+      const resolved = await this.deps.translateClient();
+      if (signal.aborted) return settle(before);
+      if (!resolved.ok) {
+        settle({ ...before, error: resolved.error });
+        if (STOP_KINDS.has(resolved.error.kind) && job.view.status !== 'running') this.finish(tabId, job, 'stopped', resolved.error);
+        return;
+      }
+      const { doc } = job;
+      const request: SnippetRequest = {
+        doc: { url: doc.url, title: doc.title, sourceLang: doc.sourceLang, targetLang: doc.targetLang, outline: [] },
+        segments: [segment],
+        options: {
+          style: doc.style ?? 'natural',
+          ...(doc.gloss ? { gloss: doc.gloss } : {}),
+          glossary: [...(doc.glossary ?? [])],
+          maxConcurrency: 1,
+          chunkTokens: resolved.profile.chunkTokens,
+          ...(job.view.brief ? { brief: job.view.brief } : {}),
+        },
+      };
+      let outcome: SegState | undefined;
+      for await (const event of this.engineFor(tabId, job, resolved.client, resolved.profile).translateSnippet(request, signal)) {
+        if (this.jobs.get(tabId) !== job) return;
+        if (event.type === 'usage') this.onEvent(tabId, job, event, resolved.profile);
+        if (event.type !== 'segment.partial' && event.type !== 'segment.final' && event.type !== 'segment.failed') continue;
+        if (event.id !== id) continue;
+        const next = applySegmentEvent(outcome ?? { status: 'pending' }, event);
+        if (!next || next === outcome) continue;
+        outcome = next;
+        if (next.status === 'streaming') {
+          job.segs.set(id, next);
+          this.patch(tabId, job, { counts: count(job.segs) });
+        }
+      }
+      if (signal.aborted || !outcome || outcome.status === 'streaming' || outcome.status === 'pending') return settle(before);
+      settle(outcome);
+      if (outcome.status === 'failed' && outcome.error && STOP_KINDS.has(outcome.error.kind) && job.view.status !== 'running') this.finish(tabId, job, 'stopped', outcome.error);
+    } catch (err) {
+      settle(signal.aborted ? before : { ...before, error: { kind: 'unknown', message: err instanceof Error ? err.message : String(err), raw: err } });
+    } finally {
+      if (job.retrying.get(id) === controller) job.retrying.delete(id);
+    }
+  }
+
+  private stopRetries(job: Job): void {
+    for (const c of job.retrying.values()) c.abort(new DOMException('cancelled', 'AbortError'));
+    job.retrying.clear();
+  }
+
+  /** The engine over the job's client: counted, gated by the tab being active, and watched for backoff (M3-E8). */
+  private engineFor(tabId: number, job: Job, client: LLMClient, profile: ModelProfile): TranslationEngine {
+    const meter = {
+      start: () => void job.inflight++,
+      end: (unmetered: boolean) => {
+        job.inflight--;
+        if (unmetered) this.patch(tabId, job, { unmetered: job.view.unmetered + 1, cost: costUsd(profile.pricing, job.view.usage) });
+      },
+    };
+    const publish = () => this.patch(tabId, job, { backoff: job.backoff.size ? [...job.backoff.values()] : [] });
+    const watch = {
+      waiting: (chunk: number, error: LLMError) => {
+        const attempt = (job.failures.get(chunk) ?? 0) + 1;
+        job.failures.set(chunk, attempt);
+        // The engine gives up (or hands over) after its retries: that is a failure, not a wait.
+        if (decideRetry(error, attempt - 1).action !== 'retry') job.backoff.delete(chunk);
+        else job.backoff.set(chunk, { chunk, kind: error.kind, attempt, ...(error.retryAfterMs === undefined ? {} : { until: this.now() + error.retryAfterMs }) });
+        publish();
+      },
+      started: (chunk: number) => {
+        if (job.backoff.delete(chunk)) publish();
+      },
+      streaming: (chunk: number) => void job.failures.delete(chunk),
+    };
+    const gated = gatedClient(backoffClient(meteredClient(client, meter), watch), job.gate);
+    return this.deps.engine?.(gated) ?? this.defaultEngine(gated);
   }
 
   /** The tab is gone (closed, moved to another window): cancel and forget its job. */
@@ -696,8 +850,9 @@ export class Jobs {
 
   private finish(tabId: number, job: Job, status: Exclude<JobStatus, 'running'>, stopError?: LLMError): void {
     // Previews of a request that did not finish can't be trusted: back to the original.
-    for (const [id, s] of job.segs) if (s.status === 'streaming') job.segs.set(id, { status: 'pending' });
-    this.patch(tabId, job, { status, paused: false, counts: count(job.segs), endedAt: this.now(), ...(stopError ? { stopError } : {}) });
+    for (const [id, s] of job.segs) if (s.status === 'streaming' && !job.retrying.has(id)) job.segs.set(id, { status: 'pending' });
+    job.backoff.clear();
+    this.patch(tabId, job, { backoff: [], status, paused: false, counts: count(job.segs), endedAt: this.now(), ...(stopError ? { stopError } : {}) });
   }
 
   private patch(tabId: number, job: Job, patch: Partial<JobView>): void {
