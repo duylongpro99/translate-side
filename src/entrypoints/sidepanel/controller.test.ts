@@ -342,6 +342,59 @@ describe('PanelController', () => {
   });
 });
 
+describe('navigated hook (review E4): a page change, not the panel\'s own reconnect', () => {
+  const hooksLog = () => {
+    const log: string[] = [];
+    return { log, hooks: { gone: (t: number) => log.push(`gone ${t}`), navigated: (t: number) => log.push(`navigated ${t}`) } };
+  };
+
+  it('a right-click on the error view (hello failed, then the worker re-injects) reconnects without navigated', async () => {
+    const w = fakeWorld();
+    const { log, hooks } = hooksLog();
+    w.pages[10] = { docId: 'd1', result: ok(1), mute: true };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    const { c } = await started(w, { hooks, helloTimeoutMs: 50 });
+    await wait(100);
+    expect(c.view.kind).toBe('error');
+    log.length = 0;
+    w.setAccess(10, { status: 'ready' }); // the context-menu click injects again
+    await wait(100);
+    expect(log).not.toContain('navigated 10');
+    c.retry(); // "Try again"
+    await wait(100);
+    expect(log).not.toContain('navigated 10');
+  });
+
+  it('fires when the page closes the port, and on a URL or load change of the tab', async () => {
+    const w = fakeWorld();
+    const { log, hooks } = hooksLog();
+    w.pages[10] = { docId: 'd1', result: ok(1) };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    await started(w, { hooks });
+    await wait();
+    w.contentEnds[10]?.disconnect();
+    await wait();
+    expect(log).toContain('navigated 10');
+    log.length = 0;
+    w.fire('updated', 10, { url: 'https://example.com/b' });
+    expect(log).toEqual(['navigated 10']);
+    w.fire('updated', 10, { status: 'loading' });
+    expect(log).toEqual(['navigated 10', 'navigated 10']);
+    w.fire('updated', 10, { title: 'x' });
+    expect(log).toHaveLength(2);
+  });
+
+  it('fires for a restricted tab, which has no port: restricted to restricted navigation', async () => {
+    const w = fakeWorld();
+    const { log, hooks } = hooksLog();
+    w.store[accessKey(10)] = { status: 'blocked', reason: 'restricted', at: 0 };
+    await started(w, { hooks });
+    await wait();
+    w.fire('updated', 10, { url: 'chrome://settings' });
+    expect(log).toEqual(['navigated 10']);
+  });
+});
+
 describe('PanelController session hooks (plan M1-E8)', () => {
   function recorder() {
     const log: string[] = [];

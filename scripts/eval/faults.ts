@@ -187,7 +187,7 @@ async function badkey() {
   jobs.setActive(1);
   await jobs.start(1, 'doc', doc(segments));
   const v = view(jobs);
-  report('badkey', v.status === 'stopped' && v.stopError?.kind === 'auth' && v.connection?.id === connection.id && resolved === 1 && state.requests <= DEFAULT_PROFILE.maxConcurrency + 1, {
+  report('badkey', v.status === 'stopped' && v.stopError?.kind === 'auth' && v.connection?.id === connection.id && resolved === 1 && state.requests <= DEFAULT_PROFILE.maxConcurrency, {
     status: v.status,
     error: v.stopError?.kind,
     connection: v.connection?.label,

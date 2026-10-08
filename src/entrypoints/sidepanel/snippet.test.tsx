@@ -181,7 +181,13 @@ describe('a selection ends with its page, and costs one request (review E4)', ()
     f.leave(3, record('Hello.'));
     await until(() => t.snippets.jobs.get(3)?.status === 'done');
     expect(f.session.has('snippet:3')).toBe(true);
+    // The panel's own reconnect (gone) keeps it: a right-click on the error view, Try again.
     (t.hooks as Required<typeof t.hooks>).gone(3);
+    await act(async () => settle(20));
+    expect(t.snippets.store.get(3)).toBeDefined();
+    expect(f.session.has('snippet:3')).toBe(true);
+    // The page changing under the panel ends it.
+    (t.hooks as Required<typeof t.hooks>).navigated(3);
     await act(async () => settle(20));
     expect(t.snippets.store.get(3)).toBeUndefined();
     expect(t.snippets.jobs.get(3)).toBeUndefined();

@@ -221,10 +221,11 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     },
     gone: (tabId) => {
       live.delete(tabId);
-      // A selection belongs to the page it was made on: a navigation or reload ends it.
-      closeSnippet(tabId);
       jobs.cancel(tabId);
     },
+    // A selection belongs to the page it was made on: a navigation or reload ends it. Not `gone`,
+    // which also fires on the panel's own reconnects (a right-click on an error view, Try again).
+    navigated: (tabId) => closeSnippet(tabId),
     closed: (tabId) => {
       snippetJobs.drop(tabId);
       snippetStore.clear(tabId);

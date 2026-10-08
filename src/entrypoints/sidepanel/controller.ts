@@ -73,6 +73,12 @@ export interface SessionHooks {
    * Its job must stop.
    */
   gone?(tabId: number): void;
+  /**
+   * The page itself changed under the panel: its content script's port closed from the page side
+   * (a navigation or reload), or the tab's URL or load state changed. Not fired for the panel's
+   * own reconnects (a retry, a re-read), so what belongs to the page (a selection) survives those.
+   */
+  navigated?(tabId: number): void;
   /** The tab closed or moved to another window: its job is forgotten. */
   closed?(tabId: number): void;
   /** The window's active tab (pause on tab switch, D14). */
@@ -118,6 +124,7 @@ export class PanelController {
     this.api.tabs.onUpdated.addListener((tabId, info) => {
       const s = this.sessions.get(tabId);
       if (!s) return;
+      if (info.status === 'loading' || info.url !== undefined) this.opts.hooks?.navigated?.(tabId);
       if (info.status === 'loading') this.pageLoading(tabId, s);
       else if (info.status === 'complete') this.pageComplete(tabId, s);
     });
@@ -236,6 +243,7 @@ export class PanelController {
     s.port = port;
     s.client = client;
     port.onDisconnect.addListener(() => {
+      if (s.generation === generation) this.opts.hooks?.navigated?.(tabId);
       if (s.generation === generation) this.opts.hooks?.gone?.(tabId);
       if (s.generation === generation && (s.view.kind === 'ready' || s.pageLoading)) this.awaitReinjection(tabId, s, generation);
     });
