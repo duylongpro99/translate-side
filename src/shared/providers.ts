@@ -49,6 +49,12 @@ export const ROUTING_KEY = 'routing';
 export const SITE_RULES_KEY = 'siteRules';
 /** storage.local: the route the migration derived from this device's M1 keys (e.g. Gemini); `routing` always wins over it. */
 export const MIGRATED_ROUTE_KEY = 'migratedRoute';
+/**
+ * storage.sync: the sites the user allowlisted for automatic translation (DESIGN §8; the UI and
+ * its permission grants are M5-E3). Host patterns as site rules take them (`example.com`,
+ * `*.example.com`). A provider's origin that an allowlisted site shares is never revoked.
+ */
+export const SITE_ALLOWLIST_KEY = 'siteAllowlist';
 /** chrome.storage.sync.MAX_ITEMS (fixed by Chrome). */
 export const SYNC_MAX_ITEMS = 512;
 export const TAB_ROUTE_PREFIX = 'tabRoute:';
@@ -405,6 +411,33 @@ export function saveProfile(api: Browser, profile: ModelProfile): Promise<void> 
   });
 }
 
+/** The fields a Test connection outcome sets on a connection. */
+export type ConnectionStatus = Pick<ProviderConnection, 'status' | 'lastError' | 'lastErrorKind'>;
+
+/**
+ * Records a Test connection outcome on the stored connection (a built-in one that applies only at
+ * read time is written from its constant), read fresh so nothing else on it is overwritten.
+ * Writes only when the status changes: a guide's auto re-test runs every few seconds and must not
+ * spend the sync write quota (review C1 #5). An ok status clears the last error. Returns whether
+ * it wrote.
+ */
+export function saveConnectionStatus(api: Browser, id: string, status: ConnectionStatus): Promise<boolean> {
+  return queued(async () => {
+    const key = connectionKey(id);
+    const raw = (await storedItem(api, key)) ?? BUILTIN_CONNECTIONS.find((c) => c.id === id);
+    const current = cleanConnection(raw);
+    if (!current || !isRecord(raw)) return false;
+    const next: ConnectionStatus = status.status === 'error' ? status : { status: status.status };
+    if (current.status === next.status && current.lastError === next.lastError && current.lastErrorKind === next.lastErrorKind) return false;
+    const value: Record<string, unknown> = { ...structuredClone(raw), ...next };
+    if (next.lastError === undefined) delete value.lastError;
+    if (next.lastErrorKind === undefined) delete value.lastErrorKind;
+    await checkQuota(api, { [key]: value });
+    await api.storage.sync.set({ [key]: value });
+    return true;
+  });
+}
+
 const ROUTING_FIELDS = new Set(['translate', 'analyze', 'review', 'fallback']);
 
 /**
@@ -540,9 +573,26 @@ export async function removeConnection(api: Browser, id: string): Promise<{ revo
   return { revoked: await revokeUnusedOrigin(api, connection.baseUrl, id) };
 }
 
+/** Does an allowlisted site (SITE_ALLOWLIST_KEY) use `baseUrl`'s host? Entries may also be origins or URLs. */
+async function allowlistedHost(api: Browser, baseUrl: string): Promise<boolean> {
+  const list = (await api.storage.sync.get(SITE_ALLOWLIST_KEY))[SITE_ALLOWLIST_KEY];
+  if (!Array.isArray(list)) return false;
+  const host = new URL(baseUrl).hostname.toLowerCase();
+  return list.some((entry) => {
+    if (typeof entry !== 'string' || entry.trim() === '') return false;
+    const pattern = entry
+      .trim()
+      .toLowerCase()
+      .replace(/^[a-z*]+:\/\//, '')
+      .replace(/[/:].*$/, '');
+    return matchesSite(pattern, `https://${host}/`) || (pattern.startsWith('*.') && host === pattern.slice(2));
+  });
+}
+
 /**
- * Gives back the host permission for `baseUrl`'s origin unless another connection in use needs it
- * (§4.3.4). `except` is the connection being removed or moved.
+ * Gives back the host permission for `baseUrl`'s origin unless another connection in use needs it,
+ * or a site the user allowlisted shares it (§4.3.4, §8). `except` is the connection being removed
+ * or moved; pass an id no connection has to count them all (a Test that was never saved).
  */
 export async function revokeUnusedOrigin(api: Browser, baseUrl: string, except: string): Promise<boolean> {
   let origin: string;
@@ -551,6 +601,7 @@ export async function revokeUnusedOrigin(api: Browser, baseUrl: string, except: 
   } catch {
     return false;
   }
+  if (await allowlistedHost(api, baseUrl)) return false;
   const settings = await readProviderSettings(api);
   for (const c of settings.connections) {
     if (c.id === except) continue;

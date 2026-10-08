@@ -6,12 +6,12 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
 import { createAdapter } from '@/llm/client';
 import type { ModelInfo, Protocol, ProtocolAdapter } from '@/llm/types';
-import { connectMessage, corsGuide, fixBaseUrl, isClaudeModel, preferredProtocol, testConnection, URL_FIX_TEXT, type ConnectMessage, type GuideStep, type TestResult } from '@/shared/connect';
+import { connectMessage, corsGuide, fixBaseUrl, isClaudeModel, preferredProtocol, testConnection, URL_FIX_TEXT, type ConnectMessage, type GuideKind, type GuideStep, type TestResult } from '@/shared/connect';
 import { AUTH_LABELS, PICKER_GROUPS, presetFor, PROTOCOL_LABELS, ROLE_LABELS, type PresetId } from '@/shared/presets';
 import { pricingFor } from '@/shared/pricing';
-import { isProviderKey, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnection, saveProfile, saveRouting, saveSetup, type ProviderSettings } from '@/shared/providers';
+import { isProviderKey, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnectionStatus, saveProfile, saveRouting, saveSetup, type ProviderSettings } from '@/shared/providers';
 import { BUILTIN_CONNECTIONS, hasHostPermission, maskKey, originPattern, readApiKey, resolveConnection, SECRET_PREFIX, type ModelProfile, type ProviderConnection } from '@/shared/settings';
-import { draftFromConnection, draftFromPreset, fieldsFor, testInputOf, toConnection, toProfile, type ConnectionDraft, type TestStatus } from './form.ts';
+import { draftFromConnection, draftFromPreset, fieldsFor, originMoved, testInputOf, toConnection, toProfile, usableStoredKey, type ConnectionDraft, type TestStatus } from './form.ts';
 
 type Browser = typeof browser;
 export type AdapterFor = (protocol: Protocol) => ProtocolAdapter;
@@ -25,6 +25,14 @@ const hostOf = (url: string) => {
     return new URL(url).host;
   } catch {
     return url;
+  }
+};
+/** The host-permission pattern for a URL, or undefined when it does not parse. */
+const safeOrigin = (url: string) => {
+  try {
+    return originPattern(url);
+  } catch {
+    return undefined;
   }
 };
 /** The host a permission covers: match patterns have no port (settings.ts originPattern). */
@@ -148,8 +156,8 @@ export function ProvidersSection({ api, adapterFor = createAdapter, retestMs = R
         </p>
       ) : null}
       <p class="opt__honest">
-        Keys are stored on this device only and are never synced; connections, models and routing sync to your other devices without them. Anyone with access to this browser profile could read a key.
-        Use keys with a spending limit.
+        Keys are stored on this device only and are never synced; connections, models and routing sync to your other devices without them. Extra headers and query params (under Advanced) sync
+        like other settings, so keep secrets in the key field. Anyone with access to this browser profile could read a key. Use keys with a spending limit.
       </p>
     </section>
   );
@@ -164,9 +172,14 @@ function Connections({ api, loaded, onAdd, onEdit, onNote }: { api: Browser; loa
     setConfirm(undefined);
     const builtIn = isImplicit(loaded.settings, c.id) || BUILTIN_IDS.has(c.id);
     removeConnection(api, c.id).then(
-      ({ revoked }) => {
+      async ({ revoked }) => {
         const access = revoked ? ` and access to ${hostOf(c.baseUrl)}` : '';
-        onNote(builtIn ? `Removed the key${access} of ${c.label}. It is built in, so it stays available without a key.` : `Removed ${c.label}, its key${access}.`);
+        if (!builtIn) return onNote(`Removed ${c.label}, its key${access}.`);
+        // Say what the list will show: a built-in stays listed (keyless) only while a route uses it.
+        const listed = visibleConnections(await load(api)).some((x) => x.id === c.id);
+        onNote(
+          `Removed the key${access} of ${c.label}. ${listed ? 'It is built in and a route still uses it, so it stays listed without a key.' : 'It is built in and now hidden; use + Add to set that provider up again.'}`,
+        );
       },
       (err: unknown) => onNote(`Could not remove ${c.label} (${err instanceof Error ? err.message : String(err)})`, true),
     );
@@ -371,19 +384,35 @@ function ModelForm({ api, adapterFor, loaded, onDone }: { api: Browser; adapterF
   const [model, setModel] = useState('');
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [error, setError] = useState<string | undefined>();
+  /** The listing failed for want of the host permission: offer Grant access (review C1 #7). */
+  const [needsAccess, setNeedsAccess] = useState(false);
   const connection = usable.find((c) => c.id === connId);
   const discover = () => {
     if (!connection) return;
     setError(undefined);
+    setNeedsAccess(false);
     void (async () => {
       const conn = await resolveConnection(api, connection);
       if (!conn) return setError('This connection has no key.');
       const result = await adapterFor(conn.protocol).probe(conn);
-      if (result.ok) setModels(result.models ?? []);
-      else setError(connectMessage(result.error, { preset: presetFor(connection.presetId, connection.protocol), baseUrl: connection.baseUrl, model }).text);
+      if (result.ok) return setModels(result.models ?? []);
+      const message = connectMessage(result.error, { preset: presetFor(connection.presetId, connection.protocol), baseUrl: connection.baseUrl, model });
+      setError(message.text);
+      setNeedsAccess(message.action === 'grant');
     })().catch((err: unknown) => setError(String(err)));
   };
   useEffect(discover, [connId]);
+  const grant = () => {
+    const origin = connection && safeOrigin(connection.baseUrl);
+    if (!origin) return;
+    // First in the click: the request needs the gesture (§8), for this connection's origin only.
+    void api.permissions
+      .request({ origins: [origin] })
+      .catch(() => false)
+      .then((granted) => {
+        if (granted) discover();
+      });
+  };
   const save = (e: Event) => {
     e.preventDefault();
     if (!connection || model.trim() === '') return;
@@ -418,7 +447,16 @@ function ModelForm({ api, adapterFor, loaded, onDone }: { api: Browser; adapterF
         </select>
       </div>
       <ModelPicker id="m-model" model={model} models={models} onModel={setModel} />
-      {error ? <p class="opt__status opt__status--warn">{error}</p> : null}
+      {error ? (
+        <p class="opt__status opt__status--warn" data-testid="model-form-error">
+          {error}{' '}
+          {needsAccess ? (
+            <button type="button" onClick={grant} data-testid="model-form-grant">
+              Grant access
+            </button>
+          ) : null}
+        </p>
+      ) : null}
       <div class="opt__row">
         <button type="submit" disabled={model.trim() === ''}>
           Save
@@ -487,6 +525,8 @@ function ConnectionForm({
   const [error, setError] = useState<string | undefined>();
   const keyInput = useRef<HTMLInputElement>(null);
   const running = useRef(false);
+  /** Base URLs whose origin this form's Test was granted (not held before): given back unless saved (§8, review C1 #3). */
+  const grantedHere = useRef(new Set<string>());
   useEffect(() => {
     if (editing) void readApiKey(api, editing.id).then(setStoredKey);
   }, [editing?.id]);
@@ -503,7 +543,8 @@ function ConnectionForm({
     setTest({ kind: 'running' });
     setError(undefined);
     const p = presetFor(d.presetId);
-    const input = testInputOf(d, storedKey, editing?.quirks ?? p.quirks);
+    // §4.3.4: the stored key only while the origin is unchanged (review C1 #1).
+    const input = testInputOf(d, usableStoredKey(d, editing, storedKey), editing?.quirks ?? p.quirks);
     const fixed = fixBaseUrl(d.baseUrl).url;
     try {
       const result = await testConnection(input, { adapter: adapterFor, hasHostPermission: () => hasHostPermission(api, fixed).catch(() => false) });
@@ -517,40 +558,57 @@ function ConnectionForm({
         setGuide(false);
         setDraft((cur) => (cur ? { ...cur, baseUrl: result.baseUrl, model: cur.model || (p.defaultModel && result.models.some((m) => m.id === p.defaultModel) ? p.defaultModel : '') } : cur));
       } else if (message?.action === 'cors-guide') setGuide(true);
-      // An existing connection remembers the outcome, so the list shows it (and its Fix… button).
-      if (editing) await saveConnection(api, { ...editing, ...statusFrom(result, message) }).catch(() => undefined);
+      // An existing connection remembers the outcome, so the list shows it (and its Fix… button):
+      // read fresh, written only when it changed (review C1 #5). Not while it is being moved.
+      if (editing && !originMoved(d, editing)) await saveConnectionStatus(api, editing.id, statusFrom(result, message)).catch(() => false);
       return result;
     } finally {
       running.current = false;
     }
   };
 
+  // The latest draft and test function, for the re-test timer: a model typed after the guide
+  // opened is tested too (review C1 #5).
+  const latest = useRef({ draft, runTest });
+  latest.current = { draft, runTest };
+
   // §4.3.6: while a CORS guide is open, the test runs again by itself until it passes.
   useEffect(() => {
-    if (!guide || !draft) return;
+    if (!guide) return;
     const started = Date.now();
     const timer = setInterval(() => {
-      if (running.current || Date.now() - started > RETEST_FOR_MS) return;
-      void runTest(draft);
+      const { draft: d, runTest: run } = latest.current;
+      if (!d || running.current || Date.now() - started > RETEST_FOR_MS) return;
+      void run(d);
     }, retestMs);
     return () => clearInterval(timer);
-  }, [guide, draft?.baseUrl, draft?.presetId, storedKey]);
+  }, [guide]);
+
+  /** Gives back what this form's tests were granted, except `keep`'s origin (the one saved). */
+  const giveBack = async (keep?: string) => {
+    const keepOrigin = keep === undefined ? undefined : safeOrigin(keep);
+    for (const url of grantedHere.current) if (safeOrigin(url) !== keepOrigin) await revokeUnusedOrigin(api, url, '').catch(() => false);
+    grantedHere.current.clear();
+  };
+  const cancel = () => void giveBack().finally(() => onDone());
 
   if (!draft || !preset) return <PresetPicker onPick={(id) => setDraft(draftFromPreset(id))} onCancel={() => onDone()} />;
+  const moved = originMoved(draft, editing);
+  const keyMissing = moved && draft.authStyle !== 'none' && draft.apiKey.trim() === '' && storedKey !== undefined;
   const fields = fieldsFor(preset, draft.authStyle);
 
   const onTest = () => {
-    // The permission request is the first call in the click (a user gesture, §4.3.3 step 3, §8):
-    // for this connection's origin only.
+    // The permission request goes out in the click, before any await (a user gesture, §4.3.3
+    // step 3, §8): for this connection's origin only. `contains`, sent just before it, tells
+    // whether the grant is new (given back on Cancel).
     const fixed = fixBaseUrl(draft.baseUrl).url;
-    let origin: string | undefined;
-    try {
-      origin = originPattern(fixed);
-    } catch {
-      origin = undefined;
-    }
+    const origin = safeOrigin(fixed);
+    const held = origin ? api.permissions.contains({ origins: [origin] }).catch(() => true) : Promise.resolve(true);
     const asked = origin ? api.permissions.request({ origins: [origin] }).catch(() => false) : Promise.resolve(false);
-    void asked.then(() => runTest(draft));
+    void Promise.all([held, asked]).then(([had, granted]) => {
+      if (granted && !had) grantedHere.current.add(fixed);
+      return runTest(draft);
+    });
   };
 
   const result = test.kind === 'done' ? test.result : undefined;
@@ -561,16 +619,23 @@ function ConnectionForm({
 
   const onSave = (e: Event) => {
     e.preventDefault();
+    if (keyMissing) {
+      setError('The base URL now points at another server: enter the key again, so this key never goes to a server it was not made for.');
+      keyInput.current?.focus();
+      return;
+    }
     const id = editing?.id ?? newId();
     const status = result ? statusFrom(result, test.kind === 'done' ? test.message : undefined) : editing ? { status: editing.status, ...(editing.lastError ? { lastError: editing.lastError } : {}), ...(editing.lastErrorKind ? { lastErrorKind: editing.lastErrorKind } : {}) } : { status: 'unverified' as const };
     const connection = toConnection(draft, id, editing, result, status);
     const model = draft.model.trim();
     const profile = model ? toProfile(connection, model, newId(), loaded.settings.profiles, models, dual ? protocol : undefined) : undefined;
-    const moved = editing && editing.baseUrl !== connection.baseUrl ? editing.baseUrl : undefined;
+    const movedFrom = editing && editing.baseUrl !== connection.baseUrl ? editing.baseUrl : undefined;
     void (async () => {
       const { routed } = await saveSetup(api, { connection, apiKey: draft.authStyle === 'none' ? undefined : draft.apiKey, profile });
-      // A connection moved to another origin gives back the old one's permission (§4.3.4).
-      if (moved && originPattern(moved) !== originPattern(connection.baseUrl)) await revokeUnusedOrigin(api, moved, id);
+      // A connection moved to another origin gives back the old one's permission (§4.3.4), and
+      // what a test of another URL was granted.
+      if (movedFrom && safeOrigin(movedFrom) !== safeOrigin(connection.baseUrl)) await revokeUnusedOrigin(api, movedFrom, id);
+      await giveBack(connection.baseUrl);
       onDone(`Saved ${connection.label}${profile ? ` with ${profile.model}` : ''}.${routed ? ` Pages now translate with ${profile?.model}.` : ''}`);
     })().catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
   };
@@ -619,7 +684,13 @@ function ConnectionForm({
             autocomplete="off"
             spellcheck={false}
             value={draft.apiKey}
-            placeholder={storedKey ? `Saved: ${maskKey(storedKey)} (enter a new key to replace it)` : `Paste your ${preset.custom ? '' : `${preset.label} `}API key`}
+            placeholder={
+              storedKey && moved
+                ? 'Enter the key again for the new server'
+                : storedKey
+                  ? `Saved: ${maskKey(storedKey)} (enter a new key to replace it)`
+                  : `Paste your ${preset.custom ? '' : `${preset.label} `}API key`
+            }
             onInput={(e) => set({ apiKey: (e.target as HTMLInputElement).value })}
           />
           {preset.keyUrl ? (
@@ -631,6 +702,9 @@ function ConnectionForm({
       ) : null}
       <details class="prov__advanced" data-testid="advanced">
         <summary>Advanced</summary>
+        <p class="opt__hint" data-testid="advanced-sync-note">
+          Extra headers and query params sync to your other devices with the connection: don't put a key or other secret here.
+        </p>
         {fields.baseUrl ? null : <BaseUrlField draft={draft} set={set} />}
         <div class="opt__row">
           <label for="c-headers">Extra headers</label>
@@ -661,7 +735,7 @@ function ConnectionForm({
         <span class="opt__hint">Chrome asks for access to {hostnameOf(fixBaseUrl(draft.baseUrl).url) || 'the server'} only.</span>
       </div>
       {test.kind === 'done' ? <TestOutcome draft={draft} test={test} onFixKey={() => keyInput.current?.focus()} onRetry={onTest} onUseUrl={(url) => set({ baseUrl: url })} onGuide={() => setGuide(true)} /> : null}
-      {guide && preset.local ? <CorsGuide local={preset.local} onClose={() => setGuide(false)} /> : null}
+      {guide ? <CorsGuide local={preset.local ?? 'generic'} onClose={() => setGuide(false)} /> : null}
       <ModelPicker id="c-model" model={draft.model} models={models} onModel={(m) => set({ model: m })} />
       {dual ? (
         <div class="opt__row" data-testid="protocol-switch">
@@ -682,7 +756,7 @@ function ConnectionForm({
         <button type="submit" data-testid="save-connection">
           Save
         </button>
-        <button type="button" onClick={() => onDone()}>
+        <button type="button" onClick={cancel} data-testid="cancel-connection">
           Cancel
         </button>
       </div>
@@ -809,7 +883,7 @@ const guessOs = (): GuideStep['os'] => {
 };
 
 /** §4.3.6 [Fix…]: the exact command for each OS; the form re-tests while it is open. */
-export function CorsGuide({ local, onClose }: { local: 'ollama' | 'lmstudio'; onClose: () => void }) {
+export function CorsGuide({ local, onClose }: { local: GuideKind; onClose: () => void }) {
   const guide = corsGuide(local);
   const tabs = guide.steps.map((s) => s.os);
   const [os, setOs] = useState<GuideStep['os']>(tabs.includes(guessOs()) ? guessOs() : (tabs[0] as GuideStep['os']));

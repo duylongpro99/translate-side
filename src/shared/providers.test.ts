@@ -650,6 +650,18 @@ describe('removing a connection (plan M4 §3 #8, DESIGN §4.3.4)', () => {
     expect(await removeConnection(f.api, 'work')).toEqual({ revoked: true });
   });
 
+  it('never revokes an origin an allowlisted site still needs (review C1 #7)', async () => {
+    const gw = { ...MY_ANTHROPIC, id: 'gw', baseUrl: 'https://llm.example.com/v1' };
+    const f = permApi({ sync: { schemaVersion: 1, 'conn:gw': gw, siteAllowlist: ['*.example.com'] }, local: { 'secret:gw': 'k-0123456789' }, granted: ['https://llm.example.com/*'] });
+    expect(await removeConnection(f.api, 'gw')).toEqual({ revoked: false });
+    expect(f.granted.has('https://llm.example.com/*')).toBe(true);
+    expect(f.local.data.has('secret:gw')).toBe(false);
+    const g = permApi({ sync: { schemaVersion: 1, 'conn:gw': gw, siteAllowlist: ['https://llm.example.com/*'] }, granted: ['https://llm.example.com/*'] });
+    expect(await removeConnection(g.api, 'gw')).toEqual({ revoked: false });
+    const h = permApi({ sync: { schemaVersion: 1, 'conn:gw': gw, siteAllowlist: ['other.example.org'] }, granted: ['https://llm.example.com/*'] });
+    expect(await removeConnection(h.api, 'gw')).toEqual({ revoked: true });
+  });
+
   it('a route with nothing usable left is removed, so the default applies', async () => {
     const f = permApi({ sync: { schemaVersion: 1, 'conn:mine': MY_ANTHROPIC, 'profile:sonnet': SONNET, routing: { translate: 'sonnet' } }, local: { 'secret:mine': 'k-0123456789' } });
     await removeConnection(f.api, 'mine');

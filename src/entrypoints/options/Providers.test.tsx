@@ -60,16 +60,19 @@ function fakeApi({ sync = {}, local = {}, granted = [] as string[], grant = true
   return { api, sync: s.m, local: l.m, log, perms };
 }
 
-type Reply = { status: number; body: unknown; headers?: Record<string, string> };
+type Reply = { status: number; body: unknown; headers?: Record<string, string> } | { throw: unknown };
 /** A provider by URL path; `handler` can be swapped mid-test (Ollama fixed while the guide is open). */
 function server(handler: (path: string, headers: Record<string, string>, body: unknown) => Reply) {
-  const s = { handler, hits: [] as string[] };
+  const s = { handler, hits: [] as string[], sent: [] as { path: string; headers: Record<string, string>; body: unknown }[] };
   const fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input instanceof Request ? input.url : input));
     const headers: Record<string, string> = {};
     new Headers(init?.headers).forEach((v, k) => (headers[k] = v));
     s.hits.push(`${init?.method ?? 'GET'} ${url.host}${url.pathname}`);
-    const r = s.handler(url.pathname, headers, typeof init?.body === 'string' ? JSON.parse(init.body) : undefined);
+    const body = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined;
+    s.sent.push({ path: url.pathname, headers, body });
+    const r = s.handler(url.pathname, headers, body);
+    if ('throw' in r) throw r.throw;
     return new Response(typeof r.body === 'string' ? r.body : JSON.stringify(r.body), { status: r.status, headers: r.headers ?? { 'content-type': 'application/json' } });
   }) as typeof globalThis.fetch;
   const adapterFor = (p: Protocol) => (p === 'anthropic-messages' ? createAnthropicAdapter({ fetch }) : createOpenAIAdapter({ fetch }));
@@ -307,7 +310,7 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     await waitFor(() => rowOf('APIBOX')?.querySelector('[data-testid=connection-status]')?.textContent === 'Built-in, no key');
     expect(f.local.has('secret:apibox')).toBe(false);
     expect(f.perms.has('https://api.ai-box.vn/*')).toBe(false);
-    expect($('[data-testid=providers-note]').textContent).toContain('It is built in, so it stays available without a key.');
+    expect($('[data-testid=providers-note]').textContent).toContain('a route still uses it, so it stays listed without a key');
   });
 
   it('routing: choosing the Document brief model saves it', async () => {
@@ -323,5 +326,144 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     await waitFor(() => f.sync.has('routing'));
     expect(f.sync.get('routing')).toEqual({ translate: 'apibox-qwen3.8-flash', analyze: 'q' });
     expect($('[data-testid=providers-note]').textContent).toBe('Document brief route saved.');
+  });
+
+  const GW = { id: 'c9', label: 'Work gateway', presetId: 'custom-openai', protocol: 'openai-chat', baseUrl: 'https://gw.example.com/v1', auth: { style: 'bearer' }, quirks: {}, status: 'ok' };
+
+  it('moving a connection to another origin needs its key again: the stored key is never sent there (review C1 #1)', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1, 'conn:c9': GW }, local: { 'secret:c9': 'sk-work-0123456789wxyz' }, granted: ['https://gw.example.com/*'] });
+    const srv = server(() => openaiList('m'));
+    await mount(f, srv);
+    click(rowOf('Work gateway')?.querySelector('[aria-label="Edit Work gateway"]') ?? null);
+    await waitFor(() => $<HTMLInputElement>('#c-key')?.placeholder.includes('Saved') === true);
+    type('#c-base', 'https://other.example.net/v1');
+    expect($<HTMLInputElement>('#c-key').placeholder).toBe('Enter the key again for the new server');
+    click($('[data-testid=test-connection]'));
+    await waitFor(() => $('[data-testid=test-status]') !== null);
+    expect($('[data-testid=test-status]').textContent).toBe('No key');
+    expect(srv.sent.every((r) => !JSON.stringify(r.headers).includes('sk-work'))).toBe(true);
+    submit();
+    await flush();
+    expect(root.textContent).toContain('enter the key again');
+    expect((f.sync.get('conn:c9') as { baseUrl: string }).baseUrl).toBe('https://gw.example.com/v1');
+    // With the key typed again it saves, and the old origin is given back.
+    type('#c-key', 'sk-other-0123456789');
+    submit();
+    await waitFor(() => $('[data-testid=providers-note]') !== null);
+    expect((f.sync.get('conn:c9') as { baseUrl: string }).baseUrl).toBe('https://other.example.net/v1');
+    expect(f.local.get('secret:c9')).toBe('sk-other-0123456789');
+    expect(f.log).toContain('revoke https://gw.example.com/*');
+    // Back on the same origin (another path), the stored key is used without retyping.
+    click(rowOf('Work gateway')?.querySelector('[aria-label="Edit Work gateway"]') ?? null);
+    await waitFor(() => $<HTMLInputElement>('#c-key')?.placeholder.includes('Saved') === true);
+    type('#c-base', 'https://other.example.net/api/v1');
+    click($('[data-testid=test-connection]'));
+    await waitFor(() => $('[data-testid=test-result]') !== null);
+    expect(srv.sent.at(-1)?.headers.authorization).toBe('Bearer sk-other-0123456789');
+  });
+
+  it('a Custom connection on localhost refused by CORS gets a generic guide (review C1 #2)', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1 } });
+    await mount(f, server(() => ({ status: 403, body: '' })));
+    await startAdd('custom-openai');
+    type('#c-base', 'http://localhost:8000/v1');
+    act(() => {
+      const sel = $<HTMLSelectElement>('#c-auth');
+      sel.value = 'none';
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    click($('[data-testid=test-connection]'));
+    await waitFor(() => $('[data-testid=test-status]') !== null);
+    expect($('[data-testid=test-status]').textContent).toBe('CORS blocked');
+    expect($('[data-testid=cors-guide]').textContent).toContain('allowed-origins');
+  });
+
+  it('Cancel gives back a permission the test was granted, not one held before (review C1 #3)', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1 }, granted: ['https://held.example.com/*'] });
+    await mount(f, server(() => openaiList('m')));
+    await startAdd('custom-openai');
+    type('#c-base', 'https://new.example.com/v1');
+    type('#c-key', 'k-0123456789');
+    click($('[data-testid=test-connection]'));
+    await waitFor(() => $('[data-testid=test-result]') !== null);
+    expect(f.perms.has('https://new.example.com/*')).toBe(true);
+    // Tested a second URL, held before: kept on Cancel.
+    type('#c-base', 'https://held.example.com/v1');
+    click($('[data-testid=test-connection]'));
+    await waitFor(() => $('[data-testid=test-result]') !== null);
+    click($('[data-testid=cancel-connection]'));
+    await waitFor(() => $('[data-testid=connections]') !== null);
+    expect(f.perms.has('https://new.example.com/*')).toBe(false);
+    expect(f.perms.has('https://held.example.com/*')).toBe(true);
+  });
+
+  it('a saved connection keeps the permission its test was granted, and gives back other tested origins', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1 } });
+    await mount(f, server(() => openaiList('m')));
+    await startAdd('custom-openai');
+    type('#c-key', 'k-0123456789');
+    type('#c-base', 'https://first.example.com/v1');
+    click($('[data-testid=test-connection]'));
+    await waitFor(() => $('[data-testid=test-result]') !== null);
+    type('#c-base', 'https://second.example.com/v1');
+    click($('[data-testid=test-connection]'));
+    await waitFor(() => $('[data-testid=test-result]') !== null);
+    submit();
+    await waitFor(() => $('[data-testid=providers-note]') !== null);
+    expect([...f.perms]).toEqual(['https://second.example.com/*']);
+  });
+
+  it('says that extra headers and query params sync (review C1 #4)', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1 } });
+    await mount(f, server(() => openaiList()));
+    expect(root.textContent).toContain('Extra headers and query params (under Advanced) sync');
+    await startAdd('custom-openai');
+    expect($('[data-testid=advanced-sync-note]').textContent).toContain("don't put a key or other secret here");
+  });
+
+  it('the guide’s auto re-test writes the status only when it changes, clears the old error, and tests a model typed later (review C1 #5)', async () => {
+    const conn = { id: 'o1', label: 'Home Ollama', presetId: 'ollama', protocol: 'openai-chat', baseUrl: 'http://localhost:11434/v1', auth: { style: 'none' }, quirks: { supportsJsonMode: true }, status: 'error', lastError: 'CORS blocked', lastErrorKind: 'cors-origin' };
+    const f = fakeApi({ sync: { schemaVersion: 1, 'conn:o1': conn } });
+    const srv = server(() => ({ status: 403, body: '' }));
+    await mount(f, srv, 20);
+    click(rowOf('Home Ollama')?.querySelector('[data-testid=fix-cors]') ?? null);
+    await waitFor(() => $('[data-testid=cors-guide]') !== null);
+    type('#c-model', 'gemma3:12b');
+    const writes = () => f.log.filter((l) => l === 'sync.set conn:o1').length;
+    await waitFor(() => srv.hits.length >= 6);
+    expect(writes()).toBe(0);
+    srv.handler = (path) => (path === '/v1/models' ? openaiList('gemma3:12b') : openaiOk);
+    await waitFor(() => $('[data-testid=test-result]')?.textContent?.includes('✓ Connected') === true);
+    await flush();
+    expect(writes()).toBe(1);
+    expect(f.sync.get('conn:o1')).toEqual({ id: 'o1', label: 'Home Ollama', presetId: 'ollama', protocol: 'openai-chat', baseUrl: 'http://localhost:11434/v1', auth: { style: 'none' }, quirks: { supportsJsonMode: true }, status: 'ok' });
+    expect(srv.sent.find((r) => r.path === '/v1/chat/completions')?.body).toMatchObject({ model: 'gemma3:12b' });
+  });
+
+  it('Add a model: without access to the host it offers Grant access, then lists the models (review C1 #7)', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1, 'conn:c9': GW }, local: { 'secret:c9': 'k-0123456789' } });
+    const srv = server(() => (f.perms.has('https://gw.example.com/*') ? openaiList('m1', 'm2') : { throw: new TypeError('Failed to fetch') }));
+    await mount(f, srv);
+    click($('[data-testid=add-model]'));
+    act(() => {
+      const sel = $<HTMLSelectElement>('#m-conn');
+      sel.value = 'c9';
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await waitFor(() => $('[data-testid=model-form-grant]') !== null);
+    expect($('[data-testid=model-form-error]').textContent).toContain('no access to gw.example.com');
+    click($('[data-testid=model-form-grant]'));
+    expect(f.log.at(-1)).toBe('request https://gw.example.com/*');
+    await waitFor(() => $$('[data-testid=model-list] option').length === 2);
+  });
+
+  it('removing a keyed built-in that no route uses says it is now hidden (review C1 #7)', async () => {
+    // An APIBOX key too: with only Gemini's, the migration routes to Gemini (M4 §3 #7).
+    const f = fakeApi({ sync: { schemaVersion: 1 }, local: { 'secret:gemini': 'AIza-0123456789', 'secret:apibox': 'sk-apibox-0123456789' } });
+    await mount(f, server(() => openaiList()));
+    click(rowOf('Google Gemini')?.querySelector('[data-testid=remove-connection]') ?? null);
+    click($('[data-testid=confirm-remove-yes]'));
+    await waitFor(() => rowOf('Google Gemini') === undefined);
+    expect($('[data-testid=providers-note]').textContent).toContain('It is built in and now hidden');
   });
 });

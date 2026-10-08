@@ -5,7 +5,7 @@ import type { AuthStyle, ModelInfo, Protocol, Quirks } from '@/llm/types';
 import type { TestInput, TestResult } from '@/shared/connect';
 import { fixBaseUrl } from '@/shared/connect';
 import { presetFor, type ConnectionPreset, type PresetId } from '@/shared/presets';
-import type { ModelProfile, ProviderConnection } from '@/shared/settings';
+import { originPattern, type ModelProfile, type ProviderConnection } from '@/shared/settings';
 
 export interface QuirkToggles {
   /** Send `max_completion_tokens` instead of `max_tokens`. */
@@ -111,6 +111,27 @@ export function quirksOf(draft: ConnectionDraft, base: Quirks): Quirks {
 }
 
 const auth = (d: ConnectionDraft): ProviderConnection['auth'] => (d.authStyle === 'custom-header' ? { style: 'custom-header', headerName: d.headerName.trim() || 'api-key' } : { style: d.authStyle });
+
+const originOf = (url: string) => {
+  try {
+    return originPattern(fixBaseUrl(url).url);
+  } catch {
+    return url.trim();
+  }
+};
+
+/** Has an edit moved the connection to another origin (§4.3.4: a key goes only to its own)? */
+export function originMoved(d: ConnectionDraft, editing: ProviderConnection | undefined): boolean {
+  return editing !== undefined && originOf(d.baseUrl) !== originOf(editing.baseUrl);
+}
+
+/**
+ * The stored key Test and Save may use for this draft: none once the base URL points at another
+ * origin, so the key is typed again rather than sent to a server it was not made for (review C1 #1).
+ */
+export function usableStoredKey(d: ConnectionDraft, editing: ProviderConnection | undefined, storedKey: string | undefined): string | undefined {
+  return originMoved(d, editing) ? undefined : storedKey;
+}
 
 /** What Test connection sends for this draft; `storedKey` stands in when no new key was typed (edit). */
 export function testInputOf(d: ConnectionDraft, storedKey?: string, baseQuirks: Quirks = presetFor(d.presetId).quirks): TestInput {
