@@ -4,7 +4,8 @@ import { formatUsd } from '@/shared/cost';
 import type { Backoff, JobView } from './jobs.ts';
 import { failureText } from './status.ts';
 
-// The job's status line (plan M1-E10): progress, Cancel, and the cost readout.
+// The job's status line (plan M1-E10): progress, Cancel, and the cost readout. On the page view
+// Cancel sits in the header (M3-E6), so the bar leaves it out there (`cancel={false}`).
 
 export interface JobActions {
   cancel(): void;
@@ -13,6 +14,10 @@ export interface JobActions {
   openOptions(): void;
   /** Translate this one failed segment again (its inline Retry, M3-E8). */
   retrySegment(id: string): void;
+  /** This one block again, skipping the cache; its new text replaces the stored one (M3-E5, decision M3-D2). */
+  retranslateSegment(id: string): void;
+  /** The whole page again with the current settings, skipping the cache (the header, M3-E6; decision M3-D2). */
+  retranslatePage(): void;
   /** Asks for the provider's host permission. Must run inside the click (a user gesture, §4.3.3). */
   grantAccess(): void;
 }
@@ -49,7 +54,7 @@ function BackoffNote({ entries }: { entries: readonly Backoff[] }) {
   );
 }
 
-export function JobBar({ job, actions }: { job: JobView; actions: JobActions }) {
+export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobView; actions: JobActions; cancel?: boolean }) {
   const { final, failed, total } = job.counts;
   const into = languageLabel(job.targetLang);
   // Providers report usage at the end of a stream, so a cancelled request's spend is unknown:
@@ -79,9 +84,11 @@ export function JobBar({ job, actions }: { job: JobView; actions: JobActions }) 
             {failed ? ` · ${failed} failed` : ''}
           </span>
           {cost}
-          <button type="button" class="job__button" onClick={actions.cancel}>
-            Cancel
-          </button>
+          {showCancel ? (
+            <button type="button" class="job__button" onClick={actions.cancel}>
+              Cancel
+            </button>
+          ) : null}
           {job.backoff?.length ? <BackoffNote entries={job.backoff} /> : null}
         </div>
       );

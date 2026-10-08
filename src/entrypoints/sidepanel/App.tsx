@@ -3,11 +3,13 @@ import { browser } from 'wxt/browser';
 import type { PanelController, PanelView } from './controller.ts';
 import { AboutDocument } from './AboutDocument.tsx';
 import { DevView } from './DevView.tsx';
+import { HeaderControls } from './HeaderControls.tsx';
 import { readFollow, useScrollFollow, writeFollow } from './follow.ts';
 import { JobBar, type JobActions } from './JobBar.tsx';
 import type { Jobs, JobView } from './jobs.ts';
 import { SegmentList } from './SegmentList.tsx';
 import { PrivacyNotice } from './PrivacyNotice.tsx';
+import type { PrefsStore } from './prefs.ts';
 import type { PrivacyGate, PrivacyState } from './privacy.ts';
 import { SelectionView } from './SelectionView.tsx';
 import { StateMessage } from './StateMessage.tsx';
@@ -24,6 +26,8 @@ export interface TranslatorProps {
   snippets?: { jobs: Jobs; store: SnippetStore; actions(tabId: number): JobActions; close(tabId: number): void };
   /** The first-run privacy notice (plan M3-E10). */
   privacy?: PrivacyGate;
+  /** The preferences the header switches (plan M3-E6). */
+  prefs?: PrefsStore;
 }
 
 const nextFrame = (fn: () => void) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 16));
@@ -73,6 +77,15 @@ function usePrivacy(gate: PrivacyGate | undefined): PrivacyState | undefined {
   return state;
 }
 
+function usePrefs(store: PrefsStore | undefined) {
+  const [prefs, setPrefs] = useState(() => store?.get());
+  useEffect(() => {
+    setPrefs(store?.get());
+    return store?.subscribe(setPrefs);
+  }, [store]);
+  return prefs;
+}
+
 export function App({ controller, translator }: { controller: PanelController; translator?: TranslatorProps }) {
   const [view, setView] = useState<PanelView>(controller.view);
   const [tabId, setTabId] = useState<number | undefined>(controller.tabId);
@@ -88,6 +101,7 @@ export function App({ controller, translator }: { controller: PanelController; t
   );
   const job = useJob(translator?.jobs, tabId, view.kind === 'ready' ? view.docId : undefined);
   const privacy = usePrivacy(translator?.privacy);
+  const prefs = usePrefs(translator?.prefs);
   const snippet = useSnippet(translator?.snippets?.store, tabId);
   const snippetJob = useJob(translator?.snippets?.jobs, tabId, snippet?.docId);
   // A site on the denylist is never read, selection included (M3-D13): its own message wins.
@@ -97,6 +111,22 @@ export function App({ controller, translator }: { controller: PanelController; t
   const toggleFollow = () => {
     writeFollow(!follow);
     setFollow(!follow);
+  };
+
+  const pageActions = translator && tabId !== undefined ? translator.actions(tabId) : undefined;
+  /**
+   * A header switch: saved like the options page saves it, and the settings listener translates
+   * the page again (from the cache where it can). A page the user cancelled is not restarted by
+   * that listener (translator.ts refresh), so the switch, an explicit ask, restarts it here.
+   */
+  const switchPrefs = (patch: Parameters<PrefsStore['update']>[0]) => {
+    const status = job?.status;
+    void translator?.prefs
+      ?.update(patch)
+      .then(() => {
+        if (status === 'cancelled') pageActions?.resume();
+      })
+      .catch(() => {});
   };
 
   const openOptions = () => {
@@ -111,31 +141,34 @@ export function App({ controller, translator }: { controller: PanelController; t
   return (
     <main class="panel">
       <header class="panel__header">
-        <h1 title={view.kind === 'ready' ? view.result.title : undefined}>{view.kind === 'ready' ? view.result.title || 'Translate Side' : 'Translate Side'}</h1>
-        {import.meta.env.DEV && view.kind === 'ready' ? (
-          <button type="button" class="panel__icon panel__dev" aria-pressed={dev} title="Segment view (dev build only)" onClick={() => setDev(!dev)}>
-            {'{ }'}
+        <div class="panel__row">
+          <h1 title={view.kind === 'ready' ? view.result.title : undefined}>{view.kind === 'ready' ? view.result.title || 'Translate Side' : 'Translate Side'}</h1>
+          {import.meta.env.DEV && view.kind === 'ready' ? (
+            <button type="button" class="panel__icon panel__dev" aria-pressed={dev} title="Segment view (dev build only)" onClick={() => setDev(!dev)}>
+              {'{ }'}
+            </button>
+          ) : null}
+          {view.kind === 'ready' && translator?.viewports ? (
+            <button
+              type="button"
+              class="panel__icon panel__follow"
+              aria-pressed={follow}
+              data-testid="scroll-follow"
+              title={follow ? 'Following the page as it scrolls (click to stop)' : 'Follow the page as it scrolls'}
+              aria-label="Follow page scroll"
+              onClick={toggleFollow}
+            >
+              ⇅
+            </button>
+          ) : null}
+          <button type="button" class="panel__icon" title="Settings" aria-label="Settings" onClick={openOptions}>
+            ⚙
           </button>
-        ) : null}
-        {view.kind === 'ready' && translator?.viewports ? (
-          <button
-            type="button"
-            class="panel__icon panel__follow"
-            aria-pressed={follow}
-            data-testid="scroll-follow"
-            title={follow ? 'Following the page as it scrolls (click to stop)' : 'Follow the page as it scrolls'}
-            aria-label="Follow page scroll"
-            onClick={toggleFollow}
-          >
-            ⇅
+          <button type="button" class="panel__icon" title="Close" aria-label="Close panel" onClick={() => void closePanel()}>
+            ✕
           </button>
-        ) : null}
-        <button type="button" class="panel__icon" title="Settings" aria-label="Settings" onClick={openOptions}>
-          ⚙
-        </button>
-        <button type="button" class="panel__icon" title="Close" aria-label="Close panel" onClick={() => void closePanel()}>
-          ✕
-        </button>
+        </div>
+        {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} actions={job ? pageActions : undefined} onPrefs={switchPrefs} /> : null}
       </header>
       {privacy === 'needed' && translator?.privacy ? <PrivacyNotice onAcknowledge={() => void translator.privacy?.acknowledge().catch(() => {})} /> : null}
       {selecting && tabId !== undefined && snippet && translator?.snippets ? (
@@ -147,14 +180,14 @@ export function App({ controller, translator }: { controller: PanelController; t
       ) : (
         <>
           {job && translator && tabId !== undefined ? (
-            <JobBar job={job} actions={translator.actions(tabId)} />
+            <JobBar job={job} actions={translator.actions(tabId)} cancel={false} />
           ) : (
             <p class="panel__meta" data-testid="panel-ready">
               Original text · {view.result.segments.length} blocks
             </p>
           )}
           {job?.brief ? <AboutDocument brief={job.brief} sourceLang={job.sourceLang} /> : null}
-          <SegmentList segments={job?.segments ?? view.result.segments} states={job?.segs} {...(job && translator && tabId !== undefined ? { actions: { retry: translator.actions(tabId).retrySegment } } : {})} />
+          <SegmentList segments={job?.segments ?? view.result.segments} states={job?.segs} {...(job && pageActions ? { actions: { retry: pageActions.retrySegment, retranslate: pageActions.retranslateSegment } } : {})} />
         </>
       )}
     </main>

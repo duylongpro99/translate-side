@@ -33,13 +33,61 @@ body {
 .panel__header {
   position: sticky;
   top: 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
   padding: 10px 0;
   background: Canvas;
   border-bottom: 1px solid var(--line);
   z-index: 1;
+}
+.panel__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+/* Page controls (M3-E6): language pair, model, style, Cancel / Retranslate page. Wraps on a narrow panel. */
+.panel__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+.panel__pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.panel__source {
+  font-weight: 600;
+}
+.panel__select {
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 4px;
+  max-width: 11em;
+}
+.panel__model {
+  color: var(--muted);
+  max-width: 12em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.panel__action {
+  font: inherit;
+  margin-left: auto;
+  color: inherit;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.panel__action:hover {
+  background: var(--surface);
 }
 .panel__header h1 {
   flex: 1;
@@ -370,4 +418,46 @@ body {
   background: var(--accent);
   color: Canvas;
   cursor: pointer;
+}
+
+/* Per-block actions (M3-E5): shown on hover or keyboard focus, always reachable by Tab. */
+.seg__actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.seg:hover .seg__actions,
+.seg:focus-within .seg__actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  .seg__actions {
+    opacity: 1;
+  }
+}
+.seg__action {
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 6px;
+  cursor: pointer;
+}
+.seg__action:hover,
+.seg__action[aria-pressed='true'] {
+  color: var(--fg);
+  background: var(--surface);
+}
+.seg__original {
+  display: block;
+  margin-top: 4px;
+  padding-left: 8px;
+  border-left: 2px solid var(--line);
+  color: var(--muted);
+  font-size: 0.9em;
+  font-weight: normal;
 }

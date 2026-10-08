@@ -1,12 +1,15 @@
 import { Component, type ComponentChildren } from 'preact';
+import { useMemo, useState } from 'preact/hooks';
 import type { Segment } from '@/engine/types';
 import type { JobView, SegState } from './jobs.ts';
-import { markerKinds, parseMarkup, type MarkupNode } from './markup.ts';
+import { markerKinds, parseMarkup, plainText, type MarkupNode } from './markup.ts';
 import { failureText } from './status.ts';
 
-/** Per-segment actions (M3-E8); absent for a list with nothing to act on. */
+/** Per-segment actions (M3-E8, M3-E5); absent for a list with nothing to act on. */
 export interface SegmentActions {
   retry(id: string): void;
+  /** This block again, skipping the cache (M3-E5). Absent: no Retranslate button. */
+  retranslate?(id: string): void;
 }
 
 // Segments rendered by kind (plan M0-E7), with the translation streaming in (plan M1-E10).
@@ -47,7 +50,72 @@ function Text({ seg, state }: { seg: Segment; state: SegState | undefined }) {
   return <Markup nodes={parseMarkup(src, markerKinds(seg))} />;
 }
 
-type Props = { seg: Segment; state: SegState | undefined; actions?: SegmentActions | undefined };
+type Props = {
+  seg: Segment;
+  state: SegState | undefined;
+  actions?: SegmentActions | undefined;
+  /** The original is shown under the translation (Original, M3-E5). */
+  original?: boolean;
+  onOriginal?: ((id: string) => void) | undefined;
+};
+
+const translated = (state: SegState | undefined): state is SegState & { text: string } => state?.status === 'final' && state.text !== undefined;
+
+/** What Copy puts on the clipboard: the text the block shows, as plain text (no markers; code as is). */
+export function copyText(seg: Segment, state: SegState | undefined): string {
+  if (seg.kind === 'code' || !seg.translate) return seg.text;
+  return plainText(parseMarkup(state?.text ?? seg.inlineMarkup, markerKinds(seg)));
+}
+
+async function writeClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
+  throw new Error('no clipboard');
+}
+
+/**
+ * Per-block actions (plan M3-E5, DESIGN §3): show the original inline, retranslate (skips the
+ * cache), copy. Only on a finished block, so a block being redone can't be asked twice; a code
+ * block, kept as is, has Copy only.
+ */
+function BlockActions({ seg, state, actions, original, onOriginal }: Props) {
+  const [copied, setCopied] = useState<'ok' | 'failed' | undefined>();
+  const done = translated(state);
+  if (!done && seg.kind !== 'code') return null;
+  const copy = () => {
+    writeClipboard(copyText(seg, state)).then(
+      () => setCopied('ok'),
+      () => setCopied('failed'),
+    );
+    setTimeout(() => setCopied(undefined), 1500);
+  };
+  return (
+    <span class="seg__actions" role="group" aria-label="Block actions">
+      {done && onOriginal ? (
+        <button type="button" class="seg__action" data-testid="seg-original" aria-pressed={original === true} onClick={() => onOriginal(seg.id)}>
+          {original ? 'Hide original' : 'Original'}
+        </button>
+      ) : null}
+      {done && actions?.retranslate ? (
+        <button type="button" class="seg__action" data-testid="seg-retranslate" title="Translate this block again, skipping the saved translation" onClick={() => actions.retranslate?.(seg.id)}>
+          Retranslate
+        </button>
+      ) : null}
+      <button type="button" class="seg__action" data-testid="seg-copy" onClick={copy}>
+        {copied === 'ok' ? 'Copied' : copied === 'failed' ? "Couldn't copy" : 'Copy'}
+      </button>
+    </span>
+  );
+}
+
+/** The original under its translation, as text like the rest (§5.6). */
+function Original({ seg, state, original }: Props) {
+  if (!original || !translated(state)) return null;
+  return (
+    <span class="seg__original" data-testid="seg-original-text">
+      <Markup nodes={parseMarkup(seg.inlineMarkup, markerKinds(seg))} />
+    </span>
+  );
+}
 
 function statusAttrs(seg: Segment, state: SegState | undefined, extra = '') {
   const status = seg.translate ? (state?.status ?? 'original') : 'kept';
@@ -59,9 +127,11 @@ function statusAttrs(seg: Segment, state: SegState | undefined, extra = '') {
   };
 }
 
-function Notes({ seg, state, actions }: Props) {
+function Notes(props: Props) {
+  const { seg, state, actions } = props;
   return (
     <>
+      <Original {...props} />
       {seg.hidden ? <span class="seg__note">hidden on the page (tab or collapsed section)</span> : null}
       {state?.status === 'failed' && state.error ? (
         <span class="seg__note seg__note--failed" role="note">
@@ -73,6 +143,12 @@ function Notes({ seg, state, actions }: Props) {
           ) : null}
         </span>
       ) : null}
+      {state?.status === 'final' && state.redoError ? (
+        <span class="seg__note seg__note--failed" role="note" data-testid="seg-redo-failed">
+          Retranslate failed: {failureText(state.redoError)}. The earlier translation is kept.
+        </span>
+      ) : null}
+      <BlockActions {...props} />
     </>
   );
 }
@@ -80,17 +156,18 @@ function Notes({ seg, state, actions }: Props) {
 /** Re-renders only when its segment's state object changes: a stream updates one block at a time. */
 class Block extends Component<Props> {
   override shouldComponentUpdate(next: Props): boolean {
-    return next.seg !== this.props.seg || next.state !== this.props.state;
+    return next.seg !== this.props.seg || next.state !== this.props.state || next.original !== this.props.original;
   }
 
-  override render({ seg, state, actions }: Props) {
+  override render(props: Props) {
+    const { seg, state } = props;
     const common = statusAttrs(seg, state);
     switch (seg.kind) {
       case 'heading':
         return (
           <div {...common} role="heading" aria-level={seg.level ?? 2} data-level={seg.level ?? 2}>
             <Text seg={seg} state={state} />
-            <Notes seg={seg} state={state} actions={actions} />
+            <Notes {...props} />
           </div>
         );
       case 'code':
@@ -102,27 +179,28 @@ class Block extends Component<Props> {
             <pre>
               <code>{seg.text}</code>
             </pre>
+            <BlockActions {...props} />
           </figure>
         );
       case 'li':
         return (
           <div {...common} role="listitem">
             <Text seg={seg} state={state} />
-            <Notes seg={seg} state={state} actions={actions} />
+            <Notes {...props} />
           </div>
         );
       case 'quote':
         return (
           <blockquote {...common}>
             <Text seg={seg} state={state} />
-            <Notes seg={seg} state={state} actions={actions} />
+            <Notes {...props} />
           </blockquote>
         );
       default:
         return (
           <p {...common}>
             <Text seg={seg} state={state} />
-            <Notes seg={seg} state={state} actions={actions} />
+            <Notes {...props} />
           </p>
         );
     }
@@ -131,15 +209,16 @@ class Block extends Component<Props> {
 
 class Cell extends Component<Props> {
   override shouldComponentUpdate(next: Props): boolean {
-    return next.seg !== this.props.seg || next.state !== this.props.state;
+    return next.seg !== this.props.seg || next.state !== this.props.state || next.original !== this.props.original;
   }
 
-  override render({ seg, state, actions }: Props) {
+  override render(props: Props) {
+    const { seg, state } = props;
     const { class: cls, ...attrs } = statusAttrs(seg, state);
     return (
       <div {...attrs} class={cls.replace(`seg--${seg.kind}`, 'seg--table-cell')} role="cell">
         <Text seg={seg} state={state} />
-        <Notes seg={seg} state={state} actions={actions} />
+        <Notes {...props} />
       </div>
     );
   }
@@ -159,7 +238,7 @@ function tableOf(seg: Segment): string | undefined {
 type States = JobView['segs'] | undefined;
 
 /** Consecutive segments of one table, grouped into rows by groupId. */
-function Table({ cells, states, actions }: { cells: Segment[]; states: States; actions?: SegmentActions | undefined }) {
+function Table({ cells, states, actions, originals, onOriginal }: { cells: Segment[]; states: States; actions?: SegmentActions | undefined; originals: ReadonlySet<string>; onOriginal?: ((id: string) => void) | undefined }) {
   const rows: Segment[][] = [];
   for (const c of cells) {
     const row = rows[rows.length - 1];
@@ -171,7 +250,7 @@ function Table({ cells, states, actions }: { cells: Segment[]; states: States; a
       {rows.map((row) => (
         <div class="seg-row" role="row" key={row[0]?.id} data-group={row[0]?.groupId}>
           {row.map((c) => (
-            <Cell key={c.id} seg={c} state={states?.get(c.id)} actions={actions} />
+            <Cell key={c.id} seg={c} state={states?.get(c.id)} actions={actions} original={originals.has(c.id)} onOriginal={onOriginal} />
           ))}
         </div>
       ))}
@@ -180,6 +259,19 @@ function Table({ cells, states, actions }: { cells: Segment[]; states: States; a
 }
 
 export function SegmentList({ segments, states, actions }: { segments: readonly Segment[]; states?: States; actions?: SegmentActions }) {
+  // Which blocks show their original (Original, M3-E5): per block, for as long as the list lives.
+  const [originals, setOriginals] = useState<ReadonlySet<string>>(() => new Set());
+  const onOriginal = useMemo(
+    () => (id: string) =>
+      setOriginals((cur) => {
+        const next = new Set(cur);
+        if (!next.delete(id)) next.add(id);
+        return next;
+      }),
+    [],
+  );
+  // Only a translated list has originals to show.
+  const toggle = states ? onOriginal : undefined;
   const out: ComponentChildren[] = [];
   for (let i = 0; i < segments.length; ) {
     const seg = segments[i] as Segment;
@@ -187,10 +279,10 @@ export function SegmentList({ segments, states, actions }: { segments: readonly 
     if (table !== undefined) {
       let j = i;
       while (j < segments.length && tableOf(segments[j] as Segment) === table) j++;
-      out.push(<Table key={seg.id} cells={segments.slice(i, j)} states={states} actions={actions} />);
+      out.push(<Table key={seg.id} cells={segments.slice(i, j)} states={states} actions={actions} originals={originals} onOriginal={toggle} />);
       i = j;
     } else {
-      out.push(<Block key={seg.id} seg={seg} state={states?.get(seg.id)} actions={actions} />);
+      out.push(<Block key={seg.id} seg={seg} state={states?.get(seg.id)} actions={actions} original={originals.has(seg.id)} onOriginal={toggle} />);
       i++;
     }
   }

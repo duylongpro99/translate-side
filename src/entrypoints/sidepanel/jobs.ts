@@ -33,6 +33,8 @@ export interface SegState {
   revision?: number;
   attempt?: number;
   error?: LLMError;
+  /** The last Retranslate of this final failed (M3-E5): the text shown is the earlier one. */
+  redoError?: LLMError;
 }
 
 export type JobStatus =
@@ -322,6 +324,8 @@ interface Job {
   flush?: boolean;
   /** A retranslate run: its stored finals replace whatever the cache has. */
   fresh?: boolean;
+  /** Cache keys whose next write replaces the stored entry (a retranslated block, M3-E5). */
+  replaceKeys: Set<string>;
   /** The brief cache key of this document; undefined without a cache. */
   briefKey?: string | undefined;
   /** Requests waiting out a retryable failure, and the failed attempts so far per chunk (M3-E8). */
@@ -447,6 +451,7 @@ export class Jobs {
       failures: new Map(),
       retrying: new Map(),
       retrySeq: 0,
+      replaceKeys: new Set(),
       fresh,
       view: {
         status: 'running',
@@ -556,6 +561,7 @@ export class Jobs {
       failures: new Map(),
       retrying: new Map(),
       retrySeq: 0,
+      replaceKeys: new Set(),
       view: {
         status: 'skipped',
         paused: false,
@@ -612,11 +618,26 @@ export class Jobs {
    * on a running, finished or stopped job; Cancel and a navigation abort it. A failure puts the
    * earlier error back.
    */
-  async retrySegment(tabId: number, id: string): Promise<void> {
+  retrySegment(tabId: number, id: string): Promise<void> {
+    return this.redoSegment(tabId, id, 'retry');
+  }
+
+  /**
+   * Translates one finished block again (its Retranslate action, M3-E5): the same single request
+   * as a Retry, never answered from the cache (the snippet path has no lookup), and its new final
+   * replaces the stored entry whatever its revision (decision M3-D2). The earlier text stays on
+   * screen until the new one streams in; a failure keeps it and says so (`redoError`).
+   */
+  retranslateSegment(tabId: number, id: string): Promise<void> {
+    return this.redoSegment(tabId, id, 'retranslate');
+  }
+
+  private async redoSegment(tabId: number, id: string, mode: 'retry' | 'retranslate'): Promise<void> {
     const job = this.jobs.get(tabId);
     const before = job?.segs.get(id);
     const segment = job?.view.segments.find((s) => s.id === id);
-    if (!job || !segment || before?.status !== 'failed' || job.retrying.has(id)) return;
+    if (!job || !segment || before?.status !== (mode === 'retry' ? 'failed' : 'final') || job.retrying.has(id)) return;
+    const failedWith = (error: LLMError): SegState => (mode === 'retry' ? { ...before, error } : { ...before, redoError: error });
     const controller = new AbortController();
     const { signal } = controller;
     job.retrying.set(id, controller);
@@ -626,12 +647,13 @@ export class Jobs {
       this.remember(job, id, state);
       this.patch(tabId, job, { counts: count(job.segs) });
     };
-    settle({ status: 'pending' });
+    // A retranslated block keeps its earlier text on screen until the new one streams in.
+    settle(mode === 'retry' ? { status: 'pending' } : { status: 'pending', ...(before.text === undefined ? {} : { text: before.text }) });
     try {
       const resolved = await this.deps.translateClient();
       if (signal.aborted) return settle(before);
       if (!resolved.ok) {
-        settle({ ...before, error: resolved.error });
+        settle(failedWith(resolved.error));
         if (stopsJob(resolved.error) && job.view.status !== 'running') this.finish(tabId, job, 'stopped', resolved.error);
         return;
       }
@@ -663,10 +685,15 @@ export class Jobs {
         }
       }
       if (signal.aborted || !outcome || outcome.status === 'streaming' || outcome.status === 'pending') return settle(before);
-      settle(outcome);
+      if (outcome.status === 'failed' && mode === 'retranslate') settle(failedWith(outcome.error ?? { kind: 'unknown', message: 'no translation came back' }));
+      else {
+        const key = job.keys.get(id);
+        if (mode === 'retranslate' && key !== undefined) job.replaceKeys.add(key);
+        settle(outcome);
+      }
       if (outcome.status === 'failed' && outcome.error && stopsJob(outcome.error) && job.view.status !== 'running') this.finish(tabId, job, 'stopped', outcome.error);
     } catch (err) {
-      settle(signal.aborted ? before : { ...before, error: { kind: 'unknown', message: err instanceof Error ? err.message : String(err), raw: err } });
+      settle(signal.aborted ? before : failedWith({ kind: 'unknown', message: err instanceof Error ? err.message : String(err), raw: err }));
     } finally {
       if (job.retrying.get(id) === controller) job.retrying.delete(id);
     }
@@ -855,8 +882,18 @@ export class Jobs {
     const drops = [...job.drops];
     job.writes.clear();
     job.drops.clear();
+    // A retranslated block replaces its entry (M3-D2), even in a run that otherwise keeps a higher revision.
+    const replacing = new Map<string, CachedSegment>();
+    if (!job.fresh) {
+      for (const [key, entry] of writes) {
+        if (!job.replaceKeys.delete(key)) continue;
+        replacing.set(key, entry);
+        writes.delete(key);
+      }
+    }
     job.chain = job.chain
       .then(() => cache.delete(drops))
+      .then(() => (replacing.size ? cache.putMany(replacing, { replace: true }) : undefined))
       .then(() => cache.putMany(writes, { replace: job.fresh === true }))
       .catch(() => {});
   }

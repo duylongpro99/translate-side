@@ -72,8 +72,13 @@ terms consistent, and rewrite idioms. That's the core of this design (§5).
   reading on from the screen and then the part above it (decision M3-D9).
 - **Selection mode**: select text, then right-click **Translate in side panel**, for pages where
   extraction fails or when you only need one passage.
-- **Per-block actions**: *show original inline*, *retranslate*, *explain this* (a short note on
-  idioms or cultural references).
+- **Per-block actions**: *show original inline*, *retranslate* (skips the cache and replaces the
+  stored entry), *copy* (the shown text, as plain text), *explain this* (a short note on idioms or
+  cultural references; M5).
+- **Header**: the language pair with a target-language switch, the model (read-only until the
+  quick switcher, §4.3.3 B, takes its place), the style mode, settings, Cancel / Retranslate page,
+  and the scroll-follow toggle. A switch is saved like the options page saves it, and the page is
+  translated again under it (from the cache where it can).
 - **Style control**: Natural (default) / Faithful (closer to the source) / Simplified (easier
   reading).
 - **Glossary**: terms detected automatically for each document, plus a personal glossary you edit

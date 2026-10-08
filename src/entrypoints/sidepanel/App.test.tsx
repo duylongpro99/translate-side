@@ -178,6 +178,8 @@ describe('translation in the panel (plan M1-E10)', () => {
         resume: () => calls.push('resume'),
         openOptions: () => calls.push('options'),
         retrySegment: (id: string) => calls.push(`retry:${id}`),
+        retranslateSegment: (id: string) => calls.push(`retranslate:${id}`),
+        retranslatePage: () => calls.push('retranslate-page'),
         grantAccess: () => calls.push('grant'),
       }),
     };
@@ -208,41 +210,49 @@ describe('translation in the panel (plan M1-E10)', () => {
     return f;
   }
   const block = (s: Segment) => root.querySelector(`[data-id="${s.id}"]`);
+  /** A block's text without its action buttons (M3-E5). */
+  const shown = (s: Segment) => {
+    const el = block(s)?.cloneNode(true) as Element | undefined;
+    el?.querySelector('.seg__actions')?.remove();
+    return el?.textContent;
+  };
 
   it('streams: original dimmed while pending, the preview while streaming, then the final', async () => {
     const f = mountJob(jobView([[p1, { status: 'pending' }], [p2, { status: 'streaming', text: 'Thứ h' }], [p3, { status: 'pending' }], [lit, { status: 'pending' }]]));
     expect(block(p1)?.getAttribute('data-status')).toBe('pending');
-    expect(block(p1)?.textContent).toBe('Read the docs.');
+    expect(shown(p1)).toBe('Read the docs.');
     expect(block(p2)?.getAttribute('data-status')).toBe('streaming');
-    expect(block(p2)?.textContent).toBe('Thứ h');
+    expect(shown(p2)).toBe('Thứ h');
     expect(block(code)?.getAttribute('data-status')).toBe('kept');
     expect(root.querySelector('[data-testid=job]')?.textContent).toContain('Translating into Vietnamese… 0 of 4');
     await f.j.push(jobView([[p1, { status: 'final', text: 'Đọc [link]tài liệu[/link].', revision: 1, attempt: 1 }], [p2, { status: 'final', text: 'Thứ hai', revision: 1 }], [p3, { status: 'pending' }], [lit, { status: 'pending' }]]));
     expect(block(p1)?.getAttribute('data-status')).toBe('final');
     expect(block(p1)?.querySelector('.seg__link')?.textContent).toBe('tài liệu');
-    expect(block(p2)?.textContent).toBe('Thứ hai');
+    expect(shown(p2)).toBe('Thứ hai');
   });
 
   it('renders model output as text only, and literal markers of the page stay literal (NB6)', () => {
     mountJob(jobView([[p1, { status: 'final', text: '<img src=x onerror=alert(1)> *đậm*', revision: 1 }], [lit, { status: 'final', text: '2 * 3 * 4', revision: 1 }]]));
     expect(root.querySelector('img')).toBeNull();
-    expect(block(p1)?.textContent).toBe('<img src=x onerror=alert(1)> *đậm*');
+    expect(shown(p1)).toBe('<img src=x onerror=alert(1)> *đậm*');
     expect(block(p1)?.querySelector('em')).toBeNull();
-    expect(block(lit)?.textContent).toBe('2 * 3 * 4');
+    expect(shown(lit)).toBe('2 * 3 * 4');
     expect(block(lit)?.querySelector('em')).toBeNull();
   });
 
   it('shows a failed segment as its original with the reason', () => {
     mountJob(jobView([[p3, { status: 'failed', error: { kind: 'rate_limit', message: '429' } }]]));
     expect(block(p3)?.getAttribute('data-status')).toBe('failed');
-    expect(block(p3)?.textContent).toContain('Third');
-    expect(block(p3)?.textContent).toContain('Not translated: the provider is busy');
+    expect(shown(p3)).toContain('Third');
+    expect(shown(p3)).toContain('Not translated: the provider is busy');
   });
 
   it('Cancel while running; the cost readout; Translate the rest after a cancel', async () => {
     const f = mountJob(jobView([]));
     expect(root.querySelector('[data-testid=job-cost]')?.textContent).toBe('$0.0023');
-    act(() => (root.querySelector('[data-testid=job] button') as HTMLButtonElement).click());
+    // Cancel sits in the header (M3-E6), not twice in the status line.
+    expect(root.querySelector('[data-testid=job] button')).toBeNull();
+    act(() => (root.querySelector('[data-testid=page-cancel]') as HTMLButtonElement).click());
     expect(f.calls).toEqual(['cancel']);
     await f.j.push(jobView([[p1, { status: 'final', text: 'x', revision: 1 }]], { status: 'cancelled', unmetered: 2 }));
     expect(root.querySelector('[data-testid=job]')?.textContent).toContain('Cancelled · 1 of 4 translated');
@@ -291,7 +301,7 @@ describe('translation in the panel (plan M1-E10)', () => {
     const f = mountJob(jobView([], { status: 'skipped', counts: { total: 0, final: 0, failed: 0 }, detection: { lang: 'vi', via: 'detector', confidence: 0.98 }, cost: undefined }));
     const note = root.querySelector('[data-testid=job-skipped]')?.textContent;
     expect(note).toBe('This page is already in Vietnamese, so it was not translated (language detection on this device).');
-    expect(block(p1)?.textContent).toBe('Read the docs.');
+    expect(shown(p1)).toBe('Read the docs.');
     act(() => (root.querySelector('[data-testid=job] button') as HTMLButtonElement).click());
     expect(f.calls).toEqual(['resume']);
   });

@@ -14,6 +14,7 @@ import { snippetDocId, snippetView, SnippetStore } from './snippet.ts';
 import { translateClient } from './route.ts';
 import { ViewportStore } from './viewport.ts';
 import { PrivacyGate } from './privacy.ts';
+import { PrefsStore } from './prefs.ts';
 
 type Browser = typeof browser;
 
@@ -25,6 +26,8 @@ export interface Translator {
   viewports: ViewportStore;
   /** The first-run privacy notice (plan M3-E10): nothing is sent before it is acknowledged. */
   privacy: PrivacyGate;
+  /** The preferences the header shows and switches (plan M3-E6). */
+  prefs: PrefsStore;
   hooks: SessionHooks;
   actions(tabId: number): JobActions;
   /** Settings listeners and the panel-close cancel. Returns the cleanup. */
@@ -61,6 +64,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   const detector = 'detector' in options ? options.detector : chromeLanguageDetector();
   const mixed = options.mixedLanguage ?? MIXED_LANGUAGE_DETECTION;
   const privacy = options.privacy ?? new PrivacyGate(api);
+  const prefs = new PrefsStore(api);
   const pageKey = (tabId: number) => `page:${tabId}`;
   const snippetKey = (tabId: number) => `snippet:${tabId}`;
 
@@ -185,6 +189,24 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   };
 
   /**
+   * Retranslate page (the header, plan M3-E6): the whole page again with the current settings,
+   * skipping the translation cache (decision M3-D2: what it produces replaces the stored entries),
+   * a running job included. The page's cost so far stays in its total. A page skipped as already
+   * in the target language is translated anyway: the user asked.
+   */
+  const retranslate = (tabId: number) => {
+    const current = jobs.docFor(tabId);
+    if (current === undefined) return;
+    const { doc, docId } = current;
+    void readSettings(api).then(async (settings) => {
+      const got = await prepare(tabId, settings, doc);
+      if (got === undefined) return;
+      if (jobs.docOf(tabId) !== docId || !isLive(tabId, docId)) return got.unmark();
+      void jobs.start(tabId, docId, got.prepared.doc, { fresh: true, keepCost: true });
+    });
+  };
+
+  /**
    * A selection arrived (the worker left it in storage.session): translate it now, whatever the
    * page is (plan M3-E4). The user's click was the explicit action that lets it go to the provider
    * (§8); a record from a denylisted site, or whose url is one, is shown as blocked and never sent
@@ -276,6 +298,8 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     resume: () => resume(tabId),
     openOptions: () => void api.runtime.openOptionsPage(),
     retrySegment: (id) => void jobs.retrySegment(tabId, id),
+    retranslateSegment: (id) => void jobs.retranslateSegment(tabId, id),
+    retranslatePage: () => retranslate(tabId),
     grantAccess: () => {
       // First call in the click handler: permissions.request needs the gesture (§4.3.3 step 3).
       void api.permissions.request({ origins: [DEFAULT_ORIGIN] }).then((granted) => {
@@ -289,6 +313,12 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     cancel: () => snippetJobs.cancel(tabId),
     resume: () => void snippetJobs.resume(tabId),
     retrySegment: (id) => void snippetJobs.retrySegment(tabId, id),
+    retranslateSegment: (id) => void snippetJobs.retranslateSegment(tabId, id),
+    // A selection has no cache to skip: translating it again is a new run of the same text.
+    retranslatePage: () => {
+      const current = snippetJobs.docFor(tabId);
+      if (current) void snippetJobs.start(tabId, current.docId, current.doc, { keepCost: true });
+    },
     grantAccess: () => {
       void api.permissions.request({ origins: [DEFAULT_ORIGIN] }).then((granted) => {
         if (granted) void snippetJobs.resume(tabId);
@@ -342,5 +372,5 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     };
   };
 
-  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, privacy, hooks, actions, watch };
+  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, privacy, prefs, hooks, actions, watch };
 }

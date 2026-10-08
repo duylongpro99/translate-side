@@ -92,6 +92,8 @@ const actions = (calls: string[]): JobActions => ({
   resume: () => calls.push('resume'),
   openOptions: () => calls.push('options'),
   retrySegment: (id) => calls.push(`retry:${id}`),
+  retranslateSegment: (id) => calls.push(`retranslate:${id}`),
+  retranslatePage: () => calls.push('retranslate-page'),
   grantAccess: () => calls.push('grant'),
 });
 
