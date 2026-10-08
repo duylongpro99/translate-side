@@ -130,14 +130,17 @@ async function* attempt(client: OpenAI, req: NormalizedRequest, quirks: Quirks):
 const MAX_MODELS = 500;
 
 export function createOpenAIAdapter(options: AdapterOptions = {}): ProtocolAdapter {
-  const listModels = async (conn: ResolvedConnection): Promise<ModelInfo[]> => {
-    const out: ModelInfo[] = [];
-    for await (const m of clientFor(conn, options).models.list()) {
-      out.push({ id: m.id });
-      if (out.length >= MAX_MODELS) break;
+  /** The models, and whether the listing is OpenAI-shaped (`object: "list"`, §4.2.5 step 2). */
+  const list = async (conn: ResolvedConnection): Promise<{ models: ModelInfo[]; shape: boolean }> => {
+    const page = await clientFor(conn, options).models.list();
+    const models: ModelInfo[] = [];
+    for await (const m of page) {
+      models.push({ id: m.id });
+      if (models.length >= MAX_MODELS) break;
     }
-    return out;
+    return { models, shape: page.object === 'list' };
   };
+  const listModels = async (conn: ResolvedConnection): Promise<ModelInfo[]> => (await list(conn)).models;
   return {
     protocol: 'openai-chat',
     stream(conn, req) {
@@ -153,7 +156,7 @@ export function createOpenAIAdapter(options: AdapterOptions = {}): ProtocolAdapt
       const pre = preflight(conn);
       if (pre !== null) return { ok: false, error: pre };
       try {
-        return { ok: true, models: await listModels(conn) };
+        return { ok: true, ...(await list(conn)) };
       } catch (err) {
         return { ok: false, error: await classifySdkError(err, conn, isApiError) };
       }

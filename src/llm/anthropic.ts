@@ -131,14 +131,18 @@ async function* attempt(client: Anthropic, req: NormalizedRequest, quirks: Quirk
 const MAX_MODELS = 500;
 
 export function createAnthropicAdapter(options: AdapterOptions = {}): ProtocolAdapter {
-  const listModels = async (conn: ResolvedConnection): Promise<ModelInfo[]> => {
-    const out: ModelInfo[] = [];
+  /** The models, and whether the listing is Anthropic-shaped (every `data[].type == "model"`, at least one; §4.2.5 step 1). */
+  const list = async (conn: ResolvedConnection): Promise<{ models: ModelInfo[]; shape: boolean }> => {
+    const models: ModelInfo[] = [];
+    let shape = true;
     for await (const m of clientFor(conn, options).models.list({ limit: 100 })) {
-      out.push({ id: m.id, displayName: m.display_name, ...(m.max_input_tokens === null ? {} : { contextWindow: m.max_input_tokens }) });
-      if (out.length >= MAX_MODELS) break;
+      if ((m as { type?: unknown }).type !== 'model') shape = false;
+      models.push({ id: m.id, ...(typeof m.display_name === 'string' ? { displayName: m.display_name } : {}), ...(typeof m.max_input_tokens === 'number' ? { contextWindow: m.max_input_tokens } : {}) });
+      if (models.length >= MAX_MODELS) break;
     }
-    return out;
+    return { models, shape: shape && models.length > 0 };
   };
+  const listModels = async (conn: ResolvedConnection): Promise<ModelInfo[]> => (await list(conn)).models;
   return {
     protocol: 'anthropic-messages',
     stream(conn, req) {
@@ -151,7 +155,7 @@ export function createAnthropicAdapter(options: AdapterOptions = {}): ProtocolAd
       const pre = preflight(conn);
       if (pre !== null) return { ok: false, error: pre };
       try {
-        return { ok: true, models: await listModels(conn) };
+        return { ok: true, ...(await list(conn)) };
       } catch (err) {
         return { ok: false, error: await classifySdkError(err, conn, isApiError) };
       }

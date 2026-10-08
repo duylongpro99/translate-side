@@ -172,8 +172,12 @@ export interface ModelInfo {
   contextWindow?: number;
 }
 
-/** Result of "Test connection" (§4.2.5, S4 decision 3: success is the status, not the content). */
-export type ProbeResult = { ok: true; models?: ModelInfo[] } | { ok: false; error: LLMError };
+/**
+ * Result of "Test connection" (§4.2.5, S4 decision 3: success is the status, not the content).
+ * `shape` (M4-E6): does the listing look like this protocol's (§4.2.5 steps 1–2: Anthropic's
+ * `data[].type == "model"`, OpenAI's `object: "list"`)? Only auto-detect uses it.
+ */
+export type ProbeResult = { ok: true; models?: ModelInfo[]; shape?: boolean } | { ok: false; error: LLMError };
 
 /** One per wire format (§4.2.2). Same contract as LLMClient.stream for `stream`. */
 export interface ProtocolAdapter {

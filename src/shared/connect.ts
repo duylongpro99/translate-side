@@ -174,6 +174,11 @@ async function checkProtocol(input: TestInput, protocol: Protocol, base: string,
     }
   }
   if (!probe.ok) return { protocol, baseUrl, error: probe.error };
+  // §4.2.5 steps 1–2: on Auto-detect a protocol is a candidate only when its listing has that
+  // protocol's shape (a 200 from a gateway that lists for both is not enough).
+  if (input.protocol === 'auto' && probe.shape !== true) {
+    return { protocol, baseUrl, error: { kind: 'bad_request', message: `The model list is not ${protocol === 'anthropic-messages' ? 'Anthropic' : 'OpenAI'}-shaped` } };
+  }
   const models = probe.models ?? [];
   const chatModel = input.model?.trim() || (input.preset.keyCheck === 'chat' || input.protocol === 'auto' ? modelForChat(models, protocol) : undefined);
   const out: ProtocolCheck & { fix?: UrlFix } = { protocol, baseUrl, models, ...(fix ? { fix } : {}) };
@@ -286,7 +291,10 @@ export function connectMessage(error: LLMError, ctx: MessageContext): ConnectMes
       if (error.cause === 'permission') return { status: 'No access', text: `Translate Side has no access to ${host}. Allow it when Chrome asks.`, action: 'grant' };
       return {
         status: 'CORS blocked',
-        text: local === 'lmstudio' ? 'LM Studio refused requests from the extension. Turn on CORS in its server settings; the test runs again by itself.' : `${server} refused requests from the extension (CORS). Allow them, and the test runs again by itself.`,
+        text:
+          local === 'lmstudio'
+            ? 'LM Studio refused requests from the extension. Turn on CORS in its server settings; the test runs again by itself.'
+            : `${server} refused requests from the extension (CORS). Allow them as the guide shows, and the test runs again by itself.`,
         action: 'cors-guide',
       };
     case 'model_not_found': {
@@ -303,7 +311,8 @@ export function connectMessage(error: LLMError, ctx: MessageContext): ConnectMes
       return { status: 'Busy', text: `${server} is busy or rate-limited right now (${error.message}). Try again in a moment.`, action: 'retry' };
     case 'bad_request':
       if (error.status === 404) {
-        const text = `Nothing answers the ${ctx.preset.protocol === 'anthropic-messages' ? 'Anthropic' : 'OpenAI-compatible'} API at ${ctx.baseUrl}. Check the base URL.`;
+        const api = ctx.preset.protocol === 'auto' ? 'an OpenAI-compatible or Anthropic-compatible API' : ctx.preset.protocol === 'anthropic-messages' ? 'an Anthropic-compatible API' : 'an OpenAI-compatible API';
+        const text = `Nothing at ${ctx.baseUrl} answers as ${api}. Check the base URL.`;
         return ctx.suggestion ? { status: 'Wrong base URL', text: `${text} Did you mean ${ctx.suggestion}?`, action: 'use-url', suggestion: ctx.suggestion } : { status: 'Wrong base URL', text };
       }
       if (error.status === undefined && /base URL/i.test(error.message)) return { status: 'Invalid base URL', text: 'Enter a base URL that starts with https:// (or http:// for a local server).' };
@@ -328,7 +337,22 @@ export interface GuideStep {
 /** The origin Ollama must allow (§4.3.6). */
 export const OLLAMA_ORIGINS = 'chrome-extension://*';
 
-export function corsGuide(local: 'ollama' | 'lmstudio'): { title: string; steps: GuideStep[] } {
+/** Which guide a local server gets: its own, or the generic one (a Custom connection on localhost). */
+export type GuideKind = 'ollama' | 'lmstudio' | 'generic';
+
+export function corsGuide(local: GuideKind): { title: string; steps: GuideStep[] } {
+  if (local === 'generic') {
+    return {
+      title: 'Let Translate Side use this server',
+      steps: [
+        {
+          os: 'All',
+          text: `The server answers 403 to requests from the extension. In its CORS or allowed-origins setting, allow ${OLLAMA_ORIGINS} (or this extension's own origin), then restart it.`,
+          after: 'vLLM: --allowed-origins \'["chrome-extension://*"]\'. LiteLLM: allow the origin in its CORS settings.',
+        },
+      ],
+    };
+  }
   if (local === 'lmstudio') {
     return {
       title: 'Let Translate Side use LM Studio',

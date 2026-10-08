@@ -133,8 +133,8 @@ describe('auto-detect (§4.2.5, plan M4-E6)', () => {
   /** An OpenRouter-style gateway: OpenAI under /api/v1, Anthropic under /api (its /v1/messages). */
   const gateway = (h: Hit): Reply => {
     const p = path(h.url);
-    if (p === '/api/v1/models' && h.headers['authorization']) return openaiList('openai/gpt-5-mini', 'anthropic/claude-haiku-4.5');
-    if (p === '/api/v1/models' && h.headers['x-api-key']) return anthropicList('anthropic/claude-haiku-4.5');
+    // Both SDKs send the Bearer key here; the Anthropic one also sends anthropic-version.
+    if (p === '/api/v1/models') return h.headers['anthropic-version'] ? anthropicList('anthropic/claude-haiku-4.5') : openaiList('openai/gpt-5-mini', 'anthropic/claude-haiku-4.5');
     if (p === '/api/v1/chat/completions') return openaiOk;
     if (p === '/api/v1/messages') return anthropicOk;
     return notFound;
@@ -148,6 +148,16 @@ describe('auto-detect (§4.2.5, plan M4-E6)', () => {
     expect(gpt.fixes.map((f) => f.reason)).toEqual(['endpoint']);
     const claude = await testConnection(auto('anthropic/claude-haiku-4.5'), ports(s.fetch));
     expect(claude).toMatchObject({ ok: true, detected: ['anthropic-messages', 'openai-chat'], protocol: 'anthropic-messages', baseUrl: 'https://openrouter.ai/api/v1' });
+  });
+
+  it('a protocol whose listing has the other shape is not detected, even with no model to test (§4.2.5 steps 1–2)', async () => {
+    // A gateway that answers every /v1/models with the OpenAI list and has no models yet.
+    const s = server((h) => (path(h.url) === '/v1/models' ? openaiList() : notFound));
+    const result = await testConnection(input('custom-auto', { baseUrl: 'https://llm.example.com/v1' }), ports(s.fetch));
+    expect(result).toMatchObject({ ok: true, detected: ['openai-chat'], protocol: 'openai-chat' });
+    // Explicit protocols keep S4: success is the status, whatever the shape.
+    const explicit = await testConnection(input('custom-anthropic', { baseUrl: 'https://llm.example.com' }), ports(server(() => openaiList('m')).fetch));
+    expect(explicit.ok).toBe(true);
   });
 
   it('keeps only the protocol whose test call succeeds', async () => {
@@ -214,7 +224,8 @@ describe('Test connection messages (plan M4 §3 #5: 4 of 4)', () => {
     const m = await message('custom-openai', () => notFound, { baseUrl: 'https://gw.example.com/llm/v1' });
     expect(m.error).toMatchObject({ kind: 'bad_request', status: 404 });
     expect(m.status).toBe('Wrong base URL');
-    expect(m.text).toContain('https://gw.example.com/llm/v1');
+    expect(m.text).toBe('Nothing at https://gw.example.com/llm/v1 answers as an OpenAI-compatible API. Check the base URL.');
+    expect(connectMessage(m.error, { preset: presetFor('custom-auto'), baseUrl: 'https://x.example' }).text).toContain('an OpenAI-compatible or Anthropic-compatible API');
     expect(connectMessage(m.error, { preset: presetFor('gemini'), baseUrl: 'https://x.example/v1', suggestion: 'https://y.example/v1' })).toMatchObject({ action: 'use-url', suggestion: 'https://y.example/v1' });
   });
 
@@ -243,6 +254,12 @@ describe('local-server guides (§4.3.6, plan M4-E12)', () => {
     expect(g.steps[1]?.command).toBe('setx OLLAMA_ORIGINS "chrome-extension://*"');
     expect(g.steps[2]?.command).toContain('Environment="OLLAMA_ORIGINS=chrome-extension://*"');
     expect(g.steps[2]?.command).toContain('systemctl restart ollama');
+  });
+
+  it('a Custom connection on localhost gets a generic guide (review C1 #2)', () => {
+    const m = connectMessage({ kind: 'cors', cause: 'origin', message: '' }, { preset: presetFor('custom-openai'), baseUrl: 'http://localhost:8000/v1' });
+    expect(m).toMatchObject({ status: 'CORS blocked', action: 'cors-guide' });
+    expect(corsGuide('generic').steps[0]?.text).toContain('chrome-extension://*');
   });
 
   it('tells LM Studio users to turn on CORS in the server settings', () => {
