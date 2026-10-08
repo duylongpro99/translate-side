@@ -242,3 +242,4 @@ The plan has no per-phase done criteria; these are the §2/§3 lines that map to
 
 ## WRAP-UP — 2026-10-08
 - User asked to commit and push master now (supersedes M3-D15's "merge after Phase E"): m3 fast-forwarded into master and pushed with this log. Phase E (dogfood) stays open; it can continue on master or a new branch.
+- M3-D16 (user, 2026-10-08): M3 stays OPEN until the 7-day dogfood (Phase E) is done; the user returns after 7 days and re-runs the M3 /loop to triage and close. M4 may run in parallel (its plan allows it) on an `m4` branch; the user dogfoods a `master` build; any M3 MVP blocker is fixed on master first, then m4 is rebased.
