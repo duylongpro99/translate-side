@@ -70,8 +70,9 @@ describe('options v0 (plan M1-E9)', () => {
       input.value = '  AIzaSyExampleKey1234 ';
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    // Opening the page migrated storage.sync (src/shared/providers.ts): a fresh install writes only the version.
-    expect(f.log).toEqual(['sync.set schemaVersion']);
+    // Opening the page migrated storage (src/shared/providers.ts): a fresh install writes only the
+    // version to sync, and its (empty) migrated route to local.
+    expect(f.log.sort()).toEqual(['local.set migratedRoute', 'sync.set schemaVersion']);
     const before = f.log.length;
     act(() => {
       (root.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));

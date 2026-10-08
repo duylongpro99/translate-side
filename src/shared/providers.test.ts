@@ -10,6 +10,7 @@ import {
   clearTabOverride,
   isProviderKey,
   matchesSite,
+  migratedRouteFromM1,
   migrateProviders,
   parseStored,
   readProviderSettings,
@@ -33,6 +34,8 @@ import {
   APIBOX_FLASH_PROFILE,
   APIBOX_PRO_PROFILE,
   APIBOX_QWEN_PROFILE,
+  BUILTIN_CONNECTIONS,
+  BUILTIN_PROFILES,
   DEFAULT_PROFILE,
   GEMINI_CONNECTION,
   GEMINI_PROFILE,
@@ -98,6 +101,9 @@ const M1_LOCAL = { 'secret:gemini': 'AIzaSyExampleKey1234', privacyNotice: { ver
 const M3_SYNC = { prefs: { targetLang: 'vi', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: 400000 } };
 const M3_LOCAL = { 'secret:apibox': 'sk-apibox-0123456789', spend: { usd: 0.01 } };
 
+const ids = (list: readonly { id: string }[]) => list.map((x) => x.id);
+const builtinProfiles = (connectionId: string) => BUILTIN_PROFILES.filter((p) => p.connectionId === connectionId);
+
 const settings = (over: Partial<ProviderSettings> = {}): ProviderSettings => ({
   schemaVersion: SCHEMA_VERSION,
   connections: [structuredClone(APIBOX_CONNECTION), structuredClone(GEMINI_CONNECTION)],
@@ -138,11 +144,12 @@ describe('schema (plan M4-E2)', () => {
     const items = toSyncItems(s);
     expect(Object.keys(items).sort()).toEqual(['conn:apibox', 'conn:gemini', 'profile:apibox-deepseek-v4-pro', 'profile:apibox-qwen3.8-flash', 'profile:gemini-flash-lite', 'routing', 'schemaVersion', 'siteRules']);
     expect(items.routing).toEqual({ translate: 'apibox-qwen3.8-flash', fallback: ['gemini-flash-lite'] });
-    expect(parseStored({ ...items, prefs: {}, glossary: [] })).toEqual(s);
+    // Built-ins not stored (Anthropic here) apply as built in.
+    expect(parseStored({ ...items, prefs: {}, glossary: [] })).toEqual({ ...s, connections: [...s.connections, ANTHROPIC_CONNECTION], profiles: [...s.profiles, ...builtinProfiles('anthropic')] });
     expect(parseStored({ prefs: {} })).toBeNull();
     // A record under the wrong key is not trusted.
     // (Nothing trusted left: the built-in default applies, not the misfiled record.)
-    expect(parseStored({ schemaVersion: 1, 'conn:other': { ...APIBOX_CONNECTION, label: 'Misfiled' }, routing: { translate: 'p' } })?.connections.map((c) => c.label)).toEqual(['APIBOX']);
+    expect(parseStored({ schemaVersion: 1, 'conn:other': { ...APIBOX_CONNECTION, label: 'Misfiled' }, routing: { translate: 'p' } })?.connections).toEqual(BUILTIN_CONNECTIONS);
     expect(Object.keys(items).every(isProviderKey)).toBe(true);
     expect(isProviderKey('prefs') || isProviderKey('glossary') || isProviderKey('secret:apibox')).toBe(false);
   });
@@ -156,17 +163,18 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
   it('an M1 user (Gemini key only) keeps their key and translates with Gemini, nothing re-entered', async () => {
     const f = fakeApi({ sync: M1_SYNC, local: M1_LOCAL });
     const s = await migrateProviders(f.api);
-    expect(s.connections.map((c) => c.id)).toEqual(['gemini']);
-    expect(s.profiles.map((p) => p.id)).toEqual([GEMINI_PROFILE.id]);
+    expect(ids(s.connections)).toEqual(['gemini', 'apibox', 'anthropic']);
+    expect(s.profiles[0]).toEqual(GEMINI_PROFILE);
     expect(s.routing).toEqual({ translate: GEMINI_PROFILE.id });
-    // Stored: the version, this device's keyed records and the derived route — never `routing`.
-    expect([...f.sync.data.keys()].sort()).toEqual(['conn:gemini', 'glossary', 'migratedRoute', 'prefs', 'profile:gemini-flash-lite', 'schemaVersion']);
-    expect(f.sync.data.get('migratedRoute')).toEqual({ translate: GEMINI_PROFILE.id });
+    // Stored: the version and this device's keyed records — never `routing`; the derived route is
+    // this device's own, in storage.local.
+    expect([...f.sync.data.keys()].sort()).toEqual(['conn:gemini', 'glossary', 'prefs', 'profile:gemini-flash-lite', 'schemaVersion']);
+    expect(f.local.data.get('migratedRoute')).toEqual({ translate: GEMINI_PROFILE.id });
     expect(f.sync.data.get('conn:gemini')).toEqual(GEMINI_CONNECTION);
     expect(f.sync.data.get('prefs')).toEqual(M1_SYNC.prefs);
     expect(f.sync.data.get('glossary')).toEqual(M1_SYNC.glossary);
     expect(JSON.stringify(Object.fromEntries(f.sync.data))).not.toContain('AIzaSy');
-    expect(Object.fromEntries(f.local.data)).toEqual(M1_LOCAL);
+    expect(Object.fromEntries(f.local.data)).toEqual({ ...M1_LOCAL, migratedRoute: { translate: GEMINI_PROFILE.id } });
     const route = await resolveRoute(f.api, 'translate');
     expect(route).toMatchObject({ ok: true, profile: GEMINI_PROFILE, connection: GEMINI_CONNECTION, source: 'routing' });
   });
@@ -174,28 +182,32 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
   it('an M2/M3 user (APIBOX key) sees the same connection and model as before', async () => {
     const f = fakeApi({ sync: M3_SYNC, local: M3_LOCAL });
     const s = await migrateProviders(f.api);
-    expect(s.connections).toEqual([APIBOX_CONNECTION]);
+    expect(s.connections).toEqual(BUILTIN_CONNECTIONS);
     expect(s.routing).toEqual({ translate: DEFAULT_PROFILE.id });
     expect(f.sync.data.has('routing') || f.sync.data.has('migratedRoute')).toBe(false);
+    expect(f.local.data.get('migratedRoute')).toEqual({});
     expect(await resolveRoute(f.api, 'translate')).toMatchObject({ ok: true, profile: APIBOX_QWEN_PROFILE, connection: APIBOX_CONNECTION });
   });
 
   it('a user with both keys stays on the default; Anthropic is seeded only with its key', async () => {
-    const both = await seedFromM1(fakeApi({ local: { ...M1_LOCAL, ...M3_LOCAL } }).api);
+    const bothApi = fakeApi({ local: { ...M1_LOCAL, ...M3_LOCAL } }).api;
+    const both = await seedFromM1(bothApi);
     expect(Object.keys(both).filter((k) => k.startsWith('conn:'))).toEqual(['conn:apibox', 'conn:gemini']);
-    expect(both).not.toHaveProperty('migratedRoute');
-    const anthropic = await seedFromM1(fakeApi({ local: { 'secret:anthropic': 'sk-ant-0123456789abcd' } }).api);
-    expect(Object.keys(anthropic).sort()).toEqual(['conn:anthropic', 'migratedRoute', `profile:${ANTHROPIC_HAIKU_PROFILE.id}`, 'schemaVersion']);
-    expect(anthropic.migratedRoute).toEqual({ translate: ANTHROPIC_HAIKU_PROFILE.id });
-    expect(parseStored(anthropic)?.connections).toEqual([ANTHROPIC_CONNECTION]);
+    expect(await migratedRouteFromM1(bothApi)).toEqual({});
+    const anthropicApi = fakeApi({ local: { 'secret:anthropic': 'sk-ant-0123456789abcd' } }).api;
+    const anthropic = await seedFromM1(anthropicApi);
+    expect(Object.keys(anthropic).sort()).toEqual(['conn:anthropic', `profile:${ANTHROPIC_HAIKU_PROFILE.id}`, 'schemaVersion']);
+    expect(await migratedRouteFromM1(anthropicApi)).toEqual({ translate: ANTHROPIC_HAIKU_PROFILE.id });
+    expect(parseStored(anthropic, await migratedRouteFromM1(anthropicApi))?.routing).toEqual({ translate: ANTHROPIC_HAIKU_PROFILE.id });
   });
 
   it('a fresh install writes only the version; the default connection and route apply at read time', async () => {
     const f = fakeApi();
     const s = await migrateProviders(f.api);
     expect([...f.sync.data.keys()]).toEqual(['schemaVersion']);
-    expect(s.connections).toEqual([APIBOX_CONNECTION]);
-    expect(s.profiles.map((p) => p.id)).toEqual([APIBOX_QWEN_PROFILE.id, APIBOX_PRO_PROFILE.id, APIBOX_FLASH_PROFILE.id]);
+    expect(s.connections).toEqual(BUILTIN_CONNECTIONS);
+    expect(ids(s.profiles)).toEqual(ids(BUILTIN_PROFILES));
+    expect(ids(s.profiles).slice(0, 3)).toEqual([APIBOX_QWEN_PROFILE.id, APIBOX_PRO_PROFILE.id, APIBOX_FLASH_PROFILE.id]);
     expect(s.routing).toEqual({ translate: DEFAULT_PROFILE.id });
   });
 
@@ -223,6 +235,33 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
     await migrateProviders(c.api);
     await saveRouting(c.api, { translate: DEFAULT_PROFILE.id });
     expect((await readProviderSettings(c.api)).routing.translate).toBe(DEFAULT_PROFILE.id);
+  });
+
+  it("a device's migrated route stays on that device; one migrating after sync was versioned derives its own (review B-2 tester B)", async () => {
+    // Device A: an M1 Gemini key; it migrates first.
+    const a = fakeApi({ local: M1_LOCAL });
+    expect((await migrateProviders(a.api)).routing.translate).toBe(GEMINI_PROFILE.id);
+    // Device B: only an APIBOX key, sync already holds A's items and no `routing`: its own default.
+    const b = fakeApi({ sync: Object.fromEntries(a.sync.data), local: M3_LOCAL, granted: ['https://api.ai-box.vn/*'] });
+    expect(b.sync.data.has('migratedRoute')).toBe(false);
+    expect((await migrateProviders(b.api)).routing.translate).toBe(DEFAULT_PROFILE.id);
+    expect(await translateClient(b.api, {})).toMatchObject({ ok: true, connection: { id: 'apibox' } });
+    expect(b.sync.sets).toHaveLength(0);
+    // Device C: a Gemini key, sync versioned by B: it still derives its own route, once.
+    const c = fakeApi({ sync: Object.fromEntries(b.sync.data), local: M1_LOCAL });
+    expect((await migrateProviders(c.api)).routing.translate).toBe(GEMINI_PROFILE.id);
+    await migrateProviders(c.api);
+    expect(c.local.sets).toEqual([['migratedRoute']]);
+  });
+
+  it('a route to a built-in profile resolves on a device that stored another connection only (review B-2 tester A)', async () => {
+    const f = fakeApi({ local: M1_LOCAL });
+    await migrateProviders(f.api);
+    expect(f.sync.data.has('conn:apibox')).toBe(false);
+    await saveRouting(f.api, { translate: APIBOX_QWEN_PROFILE.id });
+    expect(await resolveRoute(f.api, 'translate')).toMatchObject({ ok: true, profile: APIBOX_QWEN_PROFILE, connection: APIBOX_CONNECTION });
+    // It asks for that connection's key, not "no longer exists".
+    expect(await translateClient(f.api, {})).toMatchObject({ ok: false, error: { kind: 'auth', message: 'Add your APIBOX API key in settings' }, connection: { id: 'apibox' } });
   });
 
   it('is idempotent: a second run reads, writes nothing and returns the same settings', async () => {
@@ -255,9 +294,10 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
     const s = await migrateProviders(f.api);
     expect(f.sync.sets[0]).not.toContain('conn:apibox');
     expect(f.sync.data.get('conn:apibox')).toEqual(mine);
-    expect(s.connections).toEqual([mine]);
+    expect(s.connections[0]).toEqual(mine);
     expect(s.profiles[0]).toEqual(other);
-    expect(s.profiles).toHaveLength(4);
+    // The other device's profile, then this device's seeded APIBOX profiles, then the other built-ins.
+    expect(ids(s.profiles)).toEqual(['custom-pro', ...ids(BUILTIN_PROFILES)]);
     expect(s.routing).toEqual({ translate: 'custom-pro' });
   });
 
@@ -265,7 +305,7 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
     const f = fakeApi({ sync: { schemaVersion: 7, 'conn:x': { ...APIBOX_CONNECTION, id: 'x', future: true }, routing: { translate: 'p' } } });
     const s = await migrateProviders(f.api);
     expect(s.schemaVersion).toBe(7);
-    expect(s.connections.map((c) => c.id)).toEqual(['x']);
+    expect(ids(s.connections)).toEqual(['x', ...ids(BUILTIN_CONNECTIONS)]);
     expect(f.sync.sets).toHaveLength(0);
   });
 
@@ -505,7 +545,7 @@ describe('saveLearnedQuirk', () => {
     expect(f.sync.data.has('conn:apibox')).toBe(false);
     await saveLearnedQuirk(f.api, { connectionId: 'apibox', profileId: APIBOX_PRO_PROFILE.id }, 'supportsTemperature', { supportsTemperature: false });
     expect(f.sync.data.get('conn:apibox')).toEqual({ ...APIBOX_CONNECTION, quirks: { ...APIBOX_CONNECTION.quirks, supportsTemperature: false } });
-    expect((await readProviderSettings(f.api)).connections).toEqual([f.sync.data.get('conn:apibox')]);
+    expect((await readProviderSettings(f.api)).connections[0]).toEqual(f.sync.data.get('conn:apibox'));
     // Its built-in profiles still apply, so the default route still resolves.
     expect(await resolveRoute(f.api, 'translate')).toMatchObject({ ok: true, profile: { id: DEFAULT_PROFILE.id }, connection: { quirks: { supportsTemperature: false } } });
   });

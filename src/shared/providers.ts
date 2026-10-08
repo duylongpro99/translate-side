@@ -9,12 +9,13 @@
 //   profile:<id>           ModelProfile
 //   routing                { translate, analyze?, review?, fallback? }
 //   siteRules              [{ pattern, translate, localOnly? }]  (Routing.siteOverrides; UI in M5-E6)
-//   migratedRoute          { translate }: the route the M1 migration derived from this device's keys
 // `routing` is only ever written by the user (saveRouting), never by the migration: a fresh device
 // migrates before sync has pulled the other devices' items, and a default it wrote could win
-// last-write-wins over the user's routing. Without `routing`, `migratedRoute` applies, then the
-// built-in default. Likewise, with no connection stored at all, the built-in default connection
-// and its profiles apply at read time without being written.
+// last-write-wins over the user's routing. Without `routing`, this device's `migratedRoute`
+// applies, then the built-in default. `migratedRoute` ({ translate }, or {} for none) is in
+// storage.local: it is derived from this device's keys, so another device's must not reach it.
+// Every built-in connection and its profiles apply at read time when not stored, so a route to a
+// built-in profile resolves on any device (it asks for a key instead).
 // Records are found by key prefix, not through an index item: chrome.storage.sync merges devices
 // item by item, and an index written on two devices at once would lose one side's records.
 // Tab overrides (the quick switcher, M4-E11) are per browser session: storage.session
@@ -42,14 +43,14 @@ export const CONNECTION_PREFIX = 'conn:';
 export const PROFILE_PREFIX = 'profile:';
 export const ROUTING_KEY = 'routing';
 export const SITE_RULES_KEY = 'siteRules';
-/** The route the migration derived from this device's M1 keys (e.g. Gemini); `routing` always wins over it. */
+/** storage.local: the route the migration derived from this device's M1 keys (e.g. Gemini); `routing` always wins over it. */
 export const MIGRATED_ROUTE_KEY = 'migratedRoute';
 /** chrome.storage.sync.MAX_ITEMS (fixed by Chrome). */
 export const SYNC_MAX_ITEMS = 512;
 export const TAB_ROUTE_PREFIX = 'tabRoute:';
 
 /** Is `key` one of the sync items this module owns? */
-export const isProviderKey = (key: string) => key === SCHEMA_KEY || key === ROUTING_KEY || key === SITE_RULES_KEY || key === MIGRATED_ROUTE_KEY || key.startsWith(CONNECTION_PREFIX) || key.startsWith(PROFILE_PREFIX);
+export const isProviderKey = (key: string) => key === SCHEMA_KEY || key === ROUTING_KEY || key === SITE_RULES_KEY || key.startsWith(CONNECTION_PREFIX) || key.startsWith(PROFILE_PREFIX);
 export const connectionKey = (id: string) => `${CONNECTION_PREFIX}${id}`;
 export const profileKey = (id: string) => `${PROFILE_PREFIX}${id}`;
 export const tabRouteKey = (tabId: number) => `${TAB_ROUTE_PREFIX}${tabId}`;
@@ -175,8 +176,11 @@ export function cleanRouting(raw: unknown): Omit<Routing, 'siteOverrides'> | nul
   };
 }
 
-/** The provider settings in a sync snapshot; null before the migration (no schema version). */
-export function parseStored(items: Record<string, unknown>): ProviderSettings | null {
+/**
+ * The provider settings in a sync snapshot, with this device's `migratedRoute` (storage.local);
+ * null before the migration (no schema version).
+ */
+export function parseStored(items: Record<string, unknown>, migratedRoute?: unknown): ProviderSettings | null {
   const version = items[SCHEMA_KEY];
   if (typeof version !== 'number') return null;
   const connections: ProviderConnection[] = [];
@@ -190,16 +194,15 @@ export function parseStored(items: Record<string, unknown>): ProviderSettings | 
       if (p && profileKey(p.id) === key) profiles.push(p);
     }
   }
-  // Nothing stored (a device without M1 keys): the built-in default, never written (see above).
-  if (connections.length === 0) connections.push(structuredClone(DEFAULT_CONNECTION));
-  // A built-in connection with no profile stored (the default above, or one a learned quirk wrote
-  // on such a device) has its built-in profiles.
-  for (const c of connections) {
+  // A built-in connection not stored applies as built in, never written (see above); one with no
+  // profile stored (built in, or one a learned quirk wrote) has its built-in profiles.
+  for (const c of BUILTIN_CONNECTIONS) if (!connections.some((x) => x.id === c.id)) connections.push(structuredClone(c));
+  for (const c of BUILTIN_CONNECTIONS) {
     if (profiles.some((p) => p.connectionId === c.id)) continue;
     for (const p of BUILTIN_PROFILES) if (p.connectionId === c.id && !profiles.some((x) => x.id === p.id)) profiles.push(structuredClone(p));
   }
   const sites = cleanSiteRules(items[SITE_RULES_KEY]);
-  const routing = cleanRouting(items[ROUTING_KEY]) ?? cleanRouting(items[MIGRATED_ROUTE_KEY]) ?? { translate: DEFAULT_PROFILE.id };
+  const routing = cleanRouting(items[ROUTING_KEY]) ?? cleanRouting(migratedRoute) ?? { translate: DEFAULT_PROFILE.id };
   return { schemaVersion: version, connections, profiles, routing: sites.length > 0 ? { ...routing, siteOverrides: sites } : routing };
 }
 
@@ -217,27 +220,39 @@ export function toSyncItems(settings: ProviderSettings): Record<string, unknown>
 
 // ---- Migration ----------------------------------------------------------------------------
 
+/** The built-in connections this device holds a key for (M1–M3 kept each under `secret:<builtin id>`). */
+async function keyedBuiltins(api: Browser): Promise<Set<string>> {
+  const keyed = new Set<string>();
+  for (const c of BUILTIN_CONNECTIONS) if ((await readApiKey(api, c.id)) !== undefined) keyed.add(c.id);
+  return keyed;
+}
+
 /**
  * Schema 1 from M1–M3 storage, which held no connections: the extension used built-in constants
  * and kept each key under `secret:<builtin id>` (M1: Gemini, from M2: APIBOX). What this device's
- * keys say, as sync items: every built-in connection with a key, with its built-in profiles, and
- * — when only a connection other than the default has a key (an M1 user with a Gemini key) — a
- * `migratedRoute` to that connection's first profile, so nothing is re-entered (plan M4 §3 #7).
- * A device without keys contributes nothing but the version: the defaults apply at read time.
+ * keys say, as sync items: every built-in connection with a key, with its built-in profiles. A
+ * device without keys contributes nothing but the version: the built-ins apply at read time.
  */
 export async function seedFromM1(api: Browser): Promise<Record<string, unknown>> {
-  const keyed = new Set<string>();
-  for (const c of BUILTIN_CONNECTIONS) if ((await readApiKey(api, c.id)) !== undefined) keyed.add(c.id);
-  const connections = BUILTIN_CONNECTIONS.filter((c) => keyed.has(c.id));
-  const profiles = BUILTIN_PROFILES.filter((p) => keyed.has(p.connectionId));
-  const keyedOther = connections.find((c) => c.id !== DEFAULT_CONNECTION.id);
-  const route = keyed.has(DEFAULT_CONNECTION.id) || keyedOther === undefined ? undefined : profiles.find((p) => p.connectionId === keyedOther.id)?.id;
+  const keyed = await keyedBuiltins(api);
   return {
     [SCHEMA_KEY]: SCHEMA_VERSION,
-    ...Object.fromEntries(connections.map((c) => [connectionKey(c.id), structuredClone(c)])),
-    ...Object.fromEntries(profiles.map((p) => [profileKey(p.id), structuredClone(p)])),
-    ...(route ? { [MIGRATED_ROUTE_KEY]: { translate: route } } : {}),
+    ...Object.fromEntries(BUILTIN_CONNECTIONS.filter((c) => keyed.has(c.id)).map((c) => [connectionKey(c.id), structuredClone(c)])),
+    ...Object.fromEntries(BUILTIN_PROFILES.filter((p) => keyed.has(p.connectionId)).map((p) => [profileKey(p.id), structuredClone(p)])),
   };
+}
+
+/**
+ * This device's `migratedRoute`: when only a connection other than the default has a key (an M1
+ * user with a Gemini key), that connection's first profile, so nothing is re-entered (plan M4
+ * §3 #7); else {} (the default applies).
+ */
+export async function migratedRouteFromM1(api: Browser): Promise<{ translate?: string }> {
+  const keyed = await keyedBuiltins(api);
+  if (keyed.has(DEFAULT_CONNECTION.id)) return {};
+  const other = BUILTIN_CONNECTIONS.find((c) => keyed.has(c.id));
+  const route = other && BUILTIN_PROFILES.find((p) => p.connectionId === other.id)?.id;
+  return route ? { translate: route } : {};
 }
 
 const migrations = new WeakMap<object, Promise<ProviderSettings>>();
@@ -246,15 +261,26 @@ const migrations = new WeakMap<object, Promise<ProviderSettings>>();
  * Brings storage.sync to the current schema and returns the settings. Idempotent: storage that
  * already has a schema version is read, not rewritten. Items already stored (another device
  * synced them before the version) are never overwritten, and `routing` is never written here. A
- * version newer than this build knows is read as it is, never downgraded. One migration at a
- * time per `api` in this context.
+ * version newer than this build knows is read as it is, never downgraded. Each device derives its
+ * own `migratedRoute` once (storage.local), even when another device migrated sync first. One
+ * migration at a time per `api` in this context.
  */
 export function migrateProviders(api: Browser): Promise<ProviderSettings> {
   const running = migrations.get(api);
   if (running) return running;
   const run = (async () => {
-    const items = await api.storage.sync.get(null);
-    const stored = parseStored(items);
+    const [items, local] = await Promise.all([api.storage.sync.get(null), api.storage.local.get(MIGRATED_ROUTE_KEY)]);
+    let route: unknown = local[MIGRATED_ROUTE_KEY];
+    if (!(MIGRATED_ROUTE_KEY in local)) {
+      route = await migratedRouteFromM1(api);
+      // A failed write applies anyway and is derived again on the next read.
+      try {
+        await api.storage.local.set({ [MIGRATED_ROUTE_KEY]: route });
+      } catch (err) {
+        console.warn('[translate-side] could not save the migrated route', err);
+      }
+    }
+    const stored = parseStored(items, route);
     if (stored) return stored;
     const seed = Object.fromEntries(Object.entries(await seedFromM1(api)).filter(([k]) => !(k in items)));
     // One set call: the schema version is written with the records it describes. A failed write
@@ -264,7 +290,7 @@ export function migrateProviders(api: Browser): Promise<ProviderSettings> {
     } catch (err) {
       console.warn('[translate-side] could not save the migrated provider settings', err);
     }
-    return parseStored({ ...items, ...seed }) as ProviderSettings;
+    return parseStored({ ...items, ...seed }, route) as ProviderSettings;
   })();
   migrations.set(api, run);
   const clear = () => {
