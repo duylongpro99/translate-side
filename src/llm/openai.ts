@@ -42,9 +42,14 @@ const FLIPS: readonly QuirkFlip[] = [
     },
   },
   { key: 'supportsJsonMode', test: /response_format/i, apply: (q, req) => req.jsonMode === true && q.supportsJsonMode !== false && ((q.supportsJsonMode = false), true) },
-  { key: 'supportsSystemRole', // Only a rejection of the role itself: "system"/"developer" role, message or instruction named
-  // together with unsupported wording (a 400 that merely mentions "system" must not fold the prompt).
-  test: /(?=.*(?:unsupported|not\s+(?:supported|enabled|allowed|permitted|available)|does\s+not\s+support|unrecognized|invalid))(?=.*\b(?:system|developer)\s+(?:role|message|instruction|prompt)s?\b)/is, apply: (q, req) => req.system !== '' && q.supportsSystemRole !== false && ((q.supportsSystemRole = false), true) },
+  {
+    key: 'supportsSystemRole',
+    // Only a rejection of the role itself: "system"/"developer" role, message or instruction named
+    // together with unsupported wording, or OpenAI's o1 "does not support 'system'" (a 400 that merely
+    // mentions "system" must not fold the prompt).
+    test: /does\s+not\s+support\s+['"`](?:system|developer)['"`]|invalid\s+role|(?=.*(?:unsupported|not\s+(?:supported|enabled|allowed|permitted|available)|does\s+not\s+support|unrecognized))(?=.*\b(?:system|developer)\s+(?:role|message|instruction|prompt)s?\b)/is,
+    apply: (q, req) => req.system !== '' && q.supportsSystemRole !== false && ((q.supportsSystemRole = false), true),
+  },
 ];
 
 function clientFor(conn: ResolvedConnection, options: AdapterOptions): OpenAI {

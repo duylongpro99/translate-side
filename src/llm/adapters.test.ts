@@ -549,6 +549,22 @@ describe('openai-chat adapter (wire details)', () => {
     expect(c.quirks).toEqual({});
   });
 
+  it('review 2 (round 2): OpenAI\'s o1 wording flips for system and developer; "Invalid system prompt: too long" does not', async () => {
+    const wire = (m: string): ScriptedResponse => ({ status: 400, body: JSON.stringify({ error: { message: m, type: 'invalid_request_error' } }) });
+    for (const m of ["Unsupported value: 'messages[0].role' does not support 'system' with this model.", "Unsupported value: 'messages[0].role' does not support 'developer' with this model."]) {
+      const f = mockFetch([wire(m), { status: 200, body: openaiStream({ text: ['ok'] }) }]);
+      const c = conn();
+      expect(text(await collect(createOpenAIAdapter({ fetch: f.fetch }).stream(c, request('m', { system: 'rules' }))))).toBe('ok');
+      expect(f.requests).toHaveLength(2);
+      expect(c.quirks.supportsSystemRole).toBe(false);
+    }
+    const g = mockFetch([wire('Invalid system prompt: too long')]);
+    const d = conn();
+    await collect(createOpenAIAdapter({ fetch: g.fetch }).stream(d, request('m', { system: 'rules' })));
+    expect(g.requests).toHaveLength(1);
+    expect(d.quirks).toEqual({});
+  });
+
   it('N2: a 400 about the system role flips only when a system block was sent', async () => {
     const bad: ScriptedResponse = { status: 400, body: '{"error":{"message":"Developer instruction is not enabled for this model (system role)","type":"invalid_request_error"}}' };
     const f = mockFetch([bad]);
