@@ -271,12 +271,37 @@ export interface JobConnection {
 }
 
 /** What a job needs from the panel: the translate client for the routed profile, or why there is none. */
-export type ClientResult = { ok: true; client: LLMClient; profile: ModelProfile; connection?: JobConnection } | { ok: false; error: LLMError; connection?: JobConnection };
+export type ClientResult =
+  | {
+      ok: true;
+      client: LLMClient;
+      profile: ModelProfile;
+      connection?: JobConnection;
+      /** The `analyze` role's client (the document brief), when routing sends it to another profile; absent = the translate client (§4.3.1). */
+      analyze?: { client: LLMClient; profile: ModelProfile; connection?: JobConnection };
+    }
+  | { ok: false; error: LLMError; connection?: JobConnection };
 
 /** What the route is resolved for (§4.3.5): the page's tab (its override) and URL (site rules). */
 export interface ClientTarget {
   tabId: number;
   url: string;
+  /** The run may make an analyze call (not single-pass, not a segment retry): resolve that role too. */
+  analyze?: boolean;
+}
+
+const addUsage = (a: UsageTotals, b: UsageTotals): UsageTotals => ({ input: a.input + b.input, cachedInput: a.cachedInput + b.cachedInput, output: a.output + b.output });
+
+/**
+ * The page's cost: its usage priced with the translate profile, except what the analyze call
+ * spent on its own profile (`job.apart`, priced as it came). Undefined when nothing is priced.
+ * Without an analyze profile of its own this is `costUsd(profile.pricing, usage)` exactly.
+ */
+function pageCost(job: Job, profile: ModelProfile, usage: UsageTotals): number | undefined {
+  const a = job.apart.usage;
+  const own = a.input === 0 && a.output === 0 && a.cachedInput === 0 ? usage : { input: usage.input - a.input, cachedInput: usage.cachedInput - a.cachedInput, output: usage.output - a.output };
+  const main = costUsd(profile.pricing, own);
+  return main === undefined && job.apart.usd === undefined ? undefined : (main ?? 0) + (job.apart.usd ?? 0);
 }
 
 export interface JobDeps {
@@ -285,7 +310,7 @@ export interface JobDeps {
   now?: () => number;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
   /** Test seam: the engine to run (default: single-pass and contextual over the given client). */
-  engine?: (client: LLMClient) => TranslationEngine;
+  engine?: (client: LLMClient, analyze?: LLMClient) => TranslationEngine;
   /** Test seam: the strategy jobs run (default PANEL_STRATEGY). */
   strategy?: StrategyId;
   /** The translation cache (M3-E2). Absent: every run goes to the model. */
@@ -344,6 +369,10 @@ interface Job {
   replaceKeys: Set<string>;
   /** The brief cache key of this document; undefined without a cache. */
   briefKey?: string | undefined;
+  /** The analyze role's own profile, when routing sends it elsewhere than translate (its usage is priced with it). */
+  analyzeProfile?: ModelProfile;
+  /** Usage on the analyze profile and its cost, across the page's runs; the rest of `view.usage` is priced with the translate profile. */
+  apart: { usage: UsageTotals; usd: number | undefined };
   /** Requests waiting out a retryable failure, and the failed attempts so far per chunk (M3-E8). */
   backoff: Map<number, Backoff>;
   failures: Map<number, number>;
@@ -468,6 +497,7 @@ export class Jobs {
       retrying: new Map(),
       retrySeq: 0,
       replaceKeys: new Set(),
+      apart: costFrom ? { usage: { ...costFrom.apart.usage }, usd: costFrom.apart.usd } : { usage: { input: 0, cachedInput: 0, output: 0 }, usd: undefined },
       fresh,
       view: {
         status: 'running',
@@ -492,7 +522,7 @@ export class Jobs {
     this.emit(tabId, job.view);
 
     const signal = job.controller.signal;
-    const resolved = await this.deps.translateClient({ tabId, url: doc.url });
+    const resolved = await this.deps.translateClient({ tabId, url: doc.url, analyze: (this.deps.strategy ?? PANEL_STRATEGY) !== 'single-pass' });
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
     if (resolved.connection) this.patch(tabId, job, { connection: resolved.connection });
     if (!resolved.ok) {
@@ -500,6 +530,7 @@ export class Jobs {
       return;
     }
     const { client, profile } = resolved;
+    if (resolved.analyze) job.analyzeProfile = resolved.analyze.profile;
     this.patch(tabId, job, { model: client.model });
     await this.fromCache(tabId, job, { todo, translatable, model: client.model, fresh });
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
@@ -510,7 +541,7 @@ export class Jobs {
       this.finish(tabId, job, 'done');
       return;
     }
-    const engine = this.engineFor(tabId, job, client, profile);
+    const engine = this.engineFor(tabId, job, client, profile, undefined, resolved.analyze?.client);
     const engineJob: TranslationJob = {
       doc: {
         url: doc.url,
@@ -578,6 +609,7 @@ export class Jobs {
       retrying: new Map(),
       retrySeq: 0,
       replaceKeys: new Set(),
+      apart: keepCost ? { usage: { ...keepCost.apart.usage }, usd: keepCost.apart.usd } : { usage: { input: 0, cachedInput: 0, output: 0 }, usd: undefined },
       view: {
         status: 'skipped',
         paused: false,
@@ -721,12 +753,12 @@ export class Jobs {
   }
 
   /** The engine over the job's client: counted, gated by the tab being active, and watched for backoff (M3-E8). */
-  private engineFor(tabId: number, job: Job, client: LLMClient, profile: ModelProfile, retryKey?: number): TranslationEngine {
+  private engineFor(tabId: number, job: Job, client: LLMClient, profile: ModelProfile, retryKey?: number, analyze?: LLMClient): TranslationEngine {
     const meter = {
       start: () => void job.inflight++,
       end: (unmetered: boolean) => {
         job.inflight--;
-        if (unmetered) this.patch(tabId, job, { unmetered: job.view.unmetered + 1, cost: costUsd(profile.pricing, job.view.usage) });
+        if (unmetered) this.patch(tabId, job, { unmetered: job.view.unmetered + 1, cost: pageCost(job, profile, job.view.usage) });
       },
     };
     const publish = () => this.patch(tabId, job, { backoff: job.backoff.size ? [...job.backoff.values()] : [] });
@@ -747,8 +779,10 @@ export class Jobs {
       },
       streaming: (chunk: number) => void job.failures.delete(keyed(chunk)),
     };
-    const gated = gatedClient(backoffClient(meteredClient(client, meter), watch), job.gate);
-    return this.deps.engine?.(gated) ?? this.defaultEngine(gated);
+    const wrap = (c: LLMClient) => gatedClient(backoffClient(meteredClient(c, meter), watch), job.gate);
+    const gated = wrap(client);
+    const gatedAnalyze = analyze ? wrap(analyze) : undefined;
+    return this.deps.engine?.(gated, gatedAnalyze) ?? this.defaultEngine(gated, gatedAnalyze);
   }
 
   /** The tab is gone (closed, moved to another window): cancel and forget its job. */
@@ -763,12 +797,13 @@ export class Jobs {
     for (const tabId of this.jobs.keys()) this.cancel(tabId);
   }
 
-  private defaultEngine(client: LLMClient): TranslationEngine {
+  private defaultEngine(client: LLMClient, analyze?: LLMClient): TranslationEngine {
     return createEngine({
-      // §4.3.1: an unset analyze route defaults to translate (settings.ts resolveProfile).
+      // The engine asks by role (§5.1); route.ts resolved each through routing (src/shared/providers.ts
+      // resolveRoute): `analyze` has its own client only when routed elsewhere, else it is translate's (§4.3.1).
       llm: (role) => {
         if (role === 'review') throw new Error(`no model profile is routed for the ${role} role yet`);
-        return client;
+        return role === 'analyze' && analyze ? analyze : client;
       },
       now: this.now,
       sleep: this.deps.sleep ?? abortableSleep,
@@ -813,9 +848,13 @@ export class Jobs {
       }
       case 'usage': {
         const spent = { input: event.input, cachedInput: event.cachedInput ?? 0, output: event.output };
-        this.deps.onSpend?.({ usage: spent, usd: costUsd(profile.pricing, spent) });
-        const usage = { input: job.view.usage.input + event.input, cachedInput: job.view.usage.cachedInput + (event.cachedInput ?? 0), output: job.view.usage.output + event.output };
-        this.patch(tabId, job, { usage, cost: costUsd(profile.pricing, usage) });
+        // The analyze call on its own profile is priced with that profile (§4.3.5 usage meter).
+        const apart = event.role === 'analyze' && job.analyzeProfile !== undefined;
+        const usd = costUsd((apart ? job.analyzeProfile : profile)?.pricing, spent);
+        this.deps.onSpend?.({ usage: spent, usd });
+        if (apart) job.apart = { usage: addUsage(job.apart.usage, spent), usd: usd === undefined ? job.apart.usd : (job.apart.usd ?? 0) + usd };
+        const usage = addUsage(job.view.usage, spent);
+        this.patch(tabId, job, { usage, cost: pageCost(job, profile, usage) });
         return;
       }
       default:

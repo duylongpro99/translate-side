@@ -470,6 +470,41 @@ describe('Jobs: contextual (plan M2-E1) and same-language skip (M2-E5)', () => {
     expect(expected).toBeGreaterThan(10 * 3);
   });
 
+  it('§4.3.1/§5.1: an analyze role routed to its own profile runs the brief on that client, priced with that profile', async () => {
+    const translate = both('{"not":"asked"}');
+    const analyze = translatorClient((lines, _n, req) => (isAnalyze(req) ? JSON.stringify(BRIEF) : renderLines(lines, (src) => `WRONG:${src}`)), { model: 'brief-model' });
+    const analyzeProfile = { ...GEMINI_PROFILE, id: 'brief', model: 'brief-model', pricing: { inPerM: 100, cachedInPerM: 100, outPerM: 100 } };
+    const targets: unknown[] = [];
+    const deltas: { usd?: number | undefined }[] = [];
+    const jobs = new Jobs({
+      translateClient: (target) => (targets.push(target), Promise.resolve({ ok: true, client: translate, profile: GEMINI_PROFILE, analyze: { client: analyze, profile: analyzeProfile } })),
+      onSpend: (d) => deltas.push(d),
+    });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(3, 700));
+    const v = jobs.get(1) as JobView;
+    expect(v.status).toBe('done');
+    expect(targets).toEqual([{ tabId: 1, url: expect.any(String), analyze: true }]);
+    expect(v.brief).toEqual(BRIEF);
+    expect(analyze.requests.length).toBeGreaterThan(0);
+    expect(analyze.requests.every(isAnalyze)).toBe(true);
+    expect(translate.requests.filter(isAnalyze)).toHaveLength(0);
+    expect([...v.segs.values()].every((s) => s.text?.startsWith('vi:'))).toBe(true);
+    // The page cost is each call priced with its own profile: the per-call deltas add up to it, and
+    // it is more than the whole usage at the translate price (the brief model costs more).
+    const sum = deltas.reduce((a, d) => a + (d.usd ?? 0), 0);
+    expect(v.cost).toBeCloseTo(sum, 12);
+    expect(v.cost ?? 0).toBeGreaterThan(((v.usage.input - v.usage.cachedInput) * 0.3 + v.usage.cachedInput * 0.03 + v.usage.output * 2.5) / 1e6);
+  });
+
+  it('single-pass jobs do not ask for the analyze role', async () => {
+    const targets: { analyze?: boolean }[] = [];
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: (target) => (targets.push(target), ok(both('{}'))()) });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(3));
+    expect(targets[0]?.analyze).toBe(false);
+  });
+
   it('replaces the first chunk in place with its second, briefed pass (revision 2, M2-D17); counts stay per segment', async () => {
     let briefed = 0;
     const client = translatorClient((lines, _n, req) => {
