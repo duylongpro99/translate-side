@@ -8,6 +8,7 @@ import { DEFAULT_ORIGIN, GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences,
 import type { SessionHooks } from './controller.ts';
 import type { JobActions } from './JobBar.tsx';
 import { openTranslationCache } from '@/shared/cache';
+import { SpendLedger } from '@/shared/spend';
 import { anyDenylisted, clearSnippet, readSnippet, tabIdFromSnippetKey, type SnippetRecord } from '@/shared/snippet';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
 import { snippetDocId, snippetView, SnippetStore } from './snippet.ts';
@@ -55,6 +56,9 @@ async function readSettings(api: Browser): Promise<Settings> {
 }
 
 export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, options: TranslatorOptions = {}): Translator {
+  // The running total in settings (M3-E9): pages and selections alike.
+  const ledger = new SpendLedger(api);
+  deps = { onSpend: (delta) => void ledger.add(delta), ...deps };
   const jobs = new Jobs({ translateClient: () => translateClient(api), cache: openTranslationCache(), ...deps });
   // No cache: a selection is a one-off, and its text is not kept beyond the session.
   // Single-pass: one request per chunk, never the contextual brief (analyze) call for a selection.

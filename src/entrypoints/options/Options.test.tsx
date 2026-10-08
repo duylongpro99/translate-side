@@ -23,6 +23,7 @@ function fakeApi({ grant = true, answer = Promise.resolve() } = {}) {
       return Promise.resolve();
     },
     remove: (k: string) => Promise.resolve(void m.delete(k)),
+    onChanged: { addListener: () => {}, removeListener: () => {} },
   });
   const api = {
     storage: { local: area(local, 'local'), sync: area(sync, 'sync') },

@@ -22,12 +22,16 @@ import {
   readGlossary,
   readPreferences,
   removeApiKey,
+  resolveProfile,
   saveApiKey,
   saveGlossary,
   updatePreferences,
   type Preferences,
 } from '@/shared/settings';
 import { openTranslationCache, type CacheStats, type TranslationCache } from '@/shared/cache';
+import { formatUsd } from '@/shared/cost';
+import { pricingFor } from '@/shared/pricing';
+import { monthKey, readSpend, resetSpend, SPEND_KEY, type SpendTotals } from '@/shared/spend';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
 
@@ -424,6 +428,63 @@ function CacheSection({ cache }: { cache: TranslationCache | undefined }) {
   );
 }
 
+const tokens = (n: number) => n.toLocaleString('en-US');
+const perM = (usd: number) => `$${Number(usd.toFixed(4))}`;
+
+/** The running total of what translations cost (plan M3-E9), and the price it is computed with. */
+function SpendSection({ api, now = Date.now }: { api: Browser; now?: () => number }) {
+  const [spend, setSpend] = useState<SpendTotals | undefined | null>(null);
+  useEffect(() => {
+    const load = () => void readSpend(api).then(setSpend, () => setSpend(undefined));
+    load();
+    // Live: a panel translating in another window adds to it.
+    const onLocal = (changes: Record<string, unknown>) => {
+      if (SPEND_KEY in changes) load();
+    };
+    api.storage.local.onChanged.addListener(onLocal);
+    return () => api.storage.local.onChanged.removeListener(onLocal);
+  }, [api]);
+  const { profile, connection } = resolveProfile('translate');
+  const pricing = pricingFor(profile, connection);
+  const builtIn = pricing !== undefined && profile.pricing === undefined;
+  const month = spend?.months[monthKey(now())] ?? 0;
+  return (
+    <section class="opt__section" aria-labelledby="spend-h">
+      <h2 id="spend-h">Usage and cost</h2>
+      <p class="opt__hint" data-testid="spend-price">
+        {pricing
+          ? `${profile.model}: ${perM(pricing.inPerM)} input, ${perM(pricing.cachedInPerM)} cached input, ${perM(pricing.outPerM)} output per million tokens${builtIn ? ' (built-in Anthropic price)' : ''}.`
+          : `${profile.model} has no price, so its tokens are counted without a cost.`}
+      </p>
+      {spend === null ? (
+        <p class="opt__hint">Reading…</p>
+      ) : spend === undefined ? (
+        <p class="opt__hint" data-testid="spend-total">
+          Nothing spent yet.
+        </p>
+      ) : (
+        <>
+          <p data-testid="spend-total">
+            <strong>{formatUsd(spend.usd)}</strong> since {new Date(spend.since).toLocaleDateString()} · this month {formatUsd(month)}
+          </p>
+          <p class="opt__hint" data-testid="spend-tokens">
+            {tokens(spend.input)} input tokens ({tokens(spend.cachedInput)} cached), {tokens(spend.output)} output tokens
+            {spend.unpricedTokens > 0 ? ` · ${tokens(spend.unpricedTokens)} tokens on models without a price are not in the total` : ''}.
+          </p>
+        </>
+      )}
+      <p class="opt__hint">An estimate from the tokens each response reports and the price above; your provider's bill is the real figure. Requests cancelled before they finished are not counted. Kept on this device.</p>
+      {spend ? (
+        <div class="opt__row">
+          <button type="button" data-testid="spend-reset" onClick={() => void resetSpend(api).then(() => setSpend(undefined))}>
+            Reset total
+          </button>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export function Options({ api, cache = openTranslationCache() }: { api: Browser; cache?: TranslationCache | undefined }) {
   return (
     <main class="opt">
@@ -432,6 +493,7 @@ export function Options({ api, cache = openTranslationCache() }: { api: Browser;
       <LanguageSection api={api} />
       <StyleSection api={api} />
       <GlossarySection api={api} />
+      <SpendSection api={api} />
       <CacheSection cache={cache} />
     </main>
   );

@@ -4,6 +4,7 @@
 import type { browser } from 'wxt/browser';
 import { createClient } from '@/llm/client';
 import { DEFAULT_CONNECTION, hasHostPermission, resolveConnection, resolveProfile, withProfileQuirks } from '@/shared/settings';
+import { pricingFor } from '@/shared/pricing';
 import type { ClientResult } from './jobs.ts';
 
 type Browser = typeof browser;
@@ -22,5 +23,7 @@ export async function translateClient(api: Browser): Promise<ClientResult> {
   if (!(await hasHostPermission(api, conn.baseUrl))) {
     return { ok: false, error: { kind: 'cors', cause: 'permission', message: `No access to ${new URL(conn.baseUrl).hostname}` }, connection: label };
   }
-  return { ok: true, client: createClient(withProfileQuirks(conn, profile), profile.model), profile, connection: label };
+  // The cost readout prices the job from the profile: its own pricing, or the built-in Anthropic table (M3-E9).
+  const pricing = pricingFor(profile, connection);
+  return { ok: true, client: createClient(withProfileQuirks(conn, profile), profile.model), profile: pricing ? { ...profile, pricing } : profile, connection: label };
 }

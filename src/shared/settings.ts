@@ -104,6 +104,29 @@ export const APIBOX_QWEN_PROFILE: ModelProfile = {
   quirks: APIBOX_QWEN_QUIRKS,
 };
 
+/**
+ * The Anthropic preset (§4.3.2), kept selectable: the plan's default provider, which APIBOX
+ * replaces at runtime for now (decision M3-D7). Its profile carries no `pricing`: the built-in
+ * Anthropic table prices it (src/shared/pricing.ts, plan M3-E9).
+ */
+export const ANTHROPIC_CONNECTION: ProviderConnection = {
+  id: 'anthropic',
+  label: 'Anthropic',
+  presetId: 'anthropic',
+  protocol: 'anthropic-messages',
+  baseUrl: 'https://api.anthropic.com',
+  auth: { style: 'x-api-key' },
+  quirks: {},
+};
+
+export const ANTHROPIC_HAIKU_PROFILE: ModelProfile = {
+  id: 'anthropic-haiku-4-5',
+  connectionId: ANTHROPIC_CONNECTION.id,
+  model: 'claude-haiku-4-5',
+  maxConcurrency: 2,
+  chunkTokens: 1200,
+};
+
 /** The connection and profile the extension uses (M2-D11, M2-D16). */
 export const DEFAULT_CONNECTION = APIBOX_CONNECTION;
 export const DEFAULT_PROFILE = APIBOX_QWEN_PROFILE;
@@ -115,8 +138,8 @@ export const DEFAULT_HOST = new URL(DEFAULT_CONNECTION.baseUrl).hostname;
 /** §4.3.1 Routing, stubbed: `analyze` is unset, so it defaults to `translate` (§4.3.1); `review` is M7. */
 export const ROUTING: { translate: string; analyze?: string } = { translate: DEFAULT_PROFILE.id };
 
-const PROFILES = new Map([GEMINI_PROFILE, APIBOX_FLASH_PROFILE, APIBOX_PRO_PROFILE, APIBOX_QWEN_PROFILE].map((p) => [p.id, p]));
-const CONNECTIONS = new Map([GEMINI_CONNECTION, APIBOX_CONNECTION].map((c) => [c.id, c]));
+const PROFILES = new Map([GEMINI_PROFILE, APIBOX_FLASH_PROFILE, APIBOX_PRO_PROFILE, APIBOX_QWEN_PROFILE, ANTHROPIC_HAIKU_PROFILE].map((p) => [p.id, p]));
+const CONNECTIONS = new Map([GEMINI_CONNECTION, APIBOX_CONNECTION, ANTHROPIC_CONNECTION].map((c) => [c.id, c]));
 
 /** The connection a client for `profile` is built with: the profile's quirks over the connection's. */
 export function withProfileQuirks(conn: ResolvedConnection, profile: ModelProfile): ResolvedConnection {

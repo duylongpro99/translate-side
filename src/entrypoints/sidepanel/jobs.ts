@@ -21,6 +21,7 @@ import type { LLMClient, LLMError, LLMErrorKind, NormalizedRequest } from '@/llm
 import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
 import { costUsd, type UsageTotals } from '@/shared/cost';
 import type { Detection } from '@/shared/language';
+import type { SpendDelta } from '@/shared/spend';
 import type { ModelProfile } from '@/shared/settings';
 
 export type SegStatus = 'pending' | 'streaming' | 'final' | 'failed';
@@ -278,6 +279,8 @@ export interface JobDeps {
   cache?: TranslationCache | undefined;
   /** How long a run waits for the cache before it goes to the model without it (default 1500). */
   cacheTimeoutMs?: number;
+  /** Every usage report, priced (the running total in settings, M3-E9). */
+  onSpend?: (delta: SpendDelta) => void;
 }
 
 export interface JobDoc {
@@ -796,6 +799,8 @@ export class Jobs {
         return;
       }
       case 'usage': {
+        const spent = { input: event.input, cachedInput: event.cachedInput ?? 0, output: event.output };
+        this.deps.onSpend?.({ usage: spent, usd: costUsd(profile.pricing, spent) });
         const usage = { input: job.view.usage.input + event.input, cachedInput: job.view.usage.cachedInput + (event.cachedInput ?? 0), output: job.view.usage.output + event.output };
         this.patch(tabId, job, { usage, cost: costUsd(profile.pricing, usage) });
         return;
