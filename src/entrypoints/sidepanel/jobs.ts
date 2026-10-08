@@ -117,6 +117,12 @@ export interface JobView {
  */
 const STOP_KINDS: ReadonlySet<LLMErrorKind> = new Set(['auth', 'quota', 'cors', 'model_not_found', 'network']);
 
+/**
+ * Whether an error of a single-segment Retry stops a job that is not running. A network failure
+ * only fails that segment: the page itself was translated, so the job stays done (review C1).
+ */
+const stopsJob = (error: LLMError) => STOP_KINDS.has(error.kind) && error.kind !== 'network';
+
 /** The errors the engine's retry waits out (retry.ts RETRYABLE): seen at the shell, they mean "backing off". */
 const BACKOFF_KINDS: ReadonlySet<LLMErrorKind> = new Set(['rate_limit', 'overloaded', 'network']);
 
@@ -323,6 +329,8 @@ interface Job {
   failures: Map<number, number>;
   /** Single-segment retries in flight, by segment id (M3-E8). */
   retrying: Map<string, AbortController>;
+  /** Counts segment retries, for their backoff keys. */
+  retrySeq: number;
 }
 
 export type JobsListener = (tabId: number, view: JobView | undefined) => void;
@@ -438,6 +446,7 @@ export class Jobs {
       backoff: new Map(),
       failures: new Map(),
       retrying: new Map(),
+      retrySeq: 0,
       fresh,
       view: {
         status: 'running',
@@ -546,6 +555,7 @@ export class Jobs {
       backoff: new Map(),
       failures: new Map(),
       retrying: new Map(),
+      retrySeq: 0,
       view: {
         status: 'skipped',
         paused: false,
@@ -622,7 +632,7 @@ export class Jobs {
       if (signal.aborted) return settle(before);
       if (!resolved.ok) {
         settle({ ...before, error: resolved.error });
-        if (STOP_KINDS.has(resolved.error.kind) && job.view.status !== 'running') this.finish(tabId, job, 'stopped', resolved.error);
+        if (stopsJob(resolved.error) && job.view.status !== 'running') this.finish(tabId, job, 'stopped', resolved.error);
         return;
       }
       const { doc } = job;
@@ -639,7 +649,7 @@ export class Jobs {
         },
       };
       let outcome: SegState | undefined;
-      for await (const event of this.engineFor(tabId, job, resolved.client, resolved.profile).translateSnippet(request, signal)) {
+      for await (const event of this.engineFor(tabId, job, resolved.client, resolved.profile, -2 - ++job.retrySeq).translateSnippet(request, signal)) {
         if (this.jobs.get(tabId) !== job) return;
         if (event.type === 'usage') this.onEvent(tabId, job, event, resolved.profile);
         if (event.type !== 'segment.partial' && event.type !== 'segment.final' && event.type !== 'segment.failed') continue;
@@ -654,7 +664,7 @@ export class Jobs {
       }
       if (signal.aborted || !outcome || outcome.status === 'streaming' || outcome.status === 'pending') return settle(before);
       settle(outcome);
-      if (outcome.status === 'failed' && outcome.error && STOP_KINDS.has(outcome.error.kind) && job.view.status !== 'running') this.finish(tabId, job, 'stopped', outcome.error);
+      if (outcome.status === 'failed' && outcome.error && stopsJob(outcome.error) && job.view.status !== 'running') this.finish(tabId, job, 'stopped', outcome.error);
     } catch (err) {
       settle(signal.aborted ? before : { ...before, error: { kind: 'unknown', message: err instanceof Error ? err.message : String(err), raw: err } });
     } finally {
@@ -668,7 +678,7 @@ export class Jobs {
   }
 
   /** The engine over the job's client: counted, gated by the tab being active, and watched for backoff (M3-E8). */
-  private engineFor(tabId: number, job: Job, client: LLMClient, profile: ModelProfile): TranslationEngine {
+  private engineFor(tabId: number, job: Job, client: LLMClient, profile: ModelProfile, retryKey?: number): TranslationEngine {
     const meter = {
       start: () => void job.inflight++,
       end: (unmetered: boolean) => {
@@ -677,8 +687,11 @@ export class Jobs {
       },
     };
     const publish = () => this.patch(tabId, job, { backoff: job.backoff.size ? [...job.backoff.values()] : [] });
+    // A segment retry has its own key (-2 and below), apart from the chunks (0 and up) and the analyze call (-1).
+    const keyed = (chunk: number) => retryKey ?? chunk;
     const watch = {
       waiting: (chunk: number, error: LLMError) => {
+        chunk = keyed(chunk);
         const attempt = (job.failures.get(chunk) ?? 0) + 1;
         job.failures.set(chunk, attempt);
         // The engine gives up (or hands over) after its retries: that is a failure, not a wait.
@@ -687,9 +700,9 @@ export class Jobs {
         publish();
       },
       started: (chunk: number) => {
-        if (job.backoff.delete(chunk)) publish();
+        if (job.backoff.delete(keyed(chunk))) publish();
       },
-      streaming: (chunk: number) => void job.failures.delete(chunk),
+      streaming: (chunk: number) => void job.failures.delete(keyed(chunk)),
     };
     const gated = gatedClient(backoffClient(meteredClient(client, meter), watch), job.gate);
     return this.deps.engine?.(gated) ?? this.defaultEngine(gated);

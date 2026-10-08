@@ -67,6 +67,11 @@ describe('panel states', () => {
     expect(root.querySelector(`[data-state="${view.kind}"]`)).not.toBeNull();
   });
 
+  it('the error state (extraction threw) carries the selection hint too', () => {
+    mount({ kind: 'error', message: 'boom' });
+    expect(root.querySelector('[data-state="error"]')?.textContent).toContain("Couldn't read this page. Select text to translate it.");
+  });
+
   it('retries from the error state', () => {
     const c = mount({ kind: 'error', message: 'boom' });
     act(() => (root.querySelector('[data-state=error] button') as HTMLButtonElement).click());

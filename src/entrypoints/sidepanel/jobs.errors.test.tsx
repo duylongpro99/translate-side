@@ -259,6 +259,131 @@ describe('one failed segment (M3-E8)', () => {
   });
 });
 
+describe('segment Retry in other states of the job (review C1, C5)', () => {
+  const unknown: LLMError = { kind: 'unknown', message: 'cut off' };
+
+  it('while the page job is still running: only that segment changes, the job keeps running and then finishes', async () => {
+    let release: () => void = () => {};
+    const hold = new Promise<void>((r) => (release = r));
+    const engine = (): TranslationEngine => ({
+      async *translate() {
+        yield failedEv('s1', unknown);
+        yield final('s0', 'vi:P0');
+        await hold;
+        yield final('s2', 'vi:P2');
+        yield { type: 'done' };
+      },
+      async *translateSnippet(req) {
+        yield final(req.segments[0]?.id ?? '', 'vi:P1 again');
+        yield { type: 'done' };
+      },
+    });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(translatorClient()), engine });
+    jobs.setActive(1);
+    const run = jobs.start(1, 'd', doc(3));
+    await until(() => jobs.get(1)?.segs.get('s1')?.status === 'failed' && jobs.get(1)?.segs.get('s0')?.status === 'final');
+    expect(jobs.get(1)?.status).toBe('running');
+    await jobs.retrySegment(1, 's1');
+    expect(jobs.get(1)).toMatchObject({ status: 'running', counts: { total: 3, final: 2, failed: 0 } });
+    expect(jobs.get(1)?.segs.get('s2')?.status).toBe('pending');
+    release();
+    await run;
+    expect(jobs.get(1)).toMatchObject({ status: 'done', counts: { total: 3, final: 3, failed: 0 } });
+  });
+
+  it('a network failure inside the retry fails that segment only: the finished job stays done', async () => {
+    const net: LLMError = { kind: 'network', message: 'Failed to fetch' };
+    const engine = (): TranslationEngine => ({
+      async *translate() {
+        yield final('s0', 'vi:P0');
+        yield failedEv('s1', unknown);
+        yield final('s2', 'vi:P2');
+        yield { type: 'done' };
+      },
+      async *translateSnippet(req) {
+        yield failedEv(req.segments[0]?.id ?? '', net);
+        yield { type: 'done' };
+      },
+    });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(translatorClient()), engine });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(3));
+    await jobs.retrySegment(1, 's1');
+    const v = jobs.get(1) as JobView;
+    expect(v.status).toBe('done');
+    expect(v.stopError).toBeUndefined();
+    expect(v.segs.get('s1')).toMatchObject({ status: 'failed', error: { kind: 'network' } });
+    expect(v.counts).toEqual({ total: 3, final: 2, failed: 1 });
+  });
+
+  it('Resume while a segment Retry is in flight: the retry is abandoned, the resumed run translates the segment', async () => {
+    let retryAborted = false;
+    let runs = 0;
+    const engine = (): TranslationEngine => ({
+      async *translate(job) {
+        if (runs++ === 0) {
+          yield final('s0', 'vi:P0');
+          yield failedEv('s1', unknown);
+          yield final('s2', 'vi:P2');
+        } else for (const s of job.doc.segments) if (s.translate) yield final(s.id, `vi:${s.id} resumed`);
+        yield { type: 'done' };
+      },
+      async *translateSnippet(_, signal) {
+        await new Promise<void>((resolve) => signal.addEventListener('abort', () => ((retryAborted = true), resolve()), { once: true }));
+        yield final('s1', 'vi:late retry');
+      },
+    });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(translatorClient()), engine });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(3));
+    const retry = jobs.retrySegment(1, 's1');
+    await settle(5);
+    expect(jobs.get(1)?.segs.get('s1')?.status).toBe('pending');
+    await jobs.resume(1);
+    await retry;
+    expect(retryAborted).toBe(true);
+    const v = jobs.get(1) as JobView;
+    expect(v.status).toBe('done');
+    expect(v.segs.get('s1')).toMatchObject({ status: 'final', text: 'vi:s1 resumed' });
+    expect(v.counts).toEqual({ total: 3, final: 3, failed: 0 });
+  });
+
+  it('a segment retry and the analyze call do not share a backoff entry', async () => {
+    // The retry's request is rate limited while the page job is idle: its entry is its own, and it clears.
+    const inner = translatorClient();
+    let limited = false;
+    const client: LLMClient = {
+      model: inner.model,
+      reasoningReserveTokens: () => 0,
+      async *stream(req) {
+        if (limited) {
+          limited = false;
+          yield { type: 'error', error: { kind: 'rate_limit', status: 429, message: 'slow', retryAfterMs: 1000 } };
+          return;
+        }
+        yield* inner.stream(req);
+      },
+    };
+    const sleeps: (() => void)[] = [];
+    const sleep = (_: number, signal: AbortSignal) => new Promise<void>((resolve, reject) => (sleeps.push(resolve), signal.addEventListener('abort', () => reject(signal.reason), { once: true })));
+    const failing = flaky(inner, () => ({ type: 'error', error: unknown }));
+    failing.state.online = false;
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: (() => { let n = 0; return () => Promise.resolve<ClientResult>({ ok: true, client: n++ === 0 ? failing.client : client, profile: GEMINI_PROFILE, connection }); })(), sleep });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(2));
+    limited = true;
+    const retry = jobs.retrySegment(1, 's0');
+    await until(() => sleeps.length === 1);
+    const entries = (jobs.get(1) as JobView).backoff ?? [];
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.chunk).toBeLessThan(-1);
+    sleeps[0]?.();
+    await retry;
+    expect((jobs.get(1) as JobView).backoff ?? []).toEqual([]);
+    expect((jobs.get(1) as JobView).segs.get('s0')?.status).toBe('final');
+  });
+});
+
 describe('the network drops mid-job (M3-E8)', () => {
   it('finished segments stay, the job stops with Retry, and Retry runs only the missing ones', async () => {
     const inner = translatorClient();

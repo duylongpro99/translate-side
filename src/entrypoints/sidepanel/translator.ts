@@ -49,7 +49,8 @@ async function readSettings(api: Browser): Promise<Settings> {
 export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, options: TranslatorOptions = {}): Translator {
   const jobs = new Jobs({ translateClient: () => translateClient(api), cache: openTranslationCache(), ...deps });
   // No cache: a selection is a one-off, and its text is not kept beyond the session.
-  const snippetJobs = new Jobs({ translateClient: () => translateClient(api), ...deps, cache: undefined });
+  // Single-pass: one request per chunk, never the contextual brief (analyze) call for a selection.
+  const snippetJobs = new Jobs({ translateClient: () => translateClient(api), ...deps, strategy: 'single-pass', cache: undefined });
   const snippetStore = new SnippetStore();
   const viewports = new ViewportStore();
   const detector = 'detector' in options ? options.detector : chromeLanguageDetector();
@@ -220,6 +221,8 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     },
     gone: (tabId) => {
       live.delete(tabId);
+      // A selection belongs to the page it was made on: a navigation or reload ends it.
+      closeSnippet(tabId);
       jobs.cancel(tabId);
     },
     closed: (tabId) => {

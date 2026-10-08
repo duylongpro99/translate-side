@@ -28,7 +28,8 @@
     "eval:sheet": "node scripts/eval-sheet.mjs",
     "eval:judge": "node scripts/eval-judge.mjs",
     "eval:report": "node scripts/eval-report.mjs",
-    "latency": "node scripts/latency.mjs"
+    "latency": "node scripts/latency.mjs",
+    "faults": "node scripts/faults.mjs"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",

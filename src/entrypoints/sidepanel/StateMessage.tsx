@@ -49,6 +49,7 @@ export function StateMessage({ view, onRetry }: { view: Exclude<PanelView, { kin
         <div class="state" data-state="error" role="alert">
           <p class="state__title">Something went wrong</p>
           <p class="state__detail">{view.message}</p>
+          <p class="state__hint">{EXTRACTION_HINT}</p>
           <button type="button" onClick={onRetry}>
             Try again
           </button>

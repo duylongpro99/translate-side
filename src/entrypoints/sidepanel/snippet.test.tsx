@@ -171,6 +171,48 @@ describe('selection mode in the panel (plan M3-E4, §3 #5)', () => {
   });
 });
 
+describe('a selection ends with its page, and costs one request (review E4)', () => {
+  it('a navigation (the connection to the document ends) clears the selection view and the stored record', async () => {
+    const f = fakeApi();
+    const t = createTranslator(f.api, { translateClient: okClient() });
+    t.watch(() => 3);
+    (t.hooks as Required<typeof t.hooks>).active(3);
+    const { root } = mount(t, { kind: 'empty', url: 'https://example.com/a' });
+    f.leave(3, record('Hello.'));
+    await until(() => t.snippets.jobs.get(3)?.status === 'done');
+    expect(f.session.has('snippet:3')).toBe(true);
+    (t.hooks as Required<typeof t.hooks>).gone(3);
+    await act(async () => settle(20));
+    expect(t.snippets.store.get(3)).toBeUndefined();
+    expect(t.snippets.jobs.get(3)).toBeUndefined();
+    expect(f.session.has('snippet:3')).toBe(false);
+    expect(root.querySelector('[data-testid="selection"]')).toBeNull();
+  });
+
+  it('a short selection is one request: no brief (analyze) call', async () => {
+    const f = fakeApi();
+    const t = createTranslator(f.api, { translateClient: okClient() });
+    t.watch(() => 3);
+    (t.hooks as Required<typeof t.hooks>).active(3);
+    f.leave(3, record('A short selection of a few words.'));
+    await until(() => t.snippets.jobs.get(3)?.status === 'done');
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).not.toContain('<document>');
+  });
+
+  it('a long selection (several chunks) still sends no brief call', async () => {
+    const f = fakeApi();
+    const t = createTranslator(f.api, { translateClient: okClient() });
+    t.watch(() => 3);
+    (t.hooks as Required<typeof t.hooks>).active(3);
+    const para = Array.from({ length: 150 }, (_, i) => `word${i}`).join(' ');
+    f.leave(3, record(Array.from({ length: 30 }, () => para).join('\n\n')));
+    await until(() => t.snippets.jobs.get(3)?.status === 'done');
+    expect(sent.length).toBeGreaterThan(1);
+    expect(sent.some((m) => m.includes('<document>'))).toBe(false);
+  });
+});
+
 describe('selection mode and the denylist (M3-D13, §3 #6)', () => {
   it('a blocked record shows the denylist message and sends nothing', async () => {
     const f = fakeApi();
