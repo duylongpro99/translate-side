@@ -3,15 +3,19 @@ import { browser } from 'wxt/browser';
 import type { PanelController, PanelView } from './controller.ts';
 import { AboutDocument } from './AboutDocument.tsx';
 import { DevView } from './DevView.tsx';
+import { readFollow, useScrollFollow, writeFollow } from './follow.ts';
 import { JobBar, type JobActions } from './JobBar.tsx';
 import type { Jobs, JobView } from './jobs.ts';
 import { SegmentList } from './SegmentList.tsx';
 import { StateMessage } from './StateMessage.tsx';
+import type { ViewportStore } from './viewport.ts';
 
 /** What the panel needs from the translation side (translator.ts). Absent: the original only (M0). */
 export interface TranslatorProps {
   jobs: Jobs;
   actions(tabId: number): JobActions;
+  /** What is on screen per tab, for the scroll follow (plan M3-E7). */
+  viewports?: ViewportStore;
 }
 
 const nextFrame = (fn: () => void) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 16));
@@ -45,6 +49,7 @@ export function App({ controller, translator }: { controller: PanelController; t
   const [view, setView] = useState<PanelView>(controller.view);
   const [tabId, setTabId] = useState<number | undefined>(controller.tabId);
   const [dev, setDev] = useState(false);
+  const [follow, setFollow] = useState(() => readFollow());
   useEffect(
     () =>
       controller.subscribe((v, t) => {
@@ -54,6 +59,12 @@ export function App({ controller, translator }: { controller: PanelController; t
     [controller],
   );
   const job = useJob(translator?.jobs, tabId, view.kind === 'ready' ? view.docId : undefined);
+  // One-way page → panel (M3-E7); not over the dev view, whose blocks are not the reading list.
+  useScrollFollow(translator?.viewports, tabId, view.kind === 'ready' ? view.docId : undefined, follow && !dev);
+  const toggleFollow = () => {
+    writeFollow(!follow);
+    setFollow(!follow);
+  };
 
   const openOptions = () => {
     void browser.runtime.openOptionsPage();
@@ -71,6 +82,19 @@ export function App({ controller, translator }: { controller: PanelController; t
         {import.meta.env.DEV && view.kind === 'ready' ? (
           <button type="button" class="panel__icon panel__dev" aria-pressed={dev} title="Segment view (dev build only)" onClick={() => setDev(!dev)}>
             {'{ }'}
+          </button>
+        ) : null}
+        {view.kind === 'ready' && translator?.viewports ? (
+          <button
+            type="button"
+            class="panel__icon panel__follow"
+            aria-pressed={follow}
+            data-testid="scroll-follow"
+            title={follow ? 'Following the page as it scrolls (click to stop)' : 'Follow the page as it scrolls'}
+            aria-label="Follow page scroll"
+            onClick={toggleFollow}
+          >
+            ⇅
           </button>
         ) : null}
         <button type="button" class="panel__icon" title="Settings" aria-label="Settings" onClick={openOptions}>
