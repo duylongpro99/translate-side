@@ -1,6 +1,6 @@
 import type { StyleMode } from '@/engine/types';
 import { languageLabel } from '@/engine/index';
-import { LANGUAGES, resolveProfile, STYLES, type Preferences } from '@/shared/settings';
+import { LANGUAGES, STYLES, type Preferences } from '@/shared/settings';
 import type { JobActions } from './JobBar.tsx';
 import type { JobView } from './jobs.ts';
 
@@ -16,18 +16,11 @@ const STYLE_TITLES: Record<StyleMode, string> = {
   simplified: 'Easier reading: shorter sentences, plain words',
 };
 
-/** The routed translate model, until the job's own client names it. */
-function routedModel(): string {
-  try {
-    return resolveProfile('translate').profile.model;
-  } catch {
-    return '';
-  }
-}
-
 export interface HeaderControlsProps {
   job: JobView | undefined;
   prefs: Preferences | undefined;
+  /** The routed translate model (§4.3.5), until the job's own client names it. */
+  routedModel?: string | undefined;
   actions: JobActions | undefined;
   /** Writes the switch to the settings; the page is translated again under them (translator.ts refresh). */
   onPrefs(patch: Partial<Preferences>): void;
@@ -35,12 +28,12 @@ export interface HeaderControlsProps {
   error?: string | undefined;
 }
 
-export function HeaderControls({ job, prefs, actions, onPrefs, error }: HeaderControlsProps) {
+export function HeaderControls({ job, prefs, routedModel, actions, onPrefs, error }: HeaderControlsProps) {
   const target = prefs?.targetLang ?? job?.targetLang ?? '';
   const source = job?.sourceLang ?? '';
   const languages = LANGUAGES.some((l) => l.code === target) || target === '' ? LANGUAGES : [{ code: target, name: languageLabel(target) }, ...LANGUAGES];
   const style = prefs?.style ?? 'natural';
-  const model = job?.model || routedModel();
+  const model = job?.model || routedModel || '';
   const running = job?.status === 'running';
   return (
     <div class="panel__controls" data-testid="header-controls">

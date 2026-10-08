@@ -1,23 +1,12 @@
 import { useEffect, useRef } from 'preact/hooks';
-import { resolveProfile } from '@/shared/settings';
-
-/** Where page text goes: the connection the translate route uses now (§4.3.5 Resolve). */
-function destination(): { label: string; host: string } | undefined {
-  try {
-    const { connection } = resolveProfile('translate');
-    return { label: connection.label, host: new URL(connection.baseUrl).hostname };
-  } catch {
-    return undefined;
-  }
-}
 
 // The first-run privacy notice (DESIGN.md §8, plan M3-E10). Shown until acknowledged; nothing is
 // sent before that (privacy.ts).
-export function PrivacyNotice({ onAcknowledge }: { onAcknowledge: () => void }) {
+/** `to`: where page text goes, the connection the translate route uses now (§4.3.5 Resolve). */
+export function PrivacyNotice({ to, onAcknowledge }: { to?: { label: string; host: string } | undefined; onAcknowledge: () => void }) {
   const ok = useRef<HTMLButtonElement>(null);
   // The panel waits on this notice: focus its button, so the keyboard lands where the choice is.
   useEffect(() => ok.current?.focus(), []);
-  const to = destination();
   return (
     <section class="privacy" data-testid="privacy-notice" role="dialog" aria-modal="true" aria-labelledby="privacy-title" aria-describedby="privacy-text">
       <h2 id="privacy-title" class="privacy__title">
@@ -28,7 +17,7 @@ export function PrivacyNotice({ onAcknowledge }: { onAcknowledge: () => void }) 
         {to ? (
           <>
             {' '}
-            — now <strong data-testid="privacy-provider">{to.label}</strong> ({to.host})
+            — now <strong data-testid="privacy-provider">{to.label}</strong> {to.host ? `(${to.host})` : ''}
           </>
         ) : null}
         . Only pages you open the panel on are sent, and only after you click below.

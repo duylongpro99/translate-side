@@ -1,0 +1,427 @@
+// Connections, model profiles and routing in storage.sync (DESIGN.md §4.3.1, plan M4-E2), the
+// M1 → M4 migration, and routing resolution (§4.3.5 Resolve, plan M4-E8). Secrets stay in
+// storage.local under `secret:<connectionId>` (§4.3.4, settings.ts), so a connection keeps its id
+// for life: the migration reuses the built-in ids and every M1 key is found where it was.
+//
+// Sync layout, schema 1 (small items: one per record, plan M4 §8 risk "sync quota"):
+//   schemaVersion          1
+//   conn:<id>              ProviderConnection
+//   profile:<id>           ModelProfile
+//   routing                { translate, analyze?, review?, fallback? }
+//   siteRules              [{ pattern, translate, localOnly? }]  (Routing.siteOverrides; UI in M5-E6)
+// Records are found by key prefix, not through an index item: chrome.storage.sync merges devices
+// item by item, and an index written on two devices at once would lose one side's records.
+// Tab overrides (the quick switcher, M4-E11) are per browser session: storage.session
+// `tabRoute:<tabId>`, cleared when the tab closes (src/shared/panel.ts).
+import type { browser } from 'wxt/browser';
+import type { AuthStyle, ModelRole, Protocol, Quirks } from '@/llm/types';
+import {
+  BUILTIN_CONNECTIONS,
+  BUILTIN_PROFILES,
+  DEFAULT_CONNECTION,
+  DEFAULT_PROFILE,
+  readApiKey,
+  SYNC_QUOTA_BYTES_PER_ITEM,
+  syncItemBytes,
+  type ModelProfile,
+  type ProviderConnection,
+} from './settings.ts';
+
+type Browser = typeof browser;
+
+export const SCHEMA_KEY = 'schemaVersion';
+export const SCHEMA_VERSION = 1;
+export const CONNECTION_PREFIX = 'conn:';
+export const PROFILE_PREFIX = 'profile:';
+export const ROUTING_KEY = 'routing';
+export const SITE_RULES_KEY = 'siteRules';
+export const TAB_ROUTE_PREFIX = 'tabRoute:';
+
+/** Is `key` one of the sync items this module owns? */
+export const isProviderKey = (key: string) => key === SCHEMA_KEY || key === ROUTING_KEY || key === SITE_RULES_KEY || key.startsWith(CONNECTION_PREFIX) || key.startsWith(PROFILE_PREFIX);
+export const connectionKey = (id: string) => `${CONNECTION_PREFIX}${id}`;
+export const profileKey = (id: string) => `${PROFILE_PREFIX}${id}`;
+export const tabRouteKey = (tabId: number) => `${TAB_ROUTE_PREFIX}${tabId}`;
+
+/** §4.3.1 site override. `pattern` is a host: `example.com`, or `*.example.com` for it and its subdomains. */
+export interface SiteRule {
+  pattern: string;
+  /** ModelProfile id. */
+  translate: string;
+  /** Never falls back to a cloud profile (§4.3.5 privacy rule; enforced by the fallback chain, M4-E9). */
+  localOnly?: boolean;
+}
+
+/** §4.3.1 Routing. Profile ids; `analyze` and `review` default to `translate`. */
+export interface Routing {
+  translate: string;
+  analyze?: string;
+  review?: string;
+  /**
+   * Tried in order on hard failure (M4-E9). Entries are profile ids; M5-E7 adds a terminal
+   * `basic` entry (a strategy switch, not a profile), so unknown ids are kept, not dropped.
+   */
+  fallback?: string[];
+  siteOverrides?: SiteRule[];
+}
+
+export interface ProviderSettings {
+  schemaVersion: number;
+  connections: ProviderConnection[];
+  profiles: ModelProfile[];
+  routing: Routing;
+}
+
+// ---- Cleaning what storage holds (another device or a later version may have written it) ----
+
+const PROTOCOLS: readonly (Protocol | 'auto')[] = ['anthropic-messages', 'openai-chat', 'chrome-builtin', 'auto'];
+const AUTH_STYLES: readonly AuthStyle[] = ['x-api-key', 'bearer', 'custom-header', 'none'];
+const STATUSES: readonly ProviderConnection['status'][] = ['unverified', 'ok', 'error'];
+
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const nonEmpty = (v: unknown): v is string => typeof v === 'string' && v !== '';
+const oneOf = <T>(v: unknown, allowed: readonly T[]): v is T => allowed.includes(v as T);
+const positiveInt = (v: unknown, fallback: number, max: number) => (typeof v === 'number' && Number.isFinite(v) && v >= 1 ? Math.min(max, Math.round(v)) : fallback);
+
+function stringRecord(v: unknown): Record<string, string> | undefined {
+  if (!isRecord(v)) return undefined;
+  const out = Object.fromEntries(Object.entries(v).filter((e): e is [string, string] => typeof e[1] === 'string'));
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/** A stored connection, or null when it lacks what a request needs. Unknown fields are dropped. */
+export function cleanConnection(raw: unknown): ProviderConnection | null {
+  if (!isRecord(raw)) return null;
+  const { id, label, presetId, protocol, baseUrl, auth } = raw;
+  if (!nonEmpty(id) || !oneOf(protocol, PROTOCOLS) || typeof baseUrl !== 'string' || !isRecord(auth) || !oneOf(auth.style, AUTH_STYLES)) return null;
+  const extraHeaders = stringRecord(raw.extraHeaders);
+  const queryParams = stringRecord(raw.queryParams);
+  const detected = Array.isArray(raw.detectedProtocols) ? raw.detectedProtocols.filter((p): p is Protocol => p !== 'auto' && oneOf(p, PROTOCOLS)) : [];
+  return {
+    id,
+    label: nonEmpty(label) ? label : id,
+    presetId: nonEmpty(presetId) ? presetId : 'custom',
+    protocol,
+    baseUrl,
+    auth: nonEmpty(auth.headerName) ? { style: auth.style, headerName: auth.headerName } : { style: auth.style },
+    ...(extraHeaders ? { extraHeaders } : {}),
+    ...(queryParams ? { queryParams } : {}),
+    quirks: isRecord(raw.quirks) ? (raw.quirks as Quirks) : {},
+    ...(detected.length > 0 ? { detectedProtocols: detected } : {}),
+    status: oneOf(raw.status, STATUSES) ? raw.status : 'unverified',
+    ...(nonEmpty(raw.lastError) ? { lastError: raw.lastError } : {}),
+  };
+}
+
+function cleanPricing(v: unknown): ModelProfile['pricing'] {
+  if (!isRecord(v)) return undefined;
+  const n = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x : undefined);
+  const inPerM = n(v.inPerM);
+  const outPerM = n(v.outPerM);
+  if (inPerM === undefined || outPerM === undefined) return undefined;
+  return { inPerM, cachedInPerM: n(v.cachedInPerM) ?? inPerM, outPerM };
+}
+
+/** A stored profile, or null. Concurrency and chunk size fall back to the §4.3.1 defaults (2, 1200). */
+export function cleanProfile(raw: unknown): ModelProfile | null {
+  if (!isRecord(raw)) return null;
+  const { id, connectionId, model } = raw;
+  if (!nonEmpty(id) || !nonEmpty(connectionId) || !nonEmpty(model)) return null;
+  const pricing = cleanPricing(raw.pricing);
+  return {
+    id,
+    connectionId,
+    model,
+    ...(raw.protocolOverride !== 'auto' && oneOf(raw.protocolOverride, PROTOCOLS) ? { protocolOverride: raw.protocolOverride as Protocol } : {}),
+    ...(typeof raw.temperature === 'number' && Number.isFinite(raw.temperature) ? { temperature: raw.temperature } : {}),
+    maxConcurrency: positiveInt(raw.maxConcurrency, 2, 16),
+    chunkTokens: positiveInt(raw.chunkTokens, 1200, 32_000),
+    ...(typeof raw.contextWindow === 'number' && raw.contextWindow > 0 ? { contextWindow: Math.round(raw.contextWindow) } : {}),
+    ...(pricing ? { pricing } : {}),
+    ...(isRecord(raw.quirks) ? { quirks: raw.quirks as Quirks } : {}),
+  };
+}
+
+export function cleanSiteRules(raw: unknown): SiteRule[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((r): SiteRule[] => {
+    if (!isRecord(r) || !nonEmpty(r.translate) || typeof r.pattern !== 'string') return [];
+    const pattern = r.pattern.trim().toLowerCase();
+    if (pattern === '' || pattern === '*.') return [];
+    return [{ pattern, translate: r.translate, ...(r.localOnly === true ? { localOnly: true } : {}) }];
+  });
+}
+
+/** Routing without its site rules (stored apart); null without a `translate` id. */
+export function cleanRouting(raw: unknown): Omit<Routing, 'siteOverrides'> | null {
+  if (!isRecord(raw) || !nonEmpty(raw.translate)) return null;
+  const fallback = Array.isArray(raw.fallback) ? raw.fallback.filter(nonEmpty) : [];
+  return {
+    translate: raw.translate,
+    ...(nonEmpty(raw.analyze) ? { analyze: raw.analyze } : {}),
+    ...(nonEmpty(raw.review) ? { review: raw.review } : {}),
+    ...(fallback.length > 0 ? { fallback } : {}),
+  };
+}
+
+/** The provider settings in a sync snapshot; null before the migration (no schema version). */
+export function parseStored(items: Record<string, unknown>): ProviderSettings | null {
+  const version = items[SCHEMA_KEY];
+  if (typeof version !== 'number') return null;
+  const connections: ProviderConnection[] = [];
+  const profiles: ModelProfile[] = [];
+  for (const [key, value] of Object.entries(items)) {
+    if (key.startsWith(CONNECTION_PREFIX)) {
+      const c = cleanConnection(value);
+      if (c && connectionKey(c.id) === key) connections.push(c);
+    } else if (key.startsWith(PROFILE_PREFIX)) {
+      const p = cleanProfile(value);
+      if (p && profileKey(p.id) === key) profiles.push(p);
+    }
+  }
+  const sites = cleanSiteRules(items[SITE_RULES_KEY]);
+  // No usable routing (e.g. a sync that brought records before it): the first profile, so the
+  // panel can still say which provider it would use; resolution reports a missing profile.
+  const routing = cleanRouting(items[ROUTING_KEY]) ?? { translate: profiles[0]?.id ?? '' };
+  return { schemaVersion: version, connections, profiles, routing: sites.length > 0 ? { ...routing, siteOverrides: sites } : routing };
+}
+
+/** The sync items for `settings` (schema version included). */
+export function toSyncItems(settings: ProviderSettings): Record<string, unknown> {
+  const { siteOverrides, ...routing } = settings.routing;
+  return {
+    [SCHEMA_KEY]: settings.schemaVersion,
+    ...Object.fromEntries(settings.connections.map((c) => [connectionKey(c.id), c])),
+    ...Object.fromEntries(settings.profiles.map((p) => [profileKey(p.id), p])),
+    [ROUTING_KEY]: routing,
+    ...(siteOverrides && siteOverrides.length > 0 ? { [SITE_RULES_KEY]: siteOverrides } : {}),
+  };
+}
+
+// ---- Migration ----------------------------------------------------------------------------
+
+/**
+ * Schema 1 from M1–M3 storage, which held no connections: the extension used built-in constants
+ * and kept each key under `secret:<builtin id>` (M1: Gemini, from M2: APIBOX). Seeds the default
+ * connection and every built-in connection that has a key, each with its built-in profiles.
+ * Translate routes to the default profile, unless only another built-in connection has a key
+ * (an M1 user with a Gemini key): then to that connection's first profile, so nothing is
+ * re-entered (plan M4 §3 #7).
+ */
+export async function seedFromM1(api: Browser): Promise<ProviderSettings> {
+  const keyed = new Set<string>();
+  for (const c of BUILTIN_CONNECTIONS) if ((await readApiKey(api, c.id)) !== undefined) keyed.add(c.id);
+  const connections = BUILTIN_CONNECTIONS.filter((c) => c.id === DEFAULT_CONNECTION.id || keyed.has(c.id)).map((c) => structuredClone(c));
+  const ids = new Set(connections.map((c) => c.id));
+  const profiles = BUILTIN_PROFILES.filter((p) => ids.has(p.connectionId)).map((p) => structuredClone(p));
+  const keyedOther = BUILTIN_CONNECTIONS.find((c) => keyed.has(c.id) && c.id !== DEFAULT_CONNECTION.id);
+  const translate = keyed.has(DEFAULT_CONNECTION.id) || keyedOther === undefined ? DEFAULT_PROFILE.id : (profiles.find((p) => p.connectionId === keyedOther.id)?.id ?? DEFAULT_PROFILE.id);
+  return { schemaVersion: SCHEMA_VERSION, connections, profiles, routing: { translate } };
+}
+
+const migrations = new WeakMap<object, Promise<ProviderSettings>>();
+
+/**
+ * Brings storage.sync to the current schema and returns the settings. Idempotent: storage that
+ * already has a schema version is read, not rewritten. Records already stored (another device
+ * synced them before the version) win over seeded ones. A version newer than this build knows is
+ * read as it is, never downgraded. One migration at a time per `api` in this context.
+ */
+export function migrateProviders(api: Browser): Promise<ProviderSettings> {
+  const running = migrations.get(api);
+  if (running) return running;
+  const run = (async () => {
+    const items = await api.storage.sync.get(null);
+    const stored = parseStored(items);
+    if (stored) return stored;
+    const seed = await seedFromM1(api);
+    const partial = parseStored({ ...items, [SCHEMA_KEY]: SCHEMA_VERSION });
+    const merged: ProviderSettings = {
+      schemaVersion: SCHEMA_VERSION,
+      connections: [...(partial?.connections ?? []), ...seed.connections.filter((c) => !partial?.connections.some((x) => x.id === c.id))],
+      profiles: [...(partial?.profiles ?? []), ...seed.profiles.filter((p) => !partial?.profiles.some((x) => x.id === p.id))],
+      routing: cleanRouting(items[ROUTING_KEY]) ? (partial as ProviderSettings).routing : seed.routing,
+    };
+    // One set call: the schema version is written with the records it describes. A failed write
+    // (quota, sync off) leaves storage as it was: the settings still apply, and the next read migrates again.
+    try {
+      await api.storage.sync.set(toSyncItems(merged));
+    } catch (err) {
+      console.warn('[translate-side] could not save the migrated provider settings', err);
+    }
+    return merged;
+  })();
+  migrations.set(api, run);
+  const clear = () => {
+    if (migrations.get(api) === run) migrations.delete(api);
+  };
+  run.then(clear, clear);
+  return run;
+}
+
+/** The stored provider settings, migrated first if needed. */
+export const readProviderSettings = migrateProviders;
+
+// ---- Writes ---------------------------------------------------------------------------------
+
+let writes: Promise<unknown> = Promise.resolve();
+
+/** Runs storage updates one after another, each on what the last one wrote. */
+function queued<T>(task: () => Promise<T>): Promise<T> {
+  const run = writes.then(task);
+  writes = run.catch(() => undefined);
+  return run;
+}
+
+function checkItem(key: string, value: unknown): void {
+  const bytes = syncItemBytes(key, value);
+  if (bytes > SYNC_QUOTA_BYTES_PER_ITEM) throw new Error(`${key} would take ${bytes} bytes, over Chrome's sync limit of ${SYNC_QUOTA_BYTES_PER_ITEM} bytes for one setting`);
+}
+
+export function saveConnection(api: Browser, connection: ProviderConnection): Promise<void> {
+  return queued(async () => {
+    await migrateProviders(api);
+    const clean = cleanConnection(connection);
+    if (!clean) throw new Error('not a valid connection');
+    checkItem(connectionKey(clean.id), clean);
+    await api.storage.sync.set({ [connectionKey(clean.id)]: clean });
+  });
+}
+
+export function saveProfile(api: Browser, profile: ModelProfile): Promise<void> {
+  return queued(async () => {
+    await migrateProviders(api);
+    const clean = cleanProfile(profile);
+    if (!clean) throw new Error('not a valid model profile');
+    checkItem(profileKey(clean.id), clean);
+    await api.storage.sync.set({ [profileKey(clean.id)]: clean });
+  });
+}
+
+/** Routing and its site rules (two items; the rules are dropped when empty). */
+export function saveRouting(api: Browser, routing: Routing): Promise<void> {
+  return queued(async () => {
+    await migrateProviders(api);
+    const clean = cleanRouting(routing);
+    if (!clean) throw new Error('routing needs a translate profile');
+    const sites = cleanSiteRules(routing.siteOverrides);
+    checkItem(ROUTING_KEY, clean);
+    checkItem(SITE_RULES_KEY, sites);
+    await api.storage.sync.set({ [ROUTING_KEY]: clean });
+    if (sites.length > 0) await api.storage.sync.set({ [SITE_RULES_KEY]: sites });
+    else await api.storage.sync.remove(SITE_RULES_KEY);
+  });
+}
+
+/**
+ * Persists a quirk the adapter learned (§4.2.4, sdk.ts `onQuirkLearned`): only the flag that
+ * changed, never the whole merged set the adapter worked with (it holds the profile's quirks over
+ * the connection's). It goes on the profile when the profile sets that flag itself (there it would
+ * shadow the connection's), otherwise on the connection. Unknown records are left alone.
+ */
+export function saveLearnedQuirk(api: Browser, at: { connectionId: string; profileId?: string }, learned: keyof Quirks, quirks: Quirks): Promise<void> {
+  return queued(async () => {
+    const value = quirks[learned];
+    if (at.profileId !== undefined) {
+      const key = profileKey(at.profileId);
+      const profile = cleanProfile((await api.storage.sync.get(key))[key]);
+      if (profile && profile.quirks && learned in profile.quirks) {
+        await api.storage.sync.set({ [key]: { ...profile, quirks: { ...profile.quirks, [learned]: value } } });
+        return;
+      }
+    }
+    const key = connectionKey(at.connectionId);
+    const connection = cleanConnection((await api.storage.sync.get(key))[key]);
+    if (!connection) return;
+    await api.storage.sync.set({ [key]: { ...connection, quirks: { ...connection.quirks, [learned]: value } } });
+  });
+}
+
+// ---- Tab overrides (storage.session) ----------------------------------------------------------
+
+export async function readTabOverride(api: Browser, tabId: number): Promise<string | undefined> {
+  const key = tabRouteKey(tabId);
+  const value = (await api.storage.session.get(key))[key];
+  return nonEmpty(value) ? value : undefined;
+}
+
+export async function setTabOverride(api: Browser, tabId: number, profileId: string): Promise<void> {
+  await api.storage.session.set({ [tabRouteKey(tabId)]: profileId });
+}
+
+export async function clearTabOverride(api: Browser, tabId: number): Promise<void> {
+  await api.storage.session.remove(tabRouteKey(tabId));
+}
+
+// ---- Resolution (§4.3.5 Resolve, plan M4-E8) -------------------------------------------------
+
+/** Does `url`'s host match a site rule's pattern? `*.example.com` matches example.com and its subdomains. */
+export function matchesSite(pattern: string, url: string): boolean {
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  const p = pattern.trim().toLowerCase();
+  if (p.startsWith('*.')) {
+    const base = p.slice(2);
+    return base !== '' && (host === base || host.endsWith(`.${base}`));
+  }
+  return host === p;
+}
+
+/** The first site rule (in stored order) that matches `url`. */
+export function siteRuleFor(routing: Routing, url: string | undefined): SiteRule | undefined {
+  return url === undefined ? undefined : routing.siteOverrides?.find((r) => matchesSite(r.pattern, url));
+}
+
+export interface RouteContext {
+  /** The page the job translates: site rules match its host. */
+  url?: string | undefined;
+  /** The tab's override (a profile id), from the quick switcher. */
+  tabProfileId?: string | undefined;
+}
+
+export type RouteSource = 'site' | 'tab' | 'routing';
+
+export type Route =
+  | { ok: true; profile: ModelProfile; connection: ProviderConnection; source: RouteSource; localOnly: boolean; rule?: SiteRule }
+  | { ok: false; message: string; source: RouteSource; connection?: ProviderConnection };
+
+/**
+ * The profile a role runs on (§4.3.5, plan M4-E8). `translate`: the first matching site rule,
+ * then the tab override, then `routing.translate`. `analyze` and `review`: their own route when
+ * set, else whatever `translate` resolved to; a local-only site rule holds every role, so a
+ * cloud analyze profile never sees that site's text. A site rule whose profile is gone is an
+ * error, not a fall-through (it would send the page elsewhere than the user chose); a tab
+ * override whose profile is gone is ignored (session state, e.g. the profile was removed).
+ */
+export function resolveRouteIn(settings: ProviderSettings, role: ModelRole, ctx: RouteContext = {}): Route {
+  const profiles = new Map(settings.profiles.map((p) => [p.id, p]));
+  const connections = new Map(settings.connections.map((c) => [c.id, c]));
+  const pick = (id: string, source: RouteSource, extra: { localOnly?: boolean; rule?: SiteRule } = {}): Route => {
+    const profile = profiles.get(id);
+    if (!profile) return { ok: false, source, message: `The ${role} route points at a model profile that no longer exists. Choose a model in settings.` };
+    const connection = connections.get(profile.connectionId);
+    if (!connection) return { ok: false, source, message: `The model ${profile.model} has no connection. Set it up again in settings.` };
+    return { ok: true, profile, connection, source, localOnly: extra.localOnly === true, ...(extra.rule ? { rule: extra.rule } : {}) };
+  };
+  const rule = siteRuleFor(settings.routing, ctx.url);
+  if (role !== 'translate') {
+    const own = role === 'analyze' ? settings.routing.analyze : settings.routing.review;
+    if (own !== undefined && !rule?.localOnly) return pick(own, 'routing');
+  }
+  if (rule) return pick(rule.translate, 'site', { localOnly: rule.localOnly === true, rule });
+  if (ctx.tabProfileId !== undefined && profiles.has(ctx.tabProfileId)) return pick(ctx.tabProfileId, 'tab');
+  return pick(settings.routing.translate, 'routing');
+}
+
+/** `resolveRouteIn` on the stored settings and the tab's override. */
+export async function resolveRoute(api: Browser, role: ModelRole, ctx: { url?: string | undefined; tabId?: number | undefined } = {}): Promise<Route> {
+  const [settings, tabProfileId] = await Promise.all([
+    readProviderSettings(api),
+    ctx.tabId === undefined ? undefined : readTabOverride(api, ctx.tabId).catch(() => undefined),
+  ]);
+  return resolveRouteIn(settings, role, { url: ctx.url, tabProfileId });
+}

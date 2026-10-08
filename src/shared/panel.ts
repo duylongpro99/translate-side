@@ -3,6 +3,7 @@
 import type { browser } from 'wxt/browser';
 import { clearAccess, readAccess } from './access.ts';
 import { injectInto, type TabRef } from './inject.ts';
+import { clearTabOverride } from './providers.ts';
 import { anyDenylisted, clearSnippet, writeSnippet } from './snippet.ts';
 
 export const CONTEXT_MENU_ID = 'translate-side.open-panel';
@@ -106,5 +107,6 @@ export function listenForTabLifecycle(api: Browser): void {
   api.tabs.onRemoved.addListener((tabId) => {
     clearAccess(api, tabId).catch(logError('clearing tab access'));
     clearSnippet(api, tabId).catch(logError('clearing the selection'));
+    clearTabOverride(api, tabId).catch(logError("clearing the tab's model"));
   });
 }

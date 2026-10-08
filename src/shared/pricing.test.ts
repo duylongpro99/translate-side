@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ANTHROPIC_PRICES, anthropicPrice, pricingFor } from './pricing.ts';
-import { ANTHROPIC_CONNECTION, ANTHROPIC_HAIKU_PROFILE, APIBOX_CONNECTION, APIBOX_QWEN_PROFILE, resolveProfile } from './settings.ts';
+import { ANTHROPIC_CONNECTION, ANTHROPIC_HAIKU_PROFILE, APIBOX_CONNECTION, APIBOX_QWEN_PROFILE, DEFAULT_PROFILE } from './settings.ts';
 
 describe('built-in Anthropic prices (plan M3-E9, M3-D7)', () => {
   it('prices a model id exactly, as a dated snapshot, or with a provider prefix', () => {
@@ -25,7 +25,7 @@ describe('built-in Anthropic prices (plan M3-E9, M3-D7)', () => {
     expect(pricingFor({ model: 'claude-haiku-4-5' }, APIBOX_CONNECTION)).toBeUndefined();
   });
 
-  it('APIBOX stays the routed default (M3-D7)', () => {
-    expect(resolveProfile('translate').connection.id).toBe('apibox');
+  it('APIBOX stays the routed default (M3-D7): a fresh install routes translate to it (providers.test.ts)', () => {
+    expect(DEFAULT_PROFILE.connectionId).toBe('apibox');
   });
 });

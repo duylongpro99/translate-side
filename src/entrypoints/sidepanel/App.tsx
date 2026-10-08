@@ -10,6 +10,7 @@ import type { Jobs, JobView } from './jobs.ts';
 import { SegmentList } from './SegmentList.tsx';
 import { PrivacyNotice } from './PrivacyNotice.tsx';
 import type { PrefsStore } from './prefs.ts';
+import type { Routed, RouteTarget } from './route.ts';
 import type { PrivacyGate, PrivacyState } from './privacy.ts';
 import { SelectionView } from './SelectionView.tsx';
 import { StateMessage } from './StateMessage.tsx';
@@ -28,6 +29,26 @@ export interface TranslatorProps {
   privacy?: PrivacyGate;
   /** The preferences the header switches (plan M3-E6). */
   prefs?: PrefsStore;
+  /** The model and provider the translate role resolves to for a tab and page (§4.3.5). */
+  routed?(target: RouteTarget): Promise<Routed | undefined>;
+}
+
+/** What the translate role resolves to for the tab and page on screen; re-read when they or the job change. */
+function useRouted(translator: TranslatorProps | undefined, tabId: number | undefined, url: string | undefined, job: JobView | undefined): Routed | undefined {
+  const [routed, setRouted] = useState<Routed | undefined>(undefined);
+  const status = job?.status;
+  useEffect(() => {
+    if (!translator?.routed) return;
+    let live = true;
+    translator.routed({ tabId, url }).then(
+      (r) => live && setRouted(r),
+      () => live && setRouted(undefined),
+    );
+    return () => {
+      live = false;
+    };
+  }, [translator, tabId, url, status]);
+  return routed;
 }
 
 const nextFrame = (fn: () => void) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 16));
@@ -102,6 +123,7 @@ export function App({ controller, translator }: { controller: PanelController; t
   const job = useJob(translator?.jobs, tabId, view.kind === 'ready' ? view.docId : undefined);
   const privacy = usePrivacy(translator?.privacy);
   const prefs = usePrefs(translator?.prefs);
+  const routed = useRouted(translator, tabId, view.kind === 'ready' ? view.result.url : undefined, job);
   const snippet = useSnippet(translator?.snippets?.store, tabId);
   const snippetJob = useJob(translator?.snippets?.jobs, tabId, snippet?.docId);
   // A site on the denylist is never read, selection included (M3-D13): its own message wins.
@@ -171,9 +193,9 @@ export function App({ controller, translator }: { controller: PanelController; t
             ✕
           </button>
         </div>
-        {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} actions={job ? pageActions : undefined} onPrefs={switchPrefs} error={prefsError ? "Couldn't save that setting. Try again, or change it in settings." : undefined} /> : null}
+        {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} routedModel={routed?.model} actions={job ? pageActions : undefined} onPrefs={switchPrefs} error={prefsError ? "Couldn't save that setting. Try again, or change it in settings." : undefined} /> : null}
       </header>
-      {privacy === 'needed' && translator?.privacy ? <PrivacyNotice onAcknowledge={() => void translator.privacy?.acknowledge().catch(() => {})} /> : null}
+      {privacy === 'needed' && translator?.privacy ? <PrivacyNotice to={routed} onAcknowledge={() => void translator.privacy?.acknowledge().catch(() => {})} /> : null}
       {selecting && tabId !== undefined && snippet && translator?.snippets ? (
         <SelectionView snippet={snippet} job={snippetJob} actions={translator.snippets.actions(tabId)} onClose={() => translator.snippets?.close(tabId)} pageReady={view.kind === 'ready'} />
       ) : view.kind !== 'ready' ? (

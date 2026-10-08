@@ -17,7 +17,7 @@ function fakeApi({ grant = true, answer = Promise.resolve() } = {}) {
   const granted = new Set<string>();
   const log: string[] = [];
   const area = (m: Map<string, unknown>, name: string) => ({
-    get: (k: string) => Promise.resolve(m.has(k) ? { [k]: m.get(k) } : {}),
+    get: (k: string | null) => Promise.resolve(k === null ? Object.fromEntries(m) : m.has(k) ? { [k]: m.get(k) } : {}),
     set: (o: Record<string, unknown>) => {
       log.push(`${name}.set ${Object.keys(o).join(',')}`);
       for (const [k, v] of Object.entries(o)) m.set(k, v);
@@ -70,17 +70,22 @@ describe('options v0 (plan M1-E9)', () => {
       input.value = '  AIzaSyExampleKey1234 ';
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
+    // Opening the page migrated the M1 settings into storage.sync (src/shared/providers.ts).
+    expect(f.log).toEqual(['sync.set schemaVersion,conn:apibox,profile:apibox-qwen3.8-flash,profile:apibox-deepseek-v4-pro,profile:apibox-deepseek-flash,routing']);
+    const before = f.log.length;
     act(() => {
       (root.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     });
     // The permission request comes before any await: still inside the gesture.
-    expect(f.log[0]).toBe('request https://api.ai-box.vn/*');
+    expect(f.log[before]).toBe('request https://api.ai-box.vn/*');
     expect(DEFAULT_ORIGIN).toBe('https://api.ai-box.vn/*');
     await flush();
     expect(f.local.get(`secret:${DEFAULT_CONNECTION.id}`)).toBe('AIzaSyExampleKey1234');
     expect(root.querySelector('#key-h')?.textContent).toBe('APIBOX');
     expect(root.textContent).toContain('qwen3.8-flash');
-    expect(f.sync.size).toBe(0);
+    // Sync holds the provider settings only, never the key (§4.3.4).
+    expect([...f.sync.keys()].every((k) => k === 'schemaVersion' || k === 'routing' || k.startsWith('conn:') || k.startsWith('profile:'))).toBe(true);
+    expect(JSON.stringify([...f.sync.values()])).not.toContain('AIzaSyExampleKey1234');
     expect(root.querySelector('[data-testid=masked-key]')?.textContent).toBe('AIz…1234');
     expect(root.innerHTML).not.toContain('AIzaSyExampleKey1234');
     expect(input.value).toBe('');

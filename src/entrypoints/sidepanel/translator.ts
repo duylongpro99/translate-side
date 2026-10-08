@@ -12,7 +12,8 @@ import { SpendLedger } from '@/shared/spend';
 import { anyDenylisted, clearSnippet, readSnippet, tabIdFromSnippetKey, type SnippetRecord } from '@/shared/snippet';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
 import { snippetDocId, snippetView, SnippetStore } from './snippet.ts';
-import { translateClient } from './route.ts';
+import { isProviderKey } from '@/shared/providers';
+import { routedSummary, translateClient, type Routed, type RouteTarget } from './route.ts';
 import { ViewportStore } from './viewport.ts';
 import { PrivacyGate } from './privacy.ts';
 import { PrefsStore } from './prefs.ts';
@@ -31,6 +32,8 @@ export interface Translator {
   prefs: PrefsStore;
   hooks: SessionHooks;
   actions(tabId: number): JobActions;
+  /** The model and provider the translate role resolves to for a tab and page now (§4.3.5), for the header and the privacy notice. */
+  routed(target: RouteTarget): Promise<Routed | undefined>;
   /** Settings listeners and the panel-close cancel. Returns the cleanup. */
   watch(activeTab: () => number | undefined): () => void;
 }
@@ -59,10 +62,10 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   // The running total in settings (M3-E9): pages and selections alike.
   const ledger = new SpendLedger(api);
   deps = { onSpend: (delta) => void ledger.add(delta), ...deps };
-  const jobs = new Jobs({ translateClient: () => translateClient(api), cache: openTranslationCache(), ...deps });
+  const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), ...deps });
   // No cache: a selection is a one-off, and its text is not kept beyond the session.
   // Single-pass: one request per chunk, never the contextual brief (analyze) call for a selection.
-  const snippetJobs = new Jobs({ translateClient: () => translateClient(api), ...deps, strategy: 'single-pass', cache: undefined });
+  const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target), ...deps, strategy: 'single-pass', cache: undefined });
   const snippetStore = new SnippetStore();
   const viewports = new ViewportStore();
   const detector = 'detector' in options ? options.detector : chromeLanguageDetector();
@@ -310,7 +313,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     retranslatePage: () => retranslate(tabId),
     grantAccess: () => {
       // First call in the click handler: permissions.request needs the gesture (§4.3.3 step 3).
-      void api.permissions.request({ origins: [DEFAULT_ORIGIN] }).then((granted) => {
+      void api.permissions.request({ origins: [jobs.get(tabId)?.connection?.origin ?? DEFAULT_ORIGIN] }).then((granted) => {
         if (granted) resume(tabId);
       });
     },
@@ -328,7 +331,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       if (current) void snippetJobs.start(tabId, current.docId, current.doc, { keepCost: true });
     },
     grantAccess: () => {
-      void api.permissions.request({ origins: [DEFAULT_ORIGIN] }).then((granted) => {
+      void api.permissions.request({ origins: [snippetJobs.get(tabId)?.connection?.origin ?? DEFAULT_ORIGIN] }).then((granted) => {
         if (granted) void snippetJobs.resume(tabId);
       });
     },
@@ -356,6 +359,8 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     };
     /** Settings changed: the active tab's page is translated again if they concern it (refresh). */
     const onSync = (changes: Record<string, unknown>) => {
+      // A connection, model or route changed (src/shared/providers.ts): a job stopped on it runs again.
+      if (Object.keys(changes).some(isProviderKey)) retryStopped();
       if (!(PREFS_KEY in changes) && !(GLOSSARY_KEY in changes)) return;
       const tabId = activeTab();
       if (tabId !== undefined) refresh(tabId);
@@ -380,5 +385,5 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     };
   };
 
-  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, privacy, prefs, hooks, actions, watch };
+  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, privacy, prefs, hooks, actions, routed: (target) => routedSummary(api, target), watch };
 }

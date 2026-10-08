@@ -1,23 +1,34 @@
 // Settings v0 (plan M1-E9, user decision M1-D13): one hard-wired connection and its model profile,
 // the API key in storage.local under `secret:<connectionId>` (DESIGN.md §4.3.4), and the target and
 // source languages. The default is APIBOX with qwen3.8-flash (M2-D11, M2-D16); ds/deepseek-v4-pro
-// (M2-D14), ds/deepseek-flash (M2-D13) and the Gemini preset stay defined. Provider choice, presets, Test connection and routing are M4.
+// (M2-D14), ds/deepseek-flash (M2-D13) and the Gemini preset stay defined. From M4 the stored
+// connections, profiles and routing live in src/shared/providers.ts; these are the built-in ones.
 import type { browser } from 'wxt/browser';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
 import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS, GEMINI_OPENAI_BASE_URL } from '@/llm/presets';
-import type { ModelRole, Protocol, AuthStyle, Quirks, ResolvedConnection } from '@/llm/types';
+import type { Protocol, AuthStyle, Quirks, ResolvedConnection } from '@/llm/types';
 
 type Browser = typeof browser;
 
-/** §4.3.1 ProviderConnection, the fields M1 uses. Stored nowhere yet: a constant until M4. */
+/**
+ * §4.3.1 ProviderConnection. Stored in storage.sync, one item per connection (src/shared/providers.ts);
+ * the constants below are the built-in ones the M1 → M4 migration seeds from.
+ */
 export interface ProviderConnection {
   id: string;
   label: string;
   presetId: string;
-  protocol: Protocol;
+  /** "auto" until auto-detect (M4-E6) has picked one. */
+  protocol: Protocol | 'auto';
   baseUrl: string;
   auth: { style: AuthStyle; headerName?: string };
+  extraHeaders?: Record<string, string>;
+  queryParams?: Record<string, string>;
+  /** From the preset, refined by probing and learned errors (§4.2.4, persisted by providers.ts saveLearnedQuirk). */
   quirks: Quirks;
+  detectedProtocols?: Protocol[];
+  status: 'unverified' | 'ok' | 'error';
+  lastError?: string;
 }
 
 /** §4.3.1 ModelProfile. `pricing` adds `cachedInPerM` to the spec's `{ inPerM, outPerM }` (plan M1 §5: usage has cachedInput). */
@@ -25,15 +36,28 @@ export interface ModelProfile {
   id: string;
   connectionId: string;
   model: string;
+  /** For dual-protocol gateways: pick per model. */
+  protocolOverride?: Protocol;
+  temperature?: number;
   maxConcurrency: number;
   chunkTokens: number;
+  contextWindow?: number;
   /** USD per million tokens. */
   pricing?: { inPerM: number; cachedInPerM: number; outPerM: number };
   /** This model's quirks, over the connection's (key by key): e.g. its thinking policy (M2-D16). */
   quirks?: Quirks;
 }
 
-export const GEMINI_CONNECTION: ProviderConnection = {
+/** A built-in connection: its protocol is known. */
+export type BuiltinConnection = ProviderConnection & { protocol: Protocol };
+
+/** The protocol a client for `profile` on `connection` speaks; undefined while it is "auto" and nothing was detected. */
+export function protocolOf(connection: ProviderConnection, profile?: ModelProfile): Protocol | undefined {
+  if (profile?.protocolOverride) return profile.protocolOverride;
+  return connection.protocol === 'auto' ? connection.detectedProtocols?.[0] : connection.protocol;
+}
+
+export const GEMINI_CONNECTION: BuiltinConnection = {
   id: 'gemini',
   label: 'Google Gemini',
   presetId: 'gemini',
@@ -41,6 +65,7 @@ export const GEMINI_CONNECTION: ProviderConnection = {
   baseUrl: GEMINI_OPENAI_BASE_URL,
   auth: { style: 'bearer' },
   quirks: {},
+  status: 'unverified',
 };
 
 /** The Gemini connection's origin pattern (§4.3.3 step 3, §8). */
@@ -57,7 +82,7 @@ export const GEMINI_PROFILE: ModelProfile = {
   pricing: { inPerM: 0.3, cachedInPerM: 0.03, outPerM: 2.5 },
 };
 
-export const APIBOX_CONNECTION: ProviderConnection = {
+export const APIBOX_CONNECTION: BuiltinConnection = {
   id: 'apibox',
   label: 'APIBOX',
   presetId: 'apibox',
@@ -66,6 +91,7 @@ export const APIBOX_CONNECTION: ProviderConnection = {
   auth: { style: 'bearer' },
   // DeepSeek thinks by default and the thinking eats max_tokens: switched off (src/llm/presets.ts).
   quirks: APIBOX_DEEPSEEK_QUIRKS,
+  status: 'unverified',
 };
 
 /** The M2-D13 translator, kept selectable: cheaper, but it seldom adds the first-use glosses (M2-D14). */
@@ -109,7 +135,7 @@ export const APIBOX_QWEN_PROFILE: ModelProfile = {
  * replaces at runtime for now (decision M3-D7). Its profile carries no `pricing`: the built-in
  * Anthropic table prices it (src/shared/pricing.ts, plan M3-E9).
  */
-export const ANTHROPIC_CONNECTION: ProviderConnection = {
+export const ANTHROPIC_CONNECTION: BuiltinConnection = {
   id: 'anthropic',
   label: 'Anthropic',
   presetId: 'anthropic',
@@ -117,6 +143,7 @@ export const ANTHROPIC_CONNECTION: ProviderConnection = {
   baseUrl: 'https://api.anthropic.com',
   auth: { style: 'x-api-key' },
   quirks: {},
+  status: 'unverified',
 };
 
 export const ANTHROPIC_HAIKU_PROFILE: ModelProfile = {
@@ -135,25 +162,13 @@ export const DEFAULT_ORIGIN = originPattern(DEFAULT_CONNECTION.baseUrl);
 /** "api.ai-box.vn": how the settings and the panel name the host they need access to. */
 export const DEFAULT_HOST = new URL(DEFAULT_CONNECTION.baseUrl).hostname;
 
-/** §4.3.1 Routing, stubbed: `analyze` is unset, so it defaults to `translate` (§4.3.1); `review` is M7. */
-export const ROUTING: { translate: string; analyze?: string } = { translate: DEFAULT_PROFILE.id };
-
-const PROFILES = new Map([GEMINI_PROFILE, APIBOX_FLASH_PROFILE, APIBOX_PRO_PROFILE, APIBOX_QWEN_PROFILE, ANTHROPIC_HAIKU_PROFILE].map((p) => [p.id, p]));
-const CONNECTIONS = new Map([GEMINI_CONNECTION, APIBOX_CONNECTION, ANTHROPIC_CONNECTION].map((c) => [c.id, c]));
+/** The built-in connections and profiles: what the M1 → M4 migration seeds from (src/shared/providers.ts). */
+export const BUILTIN_CONNECTIONS: readonly BuiltinConnection[] = [APIBOX_CONNECTION, GEMINI_CONNECTION, ANTHROPIC_CONNECTION];
+export const BUILTIN_PROFILES: readonly ModelProfile[] = [APIBOX_QWEN_PROFILE, APIBOX_PRO_PROFILE, APIBOX_FLASH_PROFILE, GEMINI_PROFILE, ANTHROPIC_HAIKU_PROFILE];
 
 /** The connection a client for `profile` is built with: the profile's quirks over the connection's. */
 export function withProfileQuirks(conn: ResolvedConnection, profile: ModelProfile): ResolvedConnection {
   return profile.quirks === undefined ? conn : { ...conn, quirks: { ...conn.quirks, ...profile.quirks } };
-}
-
-/** §4.3.5 Resolve, M1 stub: no site overrides and no tab override yet. */
-export function resolveProfile(role: ModelRole): { profile: ModelProfile; connection: ProviderConnection } {
-  if (role === 'review') throw new Error(`no model profile is routed for the ${role} role yet`);
-  const id = role === 'analyze' ? (ROUTING.analyze ?? ROUTING.translate) : ROUTING.translate;
-  const profile = PROFILES.get(id);
-  const connection = profile && CONNECTIONS.get(profile.connectionId);
-  if (!profile || !connection) throw new Error(`the ${role} route points at no profile`);
-  return { profile, connection };
 }
 
 export const SECRET_PREFIX = 'secret:';
@@ -190,17 +205,25 @@ export function hasHostPermission(api: Browser, baseUrl: string): Promise<boolea
   return api.permissions.contains({ origins: [originPattern(baseUrl)] });
 }
 
-/** The connection as the adapter receives it (src/llm/types.ts), key included; null without a key. */
-export async function resolveConnection(api: Browser, connection: ProviderConnection): Promise<ResolvedConnection | null> {
+/**
+ * The connection as the adapter receives it (src/llm/types.ts), key included; null without a key.
+ * Its protocol is `protocolOf(connection, profile)`, which the caller checks first: it throws when
+ * there is none (an "auto" connection nothing was detected for).
+ */
+export async function resolveConnection(api: Browser, connection: ProviderConnection, profile?: ModelProfile): Promise<ResolvedConnection | null> {
+  const protocol = protocolOf(connection, profile);
+  if (protocol === undefined) throw new Error(`${connection.label} has no protocol yet`);
   const apiKey = await readApiKey(api, connection.id);
   if (apiKey === undefined && connection.auth.style !== 'none') return null;
   return {
     id: connection.id,
-    protocol: connection.protocol,
+    protocol,
     baseUrl: connection.baseUrl,
     auth: connection.auth,
     ...(apiKey === undefined ? {} : { apiKey }),
-    // A copy: the adapter flips quirks in place (§4.2.4); M4 persists what it learns.
+    ...(connection.extraHeaders ? { extraHeaders: { ...connection.extraHeaders } } : {}),
+    ...(connection.queryParams ? { queryParams: { ...connection.queryParams } } : {}),
+    // A copy: the adapter flips quirks in place (§4.2.4); providers.ts saveLearnedQuirk persists what it learns.
     quirks: structuredClone(connection.quirks),
     hasHostPermission: () => hasHostPermission(api, connection.baseUrl),
   };

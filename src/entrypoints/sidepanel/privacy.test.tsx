@@ -128,6 +128,8 @@ describe('first-run privacy notice in the panel', () => {
     expect(t.jobs.get(1)).toBeUndefined();
 
     const root = mount(t, { kind: 'ready', result: result as Extract<PanelView, { kind: 'ready' }>['result'], docId: 'd1' });
+    // The route is read from storage (src/shared/providers.ts).
+    await act(() => settle());
     const notice = root.querySelector('[data-testid=privacy-notice]');
     expect(notice?.textContent).toContain('sends the text of the pages you translate');
     expect(notice?.textContent).toContain('APIBOX');
@@ -193,6 +195,7 @@ describe('first-run privacy notice in the panel', () => {
     const { t } = setup();
     await settle();
     const root = mount(t, { kind: 'loading' });
+    await act(() => settle());
     expect(root.querySelector('[data-testid=privacy-provider]')?.textContent).toBe('APIBOX');
     expect(root.querySelector('[data-testid=privacy-notice]')?.textContent).toContain('api.ai-box.vn');
     expect(root.querySelector('[data-testid=privacy-notice]')?.getAttribute('aria-modal')).toBe('true');

@@ -26,7 +26,7 @@ import {
   readPreferences,
   removeApiKey,
   resolveConnection,
-  resolveProfile,
+  protocolOf,
   saveApiKey,
   saveGlossary,
   savePreferences,
@@ -108,11 +108,11 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
     expect(costUsd(undefined, u)).toBeUndefined();
   });
 
-  it('routes translate, and analyze to the translate profile (stub)', () => {
-    expect(resolveProfile('translate')).toEqual({ profile: APIBOX_QWEN_PROFILE, connection: APIBOX_CONNECTION });
-    // §4.3.1: an unset analyze route defaults to translate.
-    expect(resolveProfile('analyze').profile).toBe(APIBOX_QWEN_PROFILE);
-    expect(() => resolveProfile('review')).toThrow(/review/);
+  it('picks the protocol: the profile override, else the connection, else the detected one for auto', () => {
+    expect(protocolOf(APIBOX_CONNECTION)).toBe('openai-chat');
+    expect(protocolOf(APIBOX_CONNECTION, { ...APIBOX_QWEN_PROFILE, protocolOverride: 'anthropic-messages' })).toBe('anthropic-messages');
+    expect(protocolOf({ ...APIBOX_CONNECTION, protocol: 'auto' })).toBeUndefined();
+    expect(protocolOf({ ...APIBOX_CONNECTION, protocol: 'auto', detectedProtocols: ['anthropic-messages', 'openai-chat'] })).toBe('anthropic-messages');
   });
 
   it('stores the key trimmed in storage.local under secret:<connectionId>, never in sync', async () => {
@@ -142,6 +142,10 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
     expect(await conn?.hasHostPermission()).toBe(true);
     // Quirks are a copy: the adapter flips them in place.
     expect(conn?.quirks).not.toBe(GEMINI_CONNECTION.quirks);
+    // Extra headers and query parameters ride along; an auto connection with nothing detected can't resolve.
+    const extra = await resolveConnection(api, { ...GEMINI_CONNECTION, extraHeaders: { 'X-Org': 'a' }, queryParams: { v: '1' } });
+    expect(extra).toMatchObject({ extraHeaders: { 'X-Org': 'a' }, queryParams: { v: '1' } });
+    await expect(resolveConnection(api, { ...GEMINI_CONNECTION, protocol: 'auto' })).rejects.toThrow(/no protocol/);
   });
 
   it('defaults the target to the browser language and the source to auto; a saved override is read back', async () => {

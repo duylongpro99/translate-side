@@ -99,7 +99,7 @@ export interface JobView {
   /** The error that stopped the job (status `stopped`). */
   stopError?: LLMError;
   /** The connection the job runs on, for "Fix key" (M3-E8). Absent until the client is resolved. */
-  connection?: { id: string; label: string };
+  connection?: JobConnection;
   /** Requests waiting out a retryable failure right now, one per chunk (M3-E8). Absent when none. */
   backoff?: readonly Backoff[];
   /** Epoch ms: when this run started, when its first text became visible, when it ended. */
@@ -263,12 +263,25 @@ export function backoffClient(inner: LLMClient, watch: { waiting(chunk: number, 
 
 // ---- Jobs ---------------------------------------------------------------------------------
 
+/** The connection a job runs on; `origin` is its host-permission pattern, for "Grant access". */
+export interface JobConnection {
+  id: string;
+  label: string;
+  origin?: string;
+}
+
 /** What a job needs from the panel: the translate client for the routed profile, or why there is none. */
-export type ClientResult = { ok: true; client: LLMClient; profile: ModelProfile; connection?: { id: string; label: string } } | { ok: false; error: LLMError; connection?: { id: string; label: string } };
+export type ClientResult = { ok: true; client: LLMClient; profile: ModelProfile; connection?: JobConnection } | { ok: false; error: LLMError; connection?: JobConnection };
+
+/** What the route is resolved for (§4.3.5): the page's tab (its override) and URL (site rules). */
+export interface ClientTarget {
+  tabId: number;
+  url: string;
+}
 
 export interface JobDeps {
-  /** Resolves the `translate` role (§4.3.5): key, host permission, profile. Called once per run. */
-  translateClient: () => Promise<ClientResult>;
+  /** Resolves the `translate` role (§4.3.5) for a page: key, host permission, profile. Called once per run. */
+  translateClient: (target: ClientTarget) => Promise<ClientResult>;
   now?: () => number;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
   /** Test seam: the engine to run (default: single-pass and contextual over the given client). */
@@ -479,7 +492,7 @@ export class Jobs {
     this.emit(tabId, job.view);
 
     const signal = job.controller.signal;
-    const resolved = await this.deps.translateClient();
+    const resolved = await this.deps.translateClient({ tabId, url: doc.url });
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
     if (resolved.connection) this.patch(tabId, job, { connection: resolved.connection });
     if (!resolved.ok) {
@@ -653,7 +666,7 @@ export class Jobs {
     // A retranslated block keeps its earlier text on screen until the new one streams in.
     settle(mode === 'retry' ? { status: 'pending' } : { status: 'pending', ...(before.text === undefined ? {} : { text: before.text }) });
     try {
-      const resolved = await this.deps.translateClient();
+      const resolved = await this.deps.translateClient({ tabId, url: job.doc.url });
       if (signal.aborted) return settle(before);
       if (!resolved.ok) {
         settle(failedWith(resolved.error));

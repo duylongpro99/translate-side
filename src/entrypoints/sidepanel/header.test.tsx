@@ -116,11 +116,13 @@ describe('panel header (M3-E6)', () => {
     expect(q('page-cancel')).toBeNull();
   });
 
-  it('names the routed model before a job has resolved its client', () => {
+  it('names the routed model before a job has resolved its client', async () => {
     const f = fakeApi();
     const t = createTranslator(f.api, { translateClient: () => new Promise(() => {}) });
     const controller = { view: { kind: 'ready', result, docId: 'd1' } as PanelView, tabId: 1, subscribe: (fn: (v: PanelView, id: number | undefined) => void) => (fn(controller.view, 1), () => undefined), retry: () => undefined };
     act(() => render(<App controller={controller as unknown as PanelController} translator={t} />, root));
+    // The route is read from storage (src/shared/providers.ts): a fresh install routes to the default.
+    await act(() => settle());
     expect(q('header-model')?.textContent).toBe(DEFAULT_PROFILE.model);
   });
 
