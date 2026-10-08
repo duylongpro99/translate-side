@@ -84,7 +84,7 @@ export interface NormalizedRequest {
   cacheHint?: 'system';
   /** For the brief call. */
   jsonMode?: boolean;
-  /** The chunk's position in its document (translate calls): picks `Quirks.reasoning.byChunk`. Not sent. */
+  /** The chunk's place in the order the job's chunks started (translate calls; page order unless viewport first, M3-E1): picks `Quirks.reasoning.byChunk`. Not sent. */
   chunkIndex?: number;
   /**
    * Send the base thinking setting whatever the chunk (thinking off for a per-chunk policy that

@@ -8,7 +8,7 @@ import { createDefaultPromptRegistry } from './prompts/index.ts';
 import { createPromptRegistry } from './prompts/registry.ts';
 import { defineStage, multiplex, runStages } from './runner.ts';
 import { contextual } from './strategies/contextual.ts';
-import { singlePass } from './strategies/single-pass.ts';
+import { chunkJob, singlePass } from './strategies/single-pass.ts';
 import { fakeClient, fakeSleep, success, translatorClient, wireLines, type FakeClient } from './testing.ts';
 import type { EngineEvent, Segment, StageContext, TranslationJob } from './types.ts';
 
@@ -257,5 +257,51 @@ describe('contextual: viewport first (plan M3-E1, §8 risk)', () => {
     releaseBrief();
     await done;
     expect(translate.requests.map(paragraphOf)).toEqual(['p0', 'p0', 'p3', 'p4', 'p5', 'p1', 'p2']);
+  });
+});
+
+describe('the screen starts a chunk, and the first chunk started gets the first chunk\'s thinking (plan M3-E1, M2-D16)', () => {
+  /** Twelve ~110-token paragraphs: four or so to a chunk at chunkTokens 500. */
+  const short = Array.from({ length: 12 }, (_, i) => seg(`q${i}`, `Q${i} ${'word '.repeat(75).trim()}`));
+  const shortJob = (strategy: string, over: Partial<TranslationJob> = {}) => job(strategy, { doc: { ...job(strategy).doc, segments: short }, ...over });
+  const firstOf = (req: NormalizedRequest) => `q${/^Q(\d+)/.exec(wireLines(req.messages.find((m) => m.role === 'user')?.content ?? '')[0]?.source ?? '')?.[1] ?? '?'}`;
+  const chunkFirsts = (j: TranslationJob, priority: string[] = []) => chunkJob(j, priority).map((c) => c.segments[0]?.id);
+
+  it('chunkJob cuts at the first segment on screen, only for a document of more than one chunk', () => {
+    const plain = chunkFirsts(shortJob('single-pass'));
+    expect(plain).not.toContain('q6');
+    expect(chunkFirsts(shortJob('single-pass'), ['q6', 'q7'])).toContain('q6');
+    // Nothing on screen, or nothing on screen to translate: as before.
+    expect(chunkFirsts(shortJob('single-pass'), [])).toEqual(plain);
+    expect(chunkFirsts(shortJob('single-pass'), ['not-here'])).toEqual(plain);
+    // One chunk stays one chunk (M2-D9).
+    const one = shortJob('single-pass', { doc: { ...job('single-pass').doc, segments: short.slice(0, 3) } });
+    expect(chunkJob(one, ['q2'])).toHaveLength(1);
+  });
+
+  it('single-pass: the first call starts at the screen, and its chunkIndex is 0', async () => {
+    const translate = translatorClient();
+    await collect(engineFor(translate).translate(shortJob('single-pass', { priority: ['q6', 'q7'] }), new AbortController().signal));
+    expect(firstOf(translate.requests[0] as NormalizedRequest)).toBe('q6');
+    expect(translate.requests.map((r) => r.chunkIndex)).toEqual(translate.requests.map((_, i) => i));
+  });
+
+  it('with nothing on screen, chunkIndex is the page position, as in M2', async () => {
+    const translate = translatorClient();
+    await collect(engineFor(translate).translate(shortJob('single-pass'), new AbortController().signal));
+    const n = chunkJob(shortJob('single-pass')).length;
+    expect(translate.requests.map((r) => r.chunkIndex)).toEqual(Array.from({ length: n }, (_, i) => i));
+  });
+
+  it('contextual: the brief-free chunk starts at the screen with chunkIndex 0, and its revision keeps it', async () => {
+    const translate: FakeClient = translatorClient();
+    const analyze = fakeClient([success(JSON.stringify(BRIEF))], { model: 'brief-model' });
+    const events = await collect(engineFor(translate, analyze).translate(shortJob('contextual', { priority: ['q6'] }), new AbortController().signal));
+    const first = translate.requests[0] as NormalizedRequest;
+    expect(firstOf(first)).toBe('q6');
+    expect(first.chunkIndex).toBe(0);
+    const zero = translate.requests.filter((r) => r.chunkIndex === 0).map(firstOf);
+    expect(zero).toEqual(['q6', 'q6']);
+    expect(events.filter((e) => e.type === 'segment.failed')).toEqual([]);
   });
 });

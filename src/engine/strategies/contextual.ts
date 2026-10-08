@@ -38,7 +38,7 @@ import { analyzeStage } from '../stages/analyze.ts';
 import type { EngineEvent, StageContext, Strategy, TranslationJob } from '../types.ts';
 import { checkSegment } from '../check/checks.ts';
 import { pickByPriority } from '../priority.ts';
-import { createStrategyCheckStage, createTranslateRun, untilSettledOrAborted, type BriefWait, type ChunkOutcome, type ChunkWork, type TranslateRun } from './single-pass.ts';
+import { chunkJob, createStrategyCheckStage, createTranslateRun, untilSettledOrAborted, type BriefWait, type ChunkOutcome, type ChunkWork, type TranslateRun } from './single-pass.ts';
 
 export const CONTEXTUAL_ID = 'contextual';
 /** 2: translate@2 with the context providers (M2-E3). 1 was Phase B's translate@1 with the brief unused. */
@@ -97,7 +97,7 @@ async function* revise(again: TranslateRun, work: ChunkWork, ctx: StageContext):
   yield { type: 'chunk', index: work.chunk.index, briefed: ctx.memory.brief !== undefined, revise: { kept } };
 }
 
-/** Whether the document is a single chunk at the job's chunk size (the chunk stage cuts it the same way). */
+/** Whether the document is a single chunk at the job's chunk size (the chunk stage then cuts it the same way, chunkJob). */
 export function isOneChunk(job: TranslationJob): boolean {
   return chunkSegments(job.doc.segments, chunkLimits(job.options.chunkTokens)).length <= 1;
 }
@@ -133,8 +133,8 @@ export function contextualStages(brief: BriefWait, translatePrompt: string = CON
   const chunk = defineStage<TranslationJob, ContextualWork[]>({
     id: 'chunk',
     scope: 'document',
-    async *run(job) {
-      const works: ChunkWork[] = chunkSegments(job.doc.segments, chunkLimits(job.options.chunkTokens)).map((c) => ({ chunk: c, doc: job.doc, options: job.options }));
+    async *run(job, ctx) {
+      const works: ChunkWork[] = chunkJob(job, ctx.priority?.() ?? []).map((c) => ({ chunk: c, doc: job.doc, options: job.options }));
       const reviseItems: ReviseWork[] = revises === undefined ? [] : Array.from({ length: Math.min(brief.freeChunks, works.length) }, (_, k) => ({ revise: k }));
       yield [...works, ...reviseItems];
     },

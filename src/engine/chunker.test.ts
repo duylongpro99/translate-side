@@ -198,3 +198,27 @@ describe('chunkSegments', () => {
     }
   });
 });
+
+describe('breakBefore: a chunk starts where the screen does (plan M3-E1)', () => {
+  it('cuts before the unit holding the segment, with the headings just before it', () => {
+    const input = [seg(300), seg(300), h(), seg(300), seg(300)];
+    const chunks = chunkSegments(input, limits, input[3]?.id);
+    checkInvariants(input, chunks);
+    expect(ids(chunks)).toEqual([[input[0], input[1]].map((s) => s?.id), [input[2], input[3], input[4]].map((s) => s?.id)]);
+  });
+
+  it('keeps a table row whole: the cut goes before the row', () => {
+    const input = [seg(300), seg(50, { groupId: 'r' }), seg(50, { groupId: 'r' }), seg(300)];
+    const chunks = chunkSegments(input, limits, input[2]?.id);
+    checkInvariants(input, chunks);
+    expect(ids(chunks)).toEqual([[input[0]?.id], [input[1], input[2], input[3]].map((s) => s?.id)]);
+  });
+
+  it('changes nothing at the first segment, and the size limits still apply after the cut', () => {
+    const input = Array.from({ length: 6 }, () => seg(600));
+    expect(ids(chunkSegments(input, limits, input[0]?.id))).toEqual(ids(chunkSegments(input, limits)));
+    const chunks = chunkSegments(input, limits, input[3]?.id);
+    checkInvariants(input, chunks);
+    expect(ids(chunks)).toEqual([[input[0], input[1]], [input[2]], [input[3], input[4]], [input[5]]].map((c) => c.map((s) => s?.id)));
+  });
+});

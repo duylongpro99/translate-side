@@ -145,11 +145,45 @@ export function translateRequest(client: Pick<LLMClient, 'model' | 'reasoningRes
   };
 }
 
+/**
+ * The job's chunks. With segments on screen (plan M3-E1) and a document of more than one chunk, a
+ * chunk starts at the first of them, so the screen is not the tail of a chunk that streams the
+ * paragraphs above it first; a one-chunk document stays one chunk (M2-D9). Nothing on screen: as in M2.
+ */
+export function chunkJob(job: TranslationJob, priority: readonly string[] = []): Chunk[] {
+  const limits = chunkLimits(job.options.chunkTokens);
+  const plain = chunkSegments(job.doc.segments, limits);
+  if (plain.length <= 1 || priority.length === 0) return plain;
+  const onScreen = new Set(priority);
+  const first = job.doc.segments.find((s) => s.translate && onScreen.has(s.id));
+  return first === undefined ? plain : chunkSegments(job.doc.segments, limits, first.id);
+}
+
+/**
+ * The order the job's chunks started in (from 0), by chunk index. A request's `chunkIndex` is this
+ * order, not the chunk's place in the page: the profile's per-chunk thinking (M2-D16, thinking off
+ * for the first) goes to the chunk that starts first, the one on screen (plan M3-E1). In page
+ * order the two are the same.
+ */
+const startOrders = new WeakMap<StageContext, Map<number, number>>();
+
+function startOrder(ctx: StageContext, chunkIndex: number, assign: boolean): number {
+  let orders = startOrders.get(ctx);
+  if (orders === undefined) startOrders.set(ctx, (orders = new Map()));
+  let order = orders.get(chunkIndex);
+  if (order === undefined) {
+    if (!assign) return chunkIndex;
+    order = orders.size;
+    orders.set(chunkIndex, order);
+  }
+  return order;
+}
+
 export const chunkStage = defineStage<TranslationJob, ChunkWork[]>({
   id: 'chunk',
   scope: 'document',
-  async *run(job) {
-    const chunks = chunkSegments(job.doc.segments, chunkLimits(job.options.chunkTokens));
+  async *run(job, ctx) {
+    const chunks = chunkJob(job, ctx.priority?.() ?? []);
     yield chunks.map((chunk) => ({ chunk, doc: job.doc, options: job.options }));
   },
 });
@@ -246,7 +280,7 @@ export async function prepareChunk(work: ChunkWork, ctx: StageContext, memory: R
   } else {
     system = renderSystemPrompt(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
   }
-  const call: ChunkCall = (wire, attempt, followUp) => client.stream(translateRequest(client, system, wire, ctx.signal, context, work.chunk.index, attempt, followUp));
+  const call: ChunkCall = (wire, attempt, followUp) => client.stream(translateRequest(client, system, wire, ctx.signal, context, startOrder(ctx, work.chunk.index, false), attempt, followUp));
   return { model: client.model, call, ...(neighbours === undefined ? {} : { neighbours }) };
 }
 
@@ -254,6 +288,8 @@ export async function prepareChunk(work: ChunkWork, ctx: StageContext, memory: R
 export function createTranslateRun(strategyId: string, brief?: BriefWait, promptId: string = TRANSLATE_PROMPT_ID, revision: number = REVISION): TranslateRun {
   return async function* (work, ctx) {
     const outcome: ChunkOutcome = { index: work.chunk.index, ids: work.chunk.segments.map((s) => s.id), final: [], failed: [], work };
+    // In the order the chunks start, before any wait (a revise pass keeps its chunk's).
+    startOrder(ctx, work.chunk.index, true);
     if (brief !== undefined && !(brief.free?.(work.chunk.index) ?? work.chunk.index < brief.freeChunks)) await untilSettledOrAborted(brief.settled, ctx.signal);
     // One snapshot for the whole prompt: a brief landing while this chunk's prompt is being built
     // must not reach part of it (the language, the providers) and miss `briefed`.
