@@ -1,16 +1,37 @@
-import { DEFAULT_CONNECTION, DEFAULT_HOST } from '@/shared/settings';
+import { useEffect, useRef } from 'preact/hooks';
+import { resolveProfile } from '@/shared/settings';
+
+/** Where page text goes: the connection the translate route uses now (§4.3.5 Resolve). */
+function destination(): { label: string; host: string } | undefined {
+  try {
+    const { connection } = resolveProfile('translate');
+    return { label: connection.label, host: new URL(connection.baseUrl).hostname };
+  } catch {
+    return undefined;
+  }
+}
 
 // The first-run privacy notice (DESIGN.md §8, plan M3-E10). Shown until acknowledged; nothing is
 // sent before that (privacy.ts).
 export function PrivacyNotice({ onAcknowledge }: { onAcknowledge: () => void }) {
+  const ok = useRef<HTMLButtonElement>(null);
+  // The panel waits on this notice: focus its button, so the keyboard lands where the choice is.
+  useEffect(() => ok.current?.focus(), []);
+  const to = destination();
   return (
-    <section class="privacy" data-testid="privacy-notice" role="dialog" aria-labelledby="privacy-title">
+    <section class="privacy" data-testid="privacy-notice" role="dialog" aria-modal="true" aria-labelledby="privacy-title" aria-describedby="privacy-text">
       <h2 id="privacy-title" class="privacy__title">
         Before you translate
       </h2>
-      <p>
-        Translate Side sends the text of the pages you translate to the AI provider you chose — now <strong>{DEFAULT_CONNECTION.label}</strong> ({DEFAULT_HOST}). Only pages you open the panel on are sent,
-        and only after you click below.
+      <p id="privacy-text">
+        Translate Side sends the text of the pages you translate to the AI provider you chose
+        {to ? (
+          <>
+            {' '}
+            — now <strong data-testid="privacy-provider">{to.label}</strong> ({to.host})
+          </>
+        ) : null}
+        . Only pages you open the panel on are sent, and only after you click below.
       </p>
       <ul class="privacy__list">
         <li>Mail and sign-in pages, browser pages and the Chrome Web Store are never read or sent.</li>
@@ -19,7 +40,7 @@ export function PrivacyNotice({ onAcknowledge }: { onAcknowledge: () => void }) 
           For sensitive pages, don't translate them with a cloud provider. Local options that keep the text on this device (Ollama, Chrome's built-in model) are coming in a later version.
         </li>
       </ul>
-      <button type="button" class="privacy__ok" data-testid="privacy-ok" onClick={onAcknowledge}>
+      <button type="button" ref={ok} class="privacy__ok" data-testid="privacy-ok" onClick={onAcknowledge}>
         Got it, translate
       </button>
     </section>

@@ -17,7 +17,7 @@ import { ViewportStore } from './viewport.ts';
 type Api = Parameters<typeof createTranslator>[0];
 type Ready = Extract<PanelView, { kind: 'ready' }>['result'];
 
-function fakeApi(prefs: Record<string, unknown> = { targetLang: 'vi', sourceLang: 'auto', style: 'natural' }) {
+function fakeApi(prefs: Record<string, unknown> = { targetLang: 'vi', sourceLang: 'auto', style: 'natural' }, failWrites = false) {
   const sync = new Map<string, unknown>([['prefs', prefs]]);
   const onSync = new Set<(c: Record<string, unknown>) => void>();
   const none = { addListener: () => {}, removeListener: () => {} };
@@ -26,6 +26,7 @@ function fakeApi(prefs: Record<string, unknown> = { targetLang: 'vi', sourceLang
       sync: {
         get: (k: string) => Promise.resolve(sync.has(k) ? { [k]: sync.get(k) } : {}),
         set: (items: Record<string, unknown>) => {
+          if (failWrites) return Promise.reject(new Error('QUOTA_BYTES quota exceeded'));
           for (const [k, v] of Object.entries(items)) sync.set(k, v);
           const changes = Object.fromEntries(Object.entries(items).map(([k, v]) => [k, { newValue: v }]));
           for (const fn of onSync) fn(changes);
@@ -205,5 +206,42 @@ describe('panel header (M3-E6)', () => {
     await until(() => t2.jobs.get(1)?.status === 'done');
     expect(c2.requests).toHaveLength(0);
     expect(t2.jobs.get(1)?.segs.get('s1')?.text).toBe(fresh);
+  });
+
+  it('Retranslate page on a running job replaces the run: the old one stops, the new one skips the cache and finishes', async () => {
+    const f = fakeApi();
+    let hang = true;
+    const c = translatorClient((lines) => renderLines(lines, (x) => `x:${x}`), { model: GEMINI_PROFILE.model });
+    const slow = {
+      ...c,
+      async *stream(req: Parameters<typeof c.stream>[0]) {
+        if (hang) await new Promise((_, reject) => req.signal.addEventListener('abort', () => reject(req.signal.reason), { once: true }));
+        yield* c.stream(req);
+      },
+    };
+    const cache = openTranslationCache({ factory: new IDBFactory() });
+    const t = createTranslator(f.api, { translateClient: () => Promise.resolve({ ok: true as const, client: slow, profile: GEMINI_PROFILE }), strategy: 'single-pass', cache }, { detector: undefined });
+    (t.hooks as Required<SessionHooks>).active(1);
+    (t.hooks as Required<SessionHooks>).ready(1, 'd1', result);
+    await until(() => t.jobs.get(1)?.status === 'running');
+    const firstStart = t.jobs.get(1)?.startedAt ?? 0;
+    hang = false;
+    t.actions(1).retranslatePage();
+    await until(() => t.jobs.get(1)?.status === 'done');
+    expect(t.jobs.get(1)?.startedAt).toBeGreaterThanOrEqual(firstStart);
+    expect(t.jobs.get(1)?.cached).toBe(0);
+    expect(t.jobs.get(1)?.counts).toEqual({ total: 3, final: 3, failed: 0 });
+  });
+
+  it('a switch whose save fails is put back, and the header says so', async () => {
+    const f = fakeApi(undefined, true);
+    const t = createTranslator(f.api, { translateClient: () => new Promise(() => {}) });
+    const controller = { view: { kind: 'ready', result, docId: 'd1' } as PanelView, tabId: 1, subscribe: (fn: (v: PanelView, id: number | undefined) => void) => (fn(controller.view, 1), () => undefined), retry: () => undefined };
+    act(() => render(<App controller={controller as unknown as PanelController} translator={t} />, root));
+    await act(() => settle(30));
+    choose('target-lang', 'fr');
+    await act(() => settle(30));
+    expect(q<HTMLSelectElement>('target-lang')?.value).toBe('vi');
+    expect(q('prefs-error')?.textContent).toContain("Couldn't save that setting");
   });
 });

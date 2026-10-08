@@ -30,12 +30,23 @@ export class PrefsStore {
     return () => this.listeners.delete(fn);
   }
 
-  /** Writes `patch` (one after another, settings.ts updatePreferences) and shows it at once. */
+  /**
+   * Writes `patch` (one after another, settings.ts updatePreferences) and shows it at once. A
+   * write that fails puts the stored preferences back on screen and rejects, so a switch never
+   * shows a language or style that was not saved.
+   */
   async update(patch: Partial<Preferences>): Promise<Preferences> {
-    if (this.value) this.set({ ...this.value, ...patch });
-    const next = await updatePreferences(this.api, patch);
-    this.set(next);
-    return next;
+    const before = this.value;
+    if (before) this.set({ ...before, ...patch });
+    try {
+      const next = await updatePreferences(this.api, patch);
+      this.set(next);
+      return next;
+    } catch (err) {
+      const stored = await readPreferences(this.api).catch(() => before);
+      if (stored) this.set(stored);
+      throw err;
+    }
   }
 
   private reload(): void {

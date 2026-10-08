@@ -1,5 +1,5 @@
 import { Component, type ComponentChildren } from 'preact';
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Segment } from '@/engine/types';
 import type { JobView, SegState } from './jobs.ts';
 import { markerKinds, parseMarkup, plainText, type MarkupNode } from './markup.ts';
@@ -77,30 +77,47 @@ async function writeClipboard(text: string): Promise<void> {
  * cache), copy. Only on a finished block, so a block being redone can't be asked twice; a code
  * block, kept as is, has Copy only.
  */
+/** The block's first few words, so a screen reader can tell one block's buttons from the next. */
+export function blockName(seg: Segment): string {
+  const words = seg.text.trim().split(/\s+/);
+  return words.slice(0, 6).join(' ') + (words.length > 6 ? '…' : '');
+}
+
 function BlockActions({ seg, state, actions, original, onOriginal }: Props) {
   const [copied, setCopied] = useState<'ok' | 'failed' | undefined>();
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
   const done = translated(state);
   if (!done && seg.kind !== 'code') return null;
+  const name = blockName(seg);
   const copy = () => {
     writeClipboard(copyText(seg, state)).then(
       () => setCopied('ok'),
       () => setCopied('failed'),
     );
-    setTimeout(() => setCopied(undefined), 1500);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setCopied(undefined), 1500);
   };
   return (
-    <span class="seg__actions" role="group" aria-label="Block actions">
+    <span class="seg__actions" role="group" aria-label={`Actions for "${name}"`}>
       {done && onOriginal ? (
-        <button type="button" class="seg__action" data-testid="seg-original" aria-pressed={original === true} onClick={() => onOriginal(seg.id)}>
+        <button type="button" class="seg__action" data-testid="seg-original" aria-pressed={original === true} aria-label={`${original ? 'Hide original' : 'Show original'}: "${name}"`} onClick={() => onOriginal(seg.id)}>
           {original ? 'Hide original' : 'Original'}
         </button>
       ) : null}
       {done && actions?.retranslate ? (
-        <button type="button" class="seg__action" data-testid="seg-retranslate" title="Translate this block again, skipping the saved translation" onClick={() => actions.retranslate?.(seg.id)}>
+        <button
+          type="button"
+          class="seg__action"
+          data-testid="seg-retranslate"
+          aria-label={`Retranslate: "${name}"`}
+          title="Translate this block again, skipping the saved translation"
+          onClick={() => actions.retranslate?.(seg.id)}
+        >
           Retranslate
         </button>
       ) : null}
-      <button type="button" class="seg__action" data-testid="seg-copy" onClick={copy}>
+      <button type="button" class="seg__action" data-testid="seg-copy" aria-label={`Copy: "${name}"`} onClick={copy}>
         {copied === 'ok' ? 'Copied' : copied === 'failed' ? "Couldn't copy" : 'Copy'}
       </button>
     </span>

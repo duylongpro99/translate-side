@@ -473,7 +473,7 @@ function SpendSection({ api, now = Date.now }: { api: Browser; now?: () => numbe
           </p>
         </>
       )}
-      <p class="opt__hint">An estimate from the tokens each response reports and the price above; your provider's bill is the real figure. Requests cancelled before they finished are not counted. Kept on this device.</p>
+      <p class="opt__hint">An estimate from the tokens each response reports and the price above; your provider's bill is the real figure. Cache writes are priced as plain input, so a provider that charges more for them is slightly undercounted. Requests cancelled before they finished are not counted. Kept on this device.</p>
       {spend ? (
         <div class="opt__row">
           <button type="button" data-testid="spend-reset" onClick={() => void resetSpend(api).then(() => setSpend(undefined))}>

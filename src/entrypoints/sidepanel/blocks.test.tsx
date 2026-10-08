@@ -107,6 +107,46 @@ describe('Retranslate one block (M3-E5, decision M3-D2)', () => {
     expect((await cache.getMany([keyOf(d.segments[0] as Segment)])).get(keyOf(d.segments[0] as Segment))?.text).toBe(before);
   });
 
+  it('retranslates a finished block while the rest of the page is still translating; the page run is not disturbed', async () => {
+    const long = doc(6);
+    const d = { ...long, segments: long.segments.map((seg) => ({ ...seg, text: `${seg.text} ${words(400)}`, inlineMarkup: `${seg.text} ${words(400)}` })) };
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const base = tagged('page');
+    let calls = 0;
+    const client: LLMClient = {
+      ...base,
+      async *stream(req) {
+        // The page's second chunk waits until the block's retranslate is done.
+        if (++calls === 2) await gate;
+        yield* base.stream(req);
+      },
+    };
+    const jobs = new Jobs({ translateClient: ok(client), strategy: 'single-pass' });
+    jobs.setActive(1);
+    const run = jobs.start(1, 'd1', { ...d, segments: d.segments });
+    const end = Date.now() + 2000;
+    while (jobs.get(1)?.segs.get('s0')?.status !== 'final' && Date.now() < end) await new Promise((r) => setTimeout(r, 2));
+    expect(jobs.get(1)?.status).toBe('running');
+    await jobs.retranslateSegment(1, 's0');
+    expect(jobs.get(1)?.segs.get('s0')).toMatchObject({ status: 'final' });
+    expect(jobs.get(1)?.status).toBe('running');
+    release();
+    await run;
+    expect(jobs.get(1)?.status).toBe('done');
+    expect(jobs.get(1)?.counts).toEqual({ total: 6, final: 6, failed: 0 });
+  });
+
+  it('labels each block action with the block it acts on', () => {
+    const seg: Segment = { id: 'x', kind: 'p', text: 'One two three four five six seven', inlineMarkup: 'One two three four five six seven', domPath: '/p[1]', translate: true };
+    const root = document.createElement('div');
+    document.body.replaceChildren(root);
+    act(() => render(<SegmentList segments={[seg]} states={new Map([['x', { status: 'final', text: 'Một', revision: 1 }]]) as JobView['segs']} actions={{ retry: () => {}, retranslate: () => {} }} />, root));
+    expect(root.querySelector('[data-testid=seg-copy]')?.getAttribute('aria-label')).toBe('Copy: "One two three four five six…"');
+    expect(root.querySelector('[data-testid=seg-retranslate]')?.getAttribute('aria-label')).toBe('Retranslate: "One two three four five six…"');
+    expect(root.querySelector('[data-testid=seg-original]')?.getAttribute('aria-label')).toBe('Show original: "One two three four five six…"');
+  });
+
   it('does nothing for a block that is not translated yet, or already being redone', async () => {
     const client = tagged('one');
     const j = new Jobs({ translateClient: ok(client), strategy: 'single-pass' });

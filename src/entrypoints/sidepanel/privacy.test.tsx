@@ -16,13 +16,13 @@ import { createTranslator } from './translator.ts';
 type Api = Parameters<typeof createTranslator>[0];
 type Ready = Parameters<Required<SessionHooks>['ready']>[2];
 
-function fakeApi(local: Record<string, unknown> = {}) {
+function fakeApi(local: Record<string, unknown> = {}, prefs: Record<string, unknown> = { targetLang: 'vi', sourceLang: 'auto' }) {
   const onLocal = new Set<(c: Record<string, { newValue?: unknown }>) => void>();
   const onSession = new Set<(c: Record<string, { newValue?: unknown }>) => void>();
   const none = { addListener: () => {}, removeListener: () => {} };
   const api = {
     storage: {
-      sync: { get: (k: string) => Promise.resolve(k === 'prefs' ? { prefs: { targetLang: 'vi', sourceLang: 'auto' } } : {}), onChanged: none },
+      sync: { get: (k: string) => Promise.resolve(k === 'prefs' ? { prefs: { ...prefs } } : {}), onChanged: none },
       local: {
         get: (k: string) => Promise.resolve(k in local ? { [k]: local[k] } : {}),
         set: (items: Record<string, unknown>) => {
@@ -46,6 +46,7 @@ function fakeApi(local: Record<string, unknown> = {}) {
   return {
     api,
     local,
+    prefs,
     leave(tabId: number, record: SnippetRecord) {
       for (const fn of onSession) fn({ [`snippet:${tabId}`]: { newValue: record } });
     },
@@ -173,5 +174,28 @@ describe('first-run privacy notice in the panel', () => {
     await settle(60);
     expect(calls()).toBe(1);
     expect(t.snippets.jobs.get(1)?.status).toBe('done');
+  });
+
+  it('a page held by the notice is prepared again on the click: settings changed meanwhile apply, the stale ones are never sent', async () => {
+    const { f, t, calls } = setup();
+    const hooks = t.hooks as Required<SessionHooks>;
+    hooks.active(1);
+    hooks.ready(1, 'd1', result);
+    await settle();
+    f.prefs.targetLang = 'fr';
+    await t.privacy.acknowledge();
+    await settle(60);
+    expect(calls()).toBe(1);
+    expect(t.jobs.get(1)?.targetLang).toBe('fr');
+  });
+
+  it('names the provider the translate route uses, and puts the keyboard focus on its button', async () => {
+    const { t } = setup();
+    await settle();
+    const root = mount(t, { kind: 'loading' });
+    expect(root.querySelector('[data-testid=privacy-provider]')?.textContent).toBe('APIBOX');
+    expect(root.querySelector('[data-testid=privacy-notice]')?.textContent).toContain('api.ai-box.vn');
+    expect(root.querySelector('[data-testid=privacy-notice]')?.getAttribute('aria-modal')).toBe('true');
+    expect(document.activeElement).toBe(root.querySelector('[data-testid=privacy-ok]'));
   });
 });

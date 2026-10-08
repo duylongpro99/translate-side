@@ -119,14 +119,17 @@ export function App({ controller, translator }: { controller: PanelController; t
    * the page again (from the cache where it can). A page the user cancelled is not restarted by
    * that listener (translator.ts refresh), so the switch, an explicit ask, restarts it here.
    */
+  const [prefsError, setPrefsError] = useState(false);
   const switchPrefs = (patch: Parameters<PrefsStore['update']>[0]) => {
     const status = job?.status;
+    setPrefsError(false);
     void translator?.prefs
       ?.update(patch)
       .then(() => {
         if (status === 'cancelled') pageActions?.resume();
       })
-      .catch(() => {});
+      // The store put the saved value back; say why the switch did not stick.
+      .catch(() => setPrefsError(true));
   };
 
   const openOptions = () => {
@@ -168,7 +171,7 @@ export function App({ controller, translator }: { controller: PanelController; t
             ✕
           </button>
         </div>
-        {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} actions={job ? pageActions : undefined} onPrefs={switchPrefs} /> : null}
+        {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} actions={job ? pageActions : undefined} onPrefs={switchPrefs} error={prefsError ? "Couldn't save that setting. Try again, or change it in settings." : undefined} /> : null}
       </header>
       {privacy === 'needed' && translator?.privacy ? <PrivacyNotice onAcknowledge={() => void translator.privacy?.acknowledge().catch(() => {})} /> : null}
       {selecting && tabId !== undefined && snippet && translator?.snippets ? (

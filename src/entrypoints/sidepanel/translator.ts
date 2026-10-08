@@ -223,14 +223,17 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     snippetJobs.drop(tabId);
     snippetStore.set(tabId, view);
     if (view.blocked || view.segments.length === 0) return;
-    const settings = await readSettings(api);
-    // Detection only informs the prompt; a selection already in the target language is still translated (the user asked).
-    const { doc } = await docFor(settings, view.url, '', undefined, view.segments);
-    if (snippetStore.get(tabId)?.docId !== view.docId) return;
-    // Nothing is sent before the first-run privacy notice is acknowledged (M3-E10).
-    privacy.whenAcknowledged(snippetKey(tabId), () => {
-      if (snippetStore.get(tabId)?.docId === view.docId) void snippetJobs.start(tabId, view.docId, doc);
-    });
+    const translate = async (): Promise<void> => {
+      const settings = await readSettings(api);
+      // Detection only informs the prompt; a selection already in the target language is still translated (the user asked).
+      const { doc } = await docFor(settings, view.url, '', undefined, view.segments);
+      if (snippetStore.get(tabId)?.docId !== view.docId) return;
+      // Nothing is sent before the first-run privacy notice is acknowledged (M3-E10); once it is,
+      // the settings are read again, so a change made meanwhile applies.
+      if (privacy.state === 'acknowledged') void snippetJobs.start(tabId, view.docId, doc);
+      else privacy.whenAcknowledged(snippetKey(tabId), () => void translate().catch(() => {}));
+    };
+    await translate();
   };
   const closeSnippet = (tabId: number) => {
     privacy.forget(snippetKey(tabId));
@@ -249,20 +252,21 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       jobs.setViewport(tabId, docId, result.visible ?? []);
       // And where it was, so scroll follow (M3-E7) lines the panel up before the first scroll.
       viewports.set(tabId, docId, { visible: result.visible ?? [], ...(result.anchor ? { anchor: result.anchor } : {}) });
-      void readSettings(api).then(async (settings) => {
-        const got = await prepare(tabId, settings, { url: result.url, title: result.title, pageLang: result.lang, segments: result.segments });
-        if (got === undefined) return;
-        // The page may have gone, or the tab closed, while the settings were read (review E-R1).
-        if (!isLive(tabId, docId)) return got.unmark();
-        // Nothing is sent before the first-run privacy notice is acknowledged (M3-E10). Settings
-        // changed while it waited are picked up by the refresh right after.
-        const held = privacy.state !== 'acknowledged';
-        privacy.whenAcknowledged(pageKey(tabId), () => {
-          if (!isLive(tabId, docId)) return;
-          void begin(tabId, docId, got.prepared);
-          if (held) refresh(tabId);
+      const translate = () =>
+        void readSettings(api).then(async (settings) => {
+          const got = await prepare(tabId, settings, { url: result.url, title: result.title, pageLang: result.lang, segments: result.segments });
+          if (got === undefined) return;
+          // The page may have gone, or the tab closed, while the settings were read (review E-R1).
+          if (!isLive(tabId, docId)) return got.unmark();
+          if (privacy.state === 'acknowledged') return void begin(tabId, docId, got.prepared);
+          // Nothing is sent before the first-run privacy notice is acknowledged (M3-E10). Once it
+          // is, the settings are read again: the page never goes out once under stale ones.
+          got.unmark();
+          privacy.whenAcknowledged(pageKey(tabId), () => {
+            if (isLive(tabId, docId)) translate();
+          });
         });
-      });
+      translate();
     },
     gone: (tabId) => {
       privacy.forget(pageKey(tabId));

@@ -461,3 +461,8 @@ body {
   font-size: 0.9em;
   font-weight: normal;
 }
+.panel__error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--danger);
+}

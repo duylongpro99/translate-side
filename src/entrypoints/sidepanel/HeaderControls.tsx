@@ -31,9 +31,11 @@ export interface HeaderControlsProps {
   actions: JobActions | undefined;
   /** Writes the switch to the settings; the page is translated again under them (translator.ts refresh). */
   onPrefs(patch: Partial<Preferences>): void;
+  /** A switch that could not be saved (it was put back). */
+  error?: string | undefined;
 }
 
-export function HeaderControls({ job, prefs, actions, onPrefs }: HeaderControlsProps) {
+export function HeaderControls({ job, prefs, actions, onPrefs, error }: HeaderControlsProps) {
   const target = prefs?.targetLang ?? job?.targetLang ?? '';
   const source = job?.sourceLang ?? '';
   const languages = LANGUAGES.some((l) => l.code === target) || target === '' ? LANGUAGES : [{ code: target, name: languageLabel(target) }, ...LANGUAGES];
@@ -76,6 +78,11 @@ export function HeaderControls({ job, prefs, actions, onPrefs }: HeaderControlsP
             ↻ Retranslate page
           </button>
         )
+      ) : null}
+      {error ? (
+        <p class="panel__error" role="alert" data-testid="prefs-error">
+          {error}
+        </p>
       ) : null}
     </div>
   );
