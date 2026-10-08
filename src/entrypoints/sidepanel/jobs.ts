@@ -270,6 +270,9 @@ export interface JobConnection {
   origin?: string;
 }
 
+/** A role's client for the routed profile, or why there is none. */
+export type AnalyzeResult = { ok: true; client: LLMClient; profile: ModelProfile; connection?: JobConnection } | { ok: false; error: LLMError; connection?: JobConnection };
+
 /** What a job needs from the panel: the translate client for the routed profile, or why there is none. */
 export type ClientResult =
   | {
@@ -277,8 +280,11 @@ export type ClientResult =
       client: LLMClient;
       profile: ModelProfile;
       connection?: JobConnection;
-      /** The `analyze` role's client (the document brief), when routing sends it to another profile; absent = the translate client (§4.3.1). */
-      analyze?: { client: LLMClient; profile: ModelProfile; connection?: JobConnection };
+      /**
+       * Resolves the `analyze` role's client (the document brief); called only when the run will
+       * make an analyze call. Undefined from it = the translate client serves it (§4.3.1).
+       */
+      analyze?: () => Promise<AnalyzeResult | undefined>;
     }
   | { ok: false; error: LLMError; connection?: JobConnection };
 
@@ -286,7 +292,7 @@ export type ClientResult =
 export interface ClientTarget {
   tabId: number;
   url: string;
-  /** The run may make an analyze call (not single-pass, not a segment retry): resolve that role too. */
+  /** The run may make an analyze call (not single-pass, not a segment retry): give a resolver for that role too. */
   analyze?: boolean;
 }
 
@@ -530,7 +536,6 @@ export class Jobs {
       return;
     }
     const { client, profile } = resolved;
-    if (resolved.analyze) job.analyzeProfile = resolved.analyze.profile;
     this.patch(tabId, job, { model: client.model });
     await this.fromCache(tabId, job, { todo, translatable, model: client.model, fresh });
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
@@ -541,7 +546,17 @@ export class Jobs {
       this.finish(tabId, job, 'done');
       return;
     }
-    const engine = this.engineFor(tabId, job, client, profile, undefined, resolved.analyze?.client);
+    // The analyze role is resolved only when the brief will be asked for: a kept or cached brief
+    // means no analyze call, so its route must not stop the run.
+    const analyze = resolved.analyze && !job.view.brief ? await resolved.analyze() : undefined;
+    if (signal.aborted || this.jobs.get(tabId) !== job) return;
+    if (analyze && !analyze.ok) {
+      if (analyze.connection) this.patch(tabId, job, { connection: analyze.connection });
+      this.finish(tabId, job, 'stopped', analyze.error);
+      return;
+    }
+    if (analyze) job.analyzeProfile = analyze.profile;
+    const engine = this.engineFor(tabId, job, client, profile, undefined, analyze?.client);
     const engineJob: TranslationJob = {
       doc: {
         url: doc.url,

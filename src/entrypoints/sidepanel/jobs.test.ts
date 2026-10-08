@@ -477,7 +477,7 @@ describe('Jobs: contextual (plan M2-E1) and same-language skip (M2-E5)', () => {
     const targets: unknown[] = [];
     const deltas: { usd?: number | undefined }[] = [];
     const jobs = new Jobs({
-      translateClient: (target) => (targets.push(target), Promise.resolve({ ok: true, client: translate, profile: GEMINI_PROFILE, analyze: { client: analyze, profile: analyzeProfile } })),
+      translateClient: (target) => (targets.push(target), Promise.resolve({ ok: true, client: translate, profile: GEMINI_PROFILE, analyze: () => Promise.resolve({ ok: true as const, client: analyze, profile: analyzeProfile }) })),
       onSpend: (d) => deltas.push(d),
     });
     jobs.setActive(1);
@@ -495,6 +495,42 @@ describe('Jobs: contextual (plan M2-E1) and same-language skip (M2-E5)', () => {
     const sum = deltas.reduce((a, d) => a + (d.usd ?? 0), 0);
     expect(v.cost).toBeCloseTo(sum, 12);
     expect(v.cost ?? 0).toBeGreaterThan(((v.usage.input - v.usage.cachedInput) * 0.3 + v.usage.cachedInput * 0.03 + v.usage.output * 2.5) / 1e6);
+  });
+
+  it('the analyze route is resolved only when a brief is asked for: a kept brief needs none, a missing one stops on its connection (review B-2 a)', async () => {
+    let asked = 0;
+    let analyzeOk = true;
+    const client = both(JSON.stringify(BRIEF));
+    const gemini = { id: 'gemini', label: 'Google Gemini' };
+    const jobs = new Jobs({
+      translateClient: () =>
+        Promise.resolve({
+          ok: true,
+          client,
+          profile: GEMINI_PROFILE,
+          analyze: () => {
+            asked++;
+            return Promise.resolve(analyzeOk ? undefined : { ok: false as const, error: { kind: 'auth' as const, message: 'Add your Google Gemini API key in settings' }, connection: gemini });
+          },
+        }),
+    });
+    jobs.setActive(1);
+    // Routed to the translate profile: the translate client asks for the brief.
+    await jobs.start(1, 'd', doc(3, 700));
+    expect(asked).toBe(1);
+    expect(jobs.get(1)?.brief).toEqual(BRIEF);
+    expect(client.requests.filter(isAnalyze)).toHaveLength(1);
+    // The analyze route breaks; a restart that keeps the brief makes no analyze call and never asks.
+    analyzeOk = false;
+    await jobs.start(1, 'd', doc(3, 700), { keepBrief: true });
+    expect(asked).toBe(1);
+    expect(jobs.get(1)?.status).toBe('done');
+    expect(client.requests.filter(isAnalyze)).toHaveLength(1);
+    // Without a brief it is asked, and the job stops naming the analyze connection.
+    await jobs.start(1, 'd', doc(3, 700));
+    expect(asked).toBe(2);
+    expect(jobs.get(1)).toMatchObject({ status: 'stopped', stopError: { kind: 'auth' }, connection: gemini });
+    expect(client.requests.filter(isAnalyze)).toHaveLength(1);
   });
 
   it('single-pass jobs do not ask for the analyze role', async () => {

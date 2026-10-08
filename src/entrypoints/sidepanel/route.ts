@@ -1,14 +1,14 @@
 // The `translate` role → a client (DESIGN.md §4.3.5 Resolve, plan M4-E8): the profile routed for
 // this page (site rule, then the tab's override, then the default route; src/shared/providers.ts),
 // its connection's key from storage.local, and the host permission for its origin; the `analyze`
-// role's own client when routing sends it elsewhere. A quirk the adapter learns is saved on the
+// role's own client when routing sends it elsewhere, resolved only when a brief is asked for. A quirk the adapter learns is saved on the
 // stored connection (§4.2.4).
 import type { browser } from 'wxt/browser';
 import { createClient } from '@/llm/client';
 import { DEFAULT_CONNECTION, hasHostPermission, originPattern, protocolOf, resolveConnection, withProfileQuirks, type ProviderConnection } from '@/shared/settings';
 import { resolveRoute, saveLearnedQuirk, type Route } from '@/shared/providers';
 import { pricingFor } from '@/shared/pricing';
-import type { ClientResult, JobConnection } from './jobs.ts';
+import type { AnalyzeResult, ClientResult, JobConnection } from './jobs.ts';
 
 type Browser = typeof browser;
 
@@ -73,25 +73,38 @@ const settingsError = (error: unknown): Failed => ({
 });
 
 /**
- * The clients a job runs on (§4.3.5, §5.1: the engine asks by role). `translate` always; with
- * `target.analyze`, also the `analyze` role (the document brief) when routing sends it to another
- * profile than translate. An analyze route that can't run (no key, no access, no profile) stops
- * the job with its own error and connection, so "Fix key" and "Grant access" name the right one;
- * it never falls back to the translate provider unasked.
+ * The `analyze` role's client (the document brief), resolved when the job is about to ask for a
+ * brief: undefined when routing sends it to the translate profile (that client serves it). A route
+ * that can't run (no key, no access, no profile) is an error with its own connection, so "Fix key"
+ * and "Grant access" name the right one; it never falls back to the translate provider unasked.
  */
-export async function translateClient(api: Browser, target: RouteTarget & { analyze?: boolean } = {}): Promise<ClientResult> {
-  let routes: [Route, Route | undefined];
+async function analyzeClient(api: Browser, target: RouteTarget, translateProfileId: string): Promise<AnalyzeResult | undefined> {
+  let route: Route;
   try {
-    routes = await Promise.all([resolveRoute(api, 'translate', target), target.analyze ? resolveRoute(api, 'analyze', target) : undefined]);
+    route = await resolveRoute(api, 'analyze', target);
   } catch (error) {
     return settingsError(error);
   }
-  const [route, analyzeRoute] = routes;
+  if (route.ok && route.profile.id === translateProfileId) return undefined;
+  return clientFor(api, route);
+}
+
+/**
+ * The client a job runs on (§4.3.5, §5.1: the engine asks by role): `translate`; with
+ * `target.analyze`, also a resolver for the `analyze` role, called only when an analyze call will
+ * be made (no brief cached or kept), so a route that can't run never stops a run that needs none.
+ */
+export async function translateClient(api: Browser, target: RouteTarget & { analyze?: boolean } = {}): Promise<ClientResult> {
+  let route: Route;
+  try {
+    route = await resolveRoute(api, 'translate', target);
+  } catch (error) {
+    return settingsError(error);
+  }
   const translate = await clientFor(api, route);
-  if (!translate.ok || analyzeRoute === undefined || (route.ok && analyzeRoute.ok && analyzeRoute.profile.id === route.profile.id)) return translate;
-  const analyze = await clientFor(api, analyzeRoute);
-  if (!analyze.ok) return analyze;
-  return { ...translate, analyze: { client: analyze.client, profile: analyze.profile, ...(analyze.connection ? { connection: analyze.connection } : {}) } };
+  if (!translate.ok || !target.analyze) return translate;
+  const profileId = translate.profile.id;
+  return { ...translate, analyze: () => analyzeClient(api, target, profileId) };
 }
 
 /** The routed model and where it sends text: what the header and the privacy notice name. */

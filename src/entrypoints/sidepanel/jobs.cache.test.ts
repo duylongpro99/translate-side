@@ -87,6 +87,34 @@ describe('Jobs with the translation cache: a revisit makes no API call (§3 #3)'
     expect(j.get(1)?.counts.final).toBe(10);
   });
 
+  it('a cached brief needs no analyze route: a broken one is never asked for (review B-2 a)', async () => {
+    const cache = newCache();
+    await session(both(), cache).start(1, 'a', doc(4, 300));
+    await idle();
+    let asked = 0;
+    const c = both();
+    const j = track(
+      new Jobs({
+        translateClient: () =>
+          Promise.resolve({
+            ok: true,
+            client: c,
+            profile: GEMINI_PROFILE,
+            analyze: () => (asked++, Promise.resolve({ ok: false as const, error: { kind: 'auth' as const, message: 'Add your Google Gemini API key in settings' } })),
+          }),
+        cache,
+      }),
+    );
+    j.setActive(1);
+    // Another style: every segment is a miss, the brief (not keyed by style) a hit.
+    await j.start(1, 'b', { ...doc(4, 300), style: 'faithful' });
+    expect(j.get(1)?.status).toBe('done');
+    expect(j.get(1)?.brief).toEqual(BRIEF);
+    expect(c.requests.length).toBeGreaterThan(0);
+    expect(c.requests.filter(isAnalyze)).toHaveLength(0);
+    expect(asked).toBe(0);
+  });
+
   it('a different style, glossary, language or model is a miss', async () => {
     const cache = newCache();
     await session(both(), cache).start(1, 'a', doc(4, 300));

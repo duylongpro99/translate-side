@@ -459,18 +459,24 @@ describe('the panel route (src/entrypoints/sidepanel/route.ts)', () => {
   it('resolves the analyze role through routing: its own client when routed elsewhere, none when it is translate', async () => {
     const f = fakeApi({ local: M3_LOCAL, granted: [ORIGIN] });
     await migrateProviders(f.api);
+    const analyzeOf = async () => {
+      const r = await translateClient(f.api, { analyze: true });
+      if (!r.ok || !r.analyze) throw new Error('no analyze resolver');
+      return r.analyze();
+    };
     // Unset analyze → translate's client serves it (no second client).
-    expect(await translateClient(f.api, { analyze: true })).not.toHaveProperty('analyze');
+    expect(await analyzeOf()).toBeUndefined();
     await saveRouting(f.api, { translate: DEFAULT_PROFILE.id, analyze: APIBOX_FLASH_PROFILE.id });
     const r = await translateClient(f.api, { analyze: true });
     expect(r.ok && r.client.model).toBe(DEFAULT_PROFILE.model);
-    expect(r.ok && r.analyze?.client.model).toBe(APIBOX_FLASH_PROFILE.model);
-    expect(r.ok && r.analyze?.profile.pricing).toEqual(APIBOX_FLASH_PROFILE.pricing);
-    // Not asked (single-pass, a segment retry): no analyze client.
+    const a = await analyzeOf();
+    expect(a?.ok && a.client.model).toBe(APIBOX_FLASH_PROFILE.model);
+    expect(a?.ok && a.profile.pricing).toEqual(APIBOX_FLASH_PROFILE.pricing);
+    // Not asked (single-pass, a segment retry): no analyze resolver.
     expect(await translateClient(f.api)).not.toHaveProperty('analyze');
     // Routed to the translate profile itself: one client.
     await saveRouting(f.api, { translate: DEFAULT_PROFILE.id, analyze: DEFAULT_PROFILE.id });
-    expect(await translateClient(f.api, { analyze: true })).not.toHaveProperty('analyze');
+    expect(await analyzeOf()).toBeUndefined();
   });
 
   it('an analyze route that cannot run stops with its own connection, never falling back to translate', async () => {
@@ -479,7 +485,10 @@ describe('the panel route (src/entrypoints/sidepanel/route.ts)', () => {
     await saveConnection(f.api, GEMINI_CONNECTION);
     await saveProfile(f.api, GEMINI_PROFILE);
     await saveRouting(f.api, { translate: DEFAULT_PROFILE.id, analyze: GEMINI_PROFILE.id });
-    expect(await translateClient(f.api, { analyze: true })).toMatchObject({ ok: false, error: { kind: 'auth', message: 'Add your Google Gemini API key in settings' }, connection: { id: 'gemini' } });
+    // The translate client resolves; the analyze route fails only when it is asked for (a cached brief never asks).
+    const r = await translateClient(f.api, { analyze: true });
+    expect(r).toMatchObject({ ok: true, connection: { id: 'apibox' } });
+    expect(await (r.ok ? r.analyze?.() : undefined)).toMatchObject({ ok: false, error: { kind: 'auth', message: 'Add your Google Gemini API key in settings' }, connection: { id: 'gemini' } });
   });
 
   it('says what is wrong: no key, no access, a route to nothing', async () => {
