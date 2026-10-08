@@ -665,3 +665,40 @@ describe('translator wiring (plan M1-E8)', () => {
     expect(t.viewports.get(1, 'd')).toEqual({ visible: ['l30', 'l31'], anchor: { id: 'l30', offset: 0.4 } });
   });
 });
+
+describe('Grant access asks for the job’s own origin only (plan M4-E4, carry-over B3)', () => {
+  const stopped = (connection: { id: string; label: string; origin?: string }) => () => Promise.resolve({ ok: false as const, error: { kind: 'cors' as const, cause: 'permission' as const, message: 'No access to gw.example.com' }, connection });
+
+  it('requests the origin of the connection the job stopped on, never a default one', async () => {
+    const f = fakeApi();
+    const asked: string[][] = [];
+    (f.api as unknown as { permissions: Record<string, unknown> }).permissions = { onAdded: { addListener: () => {}, removeListener: () => {} }, request: ({ origins }: { origins: string[] }) => (asked.push(origins), Promise.resolve(false)) };
+    const t = createTranslator(f.api, { translateClient: stopped({ id: 'c9', label: 'Work gateway', origin: 'https://gw.example.com/*' }) });
+    const hooks = t.hooks as Required<SessionHooks>;
+    hooks.active(1);
+    hooks.ready(1, 'd', result);
+    f.answer();
+    await settle();
+    expect(t.jobs.get(1)?.status).toBe('stopped');
+    t.actions(1).grantAccess();
+    expect(asked).toEqual([['https://gw.example.com/*']]);
+  });
+
+  it('without an origin (a base URL that does not parse), opens the settings instead of asking', async () => {
+    const f = fakeApi();
+    let requested = false;
+    let opened = false;
+    const api = f.api as unknown as { permissions: Record<string, unknown>; runtime: Record<string, unknown> };
+    api.permissions = { onAdded: { addListener: () => {}, removeListener: () => {} }, request: () => ((requested = true), Promise.resolve(false)) };
+    api.runtime = { openOptionsPage: () => ((opened = true), Promise.resolve()) };
+    const t = createTranslator(f.api, { translateClient: stopped({ id: 'c9', label: 'Work gateway' }) });
+    const hooks = t.hooks as Required<SessionHooks>;
+    hooks.active(1);
+    hooks.ready(1, 'd', result);
+    f.answer();
+    await settle();
+    t.actions(1).grantAccess();
+    expect(requested).toBe(false);
+    expect(opened).toBe(true);
+  });
+});

@@ -3,7 +3,7 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_CONNECTION, DEFAULT_ORIGIN, DEFAULT_PROFILE, GLOSSARY_KEY, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/settings';
+import { DEFAULT_PROFILE, GLOSSARY_KEY, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/settings';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import { openTranslationCache, type TranslationCache } from '@/shared/cache';
 import { monthKey } from '@/shared/spend';
@@ -58,70 +58,7 @@ const waitFor = async (cond: () => boolean, ms = 3000) => {
 };
 const flush = () => act(async () => new Promise((r) => setTimeout(r, 10)));
 
-describe('options v0 (plan M1-E9)', () => {
-  it('saves the key to storage.local, asks for the provider origin (from its base URL) in the same click, and shows it masked only', async () => {
-    const f = fakeApi();
-    act(() => render(<Options api={f.api} />, root));
-    await flush();
-    expect(root.textContent).toContain('No key yet');
-    const input = root.querySelector('#key') as HTMLInputElement;
-    expect(input.type).toBe('password');
-    act(() => {
-      input.value = '  AIzaSyExampleKey1234 ';
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    // Opening the page migrated storage (src/shared/providers.ts): a fresh install writes only the
-    // version to sync, and its (empty) migrated route to local.
-    expect(f.log.sort()).toEqual(['local.set migratedRoute', 'sync.set schemaVersion']);
-    const before = f.log.length;
-    act(() => {
-      (root.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    });
-    // The permission request comes before any await: still inside the gesture.
-    expect(f.log[before]).toBe('request https://api.ai-box.vn/*');
-    expect(DEFAULT_ORIGIN).toBe('https://api.ai-box.vn/*');
-    await flush();
-    expect(f.local.get(`secret:${DEFAULT_CONNECTION.id}`)).toBe('AIzaSyExampleKey1234');
-    expect(root.querySelector('#key-h')?.textContent).toBe('APIBOX');
-    expect(root.textContent).toContain('qwen3.8-flash');
-    // Sync holds the provider settings only, never the key (§4.3.4).
-    expect([...f.sync.keys()].every((k) => k === 'schemaVersion' || k === 'routing' || k === 'migratedRoute' || k.startsWith('conn:') || k.startsWith('profile:'))).toBe(true);
-    expect(JSON.stringify([...f.sync.values()])).not.toContain('AIzaSyExampleKey1234');
-    expect(root.querySelector('[data-testid=masked-key]')?.textContent).toBe('AIz…1234');
-    expect(root.innerHTML).not.toContain('AIzaSyExampleKey1234');
-    expect(input.value).toBe('');
-    expect(root.textContent).toContain('stored on this device only');
-  });
-
-  it('shows the saved key at once, while the permission prompt is still open (review E-T1)', async () => {
-    let answer = () => {};
-    const f = fakeApi({ answer: new Promise<void>((r) => (answer = r)) });
-    act(() => render(<Options api={f.api} />, root));
-    await flush();
-    const input = root.querySelector('#key') as HTMLInputElement;
-    act(() => {
-      input.value = 'AIzaSyExampleKey1234';
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    act(() => {
-      (root.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    });
-    await flush();
-    expect(root.querySelector('[data-testid=masked-key]')?.textContent).toBe('AIz…1234');
-    expect(root.textContent).not.toContain('No key yet');
-    answer();
-    await flush();
-    expect(root.querySelector('[role=status]')?.textContent).toBe('Saved.');
-  });
-
-  it('offers Grant access when the permission was refused', async () => {
-    const f = fakeApi({ grant: false });
-    f.local.set(`secret:${DEFAULT_CONNECTION.id}`, 'AIzaSyExampleKey1234');
-    act(() => render(<Options api={f.api} />, root));
-    await flush();
-    expect(root.querySelector('[data-testid=access-status]')?.textContent).toContain('No access to api.ai-box.vn.');
-  });
-
+describe('options: languages (plan M1-E9)', () => {
   it('stores the target and source languages in sync', async () => {
     const f = fakeApi();
     act(() => render(<Options api={f.api} />, root));

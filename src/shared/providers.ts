@@ -22,12 +22,16 @@
 // `tabRoute:<tabId>`, cleared when the tab closes (src/shared/panel.ts).
 import type { browser } from 'wxt/browser';
 import type { AuthStyle, ModelRole, Protocol, Quirks } from '@/llm/types';
+import { ROLE_LABELS } from './presets.ts';
 import {
   BUILTIN_CONNECTIONS,
   BUILTIN_PROFILES,
   DEFAULT_CONNECTION,
   DEFAULT_PROFILE,
+  originPattern,
   readApiKey,
+  removeApiKey,
+  saveApiKey,
   SYNC_QUOTA_BYTES,
   SYNC_QUOTA_BYTES_PER_ITEM,
   syncItemBytes,
@@ -82,6 +86,13 @@ export interface ProviderSettings {
   connections: ProviderConnection[];
   profiles: ModelProfile[];
   routing: Routing;
+  /**
+   * Ids of the built-in connections and profiles that apply only at read time (not stored), so
+   * the settings can tell them apart: removing one cannot make it go away (carry-over B2).
+   */
+  implicit?: { connections: string[]; profiles: string[] };
+  /** Is `routing` stored (the user chose a route), rather than migrated or the default? */
+  routingStored?: boolean;
 }
 
 // ---- Cleaning what storage holds (another device or a later version may have written it) ----
@@ -89,6 +100,7 @@ export interface ProviderSettings {
 const PROTOCOLS: readonly (Protocol | 'auto')[] = ['anthropic-messages', 'openai-chat', 'chrome-builtin', 'auto'];
 const AUTH_STYLES: readonly AuthStyle[] = ['x-api-key', 'bearer', 'custom-header', 'none'];
 const STATUSES: readonly ProviderConnection['status'][] = ['unverified', 'ok', 'error'];
+const ERROR_KINDS: readonly NonNullable<ProviderConnection['lastErrorKind']>[] = ['auth', 'rate_limit', 'overloaded', 'context_length', 'bad_request', 'model_not_found', 'network', 'cors', 'cors-origin', 'unknown', 'quota'];
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const nonEmpty = (v: unknown): v is string => typeof v === 'string' && v !== '';
@@ -122,6 +134,7 @@ export function cleanConnection(raw: unknown): ProviderConnection | null {
     ...(detected.length > 0 ? { detectedProtocols: detected } : {}),
     status: oneOf(raw.status, STATUSES) ? raw.status : 'unverified',
     ...(nonEmpty(raw.lastError) ? { lastError: raw.lastError } : {}),
+    ...(oneOf(raw.lastErrorKind, ERROR_KINDS) ? { lastErrorKind: raw.lastErrorKind } : {}),
   };
 }
 
@@ -196,14 +209,24 @@ export function parseStored(items: Record<string, unknown>, migratedRoute?: unkn
   }
   // A built-in connection not stored applies as built in, never written (see above); one with no
   // profile stored (built in, or one a learned quirk wrote) has its built-in profiles.
-  for (const c of BUILTIN_CONNECTIONS) if (!connections.some((x) => x.id === c.id)) connections.push(structuredClone(c));
+  const implicit = { connections: [] as string[], profiles: [] as string[] };
+  for (const c of BUILTIN_CONNECTIONS) {
+    if (connections.some((x) => x.id === c.id)) continue;
+    connections.push(structuredClone(c));
+    implicit.connections.push(c.id);
+  }
   for (const c of BUILTIN_CONNECTIONS) {
     if (profiles.some((p) => p.connectionId === c.id)) continue;
-    for (const p of BUILTIN_PROFILES) if (p.connectionId === c.id && !profiles.some((x) => x.id === p.id)) profiles.push(structuredClone(p));
+    for (const p of BUILTIN_PROFILES) {
+      if (p.connectionId !== c.id || profiles.some((x) => x.id === p.id)) continue;
+      profiles.push(structuredClone(p));
+      implicit.profiles.push(p.id);
+    }
   }
   const sites = cleanSiteRules(items[SITE_RULES_KEY]);
-  const routing = cleanRouting(items[ROUTING_KEY]) ?? cleanRouting(migratedRoute) ?? { translate: DEFAULT_PROFILE.id };
-  return { schemaVersion: version, connections, profiles, routing: sites.length > 0 ? { ...routing, siteOverrides: sites } : routing };
+  const stored = cleanRouting(items[ROUTING_KEY]);
+  const routing = stored ?? cleanRouting(migratedRoute) ?? { translate: DEFAULT_PROFILE.id };
+  return { schemaVersion: version, connections, profiles, routing: sites.length > 0 ? { ...routing, siteOverrides: sites } : routing, implicit, routingStored: stored !== null };
 }
 
 /** The sync items for `settings` (schema version included). */
@@ -340,7 +363,7 @@ async function checkQuota(api: Browser, items: Record<string, unknown>, removed:
   }
 }
 
-const CONNECTION_FIELDS = new Set(['id', 'label', 'presetId', 'protocol', 'baseUrl', 'auth', 'extraHeaders', 'queryParams', 'quirks', 'detectedProtocols', 'status', 'lastError']);
+const CONNECTION_FIELDS = new Set(['id', 'label', 'presetId', 'protocol', 'baseUrl', 'auth', 'extraHeaders', 'queryParams', 'quirks', 'detectedProtocols', 'status', 'lastError', 'lastErrorKind']);
 const PROFILE_FIELDS = new Set(['id', 'connectionId', 'model', 'protocolOverride', 'temperature', 'maxConcurrency', 'chunkTokens', 'contextWindow', 'pricing', 'quirks']);
 
 /**
@@ -428,6 +451,137 @@ export function saveLearnedQuirk(api: Browser, at: { connectionId: string; profi
   });
 }
 
+// ---- Adding and removing (the settings' Providers section, plan M4-E3, M4-E4) -----------------
+
+/** Does this device hold what `connection` needs to send a request: a key, or auth `none`? */
+export async function isUsable(api: Browser, connection: ProviderConnection): Promise<boolean> {
+  return connection.auth.style === 'none' || (await readApiKey(api, connection.id)) !== undefined;
+}
+
+export interface SetupInput {
+  connection: ProviderConnection;
+  /** A new key to store (storage.local, never synced); undefined keeps the stored one. */
+  apiKey?: string | undefined;
+  /** The profile for the chosen model; none when only the connection changed. */
+  profile?: ModelProfile | undefined;
+}
+
+/**
+ * Saves a connection from the add / edit form: its key (storage.local), the connection, and the
+ * profile for the chosen model (§4.3.3 step 5). The profile becomes the translate route when it is
+ * the first one: the user never chose a route (no stored `routing`) and the route in effect cannot
+ * run on this device (no key), as on a fresh install. A device already translating with a
+ * migrated or default route keeps it until the user picks another (carry-over B4). Returns
+ * whether the route was set.
+ */
+export async function saveSetup(api: Browser, input: SetupInput): Promise<{ routed: boolean }> {
+  const before = await readProviderSettings(api);
+  if (input.apiKey !== undefined && input.apiKey.trim() !== '') await saveApiKey(api, input.connection.id, input.apiKey);
+  await saveConnection(api, input.connection);
+  if (!input.profile) return { routed: false };
+  await saveProfile(api, input.profile);
+  if (before.routingStored) return { routed: false };
+  const current = resolveRouteIn(before, 'translate');
+  if (current.ok && current.connection.id !== input.connection.id && (await isUsable(api, current.connection))) return { routed: false };
+  await saveRouting(api, { ...before.routing, translate: input.profile.id });
+  return { routed: true };
+}
+
+/** Routing without references to `removed` profiles; null when `translate` itself was removed and nothing can take its place. */
+function routingWithout(routing: Routing, removed: ReadonlySet<string>, replacement: string | undefined): Routing | null {
+  const translate = removed.has(routing.translate) ? replacement : routing.translate;
+  if (translate === undefined) return null;
+  const fallback = routing.fallback?.filter((id) => !removed.has(id));
+  return {
+    translate,
+    ...(routing.analyze !== undefined && !removed.has(routing.analyze) ? { analyze: routing.analyze } : {}),
+    ...(routing.review !== undefined && !removed.has(routing.review) ? { review: routing.review } : {}),
+    ...(fallback && fallback.length > 0 ? { fallback } : {}),
+    ...(routing.siteOverrides ? { siteOverrides: routing.siteOverrides } : {}),
+  };
+}
+
+/**
+ * Removes a connection (§4.3.4, plan M4 §3 #8): its record, its profiles, its key, and the host
+ * permission for its origin when no other connection in use (stored, or with a key here) has the
+ * same origin. Routing that pointed at its profiles moves to another usable profile, or, when
+ * there is none, is removed (the migrated or built-in default applies). A built-in connection
+ * still applies afterwards, as built in and without a key: the settings say so. Site rules are
+ * left as they are: one whose profile is gone stops with an error rather than sending the site's
+ * text elsewhere (§4.3.5).
+ */
+export async function removeConnection(api: Browser, id: string): Promise<{ revoked: boolean }> {
+  const settings = await readProviderSettings(api);
+  const connection = settings.connections.find((c) => c.id === id);
+  const removed = new Set(settings.profiles.filter((p) => p.connectionId === id).map((p) => p.id));
+  await removeApiKey(api, id);
+  await queued(async () => {
+    const items = await api.storage.sync.get(null);
+    const keys = [connectionKey(id), ...[...removed].map(profileKey)].filter((k) => k in items);
+    const stored = cleanRouting(items[ROUTING_KEY]);
+    let routing: Routing | null | undefined;
+    if (stored) {
+      const candidates = settings.profiles.filter((p) => !removed.has(p.id));
+      let replacement: string | undefined;
+      for (const p of candidates) {
+        const c = settings.connections.find((x) => x.id === p.connectionId);
+        if (c && (await isUsable(api, c))) {
+          replacement = p.id;
+          break;
+        }
+      }
+      routing = routingWithout(stored, removed, replacement);
+    }
+    if (keys.length > 0) await api.storage.sync.remove(keys);
+    if (routing === null) await api.storage.sync.remove(ROUTING_KEY);
+    else if (routing !== undefined) await api.storage.sync.set({ [ROUTING_KEY]: routing });
+  });
+  if (!connection) return { revoked: false };
+  return { revoked: await revokeUnusedOrigin(api, connection.baseUrl, id) };
+}
+
+/**
+ * Gives back the host permission for `baseUrl`'s origin unless another connection in use needs it
+ * (§4.3.4). `except` is the connection being removed or moved.
+ */
+export async function revokeUnusedOrigin(api: Browser, baseUrl: string, except: string): Promise<boolean> {
+  let origin: string;
+  try {
+    origin = originPattern(baseUrl);
+  } catch {
+    return false;
+  }
+  const settings = await readProviderSettings(api);
+  for (const c of settings.connections) {
+    if (c.id === except) continue;
+    let other: string;
+    try {
+      other = originPattern(c.baseUrl);
+    } catch {
+      continue;
+    }
+    if (other !== origin) continue;
+    if (!settings.implicit?.connections.includes(c.id) || (await readApiKey(api, c.id)) !== undefined) return false;
+  }
+  return api.permissions.remove({ origins: [origin] }).catch(() => false);
+}
+
+/**
+ * Removes a model profile. The one the translate route uses can't be removed (choose another
+ * first); a Document brief or fallback route to it is dropped (it then follows translate).
+ */
+export async function removeProfile(api: Browser, id: string): Promise<void> {
+  const settings = await readProviderSettings(api);
+  if (settings.routing.translate === id) throw new Error('This model is used to translate. Choose another one under Routing first.');
+  await queued(async () => {
+    const items = await api.storage.sync.get(null);
+    if (profileKey(id) in items) await api.storage.sync.remove(profileKey(id));
+    const stored = cleanRouting(items[ROUTING_KEY]);
+    const routing = stored && routingWithout(stored, new Set([id]), undefined);
+    if (stored && routing && JSON.stringify(routing) !== JSON.stringify(stored)) await api.storage.sync.set({ [ROUTING_KEY]: routing });
+  });
+}
+
 // ---- Tab overrides (storage.session) ----------------------------------------------------------
 
 export async function readTabOverride(api: Browser, tabId: number): Promise<string | undefined> {
@@ -493,7 +647,7 @@ export function resolveRouteIn(settings: ProviderSettings, role: ModelRole, ctx:
   const connections = new Map(settings.connections.map((c) => [c.id, c]));
   const pick = (id: string, source: RouteSource, extra: { localOnly?: boolean; rule?: SiteRule } = {}): Route => {
     const profile = profiles.get(id);
-    if (!profile) return { ok: false, source, message: `The ${role} route points at a model profile that no longer exists. Choose a model in settings.` };
+    if (!profile) return { ok: false, source, message: `The ${ROLE_LABELS[role].toLowerCase()} route points at a model that no longer exists. Choose a model in settings.` };
     const connection = connections.get(profile.connectionId);
     if (!connection) return { ok: false, source, message: `The model ${profile.model} has no connection. Set it up again in settings.` };
     return { ok: true, profile, connection, source, localOnly: extra.localOnly === true, ...(extra.rule ? { rule: extra.rule } : {}) };

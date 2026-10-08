@@ -4,7 +4,7 @@
 import type { browser } from 'wxt/browser';
 import { chromeLanguageDetector, detectionSample, detectSourceLanguage, MIXED_LANGUAGE_DETECTION, sameLanguage, segmentsInLanguage, type LanguageDetectorPort } from '@/shared/language';
 import type { GlossaryEntry } from '@/engine/types';
-import { DEFAULT_ORIGIN, GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences, SECRET_PREFIX, type Preferences } from '@/shared/settings';
+import { GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences, SECRET_PREFIX, type Preferences } from '@/shared/settings';
 import type { SessionHooks } from './controller.ts';
 import type { JobActions } from './JobBar.tsx';
 import { openTranslationCache } from '@/shared/cache';
@@ -312,8 +312,12 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     retranslateSegment: (id) => void jobs.retranslateSegment(tabId, id),
     retranslatePage: () => retranslate(tabId),
     grantAccess: () => {
+      // The job's own connection's origin, never a default one (§8: per origin, the one in use).
+      // Without one (a base URL that does not parse), the settings are where to fix it.
+      const origin = jobs.get(tabId)?.connection?.origin;
+      if (origin === undefined) return void api.runtime.openOptionsPage();
       // First call in the click handler: permissions.request needs the gesture (§4.3.3 step 3).
-      void api.permissions.request({ origins: [jobs.get(tabId)?.connection?.origin ?? DEFAULT_ORIGIN] }).then((granted) => {
+      void api.permissions.request({ origins: [origin] }).then((granted) => {
         if (granted) resume(tabId);
       });
     },
@@ -331,7 +335,9 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       if (current) void snippetJobs.start(tabId, current.docId, current.doc, { keepCost: true });
     },
     grantAccess: () => {
-      void api.permissions.request({ origins: [snippetJobs.get(tabId)?.connection?.origin ?? DEFAULT_ORIGIN] }).then((granted) => {
+      const origin = snippetJobs.get(tabId)?.connection?.origin;
+      if (origin === undefined) return void api.runtime.openOptionsPage();
+      void api.permissions.request({ origins: [origin] }).then((granted) => {
         if (granted) void snippetJobs.resume(tabId);
       });
     },

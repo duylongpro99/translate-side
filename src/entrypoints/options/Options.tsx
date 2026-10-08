@@ -1,8 +1,7 @@
-// Options v0 (plan M1-E9, user decision M1-D13): the provider key (APIBOX by default, M2-D11), the
-// target language and a source-language override. The host-permission text and origin come from the
-// connection's base URL. One hard-wired connection; providers, presets, Test connection and
-// routing are M4 (DESIGN.md §4.3.3 A). M2-E6 adds the translation style, the gloss setting and
-// the personal glossary editor (storage.sync, with the quota guard in shared/settings.ts).
+// The options page (plan M1-E9, user decision M1-D13): Providers (connections, models, routing,
+// each connection's key and host permission; plan M4 sub-goal C, ./Providers.tsx), the target
+// language and a source-language override. M2-E6 adds the translation style, the gloss setting
+// and the personal glossary editor (storage.sync, with the quota guard in shared/settings.ts).
 import { useEffect, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
 import {
@@ -14,14 +13,8 @@ import {
   MAX_BUDGET_TOKENS,
   STYLES,
   cleanBudget,
-  hasHostPermission,
-  maskKey,
-  readApiKey,
   readGlossary,
   readPreferences,
-  originPattern,
-  removeApiKey,
-  saveApiKey,
   saveGlossary,
   updatePreferences,
   type ModelProfile,
@@ -29,6 +22,7 @@ import {
   type ProviderConnection,
 } from '@/shared/settings';
 import { resolveRoute } from '@/shared/providers';
+import { ProvidersSection, type AdapterFor } from './Providers.tsx';
 import { openTranslationCache, type CacheStats, type TranslationCache } from '@/shared/cache';
 import { formatUsd } from '@/shared/cost';
 import { pricingFor } from '@/shared/pricing';
@@ -38,9 +32,6 @@ import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
 
 type Browser = typeof browser;
 
-/** Where to get a key, per connection preset. */
-const KEY_URLS: Record<string, string> = { gemini: 'https://aistudio.google.com/apikey', apibox: 'https://api.ai-box.vn/' };
-
 interface TranslateRoute {
   connection: ProviderConnection;
   profile: ModelProfile;
@@ -48,8 +39,7 @@ interface TranslateRoute {
 
 /**
  * The connection and profile the default translate route uses (src/shared/providers.ts, no site
- * rule or tab override): the built-in default until storage answers. The connection form of
- * M4-E3 replaces the single key section below.
+ * rule or tab override): the built-in default until storage answers.
  */
 function useTranslateRoute(api: Browser): TranslateRoute {
   const [route, setRoute] = useState<TranslateRoute>({ connection: DEFAULT_CONNECTION, profile: DEFAULT_PROFILE });
@@ -62,130 +52,6 @@ function useTranslateRoute(api: Browser): TranslateRoute {
     );
   }, [api]);
   return route;
-}
-
-const hostOf = (baseUrl: string) => {
-  try {
-    return new URL(baseUrl).hostname;
-  } catch {
-    return baseUrl;
-  }
-};
-
-function KeySection({ api }: { api: Browser }) {
-  const { connection, profile } = useTranslateRoute(api);
-  const host = hostOf(connection.baseUrl);
-  const keyUrl = KEY_URLS[connection.presetId];
-  const [saved, setSaved] = useState<string | undefined>();
-  const [draft, setDraft] = useState('');
-  const [access, setAccess] = useState<boolean | undefined>();
-  const [note, setNote] = useState('');
-
-  const refresh = async () => {
-    setSaved(await readApiKey(api, connection.id));
-    setAccess(await hasHostPermission(api, connection.baseUrl).catch(() => false));
-  };
-  useEffect(() => {
-    void refresh();
-    // refresh() reads storage only; again when the routed connection is known.
-  }, [connection.id]);
-
-  // The permission request must be the first call in the click (a user gesture, §4.3.3 step 3):
-  // no await before it.
-  const requestAccess = () =>
-    api.permissions.request({ origins: [originPattern(connection.baseUrl)] }).then(
-      (granted) => granted,
-      () => false,
-    );
-
-  const onSave = (e: Event) => {
-    e.preventDefault();
-    const key = draft.trim();
-    if (key === '') return;
-    const granted = requestAccess();
-    void (async () => {
-      await saveApiKey(api, connection.id, key);
-      // The key is stored: show it (masked) now, not once the permission prompt is answered (review E-T1).
-      setSaved(key);
-      setDraft('');
-      const ok = await granted;
-      setNote(ok ? 'Saved.' : `Saved, but Translate Side has no access to ${host} yet. Grant it below.`);
-      await refresh();
-    })();
-  };
-  const onGrant = () => {
-    void requestAccess().then(() => refresh());
-  };
-  const onRemove = () => {
-    void (async () => {
-      await removeApiKey(api, connection.id);
-      // §4.3.4: removing the connection's key also gives back its host permission.
-      await api.permissions.remove({ origins: [originPattern(connection.baseUrl)] }).catch(() => false);
-      setNote('Key removed.');
-      await refresh();
-    })();
-  };
-
-  return (
-    <section class="opt__section" aria-labelledby="key-h">
-      <h2 id="key-h">{connection.label}</h2>
-      <p class="opt__hint">
-        Translations use <code>{profile.model}</code> through {connection.label}'s {connection.protocol === 'anthropic-messages' ? 'Anthropic Messages' : 'OpenAI-compatible'} API at <code>{host}</code>. Other
-        providers come in a later version.
-      </p>
-      <form onSubmit={onSave} class="opt__row">
-        <label for="key">API key</label>
-        <input
-          id="key"
-          type="password"
-          autocomplete="off"
-          spellcheck={false}
-          placeholder={saved ? `Saved: ${maskKey(saved)} (enter a new key to replace it)` : `Paste your ${connection.label} API key`}
-          value={draft}
-          onInput={(e) => setDraft((e.target as HTMLInputElement).value)}
-        />
-        <button type="submit" disabled={draft.trim() === ''}>
-          Save
-        </button>
-      </form>
-      <p class="opt__status" data-testid="key-status">
-        {saved ? (
-          <>
-            Key saved: <code data-testid="masked-key">{maskKey(saved)}</code>{' '}
-            <button type="button" class="opt__link" onClick={onRemove}>
-              Remove
-            </button>
-          </>
-        ) : (
-          <>
-            No key yet.{' '}
-            {keyUrl ? (
-              <a href={keyUrl} target="_blank" rel="noreferrer">
-                Get a key ↗
-              </a>
-            ) : null}
-          </>
-        )}
-      </p>
-      {saved && access === false ? (
-        <p class="opt__status opt__status--warn" data-testid="access-status">
-          No access to {host}.{' '}
-          <button type="button" onClick={onGrant}>
-            Grant access
-          </button>
-        </p>
-      ) : null}
-      {note ? (
-        <p class="opt__note" role="status">
-          {note}
-        </p>
-      ) : null}
-      <p class="opt__honest">
-        Your key is stored on this device only and is never synced. Anyone with access to this browser profile could read it. Use a key with a spending
-        limit.
-      </p>
-    </section>
-  );
 }
 
 function LanguageSection({ api }: { api: Browser }) {
@@ -519,11 +385,11 @@ function SpendSection({ api, now = Date.now }: { api: Browser; now?: () => numbe
   );
 }
 
-export function Options({ api, cache = openTranslationCache() }: { api: Browser; cache?: TranslationCache | undefined }) {
+export function Options({ api, cache = openTranslationCache(), adapterFor }: { api: Browser; cache?: TranslationCache | undefined; adapterFor?: AdapterFor }) {
   return (
     <main class="opt">
       <h1>Translate Side settings</h1>
-      <KeySection api={api} />
+      <ProvidersSection api={api} {...(adapterFor ? { adapterFor } : {})} />
       <LanguageSection api={api} />
       <StyleSection api={api} />
       <GlossarySection api={api} />

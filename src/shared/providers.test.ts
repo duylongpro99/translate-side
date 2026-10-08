@@ -15,12 +15,15 @@ import {
   parseStored,
   readProviderSettings,
   readTabOverride,
+  removeConnection,
+  removeProfile,
   resolveRoute,
   resolveRouteIn,
   saveConnection,
   saveLearnedQuirk,
   saveProfile,
   saveRouting,
+  saveSetup,
   SCHEMA_VERSION,
   seedFromM1,
   setTabOverride,
@@ -39,6 +42,7 @@ import {
   DEFAULT_PROFILE,
   GEMINI_CONNECTION,
   GEMINI_PROFILE,
+  resolveConnection,
   SYNC_QUOTA_BYTES_PER_ITEM,
   type ModelProfile,
   type ProviderConnection,
@@ -145,7 +149,13 @@ describe('schema (plan M4-E2)', () => {
     expect(Object.keys(items).sort()).toEqual(['conn:apibox', 'conn:gemini', 'profile:apibox-deepseek-v4-pro', 'profile:apibox-qwen3.8-flash', 'profile:gemini-flash-lite', 'routing', 'schemaVersion', 'siteRules']);
     expect(items.routing).toEqual({ translate: 'apibox-qwen3.8-flash', fallback: ['gemini-flash-lite'] });
     // Built-ins not stored (Anthropic here) apply as built in.
-    expect(parseStored({ ...items, prefs: {}, glossary: [] })).toEqual({ ...s, connections: [...s.connections, ANTHROPIC_CONNECTION], profiles: [...s.profiles, ...builtinProfiles('anthropic')] });
+    expect(parseStored({ ...items, prefs: {}, glossary: [] })).toEqual({
+      ...s,
+      connections: [...s.connections, ANTHROPIC_CONNECTION],
+      profiles: [...s.profiles, ...builtinProfiles('anthropic')],
+      implicit: { connections: ['anthropic'], profiles: ids(builtinProfiles('anthropic')) },
+      routingStored: true,
+    });
     expect(parseStored({ prefs: {} })).toBeNull();
     // A record under the wrong key is not trusted.
     // (Nothing trusted left: the built-in default applies, not the misfiled record.)
@@ -557,5 +567,128 @@ describe('saveLearnedQuirk', () => {
     expect((await readProviderSettings(f.api)).connections[0]).toEqual(f.sync.data.get('conn:apibox'));
     // Its built-in profiles still apply, so the default route still resolves.
     expect(await resolveRoute(f.api, 'translate')).toMatchObject({ ok: true, profile: { id: DEFAULT_PROFILE.id }, connection: { quirks: { supportsTemperature: false } } });
+  });
+});
+
+/** fakeApi with permissions that can be granted and removed. */
+function permApi(opts: { sync?: Record<string, unknown>; local?: Record<string, unknown>; granted?: string[] } = {}) {
+  const f = fakeApi(opts);
+  const granted = new Set(opts.granted ?? []);
+  const removed: string[] = [];
+  (f.api as unknown as { permissions: unknown }).permissions = {
+    contains: ({ origins }: { origins: string[] }) => Promise.resolve(origins.every((o) => granted.has(o))),
+    remove: ({ origins }: { origins: string[] }) => {
+      removed.push(...origins);
+      return Promise.resolve(origins.every((o) => granted.delete(o)));
+    },
+  };
+  return { ...f, granted, removed };
+}
+
+const OLLAMA: ProviderConnection = { id: 'ollama-1', label: 'Home Ollama', presetId: 'ollama', protocol: 'openai-chat', baseUrl: 'http://localhost:11434/v1', auth: { style: 'none' }, quirks: {}, status: 'ok' };
+const QWEN: ModelProfile = { id: 'qwen-local', connectionId: 'ollama-1', model: 'qwen3:8b', maxConcurrency: 1, chunkTokens: 600 };
+const MY_ANTHROPIC: ProviderConnection = { ...ANTHROPIC_CONNECTION, id: 'mine', label: 'My Anthropic', status: 'ok' };
+const SONNET: ModelProfile = { id: 'sonnet', connectionId: 'mine', model: 'claude-sonnet-4-6', maxConcurrency: 2, chunkTokens: 1200 };
+
+describe('adding a connection (plan M4 §2, carry-over B4)', () => {
+  it('on a fresh install, the first saved model becomes the translate route; the key stays in local', async () => {
+    const f = permApi({ sync: { schemaVersion: 1 } });
+    expect(await saveSetup(f.api, { connection: MY_ANTHROPIC, apiKey: ' sk-ant-0123456789 ', profile: SONNET })).toEqual({ routed: true });
+    expect(f.local.data.get('secret:mine')).toBe('sk-ant-0123456789');
+    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet' });
+    expect(f.sync.data.get('conn:mine')).toMatchObject({ label: 'My Anthropic' });
+    expect(JSON.stringify([...f.sync.data.values()])).not.toContain('sk-ant');
+    // The second one does not take over.
+    expect(await saveSetup(f.api, { connection: OLLAMA, profile: QWEN })).toEqual({ routed: false });
+    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet' });
+  });
+
+  it('a device already translating with a migrated keyed route keeps it until the user picks another', async () => {
+    const f = permApi({ sync: { schemaVersion: 1 }, local: M3_LOCAL });
+    expect(await saveSetup(f.api, { connection: OLLAMA, profile: QWEN })).toEqual({ routed: false });
+    expect(f.sync.data.has('routing')).toBe(false);
+    expect((await resolveRoute(f.api, 'translate')).ok && (await resolveRoute(f.api, 'translate'))).toMatchObject({ profile: { id: DEFAULT_PROFILE.id } });
+  });
+
+  it('a key added to the routed (keyless) built-in connection keeps its route and sets none', async () => {
+    const f = permApi({ sync: { schemaVersion: 1 } });
+    expect(await saveSetup(f.api, { connection: APIBOX_CONNECTION, apiKey: 'sk-apibox-0123456789', profile: APIBOX_QWEN_PROFILE })).toEqual({ routed: true });
+    expect(f.sync.data.get('routing')).toEqual({ translate: APIBOX_QWEN_PROFILE.id });
+  });
+
+  it('marks the built-ins that apply only at read time, and whether routing is stored', async () => {
+    const f = permApi({ sync: { schemaVersion: 1, [`conn:${GEMINI_CONNECTION.id}`]: GEMINI_CONNECTION, [`profile:${GEMINI_PROFILE.id}`]: GEMINI_PROFILE } });
+    const s = await readProviderSettings(f.api);
+    expect(s.implicit?.connections.sort()).toEqual([ANTHROPIC_CONNECTION.id, APIBOX_CONNECTION.id].sort());
+    expect(s.implicit?.profiles).not.toContain(GEMINI_PROFILE.id);
+    expect(s.routingStored).toBe(false);
+  });
+});
+
+describe('removing a connection (plan M4 §3 #8, DESIGN §4.3.4)', () => {
+  it('deletes its record, its profiles and its key, revokes its origin, and moves the route to a usable profile', async () => {
+    const f = permApi({
+      sync: { schemaVersion: 1, 'conn:mine': MY_ANTHROPIC, 'profile:sonnet': SONNET, 'conn:ollama-1': OLLAMA, 'profile:qwen-local': QWEN, routing: { translate: 'sonnet', analyze: 'sonnet', fallback: ['qwen-local', 'sonnet'] } },
+      local: { 'secret:mine': 'sk-ant-0123456789' },
+      granted: ['https://api.anthropic.com/*', 'http://localhost/*'],
+    });
+    expect(await removeConnection(f.api, 'mine')).toEqual({ revoked: true });
+    expect(f.local.data.has('secret:mine')).toBe(false);
+    expect(f.sync.data.has('conn:mine')).toBe(false);
+    expect(f.sync.data.has('profile:sonnet')).toBe(false);
+    expect(f.removed).toEqual(['https://api.anthropic.com/*']);
+    expect(f.granted.has('http://localhost/*')).toBe(true);
+    expect(f.sync.data.get('routing')).toEqual({ translate: 'qwen-local', fallback: ['qwen-local'] });
+  });
+
+  it('keeps the origin while another connection in use shares it', async () => {
+    const other = { ...MY_ANTHROPIC, id: 'work', label: 'Work Anthropic' };
+    const f = permApi({ sync: { schemaVersion: 1, 'conn:mine': MY_ANTHROPIC, 'conn:work': other }, local: { 'secret:mine': 'k1-0123456789', 'secret:work': 'k2-0123456789' }, granted: ['https://api.anthropic.com/*'] });
+    expect(await removeConnection(f.api, 'mine')).toEqual({ revoked: false });
+    expect(f.granted.has('https://api.anthropic.com/*')).toBe(true);
+    // The keyless built-in Anthropic (read time only) does not hold it.
+    expect(await removeConnection(f.api, 'work')).toEqual({ revoked: true });
+  });
+
+  it('a route with nothing usable left is removed, so the default applies', async () => {
+    const f = permApi({ sync: { schemaVersion: 1, 'conn:mine': MY_ANTHROPIC, 'profile:sonnet': SONNET, routing: { translate: 'sonnet' } }, local: { 'secret:mine': 'k-0123456789' } });
+    await removeConnection(f.api, 'mine');
+    expect(f.sync.data.has('routing')).toBe(false);
+    expect((await readProviderSettings(f.api)).routing.translate).toBe(DEFAULT_PROFILE.id);
+  });
+
+  it('a built-in connection loses its key and stored settings, and then applies as built in (keyless)', async () => {
+    const f = permApi({ sync: { schemaVersion: 1, [`conn:${GEMINI_CONNECTION.id}`]: { ...GEMINI_CONNECTION, quirks: { supportsJsonMode: false } } }, local: M1_LOCAL, granted: ['https://generativelanguage.googleapis.com/*'] });
+    expect(await removeConnection(f.api, GEMINI_CONNECTION.id)).toEqual({ revoked: true });
+    expect(f.local.data.has('secret:gemini')).toBe(false);
+    const s = await readProviderSettings(f.api);
+    expect(s.connections.find((c) => c.id === GEMINI_CONNECTION.id)).toEqual(GEMINI_CONNECTION);
+    expect(s.implicit?.connections).toContain(GEMINI_CONNECTION.id);
+  });
+});
+
+describe('removing a model', () => {
+  it('refuses the translate route, and drops a Document brief route to it', async () => {
+    const f = permApi({ sync: { schemaVersion: 1, 'conn:ollama-1': OLLAMA, 'profile:qwen-local': QWEN, 'conn:mine': MY_ANTHROPIC, 'profile:sonnet': SONNET, routing: { translate: 'sonnet', analyze: 'qwen-local' } } });
+    await expect(removeProfile(f.api, 'sonnet')).rejects.toThrow(/used to translate/);
+    await removeProfile(f.api, 'qwen-local');
+    expect(f.sync.data.has('profile:qwen-local')).toBe(false);
+    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet' });
+  });
+
+  it('a missing Document brief route is named so in the error (plan M4 §5 Role naming)', () => {
+    const route = resolveRouteIn(settings({ routing: { translate: APIBOX_QWEN_PROFILE.id, analyze: 'gone' } }), 'analyze');
+    expect(route).toMatchObject({ ok: false });
+    expect(!route.ok && route.message).toContain('document brief route');
+  });
+});
+
+describe('dual-protocol base URL at runtime (§4.2.5)', () => {
+  it('a base URL saved with /v1 reaches the Anthropic SDK without it', async () => {
+    const gw: ProviderConnection = { id: 'gw', label: 'GW', presetId: 'custom-auto', protocol: 'auto', baseUrl: 'https://openrouter.ai/api/v1', auth: { style: 'bearer' }, quirks: {}, detectedProtocols: ['anthropic-messages', 'openai-chat'], status: 'ok' };
+    const f = permApi({ local: { 'secret:gw': 'k-0123456789' } });
+    const prof = (protocolOverride: 'anthropic-messages' | 'openai-chat'): ModelProfile => ({ id: 'p', connectionId: 'gw', model: 'm', maxConcurrency: 2, chunkTokens: 1200, protocolOverride });
+    expect((await resolveConnection(f.api, gw, prof('anthropic-messages')))?.baseUrl).toBe('https://openrouter.ai/api');
+    expect((await resolveConnection(f.api, gw, prof('openai-chat')))?.baseUrl).toBe('https://openrouter.ai/api/v1');
   });
 });

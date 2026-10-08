@@ -6,7 +6,8 @@
 import type { browser } from 'wxt/browser';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
 import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS, GEMINI_OPENAI_BASE_URL } from '@/llm/presets';
-import type { Protocol, AuthStyle, Quirks, ResolvedConnection } from '@/llm/types';
+import type { Protocol, AuthStyle, LLMErrorKind, Quirks, ResolvedConnection } from '@/llm/types';
+import { endpointBase } from './connect.ts';
 
 type Browser = typeof browser;
 
@@ -28,7 +29,10 @@ export interface ProviderConnection {
   quirks: Quirks;
   detectedProtocols?: Protocol[];
   status: 'unverified' | 'ok' | 'error';
+  /** What the last Test connection said when it failed ("Key invalid", "CORS blocked"…, src/shared/connect.ts). */
   lastError?: string;
+  /** The kind behind `lastError`; `cors-origin` is a local server's CORS refusal (the Fix… guide, §4.3.6). */
+  lastErrorKind?: LLMErrorKind | 'cors-origin';
 }
 
 /** §4.3.1 ModelProfile. `pricing` adds `cachedInPerM` to the spec's `{ inPerM, outPerM }` (plan M1 §5: usage has cachedInput). */
@@ -157,10 +161,6 @@ export const ANTHROPIC_HAIKU_PROFILE: ModelProfile = {
 /** The connection and profile the extension uses (M2-D11, M2-D16). */
 export const DEFAULT_CONNECTION = APIBOX_CONNECTION;
 export const DEFAULT_PROFILE = APIBOX_QWEN_PROFILE;
-/** The origin pattern the extension asks for when the key is saved (§4.3.3 step 3, §8), from the base URL. */
-export const DEFAULT_ORIGIN = originPattern(DEFAULT_CONNECTION.baseUrl);
-/** "api.ai-box.vn": how the settings and the panel name the host they need access to. */
-export const DEFAULT_HOST = new URL(DEFAULT_CONNECTION.baseUrl).hostname;
 
 /** The built-in connections and profiles: what the M1 → M4 migration seeds from (src/shared/providers.ts). */
 export const BUILTIN_CONNECTIONS: readonly BuiltinConnection[] = [APIBOX_CONNECTION, GEMINI_CONNECTION, ANTHROPIC_CONNECTION];
@@ -218,7 +218,8 @@ export async function resolveConnection(api: Browser, connection: ProviderConnec
   return {
     id: connection.id,
     protocol,
-    baseUrl: connection.baseUrl,
+    // A base URL saved with /v1 serves both protocols on a dual-protocol gateway: the Anthropic SDK adds its own (§4.2.5).
+    baseUrl: endpointBase(protocol, connection.baseUrl),
     auth: connection.auth,
     ...(apiKey === undefined ? {} : { apiKey }),
     ...(connection.extraHeaders ? { extraHeaders: { ...connection.extraHeaders } } : {}),

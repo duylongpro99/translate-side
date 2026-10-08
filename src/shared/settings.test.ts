@@ -9,8 +9,6 @@ import {
   APIBOX_PRO_PROFILE,
   APIBOX_QWEN_PROFILE,
   DEFAULT_CONNECTION,
-  DEFAULT_HOST,
-  DEFAULT_ORIGIN,
   DEFAULT_PROFILE,
   GEMINI_CONNECTION,
   GEMINI_ORIGIN,
@@ -85,8 +83,7 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
     expect(APIBOX_PRO_PROFILE).toMatchObject({ model: 'ds/deepseek-v4-pro', maxConcurrency: 2, connectionId: APIBOX_CONNECTION.id });
     expect(APIBOX_PRO_PROFILE.quirks).toBeUndefined();
     expect(APIBOX_FLASH_PROFILE).toMatchObject({ model: 'ds/deepseek-flash', maxConcurrency: 2, connectionId: APIBOX_CONNECTION.id });
-    expect(DEFAULT_ORIGIN).toBe('https://api.ai-box.vn/*');
-    expect(DEFAULT_HOST).toBe('api.ai-box.vn');
+    expect(originPattern(DEFAULT_CONNECTION.baseUrl)).toBe('https://api.ai-box.vn/*');
   });
 
   it("puts a profile's quirks over the connection's, key by key", () => {
