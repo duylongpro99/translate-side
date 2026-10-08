@@ -6,6 +6,7 @@ import { translatorClient } from '@/engine/testing';
 import { GEMINI_PROFILE } from '@/shared/settings';
 import type { SessionHooks } from './controller.ts';
 import { createTranslator } from './translator.ts';
+import type { TranslationJob } from '@/engine/types';
 
 type Api = Parameters<typeof createTranslator>[0];
 type Ready = Parameters<Required<SessionHooks>['ready']>[2];
@@ -627,5 +628,29 @@ describe('translator wiring (plan M1-E8)', () => {
         stop();
       });
     });
+  });
+
+  it('gives the job what was on screen, then follows the viewport events (plan M3-E1)', async () => {
+    const f = fakeApi();
+    let seen: TranslationJob | undefined;
+    const engine = () => ({
+      // eslint-disable-next-line require-yield
+      async *translate(job: TranslationJob) {
+        seen = job;
+      },
+    });
+    const t = createTranslator(f.api, { translateClient: client(), engine: engine as never });
+    const hooks = t.hooks as Required<SessionHooks>;
+    hooks.active(1);
+    hooks.ready(1, 'd', { ...longResult, visible: ['l30', 'l31'] });
+    expect(t.viewports.get(1, 'd')).toEqual({ visible: ['l30', 'l31'] });
+    f.answer();
+    await settle();
+    expect(seen?.priority).toEqual(['l30', 'l31']);
+    hooks.viewport(1, 'd', { visible: ['l20'], anchor: { id: 'l20', offset: 0.5 } });
+    expect(t.viewports.get(1, 'd')).toEqual({ visible: ['l20'], anchor: { id: 'l20', offset: 0.5 } });
+    expect(seen?.livePriority?.()).toEqual(['l20']);
+    hooks.closed(1);
+    expect(t.viewports.get(1, 'd')).toBeUndefined();
   });
 });

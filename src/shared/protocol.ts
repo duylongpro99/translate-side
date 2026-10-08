@@ -1,10 +1,12 @@
 // Content ⇄ panel Port protocol (plan M0-E4, decision S1). The panel connects to the content
 // script with tabs.connect(tabId); the worker is not on this path. The panel speaks first
-// (`hello`), so the content script never pushes into a panel that isn't there yet (S5).
+// (`hello`), so the content script never pushes into a panel that isn't there yet (S5). Once the
+// panel has asked for the page (`extract`), the content script pushes what is on screen on the
+// same port (`viewport` events, plan M3-E1/E7) until the port closes.
 import type { Segment } from '@/engine/types';
 
 /** Bump on any incompatible change to the messages below. */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 /** Every content port name starts with this; the version follows. */
 export const CONTENT_PORT_PREFIX = 'translate-side/content/';
 /**
@@ -16,7 +18,16 @@ export const CONTENT_PORT_NAME = `${CONTENT_PORT_PREFIX}v${PROTOCOL_VERSION}`;
 export type ExtractVia = 'walk' | 'readability';
 
 export type ExtractResult =
-  | { ok: true; via: ExtractVia; url: string; title: string; lang?: string; segments: Segment[] }
+  | {
+      ok: true;
+      via: ExtractVia;
+      url: string;
+      title: string;
+      lang?: string;
+      segments: Segment[];
+      /** Ids of the segments on screen when the page was read, in page order (set by the content script). */
+      visible?: string[];
+    }
   /** no-content: neither the walk nor Readability found enough text (→ selection hint, decision S3). */
   | { ok: false; reason: 'no-content' | 'denylisted'; url: string };
 
@@ -32,6 +43,39 @@ export type ContentApi = {
   hello: { req: { v: number }; res: HelloInfo };
   extract: { req: Record<string, never>; res: ExtractResult };
 };
+
+/** What is on screen (plan M3-E1, E7). */
+export interface Viewport {
+  /** Ids of the segments on screen, in page order. Empty when none is (e.g. scrolled past the article). */
+  visible: string[];
+  /**
+   * The topmost segment on screen and how far the page has scrolled into it (0 = its top is at the
+   * top of the window, 1 = its bottom is), for the panel's scroll follow. Absent when none is on screen.
+   */
+  anchor?: { id: string; offset: number };
+}
+
+/** Events the content script pushes after `extract`, without a request. */
+export type ContentEvents = {
+  viewport: Viewport;
+};
+
+export type EventMessage<E extends Record<string, unknown> = ContentEvents> = {
+  [K in keyof E & string]: { kind: 'evt'; name: K; body: E[K] };
+}[keyof E & string];
+
+export function isEventMessage(x: unknown): x is EventMessage<Record<string, unknown>> {
+  return isObject(x) && x.kind === 'evt' && typeof x.name === 'string';
+}
+
+/** Pushes an event to the panel; a port that has gone away is ignored. */
+export function emit<E extends Record<string, unknown> = ContentEvents, K extends keyof E & string = keyof E & string>(port: PortLike, name: K, body: E[K]): void {
+  try {
+    port.postMessage({ kind: 'evt', name, body });
+  } catch {
+    // The panel went away; nothing to tell.
+  }
+}
 
 type ApiShape = Record<string, { req: unknown; res: unknown }>;
 
@@ -78,14 +122,21 @@ export interface Client<A extends ApiShape> {
   readonly closed: boolean;
 }
 
-/** Request/response over a Port. Pending requests reject when the port disconnects or times out. */
-export function createClient<A extends ApiShape = ContentApi>(port: PortLike, opts: { timeoutMs?: number } = {}): Client<A> {
+/**
+ * Request/response over a Port. Pending requests reject when the port disconnects or times out.
+ * Events the other side pushes go to `onEvent`.
+ */
+export function createClient<A extends ApiShape = ContentApi>(port: PortLike, opts: { timeoutMs?: number; onEvent?: (event: EventMessage) => void } = {}): Client<A> {
   const timeoutMs = opts.timeoutMs ?? 30_000;
   const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>();
   let nextId = 1;
   let closed = false;
 
   port.onMessage.addListener((msg) => {
+    if (isEventMessage(msg)) {
+      opts.onEvent?.(msg as EventMessage);
+      return;
+    }
     if (!isResponseMessage(msg)) return;
     const p = pending.get(msg.id);
     if (!p) return;

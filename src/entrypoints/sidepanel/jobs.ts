@@ -5,6 +5,9 @@
 //
 // - Cancel: the Cancel button, a navigation (the content connection drops), the tab closing or
 //   moving to another window, and the panel closing (the page unloads; `cancelAll` on pagehide).
+// - Viewport first (plan M3-E1): the content script reports what is on screen (setViewport); the
+//   engine reads it each time a chunk is about to start, so scrolling moves what is translated
+//   next. Chunks in flight are never aborted (M3-D3).
 // - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
@@ -76,6 +79,11 @@ export interface JobView {
   /** Epoch ms: when this run started, when its first text became visible, when it ended. */
   startedAt: number;
   firstVisibleAt?: number;
+  /**
+   * Epoch ms: when every segment this run had to translate that was on screen at its start was
+   * final or failed (plan M3 §3 #1). Absent while some are pending, and when none was on screen.
+   */
+  screenDoneAt?: number;
   endedAt?: number;
 }
 
@@ -237,6 +245,8 @@ interface Job {
   inflight: number;
   /** Bumped per run, so a finished run can't overwrite a newer one. */
   run: number;
+  /** Segments on screen at the run's start still to settle (view.screenDoneAt). */
+  screen: Set<string>;
 }
 
 export type JobsListener = (tabId: number, view: JobView | undefined) => void;
@@ -257,6 +267,8 @@ const abortableSleep = (ms: number, signal: AbortSignal) =>
 
 export class Jobs {
   private readonly jobs = new Map<number, Job>();
+  /** What is on screen per tab, for the document it was reported for. */
+  private readonly viewports = new Map<number, { docId: string; ids: readonly string[] }>();
   private readonly listeners = new Set<JobsListener>();
   private activeTabId: number | undefined;
   private readonly now: () => number;
@@ -277,6 +289,21 @@ export class Jobs {
   /** The job's document id, so the panel can tell a job of a previous page. */
   docOf(tabId: number): string | undefined {
     return this.jobs.get(tabId)?.docId;
+  }
+
+  /**
+   * What is on screen in the tab's document (plan M3-E1), in page order. An empty list (scrolled
+   * past the article) keeps the last one, so the job reads on from where the reader was.
+   */
+  setViewport(tabId: number, docId: string, ids: readonly string[]): void {
+    if (ids.length === 0 && this.viewports.get(tabId)?.docId === docId) return;
+    this.viewports.set(tabId, { docId, ids: [...ids] });
+  }
+
+  /** The segment ids on screen in the tab's document, as last reported. */
+  private screenOf(tabId: number, docId: string): readonly string[] {
+    const v = this.viewports.get(tabId);
+    return v?.docId === docId ? v.ids : [];
   }
 
   /** D14: only the active tab's job sends new requests. */
@@ -314,6 +341,7 @@ export class Jobs {
       segs.set(s.id, old?.status === 'final' ? old : { status: 'pending' });
     }
     const todo = new Set(translatable.filter((s) => segs.get(s.id)?.status !== 'final').map((s) => s.id));
+    const screen = new Set(this.screenOf(tabId, docId).filter((id) => todo.has(id)));
     const gate = new Gate();
     gate.set(tabId === this.activeTabId);
     const job: Job = {
@@ -324,6 +352,7 @@ export class Jobs {
       gate,
       inflight: 0,
       run: (prev?.run ?? 0) + 1,
+      screen,
       view: {
         status: 'running',
         paused: !gate.open,
@@ -377,7 +406,9 @@ export class Jobs {
         // Already-final segments are not sent again (resume). Code blocks ride along; the engine skips them.
         segments: segments.filter((s) => !s.translate || todo.has(s.id)),
       },
-      priority: [],
+      // Viewport first (M3-E1): what is on screen now, read again each time a chunk starts.
+      priority: [...this.screenOf(tabId, docId)],
+      livePriority: () => this.screenOf(tabId, docId),
       strategy: this.deps.strategy ?? PANEL_STRATEGY,
       options: {
         style: doc.style ?? 'natural',
@@ -421,6 +452,7 @@ export class Jobs {
       gate: new Gate(),
       inflight: 0,
       run: (prev?.run ?? 0) + 1,
+      screen: new Set(),
       view: {
         status: 'skipped',
         paused: false,
@@ -466,6 +498,7 @@ export class Jobs {
   /** The tab is gone (closed, moved to another window): cancel and forget its job. */
   drop(tabId: number): void {
     this.cancel(tabId);
+    this.viewports.delete(tabId);
     if (this.jobs.delete(tabId)) this.emit(tabId, undefined);
   }
 
@@ -503,6 +536,7 @@ export class Jobs {
         job.segs.set(event.id, next);
         const patch: Partial<JobView> = { counts: count(job.segs) };
         if (job.view.firstVisibleAt === undefined && next.text) patch.firstVisibleAt = this.now();
+        if ((next.status === 'final' || next.status === 'failed') && job.screen.delete(event.id) && job.screen.size === 0) patch.screenDoneAt = this.now();
         this.patch(tabId, job, patch);
         if (event.type === 'segment.failed' && STOP_KINDS.has(event.error.kind)) {
           job.controller.abort(new DOMException('stopped', 'AbortError'));

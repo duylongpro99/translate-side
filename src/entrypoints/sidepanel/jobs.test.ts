@@ -587,3 +587,78 @@ describe('Jobs: contextual (plan M2-E1) and same-language skip (M2-E5)', () => {
     expect(sent.some((src) => src.startsWith('P0 '))).toBe(true);
   });
 });
+
+describe('Jobs: viewport first (plan M3-E1)', () => {
+  const paragraphOf = (req: NormalizedRequest) => /^P(\d+)/.exec(wireLines(req.messages.find((m) => m.role === 'user')?.content ?? '')[0]?.source ?? '')?.[1];
+
+  it('starts with the chunks on screen, then reads on (real engine, one paragraph per chunk)', async () => {
+    const client = translatorClient();
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client) });
+    jobs.setActive(1);
+    jobs.setViewport(1, 'd', ['s5']);
+    await jobs.start(1, 'd', doc(8, 600));
+    expect(client.requests.map(paragraphOf)).toEqual(['5', '6', '7', '0', '1', '2', '3', '4']);
+    expect(jobs.get(1)?.status).toBe('done');
+  });
+
+  it('gives the engine the viewport now, a live port that follows setViewport, for this document only', async () => {
+    let seen: TranslationJob | undefined;
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    const engine = () => ({
+      async *translate(job: TranslationJob) {
+        seen = job;
+        await held;
+        yield final('s0', 'vi:P0');
+      },
+    });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(translatorClient()), engine: engine as never });
+    jobs.setActive(1);
+    jobs.setViewport(1, 'd', ['s1', 's2']);
+    const running = jobs.start(1, 'd', doc(3));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(seen?.priority).toEqual(['s1', 's2']);
+    jobs.setViewport(1, 'd', ['s0']);
+    expect(seen?.livePriority?.()).toEqual(['s0']);
+    // Scrolled past the article: the last viewport stays.
+    jobs.setViewport(1, 'd', []);
+    expect(seen?.livePriority?.()).toEqual(['s0']);
+    // A viewport of another document (the page navigated) is not this job's.
+    jobs.setViewport(1, 'other', ['s2']);
+    expect(seen?.livePriority?.()).toEqual([]);
+    release();
+    await running;
+  });
+
+  it('records when the segments on screen at the start are all settled (§3 #1), not before', async () => {
+    let t = 1000;
+    const steps: (() => EngineEvent)[] = [() => final('s2', 'vi:P2'), () => failedEv('s1'), () => final('s0', 'vi:P0')];
+    const engine = () => ({
+      async *translate() {
+        for (const step of steps) {
+          t += 100;
+          yield step();
+        }
+      },
+    });
+    const views: JobView[] = [];
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(translatorClient()), engine: engine as never, now: () => t });
+    jobs.subscribe((_, v) => v && views.push(v));
+    jobs.setActive(1);
+    jobs.setViewport(1, 'd', ['s1', 's2', 'code']);
+    await jobs.start(1, 'd', doc(3));
+    const v = jobs.get(1) as JobView;
+    expect(v.firstVisibleAt).toBe(1100);
+    // s2 final at 1100, s1 failed at 1200: the screen is settled at 1200, before s0.
+    expect(v.screenDoneAt).toBe(1200);
+    expect(views.some((x) => x.counts.final === 1 && x.screenDoneAt === undefined)).toBe(true);
+  });
+
+  it('no screen, no screenDoneAt', async () => {
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(translatorClient()) });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(2));
+    expect(jobs.get(1)?.status).toBe('done');
+    expect(jobs.get(1)?.screenDoneAt).toBeUndefined();
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createClient, ProtocolError, serve, type PortLike } from './protocol.ts';
+import { createClient, emit, ProtocolError, serve, type PortLike } from './protocol.ts';
 
 type Fn = (m: unknown) => void;
 
@@ -103,5 +103,21 @@ describe('Port protocol', () => {
     panel.postMessage('hello?');
     panel.postMessage({ kind: 'req', id: 'x' });
     expect(await client.request('echo', { n: 0 })).toEqual({ n: 1 });
+  });
+
+  it('hands pushed events to onEvent, apart from responses (plan M3-E1)', async () => {
+    const [panel, content] = pair();
+    serve<TestApi>(content, { echo: ({ n }) => ({ n }), boom: () => ({}) as never, slow: () => '' });
+    const events: unknown[] = [];
+    const client = createClient<TestApi>(panel, { onEvent: (e) => events.push(e) });
+    emit(content, 'viewport', { visible: ['a', 'b'], anchor: { id: 'a', offset: 0.25 } });
+    expect(await client.request('echo', { n: 3 })).toEqual({ n: 3 });
+    expect(events).toEqual([{ kind: 'evt', name: 'viewport', body: { visible: ['a', 'b'], anchor: { id: 'a', offset: 0.25 } } }]);
+  });
+
+  it('emit to a port that has gone away does not throw', () => {
+    const [panel] = pair();
+    panel.disconnect();
+    expect(() => emit(panel, 'viewport', { visible: [] })).not.toThrow();
   });
 });

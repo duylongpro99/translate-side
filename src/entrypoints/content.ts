@@ -1,10 +1,12 @@
 // Content script (plan M0-E3/E4). Injected by the worker with scripting.executeScript under
 // activeTab, never declared in the manifest. It answers the panel over a Port and pushes nothing
-// on its own: the panel connects and says hello first (decision S5).
+// on its own: the panel connects and says hello first (decision S5). After `extract`, it pushes
+// what is on screen on that port (viewport.ts, plan M3-E1/E7) until the port closes.
 import { browser } from 'wxt/browser';
 import { extractPage } from '@/extract';
+import { watchViewport, type ViewportWatch } from '@/extract/viewport';
 import type { InjectOutcome } from '@/shared/inject';
-import { CONTENT_PORT_NAME, CONTENT_PORT_PREFIX, PROTOCOL_VERSION, ProtocolError, serve, type ContentApi } from '@/shared/protocol';
+import { CONTENT_PORT_NAME, CONTENT_PORT_PREFIX, PROTOCOL_VERSION, ProtocolError, emit, serve, type ContentApi } from '@/shared/protocol';
 
 declare global {
   // Set by the first injection into this page's isolated world.
@@ -28,6 +30,9 @@ export default defineContentScript({
         if (port.name.startsWith(CONTENT_PORT_PREFIX)) port.disconnect();
         return;
       }
+      // One watch per connection, over the segments of its latest read.
+      let watch: ViewportWatch | undefined;
+      port.onDisconnect.addListener(() => watch?.stop());
       serve<ContentApi>(port, {
         hello: ({ v }) => {
           if (v !== PROTOCOL_VERSION) {
@@ -35,7 +40,15 @@ export default defineContentScript({
           }
           return { v: PROTOCOL_VERSION, docId, url: location.href };
         },
-        extract: () => extractPage(document),
+        extract: () => {
+          watch?.stop();
+          watch = undefined;
+          const targets = new Map<string, Element>();
+          const result = extractPage(document, targets);
+          if (!result.ok) return result;
+          watch = watchViewport(window, targets, result.segments.map((s) => s.id), (v) => emit(port, 'viewport', v));
+          return { ...result, visible: watch.now().visible };
+        },
       });
     });
     return 'injected';

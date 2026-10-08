@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { accessKey, type TabAccess } from '@/shared/access';
-import { CONTENT_PORT_NAME, PROTOCOL_VERSION, serve, type ContentApi, type ExtractResult, type PortLike } from '@/shared/protocol';
+import { CONTENT_PORT_NAME, PROTOCOL_VERSION, emit, serve, type ContentApi, type ExtractResult, type PortLike, type Viewport } from '@/shared/protocol';
 import { PanelController, type PanelView } from './controller.ts';
 
 type Fn = (...args: never[]) => void;
@@ -400,5 +400,24 @@ describe('PanelController session hooks (plan M1-E8)', () => {
     expect(log).toContain('gone 10');
     w.fire('detached', 10, { oldWindowId: 1 });
     expect(log.at(-2)).toBe('closed 10');
+  });
+
+  it('passes on the viewport events of the live document only (plan M3-E1, E7)', async () => {
+    const w = fakeWorld();
+    const seen: string[] = [];
+    w.pages[10] = { docId: 'd1', result: ok(2) };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    await started(w, { hooks: { viewport: (tabId: number, docId: string, v: Viewport) => seen.push(`${tabId} ${docId} ${v.visible.join(',')} ${v.anchor?.id ?? '-'}`) } });
+    await wait();
+    emit(w.contentEnds[10] as PortLike, 'viewport', { visible: ['s1'], anchor: { id: 's1', offset: 0.5 } });
+    await wait();
+    expect(seen).toEqual(['10 d1 s1 s1']);
+    // After the page went away, a late event of the old connection is dropped.
+    const old = w.contentEnds[10] as PortLike;
+    old.disconnect();
+    await wait();
+    emit(old, 'viewport', { visible: ['s0'] });
+    await wait();
+    expect(seen).toHaveLength(1);
   });
 });

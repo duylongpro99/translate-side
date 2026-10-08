@@ -6,7 +6,7 @@ import { CONTENT_PORT_NAME, createClient, PROTOCOL_VERSION, type ContentApi, typ
 type Fn = (m?: unknown) => void;
 
 const h = vi.hoisted(() => {
-  const state = { connectListeners: [] as ((port: unknown) => void)[], runtimeId: 'ext' as string | undefined };
+  const state = { connectListeners: [] as ((port: unknown) => void)[], runtimeId: 'ext' as string | undefined, page: false };
   const api = {
     runtime: {
       get id() {
@@ -20,7 +20,20 @@ const h = vi.hoisted(() => {
 
 vi.mock('wxt/browser', () => ({ browser: h.api }));
 vi.mock('@/extract', () => ({
-  extractPage: () => ({ ok: false, reason: 'no-content', url: 'https://example.com/' }),
+  // With `page`, two paragraphs: the first on screen (jsdom has no layout: a fixed rect).
+  extractPage: (doc: Document, targets?: Map<string, Element>) => {
+    if (!h.state.page) return { ok: false, reason: 'no-content', url: 'https://example.com/' };
+    doc.body.innerHTML = '<p>One</p><p>Two</p>';
+    const [a, b] = [...doc.querySelectorAll('p')];
+    if (a && b) {
+      a.getBoundingClientRect = () => ({ top: 0, bottom: 50, left: 0, right: 100, width: 100, height: 50 }) as DOMRect;
+      b.getBoundingClientRect = () => ({ top: 5000, bottom: 5050, left: 0, right: 100, width: 100, height: 50 }) as DOMRect;
+      targets?.set('a', a);
+      targets?.set('b', b);
+    }
+    const seg = (id: string) => ({ id, kind: 'p', text: id, inlineMarkup: id, domPath: '/p', translate: true });
+    return { ok: true, via: 'walk', url: 'https://example.com/', title: 'T', segments: [seg('a'), seg('b')] };
+  },
 }));
 
 const { default: content } = await import('../src/entrypoints/content.ts');
@@ -49,6 +62,7 @@ function connect(name = CONTENT_PORT_NAME): PortLike {
 
 beforeEach(() => {
   globalThis.__translateSide = undefined;
+  h.state.page = false;
   h.state.connectListeners.length = 0;
   h.state.runtimeId = 'ext';
 });
@@ -89,5 +103,20 @@ describe('content script', () => {
     main();
     const client = createClient<ContentApi>(connect('something-else'), { timeoutMs: 30 });
     await expect(client.request('hello', { v: PROTOCOL_VERSION })).rejects.toMatchObject({ code: 'timeout' });
+  });
+
+  it('returns what is on screen with the page, then pushes viewport changes (plan M3-E1)', async () => {
+    h.state.page = true;
+    main();
+    const events: unknown[] = [];
+    const client = createClient<ContentApi>(connect(), { onEvent: (e) => events.push(e) });
+    await client.request('hello', { v: PROTOCOL_VERSION });
+    expect(await client.request('extract', {})).toMatchObject({ ok: true, visible: ['a'] });
+    const [a, b] = [...document.querySelectorAll('p')];
+    if (!a || !b) throw new Error('no page');
+    a.getBoundingClientRect = () => ({ top: -5000, bottom: -4950, left: 0, right: 100, width: 100, height: 50 }) as DOMRect;
+    b.getBoundingClientRect = () => ({ top: -10, bottom: 40, left: 0, right: 100, width: 100, height: 50 }) as DOMRect;
+    document.dispatchEvent(new Event('scroll'));
+    await vi.waitFor(() => expect(events).toEqual([{ kind: 'evt', name: 'viewport', body: { visible: ['b'], anchor: { id: 'b', offset: 0.2 } } }]));
   });
 });

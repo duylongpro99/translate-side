@@ -33,6 +33,7 @@ export function JobBar({ job, actions }: { job: JobView; actions: JobActions }) 
     'data-status': job.status,
     'data-started': job.startedAt,
     ...(job.firstVisibleAt === undefined ? {} : { 'data-first-visible': job.firstVisibleAt }),
+    ...(job.screenDoneAt === undefined ? {} : { 'data-screen-done': job.screenDoneAt }),
     ...(job.endedAt === undefined ? {} : { 'data-ended': job.endedAt }),
   };
 

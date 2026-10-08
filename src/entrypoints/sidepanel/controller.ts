@@ -12,6 +12,7 @@ import {
   type ContentApi,
   type ExtractResult,
   type PortLike,
+  type Viewport,
 } from '@/shared/protocol';
 
 type Browser = typeof browser;
@@ -76,6 +77,8 @@ export interface SessionHooks {
   closed?(tabId: number): void;
   /** The window's active tab (pause on tab switch, D14). */
   active?(tabId: number | undefined): void;
+  /** What is on screen in the document changed (plan M3-E1 priority, M3-E7 scroll follow). */
+  viewport?(tabId: number, docId: string, viewport: Viewport): void;
 }
 
 export class PanelController {
@@ -226,7 +229,10 @@ export class PanelController {
       this.setView(tabId, { kind: 'error', message: messageOf(err) });
       return;
     }
-    const client = createClient<ContentApi>(port, this.opts.requestTimeoutMs ? { timeoutMs: this.opts.requestTimeoutMs } : {});
+    const onEvent = (event: { name: 'viewport'; body: Viewport }) => {
+      if (s.generation === generation && s.docId !== undefined && event.name === 'viewport') this.opts.hooks?.viewport?.(tabId, s.docId, event.body);
+    };
+    const client = createClient<ContentApi>(port, { onEvent, ...(this.opts.requestTimeoutMs ? { timeoutMs: this.opts.requestTimeoutMs } : {}) });
     s.port = port;
     s.client = client;
     port.onDisconnect.addListener(() => {

@@ -9,11 +9,14 @@ import type { SessionHooks } from './controller.ts';
 import type { JobActions } from './JobBar.tsx';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
 import { translateClient } from './route.ts';
+import { ViewportStore } from './viewport.ts';
 
 type Browser = typeof browser;
 
 export interface Translator {
   jobs: Jobs;
+  /** What is on screen per tab (scroll follow, plan M3-E7). */
+  viewports: ViewportStore;
   hooks: SessionHooks;
   actions(tabId: number): JobActions;
   /** Settings listeners and the panel-close cancel. Returns the cleanup. */
@@ -40,6 +43,7 @@ async function readSettings(api: Browser): Promise<Settings> {
 
 export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, options: TranslatorOptions = {}): Translator {
   const jobs = new Jobs({ translateClient: () => translateClient(api), ...deps });
+  const viewports = new ViewportStore();
   const detector = 'detector' in options ? options.detector : chromeLanguageDetector();
   const mixed = options.mixedLanguage ?? MIXED_LANGUAGE_DETECTION;
 
@@ -166,6 +170,9 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   const hooks: SessionHooks = {
     ready(tabId, docId, result) {
       live.set(tabId, docId);
+      // Viewport first (plan M3-E1): what was on screen when the page was read.
+      jobs.setViewport(tabId, docId, result.visible ?? []);
+      viewports.set(tabId, docId, { visible: result.visible ?? [] });
       void readSettings(api).then(async (settings) => {
         const got = await prepare(tabId, settings, { url: result.url, title: result.title, pageLang: result.lang, segments: result.segments });
         if (got === undefined) return;
@@ -180,12 +187,17 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     },
     closed: (tabId) => {
       live.delete(tabId);
+      viewports.drop(tabId);
       used.delete(tabId);
       jobs.drop(tabId);
     },
     active: (tabId) => {
       jobs.setActive(tabId);
       if (tabId !== undefined) refresh(tabId);
+    },
+    viewport: (tabId, docId, viewport) => {
+      jobs.setViewport(tabId, docId, viewport.visible);
+      viewports.set(tabId, docId, viewport);
     },
   };
 
@@ -229,5 +241,5 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     };
   };
 
-  return { jobs, hooks, actions, watch };
+  return { jobs, viewports, hooks, actions, watch };
 }

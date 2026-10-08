@@ -67,7 +67,12 @@ function runReadability(doc: Document, body: Element): Element | null {
   }
 }
 
-export function extractPage(doc: Document): ExtractResult {
+/**
+ * Reads the page. With `targets`, also fills it with each segment's element in the live page
+ * (for the viewport observer, plan M3-E1): the block itself, the container of a `#run[k]` block,
+ * or, for an element Readability made, its nearest ancestor that came from the page.
+ */
+export function extractPage(doc: Document, targets?: Map<string, Element>): ExtractResult {
   const url = doc.URL;
   if (!classifyUrl(url).ok) return { ok: false, reason: 'denylisted', url };
   // D24: a page that is one editable region (an editor app, designMode) is never read.
@@ -77,15 +82,24 @@ export function extractPage(doc: Document): ExtractResult {
   if (!main) return { ok: false, reason: 'no-content', url };
 
   const paths = new Map<Element, string>();
+  const liveByPath = new Map<string, Element>();
   const pathOf = (el: Element): string => {
     let p = paths.get(el);
     if (p === undefined) {
       p = livePath(el, composed);
       paths.set(el, p);
+      const live = targets && liveElement(el, composed);
+      if (live) liveByPath.set(p, live);
     }
     return p;
   };
   const segments = segment(main.root, { pathOf, isHidden: (el) => el.closest(`[${HIDDEN_ATTR}]`) !== null });
+  if (targets) {
+    for (const s of segments) {
+      const live = liveByPath.get(s.domPath.replace(/#run\[\d+\]$/, ''));
+      if (live) targets.set(s.id, live);
+    }
+  }
   const lang = doc.documentElement.getAttribute('lang') ?? undefined;
   return { ok: true, via: main.via, url, title: doc.title, ...(lang ? { lang } : {}), segments };
 }
@@ -102,6 +116,13 @@ function livePath(el: Element, composed: Composed): string {
   const base = anc ? livePath(anc, composed) : '';
   const siblings = el.parentElement ? [...el.parentElement.children].filter((c) => c.localName === el.localName) : [el];
   return `${base}/~${el.localName}[${siblings.indexOf(el) + 1}]`;
+}
+
+/** The page element a copy element came from, or its nearest ancestor's that did. */
+function liveElement(el: Element, composed: Composed): Element | undefined {
+  const indexed = el.closest(`[${INDEX_ATTR}]`);
+  const own = indexed?.getAttribute(INDEX_ATTR);
+  return own === null || own === undefined ? undefined : composed.live[Number(own)];
 }
 
 function isEditableDocument(doc: Document): boolean {
