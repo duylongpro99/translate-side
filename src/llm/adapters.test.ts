@@ -457,6 +457,36 @@ describe('openai-chat adapter (wire details)', () => {
     expect(c.quirks.maxTokensParam).toBe('max_completion_tokens');
   });
 
+  it('§4.2.4: the learned quirk is reported once, after the resend succeeds, with the full quirk set', async () => {
+    const bad: ScriptedResponse = { status: 400, body: '{"error":{"message":"Unsupported parameter: \'max_tokens\' is not supported with this model. Use \'max_completion_tokens\' instead."}}' };
+    const f = mockFetch([bad, { status: 200, body: openaiStream({ text: ['ok'] }) }]);
+    const learned: unknown[] = [];
+    const c = conn({ quirks: { supportsTemperature: true } });
+    await collect(createOpenAIAdapter({ fetch: f.fetch, onQuirkLearned: (cn, key, quirks) => learned.push([cn.id, key, quirks]) }).stream(c, request('m')));
+    expect(learned).toEqual([['c1', 'maxTokensParam', { supportsTemperature: true, maxTokensParam: 'max_completion_tokens' }]]);
+  });
+
+  it('§4.2.4: nothing is reported when the resend fails too, or when a callback throws the stream still completes', async () => {
+    const bad = (m: string): ScriptedResponse => ({ status: 400, body: JSON.stringify({ error: { message: m } }) });
+    const learned: string[] = [];
+    const f1 = mockFetch([bad("Unsupported parameter: 'max_tokens'"), bad('still bad')]);
+    const e1 = await collect(createOpenAIAdapter({ fetch: f1.fetch, onQuirkLearned: (_c, k) => learned.push(k) }).stream(conn(), request('m')));
+    expect(e1.at(-1)).toMatchObject({ type: 'error', error: { kind: 'bad_request' } });
+    expect(learned).toEqual([]);
+    const f2 = mockFetch([bad("Unsupported parameter: 'max_tokens'"), { status: 200, body: openaiStream({ text: ['ok'] }) }]);
+    const e2 = await collect(createOpenAIAdapter({ fetch: f2.fetch, onQuirkLearned: () => { throw new Error('storage down'); } }).stream(conn(), request('m')));
+    expect(text(e2)).toBe('ok');
+  });
+
+  it('§5 Ollama 403: 403 + auth none + localhost is cors/origin; the same 403 with a key is auth, with no retry', async () => {
+    const f = mockFetch([{ status: 403, body: '' }, { status: 403, body: '' }]);
+    const local = await collect(createOpenAIAdapter({ fetch: f.fetch }).stream(conn({ baseUrl: 'http://localhost:11434/v1', auth: { style: 'none' }, apiKey: undefined }), request('m')));
+    expect(local).toEqual([{ type: 'error', error: expect.objectContaining({ kind: 'cors', cause: 'origin', status: 403 }) }]);
+    const keyed = await collect(createOpenAIAdapter({ fetch: f.fetch }).stream(conn({ baseUrl: 'http://localhost:11434/v1' }), request('m')));
+    expect(keyed[0]).toMatchObject({ type: 'error', error: { kind: 'auth' } });
+    expect(f.requests).toHaveLength(2);
+  });
+
   it('N2: Gemini\'s generic 400 "Invalid JSON payload … Unknown name" without jsonMode neither flips nor resends', async () => {
     const gemini: ScriptedResponse = { status: 400, body: '[{"error":{"code":400,"message":"Invalid JSON payload received. Unknown name \\"foo\\" at \'generation_config\': Cannot find field.","status":"INVALID_ARGUMENT"}}]' };
     const f = mockFetch([gemini]);

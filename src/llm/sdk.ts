@@ -20,6 +20,13 @@ export interface SdkApiError {
 export interface AdapterOptions {
   /** A `fetch` for the SDK client (tests count requests with it); the global one otherwise. */
   fetch?: typeof globalThis.fetch;
+  /**
+   * Called once when a §4.2.4 quirk flip was confirmed: the resend after it got a response that
+   * is not an error. `quirks` is the connection's full quirk set after the flip, `learned` names
+   * the flag that changed. The shell saves it on the stored connection (M4 data model); the
+   * adapter has already updated `conn.quirks` in memory. A throwing callback is ignored.
+   */
+  onQuirkLearned?: (conn: ResolvedConnection, learned: keyof Quirks, quirks: Quirks) => void;
 }
 
 /**
@@ -29,11 +36,14 @@ export interface AdapterOptions {
  * flip a quirk and resend an identical request (review N2).
  */
 export interface QuirkFlip {
+  /** The `Quirks` flag `apply` changes, reported to `onQuirkLearned`. */
+  key: keyof Quirks;
   test: RegExp;
   apply: (quirks: Quirks, req: NormalizedRequest) => boolean;
 }
 
 export const FLIP_TEMPERATURE: QuirkFlip = {
+  key: 'supportsTemperature',
   test: /temperature/i,
   apply: (q, req) => req.temperature !== undefined && q.supportsTemperature !== false && ((q.supportsTemperature = false), true),
 };
@@ -86,6 +96,7 @@ type Usage = Extract<NormalizedEvent, { type: 'usage' }>;
 export interface AttemptOptions {
   isApiError: (e: unknown) => e is SdkApiError;
   flips: readonly QuirkFlip[];
+  onQuirkLearned?: AdapterOptions['onQuirkLearned'];
 }
 
 /**
@@ -107,7 +118,18 @@ export async function* streamAttempts(
     yield { type: 'error', error: pre };
     return;
   }
-  let flipped = false;
+  let flipped: QuirkFlip | null = null;
+  let flippedOnce = false;
+  const confirm = (): void => {
+    if (flipped === null || options.onQuirkLearned === undefined) return;
+    const learned = flipped.key;
+    flipped = null;
+    try {
+      options.onQuirkLearned(conn, learned, { ...conn.quirks });
+    } catch {
+      // Persisting is the shell's business; it must not fail the translation.
+    }
+  };
   for (;;) {
     req.signal.throwIfAborted();
     let sawText = false;
@@ -119,14 +141,19 @@ export async function* streamAttempts(
           continue;
         }
         if (event.type === 'done') {
+          confirm();
           if (usage !== undefined) yield usage;
           yield event;
           return;
         }
-        if (event.type === 'text' && event.delta !== '') sawText = true;
+        if (event.type === 'text' && event.delta !== '') {
+          sawText = true;
+          confirm();
+        }
         yield event;
       }
       req.signal.throwIfAborted();
+      confirm();
       if (usage !== undefined) yield usage;
       yield { type: 'done', stopReason: 'other' };
       return;
@@ -135,9 +162,13 @@ export async function* streamAttempts(
       const error = await classifySdkError(err, conn, options.isApiError);
       // §4.2.4: flip the named quirk and resend once. Never after text (it can't be taken back),
       // never twice, and only on a status-400 bad_request (never a 429, 5xx or network error).
-      if (!sawText && !flipped && flipQuirk(error, conn.quirks, req, options.flips) !== null) {
-        flipped = true;
-        continue;
+      if (!sawText && flipped === null && !flippedOnce) {
+        const flip = flipQuirk(error, conn.quirks, req, options.flips);
+        if (flip !== null) {
+          flipped = flip;
+          flippedOnce = true;
+          continue;
+        }
       }
       if (usage !== undefined) yield usage;
       yield { type: 'error', error };

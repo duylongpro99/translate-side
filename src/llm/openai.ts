@@ -20,6 +20,7 @@ const isApiError = (e: unknown): e is SdkApiError => e instanceof APIError;
 const FLIPS: readonly QuirkFlip[] = [
   FLIP_TEMPERATURE,
   {
+    key: 'maxTokensParam',
     // Always sent, under one name or the other.
     test: /max_completion_tokens|max_tokens/i,
     apply: (q) => {
@@ -27,8 +28,9 @@ const FLIPS: readonly QuirkFlip[] = [
       return true;
     },
   },
-  { test: /stream_options|include_usage/i, apply: (q) => q.supportsStreamUsage !== false && ((q.supportsStreamUsage = false), true) },
+  { key: 'supportsStreamUsage', test: /stream_options|include_usage/i, apply: (q) => q.supportsStreamUsage !== false && ((q.supportsStreamUsage = false), true) },
   {
+    key: 'reasoning',
     test: /reasoning_effort|reasoning/i,
     apply: (q) => {
       // `reasoning_effort` goes out only under the `effort` control.
@@ -37,8 +39,8 @@ const FLIPS: readonly QuirkFlip[] = [
       return true;
     },
   },
-  { test: /response_format/i, apply: (q, req) => req.jsonMode === true && q.supportsJsonMode !== false && ((q.supportsJsonMode = false), true) },
-  { test: /\bsystem\b|developer/i, apply: (q, req) => req.system !== '' && q.supportsSystemRole !== false && ((q.supportsSystemRole = false), true) },
+  { key: 'supportsJsonMode', test: /response_format/i, apply: (q, req) => req.jsonMode === true && q.supportsJsonMode !== false && ((q.supportsJsonMode = false), true) },
+  { key: 'supportsSystemRole', test: /\bsystem\b|developer/i, apply: (q, req) => req.system !== '' && q.supportsSystemRole !== false && ((q.supportsSystemRole = false), true) },
 ];
 
 function clientFor(conn: ResolvedConnection, options: AdapterOptions): OpenAI {
@@ -131,7 +133,7 @@ export function createOpenAIAdapter(options: AdapterOptions = {}): ProtocolAdapt
     protocol: 'openai-chat',
     stream(conn, req) {
       const client = clientFor(conn, options);
-      return streamAttempts(conn, req, (quirks) => attempt(client, req, quirks), { isApiError, flips: FLIPS });
+      return streamAttempts(conn, req, (quirks) => attempt(client, req, quirks), { isApiError, flips: FLIPS, ...(options.onQuirkLearned === undefined ? {} : { onQuirkLearned: options.onQuirkLearned }) });
     },
     listModels,
     /**

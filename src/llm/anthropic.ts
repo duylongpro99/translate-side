@@ -15,8 +15,9 @@ const isApiError = (e: unknown): e is SdkApiError => e instanceof APIError;
 /** §4.2.4 flips this adapter knows: `temperature` (thinking models), `cache_control` (a gateway that rejects it), `thinking`. */
 const FLIPS: readonly QuirkFlip[] = [
   FLIP_TEMPERATURE,
-  { test: /cache_control/i, apply: (q, req) => req.cacheHint === 'system' && req.system !== '' && q.supportsCacheControl !== false && ((q.supportsCacheControl = false), true) },
+  { key: 'supportsCacheControl', test: /cache_control/i, apply: (q, req) => req.cacheHint === 'system' && req.system !== '' && q.supportsCacheControl !== false && ((q.supportsCacheControl = false), true) },
   {
+    key: 'reasoning',
     // `thinking` goes out only under the `budget` control.
     test: /thinking|budget_tokens/i,
     apply: (q) => {
@@ -142,7 +143,7 @@ export function createAnthropicAdapter(options: AdapterOptions = {}): ProtocolAd
     protocol: 'anthropic-messages',
     stream(conn, req) {
       const client = clientFor(conn, options);
-      return streamAttempts(conn, req, (quirks) => attempt(client, req, quirks), { isApiError, flips: FLIPS });
+      return streamAttempts(conn, req, (quirks) => attempt(client, req, quirks), { isApiError, flips: FLIPS, ...(options.onQuirkLearned === undefined ? {} : { onQuirkLearned: options.onQuirkLearned }) });
     },
     listModels,
     /** `GET /v1/models` needs the key here, so a 401 shows a bad key; success is the status (S4). */
