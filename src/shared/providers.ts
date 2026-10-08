@@ -9,6 +9,12 @@
 //   profile:<id>           ModelProfile
 //   routing                { translate, analyze?, review?, fallback? }
 //   siteRules              [{ pattern, translate, localOnly? }]  (Routing.siteOverrides; UI in M5-E6)
+//   migratedRoute          { translate }: the route the M1 migration derived from this device's keys
+// `routing` is only ever written by the user (saveRouting), never by the migration: a fresh device
+// migrates before sync has pulled the other devices' items, and a default it wrote could win
+// last-write-wins over the user's routing. Without `routing`, `migratedRoute` applies, then the
+// built-in default. Likewise, with no connection stored at all, the built-in default connection
+// and its profiles apply at read time without being written.
 // Records are found by key prefix, not through an index item: chrome.storage.sync merges devices
 // item by item, and an index written on two devices at once would lose one side's records.
 // Tab overrides (the quick switcher, M4-E11) are per browser session: storage.session
@@ -21,6 +27,7 @@ import {
   DEFAULT_CONNECTION,
   DEFAULT_PROFILE,
   readApiKey,
+  SYNC_QUOTA_BYTES,
   SYNC_QUOTA_BYTES_PER_ITEM,
   syncItemBytes,
   type ModelProfile,
@@ -35,10 +42,14 @@ export const CONNECTION_PREFIX = 'conn:';
 export const PROFILE_PREFIX = 'profile:';
 export const ROUTING_KEY = 'routing';
 export const SITE_RULES_KEY = 'siteRules';
+/** The route the migration derived from this device's M1 keys (e.g. Gemini); `routing` always wins over it. */
+export const MIGRATED_ROUTE_KEY = 'migratedRoute';
+/** chrome.storage.sync.MAX_ITEMS (fixed by Chrome). */
+export const SYNC_MAX_ITEMS = 512;
 export const TAB_ROUTE_PREFIX = 'tabRoute:';
 
 /** Is `key` one of the sync items this module owns? */
-export const isProviderKey = (key: string) => key === SCHEMA_KEY || key === ROUTING_KEY || key === SITE_RULES_KEY || key.startsWith(CONNECTION_PREFIX) || key.startsWith(PROFILE_PREFIX);
+export const isProviderKey = (key: string) => key === SCHEMA_KEY || key === ROUTING_KEY || key === SITE_RULES_KEY || key === MIGRATED_ROUTE_KEY || key.startsWith(CONNECTION_PREFIX) || key.startsWith(PROFILE_PREFIX);
 export const connectionKey = (id: string) => `${CONNECTION_PREFIX}${id}`;
 export const profileKey = (id: string) => `${PROFILE_PREFIX}${id}`;
 export const tabRouteKey = (tabId: number) => `${TAB_ROUTE_PREFIX}${tabId}`;
@@ -179,10 +190,16 @@ export function parseStored(items: Record<string, unknown>): ProviderSettings | 
       if (p && profileKey(p.id) === key) profiles.push(p);
     }
   }
+  // Nothing stored (a device without M1 keys): the built-in default, never written (see above).
+  if (connections.length === 0) connections.push(structuredClone(DEFAULT_CONNECTION));
+  // A built-in connection with no profile stored (the default above, or one a learned quirk wrote
+  // on such a device) has its built-in profiles.
+  for (const c of connections) {
+    if (profiles.some((p) => p.connectionId === c.id)) continue;
+    for (const p of BUILTIN_PROFILES) if (p.connectionId === c.id && !profiles.some((x) => x.id === p.id)) profiles.push(structuredClone(p));
+  }
   const sites = cleanSiteRules(items[SITE_RULES_KEY]);
-  // No usable routing (e.g. a sync that brought records before it): the first profile, so the
-  // panel can still say which provider it would use; resolution reports a missing profile.
-  const routing = cleanRouting(items[ROUTING_KEY]) ?? { translate: profiles[0]?.id ?? '' };
+  const routing = cleanRouting(items[ROUTING_KEY]) ?? cleanRouting(items[MIGRATED_ROUTE_KEY]) ?? { translate: DEFAULT_PROFILE.id };
   return { schemaVersion: version, connections, profiles, routing: sites.length > 0 ? { ...routing, siteOverrides: sites } : routing };
 }
 
@@ -202,30 +219,35 @@ export function toSyncItems(settings: ProviderSettings): Record<string, unknown>
 
 /**
  * Schema 1 from M1–M3 storage, which held no connections: the extension used built-in constants
- * and kept each key under `secret:<builtin id>` (M1: Gemini, from M2: APIBOX). Seeds the default
- * connection and every built-in connection that has a key, each with its built-in profiles.
- * Translate routes to the default profile, unless only another built-in connection has a key
- * (an M1 user with a Gemini key): then to that connection's first profile, so nothing is
- * re-entered (plan M4 §3 #7).
+ * and kept each key under `secret:<builtin id>` (M1: Gemini, from M2: APIBOX). What this device's
+ * keys say, as sync items: every built-in connection with a key, with its built-in profiles, and
+ * — when only a connection other than the default has a key (an M1 user with a Gemini key) — a
+ * `migratedRoute` to that connection's first profile, so nothing is re-entered (plan M4 §3 #7).
+ * A device without keys contributes nothing but the version: the defaults apply at read time.
  */
-export async function seedFromM1(api: Browser): Promise<ProviderSettings> {
+export async function seedFromM1(api: Browser): Promise<Record<string, unknown>> {
   const keyed = new Set<string>();
   for (const c of BUILTIN_CONNECTIONS) if ((await readApiKey(api, c.id)) !== undefined) keyed.add(c.id);
-  const connections = BUILTIN_CONNECTIONS.filter((c) => c.id === DEFAULT_CONNECTION.id || keyed.has(c.id)).map((c) => structuredClone(c));
-  const ids = new Set(connections.map((c) => c.id));
-  const profiles = BUILTIN_PROFILES.filter((p) => ids.has(p.connectionId)).map((p) => structuredClone(p));
-  const keyedOther = BUILTIN_CONNECTIONS.find((c) => keyed.has(c.id) && c.id !== DEFAULT_CONNECTION.id);
-  const translate = keyed.has(DEFAULT_CONNECTION.id) || keyedOther === undefined ? DEFAULT_PROFILE.id : (profiles.find((p) => p.connectionId === keyedOther.id)?.id ?? DEFAULT_PROFILE.id);
-  return { schemaVersion: SCHEMA_VERSION, connections, profiles, routing: { translate } };
+  const connections = BUILTIN_CONNECTIONS.filter((c) => keyed.has(c.id));
+  const profiles = BUILTIN_PROFILES.filter((p) => keyed.has(p.connectionId));
+  const keyedOther = connections.find((c) => c.id !== DEFAULT_CONNECTION.id);
+  const route = keyed.has(DEFAULT_CONNECTION.id) || keyedOther === undefined ? undefined : profiles.find((p) => p.connectionId === keyedOther.id)?.id;
+  return {
+    [SCHEMA_KEY]: SCHEMA_VERSION,
+    ...Object.fromEntries(connections.map((c) => [connectionKey(c.id), structuredClone(c)])),
+    ...Object.fromEntries(profiles.map((p) => [profileKey(p.id), structuredClone(p)])),
+    ...(route ? { [MIGRATED_ROUTE_KEY]: { translate: route } } : {}),
+  };
 }
 
 const migrations = new WeakMap<object, Promise<ProviderSettings>>();
 
 /**
  * Brings storage.sync to the current schema and returns the settings. Idempotent: storage that
- * already has a schema version is read, not rewritten. Records already stored (another device
- * synced them before the version) win over seeded ones. A version newer than this build knows is
- * read as it is, never downgraded. One migration at a time per `api` in this context.
+ * already has a schema version is read, not rewritten. Items already stored (another device
+ * synced them before the version) are never overwritten, and `routing` is never written here. A
+ * version newer than this build knows is read as it is, never downgraded. One migration at a
+ * time per `api` in this context.
  */
 export function migrateProviders(api: Browser): Promise<ProviderSettings> {
   const running = migrations.get(api);
@@ -234,22 +256,15 @@ export function migrateProviders(api: Browser): Promise<ProviderSettings> {
     const items = await api.storage.sync.get(null);
     const stored = parseStored(items);
     if (stored) return stored;
-    const seed = await seedFromM1(api);
-    const partial = parseStored({ ...items, [SCHEMA_KEY]: SCHEMA_VERSION });
-    const merged: ProviderSettings = {
-      schemaVersion: SCHEMA_VERSION,
-      connections: [...(partial?.connections ?? []), ...seed.connections.filter((c) => !partial?.connections.some((x) => x.id === c.id))],
-      profiles: [...(partial?.profiles ?? []), ...seed.profiles.filter((p) => !partial?.profiles.some((x) => x.id === p.id))],
-      routing: cleanRouting(items[ROUTING_KEY]) ? (partial as ProviderSettings).routing : seed.routing,
-    };
+    const seed = Object.fromEntries(Object.entries(await seedFromM1(api)).filter(([k]) => !(k in items)));
     // One set call: the schema version is written with the records it describes. A failed write
     // (quota, sync off) leaves storage as it was: the settings still apply, and the next read migrates again.
     try {
-      await api.storage.sync.set(toSyncItems(merged));
+      await api.storage.sync.set(seed);
     } catch (err) {
       console.warn('[translate-side] could not save the migrated provider settings', err);
     }
-    return merged;
+    return parseStored({ ...items, ...seed }) as ProviderSettings;
   })();
   migrations.set(api, run);
   const clear = () => {
@@ -273,9 +288,48 @@ function queued<T>(task: () => Promise<T>): Promise<T> {
   return run;
 }
 
-function checkItem(key: string, value: unknown): void {
-  const bytes = syncItemBytes(key, value);
-  if (bytes > SYNC_QUOTA_BYTES_PER_ITEM) throw new Error(`${key} would take ${bytes} bytes, over Chrome's sync limit of ${SYNC_QUOTA_BYTES_PER_ITEM} bytes for one setting`);
+/**
+ * Refuses a write that would not fit chrome.storage.sync (it would fail anyway, with a raw
+ * error), like the glossary's guard (settings.ts saveGlossary): an item over the per-item quota,
+ * the total over the sync quota, or more items than Chrome keeps. `items` are the keys to set,
+ * `removed` the keys the same write drops.
+ */
+async function checkQuota(api: Browser, items: Record<string, unknown>, removed: readonly string[] = []): Promise<void> {
+  for (const [key, value] of Object.entries(items)) {
+    const bytes = syncItemBytes(key, value);
+    if (bytes > SYNC_QUOTA_BYTES_PER_ITEM) throw new Error(`This setting would take ${bytes} bytes, over Chrome's sync limit of ${SYNC_QUOTA_BYTES_PER_ITEM} bytes for one setting. Shorten it (fewer extra headers or a shorter label).`);
+  }
+  const stored = await api.storage.sync.get(null);
+  const replaced = [...Object.keys(items), ...removed].filter((k) => k in stored);
+  const added = Object.keys(items).filter((k) => !(k in stored)).length;
+  if (Object.keys(stored).length + added - removed.filter((k) => k in stored).length > SYNC_MAX_ITEMS) {
+    throw new Error(`Synced settings would exceed Chrome's limit of ${SYNC_MAX_ITEMS} items. Remove some connections, models or site rules.`);
+  }
+  const sync = api.storage.sync as { getBytesInUse?: (keys?: string | string[] | null) => Promise<number> };
+  if (typeof sync.getBytesInUse !== 'function') return;
+  const [total, current] = await Promise.all([sync.getBytesInUse(null), replaced.length > 0 ? sync.getBytesInUse(replaced) : 0]);
+  const next = Object.entries(items).reduce((n, [k, v]) => n + syncItemBytes(k, v), 0);
+  if (total - current + next > SYNC_QUOTA_BYTES) {
+    throw new Error(`Synced settings would exceed Chrome's ${SYNC_QUOTA_BYTES}-byte limit. Remove some connections, models, site rules or glossary entries.`);
+  }
+}
+
+const CONNECTION_FIELDS = new Set(['id', 'label', 'presetId', 'protocol', 'baseUrl', 'auth', 'extraHeaders', 'queryParams', 'quirks', 'detectedProtocols', 'status', 'lastError']);
+const PROFILE_FIELDS = new Set(['id', 'connectionId', 'model', 'protocolOverride', 'temperature', 'maxConcurrency', 'chunkTokens', 'contextWindow', 'pricing', 'quirks']);
+
+/**
+ * `clean` with the fields of the stored record this build does not know (a newer schema wrote
+ * them), so editing a record here never drops them. Unknown fields come only from storage, never
+ * from the caller's input (`clean` has none).
+ */
+function keepUnknown<T extends object>(stored: unknown, known: ReadonlySet<string>, clean: T): T {
+  if (!isRecord(stored)) return clean;
+  const unknown = Object.fromEntries(Object.entries(stored).filter(([k]) => !known.has(k)));
+  return { ...unknown, ...clean };
+}
+
+async function storedItem(api: Browser, key: string): Promise<unknown> {
+  return (await api.storage.sync.get(key))[key];
 }
 
 export function saveConnection(api: Browser, connection: ProviderConnection): Promise<void> {
@@ -283,8 +337,10 @@ export function saveConnection(api: Browser, connection: ProviderConnection): Pr
     await migrateProviders(api);
     const clean = cleanConnection(connection);
     if (!clean) throw new Error('not a valid connection');
-    checkItem(connectionKey(clean.id), clean);
-    await api.storage.sync.set({ [connectionKey(clean.id)]: clean });
+    const key = connectionKey(clean.id);
+    const value = keepUnknown(await storedItem(api, key), CONNECTION_FIELDS, clean);
+    await checkQuota(api, { [key]: value });
+    await api.storage.sync.set({ [key]: value });
   });
 }
 
@@ -293,23 +349,27 @@ export function saveProfile(api: Browser, profile: ModelProfile): Promise<void> 
     await migrateProviders(api);
     const clean = cleanProfile(profile);
     if (!clean) throw new Error('not a valid model profile');
-    checkItem(profileKey(clean.id), clean);
-    await api.storage.sync.set({ [profileKey(clean.id)]: clean });
+    const key = profileKey(clean.id);
+    const value = keepUnknown(await storedItem(api, key), PROFILE_FIELDS, clean);
+    await checkQuota(api, { [key]: value });
+    await api.storage.sync.set({ [key]: value });
   });
 }
 
-/** Routing and its site rules (two items; the rules are dropped when empty). */
+const ROUTING_FIELDS = new Set(['translate', 'analyze', 'review', 'fallback']);
+
+/**
+ * Routing and its site rules, in one write. Without site rules their item is set to an empty
+ * list rather than removed, so the two never disagree after a failure half way.
+ */
 export function saveRouting(api: Browser, routing: Routing): Promise<void> {
   return queued(async () => {
     await migrateProviders(api);
     const clean = cleanRouting(routing);
     if (!clean) throw new Error('routing needs a translate profile');
-    const sites = cleanSiteRules(routing.siteOverrides);
-    checkItem(ROUTING_KEY, clean);
-    checkItem(SITE_RULES_KEY, sites);
-    await api.storage.sync.set({ [ROUTING_KEY]: clean });
-    if (sites.length > 0) await api.storage.sync.set({ [SITE_RULES_KEY]: sites });
-    else await api.storage.sync.remove(SITE_RULES_KEY);
+    const items = { [ROUTING_KEY]: keepUnknown(await storedItem(api, ROUTING_KEY), ROUTING_FIELDS, clean), [SITE_RULES_KEY]: cleanSiteRules(routing.siteOverrides) };
+    await checkQuota(api, items);
+    await api.storage.sync.set(items);
   });
 }
 
@@ -317,23 +377,28 @@ export function saveRouting(api: Browser, routing: Routing): Promise<void> {
  * Persists a quirk the adapter learned (§4.2.4, sdk.ts `onQuirkLearned`): only the flag that
  * changed, never the whole merged set the adapter worked with (it holds the profile's quirks over
  * the connection's). It goes on the profile when the profile sets that flag itself (there it would
- * shadow the connection's), otherwise on the connection. Unknown records are left alone.
+ * shadow the connection's), otherwise on the connection. The stored record is updated as it is
+ * (fields this build does not know included); a built-in one that only applies at read time is
+ * written from its constant. Anything else unknown is left alone.
  */
 export function saveLearnedQuirk(api: Browser, at: { connectionId: string; profileId?: string }, learned: keyof Quirks, quirks: Quirks): Promise<void> {
   return queued(async () => {
     const value = quirks[learned];
+    const update = async (key: string, raw: unknown) => {
+      const record = raw as { quirks?: Quirks };
+      const next = { ...record, quirks: { ...(isRecord(record.quirks) ? record.quirks : {}), [learned]: value } };
+      await checkQuota(api, { [key]: next });
+      await api.storage.sync.set({ [key]: next });
+    };
     if (at.profileId !== undefined) {
       const key = profileKey(at.profileId);
-      const profile = cleanProfile((await api.storage.sync.get(key))[key]);
-      if (profile && profile.quirks && learned in profile.quirks) {
-        await api.storage.sync.set({ [key]: { ...profile, quirks: { ...profile.quirks, [learned]: value } } });
-        return;
-      }
+      const raw = (await storedItem(api, key)) ?? BUILTIN_PROFILES.find((p) => p.id === at.profileId);
+      const profile = cleanProfile(raw);
+      if (profile && profile.quirks && learned in profile.quirks) return update(key, raw);
     }
     const key = connectionKey(at.connectionId);
-    const connection = cleanConnection((await api.storage.sync.get(key))[key]);
-    if (!connection) return;
-    await api.storage.sync.set({ [key]: { ...connection, quirks: { ...connection.quirks, [learned]: value } } });
+    const raw = (await storedItem(api, key)) ?? BUILTIN_CONNECTIONS.find((c) => c.id === at.connectionId);
+    if (cleanConnection(raw)) await update(key, raw);
   });
 }
 

@@ -70,8 +70,8 @@ describe('options v0 (plan M1-E9)', () => {
       input.value = '  AIzaSyExampleKey1234 ';
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    // Opening the page migrated the M1 settings into storage.sync (src/shared/providers.ts).
-    expect(f.log).toEqual(['sync.set schemaVersion,conn:apibox,profile:apibox-qwen3.8-flash,profile:apibox-deepseek-v4-pro,profile:apibox-deepseek-flash,routing']);
+    // Opening the page migrated storage.sync (src/shared/providers.ts): a fresh install writes only the version.
+    expect(f.log).toEqual(['sync.set schemaVersion']);
     const before = f.log.length;
     act(() => {
       (root.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -84,7 +84,7 @@ describe('options v0 (plan M1-E9)', () => {
     expect(root.querySelector('#key-h')?.textContent).toBe('APIBOX');
     expect(root.textContent).toContain('qwen3.8-flash');
     // Sync holds the provider settings only, never the key (§4.3.4).
-    expect([...f.sync.keys()].every((k) => k === 'schemaVersion' || k === 'routing' || k.startsWith('conn:') || k.startsWith('profile:'))).toBe(true);
+    expect([...f.sync.keys()].every((k) => k === 'schemaVersion' || k === 'routing' || k === 'migratedRoute' || k.startsWith('conn:') || k.startsWith('profile:'))).toBe(true);
     expect(JSON.stringify([...f.sync.values()])).not.toContain('AIzaSyExampleKey1234');
     expect(root.querySelector('[data-testid=masked-key]')?.textContent).toBe('AIz…1234');
     expect(root.innerHTML).not.toContain('AIzaSyExampleKey1234');

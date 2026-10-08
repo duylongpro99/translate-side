@@ -69,6 +69,11 @@ function area(initial: Record<string, unknown> = {}) {
       for (const k of typeof keys === 'string' ? [keys] : keys) data.delete(k);
       return Promise.resolve();
     },
+    /** As chrome.storage.sync counts it: key plus JSON value, in UTF-8. */
+    getBytesInUse(keys: string | string[] | null) {
+      const list = keys === null ? [...data.keys()] : typeof keys === 'string' ? [keys] : keys;
+      return Promise.resolve(list.filter((k) => data.has(k)).reduce((n, k) => n + new TextEncoder().encode(k + JSON.stringify(data.get(k))).length, 0));
+    },
   };
 }
 
@@ -136,7 +141,8 @@ describe('schema (plan M4-E2)', () => {
     expect(parseStored({ ...items, prefs: {}, glossary: [] })).toEqual(s);
     expect(parseStored({ prefs: {} })).toBeNull();
     // A record under the wrong key is not trusted.
-    expect(parseStored({ schemaVersion: 1, 'conn:other': APIBOX_CONNECTION, routing: { translate: 'p' } })?.connections).toEqual([]);
+    // (Nothing trusted left: the built-in default applies, not the misfiled record.)
+    expect(parseStored({ schemaVersion: 1, 'conn:other': { ...APIBOX_CONNECTION, label: 'Misfiled' }, routing: { translate: 'p' } })?.connections.map((c) => c.label)).toEqual(['APIBOX']);
     expect(Object.keys(items).every(isProviderKey)).toBe(true);
     expect(isProviderKey('prefs') || isProviderKey('glossary') || isProviderKey('secret:apibox')).toBe(false);
   });
@@ -150,11 +156,12 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
   it('an M1 user (Gemini key only) keeps their key and translates with Gemini, nothing re-entered', async () => {
     const f = fakeApi({ sync: M1_SYNC, local: M1_LOCAL });
     const s = await migrateProviders(f.api);
-    expect(s.connections.map((c) => c.id)).toEqual(['apibox', 'gemini']);
-    expect(s.profiles.map((p) => p.id)).toEqual([APIBOX_QWEN_PROFILE.id, APIBOX_PRO_PROFILE.id, APIBOX_FLASH_PROFILE.id, GEMINI_PROFILE.id]);
+    expect(s.connections.map((c) => c.id)).toEqual(['gemini']);
+    expect(s.profiles.map((p) => p.id)).toEqual([GEMINI_PROFILE.id]);
     expect(s.routing).toEqual({ translate: GEMINI_PROFILE.id });
-    // Stored: version, records, routing; prefs and glossary untouched; the key stays in local only.
-    expect(f.sync.data.get('schemaVersion')).toBe(1);
+    // Stored: the version, this device's keyed records and the derived route — never `routing`.
+    expect([...f.sync.data.keys()].sort()).toEqual(['conn:gemini', 'glossary', 'migratedRoute', 'prefs', 'profile:gemini-flash-lite', 'schemaVersion']);
+    expect(f.sync.data.get('migratedRoute')).toEqual({ translate: GEMINI_PROFILE.id });
     expect(f.sync.data.get('conn:gemini')).toEqual(GEMINI_CONNECTION);
     expect(f.sync.data.get('prefs')).toEqual(M1_SYNC.prefs);
     expect(f.sync.data.get('glossary')).toEqual(M1_SYNC.glossary);
@@ -169,24 +176,53 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
     const s = await migrateProviders(f.api);
     expect(s.connections).toEqual([APIBOX_CONNECTION]);
     expect(s.routing).toEqual({ translate: DEFAULT_PROFILE.id });
+    expect(f.sync.data.has('routing') || f.sync.data.has('migratedRoute')).toBe(false);
     expect(await resolveRoute(f.api, 'translate')).toMatchObject({ ok: true, profile: APIBOX_QWEN_PROFILE, connection: APIBOX_CONNECTION });
   });
 
   it('a user with both keys stays on the default; Anthropic is seeded only with its key', async () => {
     const both = await seedFromM1(fakeApi({ local: { ...M1_LOCAL, ...M3_LOCAL } }).api);
-    expect(both.connections.map((c) => c.id)).toEqual(['apibox', 'gemini']);
-    expect(both.routing.translate).toBe(DEFAULT_PROFILE.id);
+    expect(Object.keys(both).filter((k) => k.startsWith('conn:'))).toEqual(['conn:apibox', 'conn:gemini']);
+    expect(both).not.toHaveProperty('migratedRoute');
     const anthropic = await seedFromM1(fakeApi({ local: { 'secret:anthropic': 'sk-ant-0123456789abcd' } }).api);
-    expect(anthropic.connections).toEqual([APIBOX_CONNECTION, ANTHROPIC_CONNECTION]);
-    expect(anthropic.routing.translate).toBe(ANTHROPIC_HAIKU_PROFILE.id);
+    expect(Object.keys(anthropic).sort()).toEqual(['conn:anthropic', 'migratedRoute', `profile:${ANTHROPIC_HAIKU_PROFILE.id}`, 'schemaVersion']);
+    expect(anthropic.migratedRoute).toEqual({ translate: ANTHROPIC_HAIKU_PROFILE.id });
+    expect(parseStored(anthropic)?.connections).toEqual([ANTHROPIC_CONNECTION]);
   });
 
-  it('a fresh install gets the default connection and route', async () => {
+  it('a fresh install writes only the version; the default connection and route apply at read time', async () => {
     const f = fakeApi();
     const s = await migrateProviders(f.api);
+    expect([...f.sync.data.keys()]).toEqual(['schemaVersion']);
     expect(s.connections).toEqual([APIBOX_CONNECTION]);
-    expect(s.profiles.every((p) => p.connectionId === 'apibox')).toBe(true);
+    expect(s.profiles.map((p) => p.id)).toEqual([APIBOX_QWEN_PROFILE.id, APIBOX_PRO_PROFILE.id, APIBOX_FLASH_PROFILE.id]);
     expect(s.routing).toEqual({ translate: DEFAULT_PROFILE.id });
+  });
+
+  it("a fresh device that migrates before sync has pulled never overwrites the user's routing (review B-4)", async () => {
+    // Device A: the user's own routing, site rules and records.
+    const a = fakeApi({ local: M3_LOCAL });
+    await migrateProviders(a.api);
+    await saveConnection(a.api, GEMINI_CONNECTION);
+    await saveProfile(a.api, GEMINI_PROFILE);
+    await saveRouting(a.api, { translate: GEMINI_PROFILE.id, siteOverrides: [{ pattern: 'x.com', translate: DEFAULT_PROFILE.id }] });
+    // Device B: fresh, even with an M1 Gemini key; it migrates first, then sync merges item by
+    // item, last write wins — in either order.
+    for (const bFirst of [true, false]) {
+      const b = fakeApi({ local: M1_LOCAL });
+      if (!bFirst) for (const [k, v] of a.sync.data) b.sync.data.set(k, structuredClone(v));
+      await migrateProviders(b.api);
+      expect(b.sync.sets.flat()).not.toContain('routing');
+      expect(b.sync.sets.flat()).not.toContain('siteRules');
+      if (bFirst) for (const [k, v] of a.sync.data) b.sync.data.set(k, structuredClone(v));
+      const s = await readProviderSettings(b.api);
+      expect(s.routing).toEqual({ translate: GEMINI_PROFILE.id, siteOverrides: [{ pattern: 'x.com', translate: DEFAULT_PROFILE.id }] });
+    }
+    // A user routing beats a migrated route on the same device too.
+    const c = fakeApi({ local: M1_LOCAL });
+    await migrateProviders(c.api);
+    await saveRouting(c.api, { translate: DEFAULT_PROFILE.id });
+    expect((await readProviderSettings(c.api)).routing.translate).toBe(DEFAULT_PROFILE.id);
   });
 
   it('is idempotent: a second run reads, writes nothing and returns the same settings', async () => {
@@ -198,7 +234,7 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
     expect(second).toEqual(first);
     expect(f.sync.sets).toHaveLength(1);
     expect(Object.fromEntries(f.sync.data)).toEqual(snapshot);
-    // A key added after the migration changes nothing: the stored routing is the user's now.
+    // A key added after the migration changes nothing: the migrated route stays.
     await f.local.set({ 'secret:apibox': 'sk-later-0123456789' });
     expect((await readProviderSettings(f.api)).routing.translate).toBe(GEMINI_PROFILE.id);
     expect(f.sync.sets).toHaveLength(1);
@@ -212,11 +248,13 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
     expect(f.sync.sets).toHaveLength(1);
   });
 
-  it('keeps records another device synced before the version, and routing it already has', async () => {
+  it('never overwrites items another device synced before the version', async () => {
     const mine: ProviderConnection = { ...APIBOX_CONNECTION, label: 'Work APIBOX', quirks: { supportsTemperature: false } };
     const other: ModelProfile = { ...APIBOX_PRO_PROFILE, id: 'custom-pro', maxConcurrency: 1 };
     const f = fakeApi({ sync: { 'conn:apibox': mine, 'profile:custom-pro': other, routing: { translate: 'custom-pro' } }, local: M3_LOCAL });
     const s = await migrateProviders(f.api);
+    expect(f.sync.sets[0]).not.toContain('conn:apibox');
+    expect(f.sync.data.get('conn:apibox')).toEqual(mine);
     expect(s.connections).toEqual([mine]);
     expect(s.profiles[0]).toEqual(other);
     expect(s.profiles).toHaveLength(4);
@@ -324,14 +362,40 @@ describe('routing resolution (plan M4-E8, DESIGN §4.3.5)', () => {
     expect(id(await resolveRoute(f.api, 'translate', { tabId: 5, url: 'https://y.com/' }))).toBe(`routing:${DEFAULT_PROFILE.id}`);
     await clearTabOverride(f.api, 4);
     expect(id(await resolveRoute(f.api, 'translate', { tabId: 4, url: 'https://y.com/' }))).toBe(`routing:${DEFAULT_PROFILE.id}`);
-    // Removing the last site rule removes its item.
+    // Removing the last site rule empties its item, in the same write as the routing (review B-5).
+    const before = f.sync.sets.length;
     await saveRouting(f.api, { translate: DEFAULT_PROFILE.id });
-    expect(f.sync.data.has('siteRules')).toBe(false);
+    expect(f.sync.sets.slice(before)).toEqual([['routing', 'siteRules']]);
+    expect(f.sync.data.get('siteRules')).toEqual([]);
+    expect((await readProviderSettings(f.api)).routing).toEqual({ translate: DEFAULT_PROFILE.id });
   });
 
-  it('saves refuse what does not fit a sync item or is not valid', async () => {
+  it('saves keep the fields a newer schema added to the stored record, and never take unknown fields from the input (review B-2)', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1, 'conn:apibox': { ...APIBOX_CONNECTION, rateLimit: { rpm: 60 } }, [`profile:${DEFAULT_PROFILE.id}`]: { ...DEFAULT_PROFILE, region: 'eu' }, routing: { translate: DEFAULT_PROFILE.id, onMeter: 'brief' } } });
+    await saveConnection(f.api, { ...APIBOX_CONNECTION, label: 'Work', apiKey: 'sk-should-never-sync', junk: 1 } as ProviderConnection);
+    expect(f.sync.data.get('conn:apibox')).toEqual({ ...APIBOX_CONNECTION, label: 'Work', rateLimit: { rpm: 60 } });
+    await saveProfile(f.api, { ...DEFAULT_PROFILE, maxConcurrency: 1, secret: 'x' } as ModelProfile);
+    expect(f.sync.data.get(`profile:${DEFAULT_PROFILE.id}`)).toEqual({ ...DEFAULT_PROFILE, maxConcurrency: 1, region: 'eu' });
+    await saveRouting(f.api, { translate: DEFAULT_PROFILE.id, analyze: DEFAULT_PROFILE.id });
+    expect(f.sync.data.get('routing')).toEqual({ translate: DEFAULT_PROFILE.id, analyze: DEFAULT_PROFILE.id, onMeter: 'brief' });
+    await saveLearnedQuirk(f.api, { connectionId: 'apibox', profileId: APIBOX_PRO_PROFILE.id }, 'supportsTemperature', { supportsTemperature: false });
+    expect(f.sync.data.get('conn:apibox')).toMatchObject({ rateLimit: { rpm: 60 }, quirks: { supportsTemperature: false } });
+  });
+
+  it('saves refuse what would not fit chrome.storage.sync: an item, the total, the item count (review B-3)', async () => {
     const f = fakeApi();
-    await expect(saveConnection(f.api, { ...APIBOX_CONNECTION, extraHeaders: { 'X-Big': 'x'.repeat(9000) } })).rejects.toThrow(/sync limit/);
+    await expect(saveConnection(f.api, { ...APIBOX_CONNECTION, extraHeaders: { 'X-Big': 'x'.repeat(9000) } })).rejects.toThrow(/sync limit of 8192 bytes for one setting/);
+    // Total: 13 items of ~8,000 bytes already synced (e.g. glossary and others) leave no room.
+    const full = fakeApi({ sync: { schemaVersion: 1, ...Object.fromEntries(Array.from({ length: 13 }, (_, i) => [`other${i}`, 'x'.repeat(7900)])) } });
+    await expect(saveConnection(full.api, { ...APIBOX_CONNECTION, label: 'y'.repeat(500) })).rejects.toThrow(/102400-byte limit/);
+    expect(full.sync.data.has('conn:apibox')).toBe(false);
+    // Replacing an item counts only the difference.
+    const roomy = fakeApi({ sync: { schemaVersion: 1, ...Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`other${i}`, 'x'.repeat(7900)])), 'conn:apibox': APIBOX_CONNECTION } });
+    await saveConnection(roomy.api, { ...APIBOX_CONNECTION, label: 'Work' });
+    expect(roomy.sync.data.get('conn:apibox')).toMatchObject({ label: 'Work' });
+    // Item count: 512 at most.
+    const many = fakeApi({ sync: { schemaVersion: 1, ...Object.fromEntries(Array.from({ length: 511 }, (_, i) => [`k${i}`, 1])) } });
+    await expect(saveProfile(many.api, { ...APIBOX_PRO_PROFILE, id: 'new' })).rejects.toThrow(/512 items/);
     await expect(saveProfile(f.api, { ...APIBOX_QWEN_PROFILE, model: '' })).rejects.toThrow(/not a valid/);
     await expect(saveRouting(f.api, { translate: '' })).rejects.toThrow(/translate/);
   });
@@ -433,5 +497,16 @@ describe('saveLearnedQuirk', () => {
     // A connection that is not stored (removed meanwhile) is left alone.
     await saveLearnedQuirk(f.api, { connectionId: 'gone' }, 'supportsTemperature', { supportsTemperature: false });
     expect(f.sync.data.has('conn:gone')).toBe(false);
+  });
+
+  it('a built-in connection that only applies at read time (fresh install) is written with the learned flag', async () => {
+    const f = fakeApi();
+    await migrateProviders(f.api);
+    expect(f.sync.data.has('conn:apibox')).toBe(false);
+    await saveLearnedQuirk(f.api, { connectionId: 'apibox', profileId: APIBOX_PRO_PROFILE.id }, 'supportsTemperature', { supportsTemperature: false });
+    expect(f.sync.data.get('conn:apibox')).toEqual({ ...APIBOX_CONNECTION, quirks: { ...APIBOX_CONNECTION.quirks, supportsTemperature: false } });
+    expect((await readProviderSettings(f.api)).connections).toEqual([f.sync.data.get('conn:apibox')]);
+    // Its built-in profiles still apply, so the default route still resolves.
+    expect(await resolveRoute(f.api, 'translate')).toMatchObject({ ok: true, profile: { id: DEFAULT_PROFILE.id }, connection: { quirks: { supportsTemperature: false } } });
   });
 });
