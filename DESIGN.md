@@ -764,8 +764,20 @@ viewport comes first, you can start reading almost immediately.
 - **Translation cache** (IndexedDB): key = `hash(segmentText + targetLang + model + styleMode +
   strategyId@version + promptVersions + glossaryHash)`. Only the highest revision of each
   segment is stored. Revisits and repeated boilerplate (e.g. docs sidebars) cost
-  nothing. LRU eviction around 50 MB.
-- **Brief cache**: by `url + contentHash`.
+  nothing. LRU eviction around 50 MB. Segment text is normalized before hashing (Unicode NFC,
+  whitespace runs collapsed, zero-width characters dropped), so a re-extraction of the same page
+  hits. A finished segment is stored as it arrives, so an interrupted job costs nothing it
+  already did: a retry or a revisit re-runs only the missing segments (S1: the panel hosts the
+  engine, so there is no resume machinery beyond this). A segment that fails its checks is
+  removed from the cache.
+  **The brief is deliberately not in the key** (M3-D2): boilerplate (docs sidebars, footers)
+  reuses its translation across pages whose briefs differ, which is worth more than a brief-exact
+  match. The cost is that a cached sentence was translated under another page's brief, once;
+  *retranslate* always bypasses the cache and replaces the stored entry.
+- **Brief cache**: by `url + contentHash + targetLang + analyze prompt version` (the hash covers
+  exactly what the analyze call sends), so a revisit makes no analyze call either. Kept by count
+  (200), least recently used first.
+- Cache stats (entries, size) and *Clear cache* are in the options page.
 - **Settings** (`chrome.storage.sync`): target language, provider, model, style, personal
   glossary, site rules (auto-translate when the panel is open / never translate).
 - **API keys** (`chrome.storage.local` only, never sync). Show a clear note that keys are stored

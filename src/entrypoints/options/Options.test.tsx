@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
+import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONNECTION, DEFAULT_ORIGIN, GLOSSARY_KEY, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/settings';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
+import { openTranslationCache, type TranslationCache } from '@/shared/cache';
 import { Options } from './Options.tsx';
 
 type Api = Parameters<typeof Options>[0]['api'];
@@ -288,5 +290,26 @@ describe('options: style and personal glossary (plan M2-E6)', () => {
     expect(note).toContain("over Chrome's sync limit of 8192 bytes");
     expect(f.sync.get('glossary')).toBe(big);
     expect(rows()).toHaveLength(big.length);
+  });
+});
+
+describe('options: translation cache (plan M3-E2)', () => {
+  it('shows what the cache holds and clears it', async () => {
+    const cache = openTranslationCache({ factory: new IDBFactory() }) as TranslationCache;
+    await cache.putMany(new Map([['a', { text: 'A', revision: 1, attempt: 1 }], ['b', { text: 'B', revision: 1, attempt: 1 }]]));
+    await cache.putBrief('k', { genre: 'g', audience: 'a', purpose: 'p', tone: 't', glossary: [] });
+    act(() => render(<Options api={fakeApi().api} cache={cache} />, root));
+    await flush();
+    expect(root.querySelector('[data-testid=cache-stats]')?.textContent).toMatch(/^2 translated blocks and 1 document briefs, \d+ KB of 50\.0 MB/);
+    act(() => (root.querySelector('[data-testid=cache-clear]') as HTMLButtonElement).click());
+    await flush();
+    expect(root.querySelector('[data-testid=cache-stats]')?.textContent).toMatch(/^0 translated blocks and 0 document briefs/);
+    expect((await cache.stats()).entries).toBe(0);
+  });
+
+  it('has no cache section where the browser has no IndexedDB', async () => {
+    act(() => render(<Options api={fakeApi().api} cache={undefined} />, root));
+    await flush();
+    expect(root.querySelector('#cache-h')).toBeNull();
   });
 });

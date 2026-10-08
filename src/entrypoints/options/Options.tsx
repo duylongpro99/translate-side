@@ -27,6 +27,7 @@ import {
   updatePreferences,
   type Preferences,
 } from '@/shared/settings';
+import { openTranslationCache, type CacheStats, type TranslationCache } from '@/shared/cache';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
 
@@ -395,7 +396,35 @@ function GlossarySection({ api }: { api: Browser }) {
   );
 }
 
-export function Options({ api }: { api: Browser }) {
+const mb = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(0, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`);
+
+/** The translation cache (plan M3-E2): what it holds, and a way to empty it. */
+function CacheSection({ cache }: { cache: TranslationCache | undefined }) {
+  const [stats, setStats] = useState<CacheStats | undefined | null>();
+  const load = () =>
+    cache?.stats().then(setStats, () => setStats(null));
+  useEffect(() => {
+    void load();
+    // Reads the cache once on mount.
+  }, []);
+  if (!cache || stats === null) return null;
+  return (
+    <section class="opt__section" aria-labelledby="cache-h">
+      <h2 id="cache-h">Translation cache</h2>
+      <p class="opt__hint" data-testid="cache-stats">
+        {stats === undefined ? 'Reading…' : `${stats.entries} translated blocks and ${stats.briefs} document briefs, ${mb(stats.bytes)} of ${mb(stats.maxBytes)}.`}
+      </p>
+      <p class="opt__hint">Pages you translated again open from this cache at no cost. The oldest entries go first when it is full. It stays on this device.</p>
+      <div class="opt__row">
+        <button type="button" data-testid="cache-clear" onClick={() => void cache.clear().then(load, () => setStats(null))}>
+          Clear cache
+        </button>
+      </div>
+    </section>
+  );
+}
+
+export function Options({ api, cache = openTranslationCache() }: { api: Browser; cache?: TranslationCache | undefined }) {
   return (
     <main class="opt">
       <h1>Translate Side settings</h1>
@@ -403,6 +432,7 @@ export function Options({ api }: { api: Browser }) {
       <LanguageSection api={api} />
       <StyleSection api={api} />
       <GlossarySection api={api} />
+      <CacheSection cache={cache} />
     </main>
   );
 }

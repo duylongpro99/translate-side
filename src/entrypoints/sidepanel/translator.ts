@@ -7,6 +7,7 @@ import type { GlossaryEntry } from '@/engine/types';
 import { DEFAULT_CONNECTION, DEFAULT_ORIGIN, GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences, secretKey, type Preferences } from '@/shared/settings';
 import type { SessionHooks } from './controller.ts';
 import type { JobActions } from './JobBar.tsx';
+import { openTranslationCache } from '@/shared/cache';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
 import { translateClient } from './route.ts';
 import { ViewportStore } from './viewport.ts';
@@ -42,7 +43,7 @@ async function readSettings(api: Browser): Promise<Settings> {
 }
 
 export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, options: TranslatorOptions = {}): Translator {
-  const jobs = new Jobs({ translateClient: () => translateClient(api), ...deps });
+  const jobs = new Jobs({ translateClient: () => translateClient(api), cache: openTranslationCache(), ...deps });
   const viewports = new ViewportStore();
   const detector = 'detector' in options ? options.detector : chromeLanguageDetector();
   const mixed = options.mixedLanguage ?? MIXED_LANGUAGE_DETECTION;

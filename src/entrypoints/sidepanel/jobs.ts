@@ -8,11 +8,16 @@
 // - Viewport first (plan M3-E1): the content script reports what is on screen (setViewport); the
 //   engine reads it each time a chunk is about to start, so scrolling moves what is translated
 //   next. Chunks in flight are never aborted (M3-D3).
+// - Cache (plan M3-E2, DESIGN §7): before a run, segments found in the translation cache are shown
+//   as final and never sent; a cached brief seeds the run. What the run produces is stored as it
+//   arrives (highest revision only; a failure removes the entry), so a retry, a reload or a revisit
+//   re-runs only what is missing. `fresh` (retranslate) skips the lookup, never the store.
 // - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
-import { contextual, createDefaultPromptRegistry, createEngine, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob } from '@/engine/index';
+import { briefCacheKey, contextual, createDefaultPromptRegistry, createEngine, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob } from '@/engine/index';
 import type { LLMClient, LLMError, LLMErrorKind, NormalizedRequest } from '@/llm/types';
+import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
 import { costUsd, type UsageTotals } from '@/shared/cost';
 import type { Detection } from '@/shared/language';
 import type { ModelProfile } from '@/shared/settings';
@@ -67,6 +72,8 @@ export interface JobView {
   segs: ReadonlyMap<string, SegState>;
   counts: { total: number; final: number; failed: number };
   usage: UsageTotals;
+  /** Segments of this run shown from the translation cache instead of being sent (M3-E2). */
+  cached?: number;
   /** USD for this page so far, across runs (cancel + resume, a language change); undefined without pricing or usage. */
   cost: number | undefined;
   /**
@@ -211,6 +218,8 @@ export interface JobDeps {
   engine?: (client: LLMClient) => TranslationEngine;
   /** Test seam: the strategy jobs run (default PANEL_STRATEGY). */
   strategy?: StrategyId;
+  /** The translation cache (M3-E2). Absent: every run goes to the model. */
+  cache?: TranslationCache | undefined;
 }
 
 export interface JobDoc {
@@ -247,6 +256,16 @@ interface Job {
   run: number;
   /** Segments on screen at the run's start still to settle (view.screenDoneAt). */
   screen: Set<string>;
+  /** Cache key per translatable segment id; empty without a cache. */
+  keys: Map<string, string>;
+  /** Cache writes waiting for the end of this tick (coalesced), and the keys to drop. */
+  writes: Map<string, CachedSegment>;
+  drops: Set<string>;
+  flush?: boolean;
+  /** A retranslate run: its stored finals replace whatever the cache has. */
+  fresh?: boolean;
+  /** The brief cache key of this document; undefined without a cache. */
+  briefKey?: string;
 }
 
 export type JobsListener = (tabId: number, view: JobView | undefined) => void;
@@ -321,9 +340,10 @@ export class Jobs {
    * only what is left (pending or failed). `keepCost` keeps only the cost of the same document's
    * earlier runs (a restart in other languages): the page total stays honest. `keepBrief` keeps
    * the same document's brief when the target language is unchanged (a restart for a new style or
-   * glossary): the brief doesn't depend on them, so no second analyze call.
+   * glossary): the brief doesn't depend on them, so no second analyze call. `fresh` ignores the
+   * translation cache for this run (retranslate, M3 decision D2); results are still stored.
    */
-  async start(tabId: number, docId: string, doc: JobDoc, { resume = false, keepCost = false, keepBrief = false } = {}): Promise<void> {
+  async start(tabId: number, docId: string, doc: JobDoc, { resume = false, keepCost = false, keepBrief = false, fresh = false } = {}): Promise<void> {
     const prev = this.jobs.get(tabId);
     const keep = resume && prev?.docId === docId && prev.view.status !== 'running' ? prev : undefined;
     const costFrom = keep ?? (keepCost && prev?.docId === docId ? prev : undefined);
@@ -353,6 +373,10 @@ export class Jobs {
       inflight: 0,
       run: (prev?.run ?? 0) + 1,
       screen,
+      keys: new Map(),
+      writes: new Map(),
+      drops: new Set(),
+      fresh,
       view: {
         status: 'running',
         paused: !gate.open,
@@ -366,6 +390,7 @@ export class Jobs {
         segs,
         counts: count(segs),
         usage: costFrom ? { ...costFrom.view.usage } : { input: 0, cachedInput: 0, output: 0 },
+        cached: 0,
         cost: costFrom?.view.cost,
         unmetered: (costFrom?.view.unmetered ?? 0) + abandoned,
         startedAt: this.now(),
@@ -383,6 +408,8 @@ export class Jobs {
     }
     const { client, profile } = resolved;
     this.patch(tabId, job, { model: client.model });
+    await this.fromCache(tabId, job, { todo, translatable, model: client.model, fresh });
+    if (signal.aborted || this.jobs.get(tabId) !== job) return;
     if (todo.size === 0) {
       this.finish(tabId, job, 'done');
       return;
@@ -453,6 +480,9 @@ export class Jobs {
       inflight: 0,
       run: (prev?.run ?? 0) + 1,
       screen: new Set(),
+      keys: new Map(),
+      writes: new Map(),
+      drops: new Set(),
       view: {
         status: 'skipped',
         paused: false,
@@ -464,6 +494,7 @@ export class Jobs {
         segs,
         counts: { total: 0, final: 0, failed: 0 },
         usage: keepCost ? { ...keepCost.view.usage } : { input: 0, cachedInput: 0, output: 0 },
+        cached: 0,
         cost: keepCost?.view.cost,
         unmetered: keepCost?.view.unmetered ?? 0,
         startedAt: now,
@@ -534,6 +565,7 @@ export class Jobs {
         const next = applySegmentEvent(cur, event);
         if (next === cur || next === undefined) return;
         job.segs.set(event.id, next);
+        this.remember(job, event.id, next);
         const patch: Partial<JobView> = { counts: count(job.segs) };
         if (job.view.firstVisibleAt === undefined && next.text) patch.firstVisibleAt = this.now();
         if ((next.status === 'final' || next.status === 'failed') && job.screen.delete(event.id) && job.screen.size === 0) patch.screenDoneAt = this.now();
@@ -551,6 +583,7 @@ export class Jobs {
         if (!brief) return;
         const sourceLang = job.view.sourceLang || brief.language || '';
         this.patch(tabId, job, { brief, sourceLang });
+        if (job.briefKey !== undefined) void this.deps.cache?.putBrief(job.briefKey, brief).catch(() => {});
         return;
       }
       case 'usage': {
@@ -561,6 +594,82 @@ export class Jobs {
       default:
         return;
     }
+  }
+
+  /**
+   * Shows what the translation cache has for the run's segments as final (never sent), and seeds
+   * the brief from the brief cache when the run has none. Any cache error just means a normal run.
+   * Mutates `todo`: the segments still to translate.
+   */
+  private async fromCache(tabId: number, job: Job, run: { todo: Set<string>; translatable: readonly Segment[]; model: string; fresh: boolean }): Promise<void> {
+    const cache = this.deps.cache;
+    if (!cache) return;
+    const { doc } = job;
+    const segments = job.view.segments;
+    const scope = scopeHash(keyScope({ targetLang: doc.targetLang, model: run.model, style: doc.style, gloss: doc.gloss, strategy: this.deps.strategy ?? PANEL_STRATEGY, glossary: doc.glossary }));
+    for (const s of run.translatable) job.keys.set(s.id, segmentKey(scope, s));
+    job.briefKey = briefCacheKey({ url: doc.url, title: doc.title, targetLang: doc.targetLang, outline: segments.filter((s) => s.kind === 'heading').map((s) => s.text) }, segments);
+    if (run.fresh) return;
+    try {
+      const wanted = run.translatable.filter((s) => run.todo.has(s.id));
+      const hits = await cache.getMany([...new Set(wanted.map((s) => job.keys.get(s.id) as string))]);
+      const brief = job.view.brief ?? (await cache.getBrief(job.briefKey));
+      if (job.controller.signal.aborted || this.jobs.get(tabId) !== job) return;
+      const patch: Partial<JobView> = {};
+      let shown = 0;
+      for (const s of wanted) {
+        const hit = hits.get(job.keys.get(s.id) as string);
+        if (!hit) continue;
+        job.segs.set(s.id, { status: 'final', text: hit.text, revision: hit.revision, attempt: hit.attempt });
+        run.todo.delete(s.id);
+        job.screen.delete(s.id);
+        shown++;
+      }
+      if (shown > 0) {
+        patch.cached = shown;
+        patch.counts = count(job.segs);
+        patch.firstVisibleAt = this.now();
+        if (job.screen.size === 0 && this.screenOf(tabId, job.docId).some((id) => job.segs.get(id)?.status === 'final')) patch.screenDoneAt = this.now();
+      }
+      if (brief && !job.view.brief) {
+        patch.brief = brief;
+        if (!job.view.sourceLang && brief.language) patch.sourceLang = brief.language;
+      }
+      if (Object.keys(patch).length > 0) this.patch(tabId, job, patch);
+    } catch {
+      // A broken cache is a cache miss.
+    }
+  }
+
+  /** Stores the final a segment now shows (the highest revision only), or drops the entry of one that failed. */
+  private remember(job: Job, id: string, state: SegState): void {
+    const key = job.keys.get(id);
+    if (key === undefined || !this.deps.cache) return;
+    if (state.status === 'final' && state.text !== undefined) {
+      job.drops.delete(key);
+      job.writes.set(key, { text: state.text, revision: state.revision ?? 1, attempt: state.attempt ?? 1 });
+    } else if (state.status === 'failed') {
+      job.writes.delete(key);
+      job.drops.add(key);
+    } else return;
+    if (job.flush) return;
+    job.flush = true;
+    // Coalesced: one transaction for the finals of a tick.
+    queueMicrotask(() => this.flushCache(job));
+  }
+
+  private flushCache(job: Job): void {
+    job.flush = false;
+    const cache = this.deps.cache;
+    if (!cache) return;
+    const writes = new Map(job.writes);
+    const drops = [...job.drops];
+    job.writes.clear();
+    job.drops.clear();
+    void cache
+      .delete(drops)
+      .then(() => cache.putMany(writes, { replace: job.fresh === true }))
+      .catch(() => {});
   }
 
   private finish(tabId: number, job: Job, status: Exclude<JobStatus, 'running'>, stopError?: LLMError): void {
