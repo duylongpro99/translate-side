@@ -445,7 +445,9 @@ model"). The choice applies to this tab only. The default routing stays the same
   provider.
 - **Usage meter**: count input/output tokens per profile from the responses, and show estimated
   spend per day and month in settings (using the profile's `pricing`). An optional monthly soft
-  limit warns before continuing.
+  limit warns before continuing. M3-E9 ships the first part: a running total (USD, tokens, per
+  month) in `storage.local`, fed by every usage report, with a reset; a profile on the Anthropic
+  preset without its own `pricing` is priced from a built-in table (`src/shared/pricing.ts`).
 
 ### 4.3.6 Local model specifics
 - **Ollama blocks requests from extensions by default.** Starting Ollama with

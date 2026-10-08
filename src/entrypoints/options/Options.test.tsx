@@ -3,9 +3,10 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_CONNECTION, DEFAULT_ORIGIN, GLOSSARY_KEY, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/settings';
+import { DEFAULT_CONNECTION, DEFAULT_ORIGIN, DEFAULT_PROFILE, GLOSSARY_KEY, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/settings';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import { openTranslationCache, type TranslationCache } from '@/shared/cache';
+import { monthKey } from '@/shared/spend';
 import { Options } from './Options.tsx';
 
 type Api = Parameters<typeof Options>[0]['api'];
@@ -319,5 +320,22 @@ describe('options: translation cache (plan M3-E2)', () => {
     act(() => render(<Options api={fakeApi().api} cache={undefined} />, root));
     await flush();
     expect(root.querySelector('#cache-h')).toBeNull();
+  });
+});
+
+describe('usage and cost (plan M3-E9)', () => {
+  it('shows the routed model’s price, the running total and this month, and resets it', async () => {
+    const f = fakeApi();
+    const now = Date.now();
+    f.local.set('spend', { since: now - 86_400_000, usd: 0.1234, input: 12000, cachedInput: 2000, output: 3400, unpricedTokens: 50, months: { [monthKey(now)]: 0.05 } });
+    act(() => render(<Options api={f.api} cache={undefined} />, root));
+    await waitFor(() => root.querySelector('[data-testid=spend-tokens]') !== null);
+    expect(root.querySelector('[data-testid=spend-price]')?.textContent).toContain(`${DEFAULT_PROFILE.model}: $0.032 input`);
+    expect(root.querySelector('[data-testid=spend-total]')?.textContent).toContain('$0.12');
+    expect(root.querySelector('[data-testid=spend-total]')?.textContent).toContain('this month $0.0500');
+    expect(root.querySelector('[data-testid=spend-tokens]')?.textContent).toContain('12,000 input tokens (2,000 cached), 3,400 output tokens · 50 tokens on models without a price');
+    act(() => (root.querySelector('[data-testid=spend-reset]') as HTMLButtonElement).click());
+    await waitFor(() => root.querySelector('[data-testid=spend-total]')?.textContent === 'Nothing spent yet.');
+    expect(f.local.has('spend')).toBe(false);
   });
 });
