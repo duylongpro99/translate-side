@@ -7,15 +7,20 @@
 //   first text, so the §8 risk (the brief delaying the first viewport chunk) is measured, not guessed.
 // Scenarios: `top` (the screen is the start of the page), `middle` (half way down), and
 // `middle-old` (the same screen not reported: the job runs in page order, as before M3).
+// Scenario `revisit` (plan M3-E2, §3 #3): the page is translated once into the translation cache
+// (fake-indexeddb here), then opened again in a new Jobs; it reports the second open's request count
+// (must be 0) and its screen / whole-page render time.
 // Run: pnpm run latency -- [--runs 2] [--scenarios top,middle,middle-old] [--words 3000] [--screen-words 250]
 // Key: AIBOX_API_KEY from .env (the default profile's connection, M2-D11/D16). Results go to
 // eval-results/latency-<stamp>.json (gitignored).
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+import { IDBFactory } from 'fake-indexeddb';
 import { createClient } from '@/llm';
 import type { LLMClient, NormalizedRequest } from '@/llm/types';
 import type { Segment } from '@/engine/index';
+import { openTranslationCache, type TranslationCache } from '@/shared/cache';
 import { Jobs, type JobDoc, type JobView } from '@/entrypoints/sidepanel/jobs';
 import { DEFAULT_CONNECTION, DEFAULT_PROFILE, withProfileQuirks } from '@/shared/settings';
 
@@ -95,17 +100,17 @@ function timed(inner: LLMClient, calls: Call[], t0: () => number): LLMClient {
   };
 }
 
-async function runOnce(scenario: string, segments: Segment[]) {
+async function runOnce(scenario: string, segments: Segment[], cache?: TranslationCache) {
   const conn = withProfileQuirks({ id: DEFAULT_CONNECTION.id, protocol: DEFAULT_CONNECTION.protocol, baseUrl: DEFAULT_CONNECTION.baseUrl, auth: DEFAULT_CONNECTION.auth, quirks: DEFAULT_CONNECTION.quirks, apiKey: key as string, hasHostPermission: async () => true }, DEFAULT_PROFILE);
   const calls: Call[] = [];
   let started = 0;
   const t0 = () => Date.now() - started;
   const client = timed(createClient(conn, DEFAULT_PROFILE.model), calls, t0);
-  const jobs = new Jobs({ translateClient: async () => ({ ok: true, client, profile: DEFAULT_PROFILE }) });
+  const jobs = new Jobs({ translateClient: async () => ({ ok: true, client, profile: DEFAULT_PROFILE }), cache });
   jobs.setActive(1);
   const translatable = segments.filter((s) => s.translate);
   const middle = segments.indexOf(translatable[Math.floor(translatable.length / 2)] as Segment);
-  const screen = screenAt(segments, scenario === 'top' ? 0 : middle);
+  const screen = screenAt(segments, scenario === 'top' || scenario === 'revisit' ? 0 : middle);
   // `middle-old`: nothing reported, page order (pre-M3); its screen is still timed below.
   if (scenario !== 'middle-old') jobs.setViewport(1, 'doc', screen);
   const todo = new Set(screen.filter((id) => segments.find((s) => s.id === id)?.translate));
@@ -134,6 +139,8 @@ async function runOnce(scenario: string, segments: Segment[]) {
     brief: brief ? { startMs: brief.start, endMs: brief.end ?? null } : null,
     firstTranslate: firstTranslate ? { startMs: firstTranslate.start, firstTextMs: firstTranslate.firstText ?? null, endMs: firstTranslate.end ?? null, chunkIndex: firstTranslate.chunkIndex ?? null } : null,
     calls: calls.map((c) => ({ ...c })),
+    cached: v.cached ?? 0,
+    requests: calls.length,
     usd: v.cost ?? null,
   };
 }
@@ -144,7 +151,15 @@ console.log(`page: ${segments.length} segments, ${words} words; profile ${DEFAUL
 const results = [];
 for (let r = 0; r < Number(opt.runs); r++) {
   for (const scenario of (opt.scenarios as string).split(',')) {
-    const res = await runOnce(scenario, segments);
+    let res;
+    if (scenario === 'revisit') {
+      // Cold open fills the cache; the revisit is a new Jobs (a new panel) over the same cache.
+      const cache = openTranslationCache({ factory: new IDBFactory() });
+      const cold = await runOnce('top', segments, cache);
+      await new Promise((r) => setTimeout(r, 200));
+      res = { ...(await runOnce('revisit', segments, cache)), coldWholeMs: cold.wholeMs, coldRequests: cold.requests };
+      console.log(`revisit    cold: ${cold.requests} requests, whole ${((cold.wholeMs ?? 0) / 1000).toFixed(1)}s, $${cold.usd?.toFixed(4)}`);
+    } else res = await runOnce(scenario, segments);
     results.push(res);
     const s = (ms: number | null | undefined) => (ms === null || ms === undefined ? '—' : `${(ms / 1000).toFixed(1)}s`);
     console.log(
