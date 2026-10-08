@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Segment } from '@/engine/types';
 import { App, type TranslatorProps } from './App.tsx';
 import type { PanelController, PanelView } from './controller.ts';
-import { FOLLOW_KEY, followTop, readFollow, scrollToAnchor, writeFollow } from './follow.ts';
+import { FOLLOW_KEY, blockFinder, followTop, readFollow, scrollToAnchor, writeFollow } from './follow.ts';
 import type { Jobs } from './jobs.ts';
 import { ViewportStore } from './viewport.ts';
 
@@ -99,6 +99,23 @@ describe('scroll follow in the panel (plan M3-E7)', () => {
     act(() => button()?.click());
     await frame();
     expect(scrollTo).toHaveBeenLastCalledWith({ top: 560, behavior: 'instant' });
+  });
+
+  it('looks blocks up once, and again only when a block was replaced (R4)', () => {
+    const viewports = new ViewportStore();
+    mount(viewports);
+    const spy = vi.spyOn(document, 'querySelectorAll');
+    const find = blockFinder(document);
+    const b = find('b');
+    expect(b?.dataset.id).toBe('b');
+    find('b');
+    find('a');
+    expect(spy.mock.calls.filter(([s]) => s === '.segments [data-id]')).toHaveLength(1);
+    const copy = b?.cloneNode(true) as HTMLElement;
+    b?.replaceWith(copy);
+    expect(find('b')).toBe(copy);
+    expect(spy.mock.calls.filter(([s]) => s === '.segments [data-id]')).toHaveLength(2);
+    spy.mockRestore();
   });
 
   it('an anchor with no block in the panel is ignored', () => {

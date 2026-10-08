@@ -172,7 +172,8 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       live.set(tabId, docId);
       // Viewport first (plan M3-E1): what was on screen when the page was read.
       jobs.setViewport(tabId, docId, result.visible ?? []);
-      viewports.set(tabId, docId, { visible: result.visible ?? [] });
+      // And where it was, so scroll follow (M3-E7) lines the panel up before the first scroll.
+      viewports.set(tabId, docId, { visible: result.visible ?? [], ...(result.anchor ? { anchor: result.anchor } : {}) });
       void readSettings(api).then(async (settings) => {
         const got = await prepare(tabId, settings, { url: result.url, title: result.title, pageLang: result.lang, segments: result.segments });
         if (got === undefined) return;

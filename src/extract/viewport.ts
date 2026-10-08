@@ -20,7 +20,8 @@ export const VIEWPORT_THROTTLE_MS = 50;
 
 /**
  * Watches the elements of `targets` (segment id → live element). `order` is the segments' page
- * order. `onChange` gets each new viewport, starting from the first change after `now()`.
+ * order. `onChange` gets each new viewport, starting from the first change after `now()`. An
+ * element shared by several segments and taller than the window does not count (see `coarse`).
  */
 export function watchViewport(win: Window, targets: ReadonlyMap<string, Element>, order: readonly string[], onChange: (v: Viewport) => void, opts: ViewportOptions = {}): ViewportWatch {
   const throttleMs = opts.throttleMs ?? VIEWPORT_THROTTLE_MS;
@@ -40,6 +41,11 @@ export function watchViewport(win: Window, targets: ReadonlyMap<string, Element>
     return r.width + r.height > 0 && r.bottom > 0 && r.top < win.innerHeight && r.right > 0 && r.left < win.innerWidth;
   };
 
+  // An element holding several segments that is taller than the window (on the Readability path,
+  // the ancestor several made-up blocks share, up to the whole article) says nothing about which of
+  // them is on screen: it is neither visible nor an anchor, or it would always be both.
+  const coarse = (el: Element, rect: DOMRect): boolean => (idsOf.get(el)?.length ?? 0) > 1 && rect.height > win.innerHeight;
+
   // With an observer, the set it reports; without one (old engines, tests), the layout each time.
   const Observer = (win as Window & { IntersectionObserver?: typeof IntersectionObserver }).IntersectionObserver;
   const shown = new Set<Element>();
@@ -50,13 +56,17 @@ export function watchViewport(win: Window, targets: ReadonlyMap<string, Element>
       shown.clear();
       for (const el of idsOf.keys()) if (onScreen(el)) shown.add(el);
     }
-    const visible = order.filter((id) => {
-      const el = targets.get(id);
-      return el !== undefined && shown.has(el);
-    });
-    let top: { el: Element; rect: DOMRect } | undefined;
+    const rects = new Map<Element, DOMRect>();
     for (const el of shown) {
       const rect = el.getBoundingClientRect();
+      if (!coarse(el, rect)) rects.set(el, rect);
+    }
+    const visible = order.filter((id) => {
+      const el = targets.get(id);
+      return el !== undefined && rects.has(el);
+    });
+    let top: { el: Element; rect: DOMRect } | undefined;
+    for (const [el, rect] of rects) {
       if (rect.bottom <= 0 || rect.height <= 0) continue;
       if (!top || rect.top < top.rect.top) top = { el, rect };
     }

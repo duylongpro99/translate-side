@@ -95,6 +95,28 @@ describe('watchViewport', () => {
     w.stop();
   });
 
+  it('an element shared by several segments and taller than the window counts for none of them (Readability path)', () => {
+    const { targets } = page(3);
+    const [e0, e1, e2] = [...targets.values()];
+    // The article ancestor three made-up blocks fall back to: 2,000 px tall, its top above the window.
+    const article = document.createElement('article');
+    article.getBoundingClientRect = () => ({ top: -200, bottom: 1800, left: 0, right: 500, width: 500, height: 2000, x: 0, y: -200, toJSON: () => ({}) }) as DOMRect;
+    document.body.append(article);
+    const w = watchViewport(window, new Map([['r0', article], ['s1', e1 as Element], ['r1', article], ['r2', article], ['s2', e2 as Element]]), ['r0', 's1', 'r1', 'r2', 's2'], () => undefined);
+    expect(w.now()).toEqual({ visible: ['s1', 's2'], anchor: { id: 's1', offset: 0 } });
+    w.stop();
+    // Alone it says nothing at all: nothing visible, no anchor (the job keeps its order, the panel stays).
+    const only = watchViewport(window, new Map([['r0', article], ['r1', article]]), ['r0', 'r1'], () => undefined);
+    expect(only.now()).toEqual({ visible: [] });
+    only.stop();
+    // One segment's element taller than the window (a long code block) still counts.
+    const block = e0 as Element;
+    block.getBoundingClientRect = article.getBoundingClientRect;
+    const one = watchViewport(window, new Map([['c0', block]]), ['c0'], () => undefined);
+    expect(one.now()).toEqual({ visible: ['c0'], anchor: { id: 'c0', offset: 0.1 } });
+    one.stop();
+  });
+
   it('uses an IntersectionObserver when there is one, and disconnects it on stop', () => {
     vi.useFakeTimers();
     const { targets, order } = page(4);

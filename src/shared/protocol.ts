@@ -27,6 +27,8 @@ export type ExtractResult =
       segments: Segment[];
       /** Ids of the segments on screen when the page was read, in page order (set by the content script). */
       visible?: string[];
+      /** The topmost of them and how far the page is scrolled into it (Viewport.anchor), so the panel follows at once. */
+      anchor?: Viewport['anchor'];
     }
   /** no-content: neither the walk nor Readability found enough text (→ selection hint, decision S3). */
   | { ok: false; reason: 'no-content' | 'denylisted'; url: string };

@@ -34,10 +34,29 @@ export function followTop(block: { top: number; height: number }, offset: number
   return Math.max(0, Math.round(scrollY + block.top + offset * block.height - covered));
 }
 
+/**
+ * Finds a segment's block in the panel. The id → block map is built once and rebuilt only when a
+ * block is missing or was replaced, not on every scroll frame.
+ */
+export function blockFinder(doc: Document): (id: string) => HTMLElement | undefined {
+  let blocks = new Map<string, HTMLElement>();
+  const build = () => {
+    blocks = new Map([...doc.querySelectorAll<HTMLElement>('.segments [data-id]')].map((e) => [e.dataset.id ?? '', e]));
+  };
+  return (id) => {
+    let block = blocks.get(id);
+    if (!block?.isConnected) {
+      build();
+      block = blocks.get(id);
+    }
+    return block;
+  };
+}
+
 /** Scrolls the panel to the anchor's block, if it has one. Returns whether it did. */
-export function scrollToAnchor(doc: Document, anchor: Viewport['anchor']): boolean {
+export function scrollToAnchor(doc: Document, anchor: Viewport['anchor'], find: (id: string) => HTMLElement | undefined = blockFinder(doc)): boolean {
   if (!anchor) return false;
-  const block = [...doc.querySelectorAll<HTMLElement>('.segments [data-id]')].find((e) => e.dataset.id === anchor.id);
+  const block = find(anchor.id);
   const win = doc.defaultView;
   if (!block || !win) return false;
   // Whatever stays stuck at the top hides the start of the content.
@@ -53,10 +72,11 @@ export function useScrollFollow(viewports: ViewportStore | undefined, tabId: num
     if (!on || !viewports || tabId === undefined || docId === undefined) return;
     let frame: number | undefined;
     let latest = viewports.get(tabId, docId)?.anchor;
+    const find = blockFinder(document);
     // One scroll per frame, to the latest anchor.
     const follow = () => {
       frame = undefined;
-      scrollToAnchor(document, latest);
+      scrollToAnchor(document, latest, find);
     };
     const schedule = () => {
       frame ??= requestAnimationFrame(follow);

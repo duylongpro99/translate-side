@@ -653,4 +653,13 @@ describe('translator wiring (plan M1-E8)', () => {
     hooks.closed(1);
     expect(t.viewports.get(1, 'd')).toBeUndefined();
   });
+
+  it('keeps the anchor the page was read at, so scroll follow lines up before the first scroll (M3-E7)', () => {
+    const f = fakeApi();
+    const t = createTranslator(f.api, { translateClient: client() });
+    const hooks = t.hooks as Required<SessionHooks>;
+    hooks.active(1);
+    hooks.ready(1, 'd', { ...longResult, visible: ['l30', 'l31'], anchor: { id: 'l30', offset: 0.4 } });
+    expect(t.viewports.get(1, 'd')).toEqual({ visible: ['l30', 'l31'], anchor: { id: 'l30', offset: 0.4 } });
+  });
 });

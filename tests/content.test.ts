@@ -111,7 +111,7 @@ describe('content script', () => {
     const events: unknown[] = [];
     const client = createClient<ContentApi>(connect(), { onEvent: (e) => events.push(e) });
     await client.request('hello', { v: PROTOCOL_VERSION });
-    expect(await client.request('extract', {})).toMatchObject({ ok: true, visible: ['a'] });
+    expect(await client.request('extract', {})).toMatchObject({ ok: true, visible: ['a'], anchor: { id: 'a', offset: 0 } });
     const [a, b] = [...document.querySelectorAll('p')];
     if (!a || !b) throw new Error('no page');
     a.getBoundingClientRect = () => ({ top: -5000, bottom: -4950, left: 0, right: 100, width: 100, height: 50 }) as DOMRect;

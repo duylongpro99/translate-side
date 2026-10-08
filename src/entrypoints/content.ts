@@ -47,7 +47,8 @@ export default defineContentScript({
           const result = extractPage(document, targets);
           if (!result.ok) return result;
           watch = watchViewport(window, targets, result.segments.map((s) => s.id), (v) => emit(port, 'viewport', v));
-          return { ...result, visible: watch.now().visible };
+          const { visible, anchor } = watch.now();
+          return { ...result, visible, ...(anchor ? { anchor } : {}) };
         },
       });
     });
