@@ -30,8 +30,11 @@ export type ExtractResult =
       /** The topmost of them and how far the page is scrolled into it (Viewport.anchor), so the panel follows at once. */
       anchor?: Viewport['anchor'];
     }
-  /** no-content: neither the walk nor Readability found enough text (→ selection hint, decision S3). */
-  | { ok: false; reason: 'no-content' | 'denylisted'; url: string };
+  /**
+   * no-content: neither the walk nor Readability found enough text (→ selection hint, decision S3).
+   * password: a password field had focus, so the page was not read (M3-D5).
+   */
+  | { ok: false; reason: 'no-content' | 'denylisted' | 'password'; url: string };
 
 export interface HelloInfo {
   v: number;

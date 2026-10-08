@@ -13,6 +13,7 @@ import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
 import { snippetDocId, snippetView, SnippetStore } from './snippet.ts';
 import { translateClient } from './route.ts';
 import { ViewportStore } from './viewport.ts';
+import { PrivacyGate } from './privacy.ts';
 
 type Browser = typeof browser;
 
@@ -22,6 +23,8 @@ export interface Translator {
   snippets: { jobs: Jobs; store: SnippetStore; actions(tabId: number): JobActions; close(tabId: number): void };
   /** What is on screen per tab (scroll follow, plan M3-E7). */
   viewports: ViewportStore;
+  /** The first-run privacy notice (plan M3-E10): nothing is sent before it is acknowledged. */
+  privacy: PrivacyGate;
   hooks: SessionHooks;
   actions(tabId: number): JobActions;
   /** Settings listeners and the panel-close cancel. Returns the cleanup. */
@@ -33,6 +36,8 @@ export interface TranslatorOptions {
   detector?: LanguageDetectorPort | undefined;
   /** Per-segment detection for mixed-language pages; default MIXED_LANGUAGE_DETECTION (off). */
   mixedLanguage?: boolean;
+  /** The first-run privacy notice; default one over `api.storage.local`. */
+  privacy?: PrivacyGate;
 }
 
 /** What a job reads from the settings: the preferences and the personal glossary (both storage.sync). */
@@ -55,6 +60,9 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   const viewports = new ViewportStore();
   const detector = 'detector' in options ? options.detector : chromeLanguageDetector();
   const mixed = options.mixedLanguage ?? MIXED_LANGUAGE_DETECTION;
+  const privacy = options.privacy ?? new PrivacyGate(api);
+  const pageKey = (tabId: number) => `page:${tabId}`;
+  const snippetKey = (tabId: number) => `snippet:${tabId}`;
 
   /**
    * The job document for a page under these preferences: its source language from the detection
@@ -193,9 +201,13 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     // Detection only informs the prompt; a selection already in the target language is still translated (the user asked).
     const { doc } = await docFor(settings, view.url, '', undefined, view.segments);
     if (snippetStore.get(tabId)?.docId !== view.docId) return;
-    void snippetJobs.start(tabId, view.docId, doc);
+    // Nothing is sent before the first-run privacy notice is acknowledged (M3-E10).
+    privacy.whenAcknowledged(snippetKey(tabId), () => {
+      if (snippetStore.get(tabId)?.docId === view.docId) void snippetJobs.start(tabId, view.docId, doc);
+    });
   };
   const closeSnippet = (tabId: number) => {
+    privacy.forget(snippetKey(tabId));
     snippetJobs.drop(tabId);
     snippetStore.clear(tabId);
     clearSnippet(api, tabId).catch(() => {});
@@ -215,11 +227,19 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
         const got = await prepare(tabId, settings, { url: result.url, title: result.title, pageLang: result.lang, segments: result.segments });
         if (got === undefined) return;
         // The page may have gone, or the tab closed, while the settings were read (review E-R1).
-        if (isLive(tabId, docId)) void begin(tabId, docId, got.prepared);
-        else got.unmark();
+        if (!isLive(tabId, docId)) return got.unmark();
+        // Nothing is sent before the first-run privacy notice is acknowledged (M3-E10). Settings
+        // changed while it waited are picked up by the refresh right after.
+        const held = privacy.state !== 'acknowledged';
+        privacy.whenAcknowledged(pageKey(tabId), () => {
+          if (!isLive(tabId, docId)) return;
+          void begin(tabId, docId, got.prepared);
+          if (held) refresh(tabId);
+        });
       });
     },
     gone: (tabId) => {
+      privacy.forget(pageKey(tabId));
       live.delete(tabId);
       jobs.cancel(tabId);
     },
@@ -227,6 +247,8 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     // which also fires on the panel's own reconnects (a right-click on an error view, Try again).
     navigated: (tabId) => closeSnippet(tabId),
     closed: (tabId) => {
+      privacy.forget(pageKey(tabId));
+      privacy.forget(snippetKey(tabId));
       snippetJobs.drop(tabId);
       snippetStore.clear(tabId);
       live.delete(tabId);
@@ -320,5 +342,5 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     };
   };
 
-  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, hooks, actions, watch };
+  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, privacy, hooks, actions, watch };
 }

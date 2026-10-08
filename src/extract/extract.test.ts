@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Segment } from '@/engine/types';
 import { resolveDomPath } from '@/segment/dom-path';
 import { loadHtml } from '../../tests/fixtures/load.ts';
-import { extractPage } from './index.ts';
+import { extractPage, hasFocusedPassword } from './index.ts';
 
 const LONG = 'Futures decouple a value from how it is computed, so programs can wait for results. '.repeat(8);
 
@@ -90,6 +90,28 @@ describe('extraction policy (decision S3)', () => {
 
   it('never extracts a denylisted origin', () => {
     expect(extract(`<main><p>${LONG}</p></main>`, 'https://mail.google.com/mail/u/0/').result).toMatchObject({ ok: false, reason: 'denylisted' });
+  });
+
+  it('skips the page while a password field has focus (M3-D5), and reads it once focus left', () => {
+    const { doc } = extract(`<main><p>${LONG}</p><form><input type="text" id="user"><input type="PassWord" id="pw"></form></main>`);
+    (doc.getElementById('pw') as HTMLInputElement).focus();
+    expect(extractPage(doc)).toEqual({ ok: false, reason: 'password', url: 'https://example.com/docs/page' });
+    (doc.getElementById('user') as HTMLInputElement).focus();
+    expect(extractPage(doc).ok).toBe(true);
+  });
+
+  it('sees a focused password field inside an open shadow root', () => {
+    const { doc } = extract(`<main><p>${LONG}</p><div id="host"></div></main>`);
+    const root = (doc.getElementById('host') as HTMLElement).attachShadow({ mode: 'open' });
+    root.innerHTML = '<input type="password">';
+    (root.querySelector('input') as HTMLInputElement).focus();
+    expect(hasFocusedPassword(doc)).toBe(true);
+    expect(extractPage(doc)).toMatchObject({ ok: false, reason: 'password' });
+  });
+
+  it('reads a page whose password field is not focused', () => {
+    const { result } = extract(`<main><p>${LONG}</p><input type="password"></main>`);
+    expect(result.ok).toBe(true);
   });
 
   it('never reads form fields, so password values cannot reach a segment (DESIGN §8)', () => {

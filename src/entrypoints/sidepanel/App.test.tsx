@@ -58,6 +58,7 @@ describe('panel states', () => {
     [{ kind: 'blocked', reason: 'restricted' }, "Can't read this page"],
     [{ kind: 'blocked', reason: 'inject-failed', detail: 'Cannot access a chrome:// URL' }, "Can't read this page"],
     [{ kind: 'blocked', reason: 'denylisted' }, 'never reads this site'],
+    [{ kind: 'blocked', reason: 'password' }, 'A password field has focus on this page, so Translate Side did not read it. Nothing was sent.'],
     [{ kind: 'lost' }, 'Press Alt+T or click the toolbar icon'],
     [{ kind: 'empty', url: 'https://x/' }, "Couldn't read this page. Select text to translate it."],
     [{ kind: 'error', message: 'boom' }, 'boom'],

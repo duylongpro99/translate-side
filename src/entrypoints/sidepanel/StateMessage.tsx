@@ -1,4 +1,4 @@
-import { DENYLIST_MESSAGE, EXTRACTION_HINT } from '@/shared/snippet';
+import { DENYLIST_MESSAGE, EXTRACTION_HINT, PASSWORD_MESSAGE } from '@/shared/snippet';
 import type { PanelView } from './controller.ts';
 
 // Loading, empty, error and access states (plan M0-E7; "can't read this page", criterion #4).
@@ -18,6 +18,14 @@ export function StateMessage({ view, onRetry }: { view: Exclude<PanelView, { kin
         </div>
       );
     case 'blocked':
+      if (view.reason === 'password')
+        return (
+          <div class="state" data-state="blocked" data-reason="password" role="alert">
+            <p class="state__title">Not read: a password field is in use</p>
+            <p>{PASSWORD_MESSAGE}</p>
+            <p class="state__hint">Click outside the password field, then press Alt+T or click the toolbar icon again.</p>
+          </div>
+        );
       return (
         <div class="state" data-state="blocked" role="alert">
           <p class="state__title">Can't read this page</p>

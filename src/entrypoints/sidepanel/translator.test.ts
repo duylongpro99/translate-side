@@ -23,7 +23,8 @@ function fakeApi() {
         get: (k: string) => new Promise((resolve) => gets.push(() => resolve(sync.has(k) ? { [k]: sync.get(k) } : {}))),
         onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) },
       },
-      local: { onChanged: listeners() },
+      // The first-run privacy notice was acknowledged (M3-E10).
+      local: { get: () => Promise.resolve({ privacyNotice: { version: 1, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
       session: { onChanged: listeners(), get: () => Promise.resolve({}), remove: () => Promise.resolve() },
     },
     permissions: { onAdded: listeners() },

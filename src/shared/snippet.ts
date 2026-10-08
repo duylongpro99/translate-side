@@ -11,6 +11,9 @@ type Browser = typeof browser;
 /** What the panel shows when a selection came from a denylisted site. Same wording as the page state. */
 export const DENYLIST_MESSAGE = 'Translate Side never reads this site (mail and sign-in pages are on a built-in denylist).';
 
+/** What the panel shows when a password field had focus as the page was read (M3-D5). Nothing was read or sent. */
+export const PASSWORD_MESSAGE = 'A password field has focus on this page, so Translate Side did not read it. Nothing was sent.';
+
 /** The hint of a page whose text could not be extracted (plan M3 §2). */
 export const EXTRACTION_HINT = "Couldn't read this page. Select text to translate it.";
 

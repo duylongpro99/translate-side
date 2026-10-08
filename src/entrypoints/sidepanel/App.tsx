@@ -7,6 +7,8 @@ import { readFollow, useScrollFollow, writeFollow } from './follow.ts';
 import { JobBar, type JobActions } from './JobBar.tsx';
 import type { Jobs, JobView } from './jobs.ts';
 import { SegmentList } from './SegmentList.tsx';
+import { PrivacyNotice } from './PrivacyNotice.tsx';
+import type { PrivacyGate, PrivacyState } from './privacy.ts';
 import { SelectionView } from './SelectionView.tsx';
 import { StateMessage } from './StateMessage.tsx';
 import type { SnippetStore, SnippetView } from './snippet.ts';
@@ -20,6 +22,8 @@ export interface TranslatorProps {
   viewports?: ViewportStore;
   /** Selection mode (plan M3-E4): the selection of each tab, and the job that translates it. */
   snippets?: { jobs: Jobs; store: SnippetStore; actions(tabId: number): JobActions; close(tabId: number): void };
+  /** The first-run privacy notice (plan M3-E10). */
+  privacy?: PrivacyGate;
 }
 
 const nextFrame = (fn: () => void) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 16));
@@ -60,6 +64,15 @@ function useSnippet(store: SnippetStore | undefined, tabId: number | undefined):
   return view;
 }
 
+function usePrivacy(gate: PrivacyGate | undefined): PrivacyState | undefined {
+  const [state, setState] = useState(() => gate?.state);
+  useEffect(() => {
+    setState(gate?.state);
+    return gate?.subscribe(setState);
+  }, [gate]);
+  return state;
+}
+
 export function App({ controller, translator }: { controller: PanelController; translator?: TranslatorProps }) {
   const [view, setView] = useState<PanelView>(controller.view);
   const [tabId, setTabId] = useState<number | undefined>(controller.tabId);
@@ -74,6 +87,7 @@ export function App({ controller, translator }: { controller: PanelController; t
     [controller],
   );
   const job = useJob(translator?.jobs, tabId, view.kind === 'ready' ? view.docId : undefined);
+  const privacy = usePrivacy(translator?.privacy);
   const snippet = useSnippet(translator?.snippets?.store, tabId);
   const snippetJob = useJob(translator?.snippets?.jobs, tabId, snippet?.docId);
   // A site on the denylist is never read, selection included (M3-D13): its own message wins.
@@ -123,6 +137,7 @@ export function App({ controller, translator }: { controller: PanelController; t
           ✕
         </button>
       </header>
+      {privacy === 'needed' && translator?.privacy ? <PrivacyNotice onAcknowledge={() => void translator.privacy?.acknowledge().catch(() => {})} /> : null}
       {selecting && tabId !== undefined && snippet && translator?.snippets ? (
         <SelectionView snippet={snippet} job={snippetJob} actions={translator.snippets.actions(tabId)} onClose={() => translator.snippets?.close(tabId)} pageReady={view.kind === 'ready'} />
       ) : view.kind !== 'ready' ? (

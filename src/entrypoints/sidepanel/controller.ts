@@ -21,8 +21,8 @@ export type PanelView =
   /** No injection yet for this tab: the user has to click the icon or press Alt+T. */
   | { kind: 'idle' }
   | { kind: 'loading' }
-  /** Chrome or the denylist forbids reading the page. */
-  | { kind: 'blocked'; reason: AccessReason | 'denylisted'; detail?: string }
+  /** Chrome or the denylist forbids reading the page; or a password field had focus when it was read (M3-D5). */
+  | { kind: 'blocked'; reason: AccessReason | 'denylisted' | 'password'; detail?: string }
   /**
    * The activeTab grant ended (cross-origin navigation); a new gesture is needed (S5). Without a
    * grant Chrome hides the tab's URL, so a move to a browser page or the Web Store looks the same.
@@ -211,7 +211,7 @@ export class PanelController {
         // repeat clicks re-inject as "already injected"). SPA re-extraction is M5. A new gesture
         // on a page that came out empty or failed reads it again on the same connection.
         if (s.client && !s.client.closed) {
-          if (!changed || (s.view.kind !== 'empty' && s.view.kind !== 'error')) return;
+          if (!changed || (s.view.kind !== 'empty' && s.view.kind !== 'error' && !(s.view.kind === 'blocked' && s.view.reason === 'password'))) return;
           if (s.docId === undefined) void this.connect(tabId);
           else void this.extract(tabId, s, s.client, s.generation);
           return;
@@ -267,7 +267,7 @@ export class PanelController {
         this.setView(tabId, { kind: 'ready', result, docId: s.docId ?? '' });
         this.opts.hooks?.ready?.(tabId, s.docId ?? '', result);
       }
-      else if (result.reason === 'denylisted') this.setView(tabId, { kind: 'blocked', reason: 'denylisted' });
+      else if (result.reason === 'denylisted' || result.reason === 'password') this.setView(tabId, { kind: 'blocked', reason: result.reason });
       else this.setView(tabId, { kind: 'empty', url: result.url });
     } catch (err) {
       this.fail(tabId, s, generation, err);

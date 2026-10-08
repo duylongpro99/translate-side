@@ -81,9 +81,9 @@ describe('openPanelAndInject', () => {
     }
   });
 
-  it('never injects into a denylisted origin', async () => {
+  it.each(['https://mail.google.com/mail/u/0/', 'https://accounts.google.com/signin', 'https://login.microsoftonline.com/common/oauth2'])('never injects into the denylisted %s', async (url) => {
     const f = fakeApi();
-    await openPanelAndInject(f.api, { id: 5, url: 'https://mail.google.com/mail/u/0/' });
+    await openPanelAndInject(f.api, { id: 5, url });
     expect(f.calls).toEqual(['open:5']);
     expect(f.store[accessKey(5)]).toMatchObject({ status: 'blocked', reason: 'denylisted' });
   });

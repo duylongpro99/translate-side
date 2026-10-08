@@ -23,7 +23,8 @@ function fakeApi() {
   const api = {
     storage: {
       sync: { get: (k: string) => Promise.resolve(k === 'prefs' ? { prefs: { targetLang: 'vi', sourceLang: 'auto' } } : {}), onChanged: none },
-      local: { onChanged: none },
+      // The first-run privacy notice was acknowledged (M3-E10).
+      local: { get: () => Promise.resolve({ privacyNotice: { version: 1, at: 0 } }), set: () => Promise.resolve(), onChanged: none },
       session: {
         get: (k: string) => Promise.resolve(session.has(k) ? { [k]: session.get(k) } : {}),
         remove: (k: string) => (session.delete(k), Promise.resolve()),

@@ -335,3 +335,39 @@ body {
   margin: 0;
   font-size: 1rem;
 }
+
+/* First-run privacy notice (M3-E10) */
+.privacy {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.privacy__title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+.privacy p {
+  margin: 0 0 8px;
+}
+.privacy__list {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  color: var(--muted);
+}
+.privacy__list li {
+  margin-bottom: 4px;
+}
+.privacy__ok {
+  font: inherit;
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: Canvas;
+  cursor: pointer;
+}

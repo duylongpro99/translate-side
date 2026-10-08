@@ -161,7 +161,9 @@ describe('PanelController', () => {
     const w = fakeWorld();
     w.pages[10] = { docId: 'd1', result: { ok: false, reason: 'no-content', url: 'https://example.com/' } };
     w.store[accessKey(10)] = { status: 'ready', at: 0 };
-    const { c } = await started(w);
+    // Nothing reaches the translator (the only path to a provider) for either: never sent (§3 #7).
+    const ready = vi.fn();
+    const { c } = await started(w, { hooks: { ready } });
     await wait();
     expect(c.view).toEqual({ kind: 'empty', url: 'https://example.com/' });
 
@@ -169,6 +171,28 @@ describe('PanelController', () => {
     c.retry();
     await wait();
     expect(c.view).toEqual({ kind: 'blocked', reason: 'denylisted' });
+    expect(ready).not.toHaveBeenCalled();
+  });
+
+  it('skips a page read while a password field had focus (M3-D5): nothing reaches the job, and the next gesture reads it again', async () => {
+    const w = fakeWorld();
+    w.pages[10] = { docId: 'd1', result: { ok: false, reason: 'password', url: 'https://example.com/login' } };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    const ready = vi.fn();
+    const c = new PanelController(w.api, { idleGraceMs: 20, lostAfterMs: 30, hooks: { ready } });
+    await c.start();
+    await wait();
+    await wait();
+    expect(c.view).toEqual({ kind: 'blocked', reason: 'password' });
+    expect(ready).not.toHaveBeenCalled();
+
+    // Focus left the field; Alt+T again re-injects as "already injected" on the same connection.
+    w.pages[10].result = ok(2);
+    w.setAccess(10, { status: 'ready', detail: 'already injected' });
+    await wait();
+    expect(c.view).toMatchObject({ kind: 'ready', docId: 'd1' });
+    expect(ready).toHaveBeenCalledTimes(1);
+    expect(w.connects).toEqual([10]);
   });
 
   it('routes per tab: each tab keeps its own view, and switching back does not reconnect', async () => {

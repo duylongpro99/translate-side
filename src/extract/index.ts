@@ -75,6 +75,8 @@ function runReadability(doc: Document, body: Element): Element | null {
 export function extractPage(doc: Document, targets?: Map<string, Element>): ExtractResult {
   const url = doc.URL;
   if (!classifyUrl(url).ok) return { ok: false, reason: 'denylisted', url };
+  // M3-D5: someone is typing a password here (a sign-in or payment page): skip the page.
+  if (hasFocusedPassword(doc)) return { ok: false, reason: 'password', url };
   // D24: a page that is one editable region (an editor app, designMode) is never read.
   if (isEditableDocument(doc)) return { ok: false, reason: 'no-content', url };
   const composed = composeDocument(doc);
@@ -131,4 +133,17 @@ function isEditableDocument(doc: Document): boolean {
     return ce !== null && ce !== undefined && ce.toLowerCase() !== 'false';
   };
   return doc.designMode === 'on' || editable(doc.documentElement) || editable(doc.body);
+}
+
+/** The focused element, through open shadow roots (a password field inside a web component counts). */
+function deepActiveElement(doc: Document): Element | null {
+  let el = doc.activeElement;
+  while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+  return el;
+}
+
+/** Whether focus is in a password field at extraction time (plan M3 §5, decision M3-D5). */
+export function hasFocusedPassword(doc: Document): boolean {
+  const el = deepActiveElement(doc);
+  return el?.localName === 'input' && (el.getAttribute('type') ?? '').trim().toLowerCase() === 'password';
 }
