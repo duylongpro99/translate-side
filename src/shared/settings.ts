@@ -271,7 +271,7 @@ export const PREFS_KEY = 'prefs';
 export const STYLES: readonly StyleMode[] = ['natural', 'faithful', 'simplified'];
 export const GLOSS_MODES: readonly GlossMode[] = ['first', 'off'];
 
-/** The browser's language, the native-language guess before onboarding exists (§4.3.3 C, M5). */
+/** The browser's language, the native-language guess until the user picks one (the onboarding's step 1, §4.3.3 C). */
 export function defaultPreferences(uiLanguage = 'en'): Preferences {
   return { targetLang: uiLanguage.split('-')[0] || 'en', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: DEFAULT_BUDGET_TOKENS };
 }

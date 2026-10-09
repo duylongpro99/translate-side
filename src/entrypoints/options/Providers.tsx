@@ -52,13 +52,13 @@ export const accessHint = (url: string) => {
 const newId = () => (globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 const perM = (n: number) => `$${Number(n.toFixed(3))}`;
 
-interface Loaded {
+export interface Loaded {
   settings: ProviderSettings;
   /** Connection ids with a key on this device. */
   keyed: Set<string>;
 }
 
-async function load(api: Browser): Promise<Loaded> {
+export async function load(api: Browser): Promise<Loaded> {
   const settings = await readProviderSettings(api);
   const keyed = new Set<string>();
   for (const c of settings.connections) if ((await readApiKey(api, c.id)) !== undefined) keyed.add(c.id);
@@ -568,13 +568,18 @@ function ModelPicker({ id, model, models, onModel }: { id: string; model: string
 
 type TestState = { kind: 'idle' } | { kind: 'running' } | { kind: 'done'; result: TestResult; message?: ConnectMessage | undefined };
 
-function ConnectionForm({
+/**
+ * The add / edit connection form. `initialPreset` starts the form on that preset (no picker): the
+ * onboarding's step 3 uses this same form and Test connection (plan M4-E13).
+ */
+export function ConnectionForm({
   api,
   adapterFor,
   loaded,
   editing,
   openGuide,
   retestMs,
+  initialPreset,
   onDone,
 }: {
   api: Browser;
@@ -583,11 +588,12 @@ function ConnectionForm({
   editing: ProviderConnection | undefined;
   openGuide: boolean;
   retestMs: number;
+  initialPreset?: PresetId | undefined;
   onDone: (text?: string) => void;
 }) {
   const routedModel = editing ? loaded.settings.profiles.find((p) => p.connectionId === editing.id && p.id === loaded.settings.routing.translate)?.model : undefined;
   const firstModel = editing ? loaded.settings.profiles.find((p) => p.connectionId === editing.id)?.model : undefined;
-  const [draft, setDraft] = useState<ConnectionDraft | undefined>(editing ? draftFromConnection(editing, routedModel ?? firstModel ?? '') : undefined);
+  const [draft, setDraft] = useState<ConnectionDraft | undefined>(editing ? draftFromConnection(editing, routedModel ?? firstModel ?? '') : initialPreset ? draftFromPreset(initialPreset) : undefined);
   const [storedKey, setStoredKey] = useState<string | undefined>();
   const [test, setTest] = useState<TestState>({ kind: 'idle' });
   const [guide, setGuide] = useState(openGuide);

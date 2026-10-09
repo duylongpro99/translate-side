@@ -22,6 +22,8 @@ export interface SwitcherState {
   options: SwitcherOption[];
   /** The profile the translate role resolves to for this tab and page; undefined when none resolves. */
   currentId?: string;
+  /** Can this device send with the current profile (a key, or none needed)? False on a fresh install. */
+  currentUsable?: boolean;
   /** `routing.translate`: what every other tab and page uses. */
   defaultId: string;
   /** This tab's own choice, when it has one. */
@@ -46,9 +48,11 @@ export async function readSwitcher(api: Browser, target: { tabId?: number | unde
     if (!usable && p.id !== current && p.id !== defaultId) continue;
     options.push({ id: p.id, model: p.model, connection: c.label, usable, local: isLocalConnection(c) });
   }
+  const currentConnection = route.ok ? route.connection : undefined;
+  const currentUsable = currentConnection ? await isUsable(api, currentConnection).catch(() => false) : false;
   const rule = siteRuleFor(settings.routing, target.url);
   const ruled = rule && route.ok && route.source === 'site' ? { pattern: rule.pattern, localOnly: rule.localOnly === true, model: route.profile.model, connection: route.connection.label } : undefined;
-  return { options, ...(current !== undefined ? { currentId: current } : {}), defaultId, ...(tab !== undefined && settings.profiles.some((p) => p.id === tab) ? { tabId: tab } : {}), ...(ruled ? { rule: ruled } : {}) };
+  return { options, currentUsable, ...(current !== undefined ? { currentId: current } : {}), defaultId, ...(tab !== undefined && settings.profiles.some((p) => p.id === tab) ? { tabId: tab } : {}), ...(ruled ? { rule: ruled } : {}) };
 }
 
 /** This tab only (§4.3.3 B): the routing is not touched. `undefined` goes back to the default. */

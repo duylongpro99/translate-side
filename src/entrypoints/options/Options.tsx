@@ -23,6 +23,7 @@ import {
   type ProviderConnection,
 } from '@/shared/settings';
 import { isProviderKey, readProviderSettings, resolveRoute, type ProviderSettings } from '@/shared/providers';
+import { openOnboarding } from '@/shared/onboarding';
 import { ProvidersSection, type AdapterFor } from './Providers.tsx';
 import { openTranslationCache, type CacheStats, type TranslationCache } from '@/shared/cache';
 import { formatUsd } from '@/shared/cost';
@@ -517,6 +518,12 @@ export function Options({ api, cache = openTranslationCache(), adapterFor }: { a
   return (
     <main class="opt">
       <h1>Translate Side settings</h1>
+      <p class="opt__hint">
+        <button type="button" data-testid="open-onboarding" onClick={() => void openOnboarding(api)}>
+          Set up guide
+        </button>{' '}
+        Language, how to translate, and a sample, step by step.
+      </p>
       <ProvidersSection api={api} {...(adapterFor ? { adapterFor } : {})} />
       <LanguageSection api={api} />
       <StyleSection api={api} />

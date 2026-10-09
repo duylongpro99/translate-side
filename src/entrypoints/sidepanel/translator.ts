@@ -338,6 +338,13 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       const got = await prepare(tabId, settings, doc);
       if (got === undefined) return;
       if (jobs.docOf(tabId) !== docId || !isLive(tabId, docId)) return got.unmark();
+      // Nothing is sent before the first-run privacy notice is acknowledged (M3-E10), a switch included.
+      if (privacy.state !== 'acknowledged') {
+        got.unmark();
+        return privacy.whenAcknowledged(pageKey(tabId), () => {
+          if (isLive(tabId, docId)) rerun(tabId);
+        });
+      }
       void jobs.start(tabId, docId, got.prepared.doc, { keepCost: true, keepBrief: true });
     });
   };

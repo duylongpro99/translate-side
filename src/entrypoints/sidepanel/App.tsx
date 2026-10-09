@@ -11,6 +11,7 @@ import { SegmentList } from './SegmentList.tsx';
 import { PrivacyNotice } from './PrivacyNotice.tsx';
 import type { PrefsStore } from './prefs.ts';
 import type { Routed, RouteTarget } from './route.ts';
+import { openOnboarding, readOnboarding, ONBOARDING_KEY, type OnboardingStatus } from '@/shared/onboarding';
 import type { SwitcherState } from './switcher.ts';
 import type { Translator } from './translator.ts';
 import type { PrivacyGate, PrivacyState } from './privacy.ts';
@@ -84,6 +85,25 @@ function useSwitcher(translator: TranslatorProps | undefined, tabId: number | un
       browser.storage.session.onChanged.removeListener(on);
     };
   }, [translator, tabId, url, status, version]);
+  return state;
+}
+
+/** Has the first-run guide been finished or skipped on this device (M4-E13)? undefined until read, and while it is not. */
+function useOnboarding(): { status: OnboardingStatus | undefined; read: boolean } {
+  const [state, setState] = useState<{ status: OnboardingStatus | undefined; read: boolean }>({ status: undefined, read: false });
+  useEffect(() => {
+    const load = () =>
+      readOnboarding(browser).then(
+        (status) => setState({ status, read: true }),
+        () => setState({ status: undefined, read: false }),
+      );
+    void load();
+    const on = (changes: Record<string, unknown>) => {
+      if (ONBOARDING_KEY in changes) void load();
+    };
+    browser.storage.local.onChanged.addListener(on);
+    return () => browser.storage.local.onChanged.removeListener(on);
+  }, []);
   return state;
 }
 
@@ -162,6 +182,9 @@ export function App({ controller, translator }: { controller: PanelController; t
   const routed = useRouted(translator, tabId, view.kind === 'ready' ? view.result.url : undefined, job);
   const [switcherVersion, setSwitcherVersion] = useState(0);
   const switcherState = useSwitcher(translator, tabId, view.kind === 'ready' ? view.result.url : undefined, job, switcherVersion);
+  const onboarding = useOnboarding();
+  // No route can run here yet and the guide was never finished: offer it (the page still reads as the original).
+  const offerSetup = onboarding.read && onboarding.status === undefined && switcherState !== undefined && switcherState.currentUsable === false;
   const [switcherError, setSwitcherError] = useState<string | undefined>();
   const switcherActions =
     translator?.switcher && tabId !== undefined
@@ -255,6 +278,14 @@ export function App({ controller, translator }: { controller: PanelController; t
         </div>
         {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} routedModel={routed?.model} switcher={switcherActions} actions={job ? pageActions : undefined} onPrefs={switchPrefs} error={prefsError ? "Couldn't save that setting. Try again, or change it in settings." : undefined} /> : null}
       </header>
+      {offerSetup ? (
+        <section class="setup-offer" data-testid="setup-offer">
+          <p>New here? Set up a translation provider to start translating.</p>
+          <button type="button" class="job__button" data-testid="setup-open" onClick={() => void openOnboarding(browser)}>
+            Set up Translate Side
+          </button>
+        </section>
+      ) : null}
       {privacy === 'needed' && translator?.privacy ? <PrivacyNotice to={routed} onAcknowledge={() => void translator.privacy?.acknowledge().catch(() => {})} /> : null}
       {selecting && tabId !== undefined && snippet && translator?.snippets ? (
         <SelectionView snippet={snippet} job={snippetJob} actions={translator.snippets.actions(tabId)} onClose={() => translator.snippets?.close(tabId)} pageReady={view.kind === 'ready'} />

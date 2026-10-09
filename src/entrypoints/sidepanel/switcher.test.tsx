@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // The quick switcher (plan M4-E11, DESIGN §4.3.3 B): a tab-only choice (storage.session), the
 // routing unchanged until "Make default", the choice gone with the tab, and a site rule that wins.
+import { browser } from 'wxt/browser';
 import { IDBFactory } from 'fake-indexeddb';
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
@@ -9,6 +10,7 @@ import type { Segment } from '@/engine/index';
 import { renderLines, translatorClient } from '@/engine/testing';
 import { openTranslationCache } from '@/shared/cache';
 import { listenForTabLifecycle } from '@/shared/panel';
+import { translateClient } from './route.ts';
 import { readTabOverride, resolveRoute, tabRouteKey } from '@/shared/providers';
 import { APIBOX_FLASH_PROFILE, DEFAULT_PROFILE, GEMINI_PROFILE } from '@/shared/settings';
 import { App } from './App.tsx';
@@ -56,7 +58,7 @@ function area(initial: Record<string, unknown> = {}) {
   };
 }
 
-function fakeApi(opts: { siteRules?: unknown[]; keys?: string[] } = {}) {
+function fakeApi(opts: { siteRules?: unknown[]; keys?: string[]; denied?: string[] } = {}) {
   const sync = area({ prefs: { targetLang: 'vi', sourceLang: 'auto', style: 'natural' }, ...(opts.siteRules ? { siteRules: opts.siteRules } : {}) });
   const local = area({ privacyNotice: { version: 1, at: 0 }, ...Object.fromEntries((opts.keys ?? ['apibox', 'gemini']).map((id) => [`secret:${id}`, `key-${id}`])) });
   const session = area();
@@ -64,7 +66,7 @@ function fakeApi(opts: { siteRules?: unknown[]; keys?: string[] } = {}) {
   const removed = new Set<(tabId: number) => void>();
   const api = {
     storage: { sync, local, session },
-    permissions: { onAdded: none, contains: () => Promise.resolve(true) },
+    permissions: { onAdded: none, contains: ({ origins }: { origins: string[] }) => Promise.resolve(origins.every((o) => !(opts.denied ?? []).some((d) => o.includes(d)))) },
     runtime: { openOptionsPage: () => Promise.resolve() },
     i18n: { getUILanguage: () => 'en' },
     tabs: { onRemoved: { addListener: (fn: (id: number) => void) => removed.add(fn) }, onUpdated: none, onActivated: none },
@@ -101,6 +103,8 @@ function setup(opts: Parameters<typeof fakeApi>[0] = {}) {
         const route = await resolveRoute(f.api, 'translate', target);
         if (!route.ok) return { ok: false as const, error: { kind: 'bad_request' as const, message: route.message } };
         const model = route.profile.model;
+        // Gemini goes through the real route (host permission check, no request when it is missing).
+        if (opts.denied && route.profile.id === GEMINI_PROFILE.id) return translateClient(f.api, target);
         const c = translatorClient((lines) => {
           calls.push(model);
           return renderLines(lines, (s) => `${model}:${s}`);
@@ -229,5 +233,64 @@ describe('quick switcher (M4-E11)', () => {
     const state = await readSwitcher(f.api, { tabId: 1, url: 'https://example.com/a' });
     expect(state.currentId).toBe(DEFAULT_PROFILE.id);
     expect(state.tabId).toBeUndefined();
+  });
+
+  it('a switch to a model whose provider has no host permission stops with Grant access, not silently', async () => {
+    const { t } = setup({ denied: ['generativelanguage.googleapis.com'] });
+    await until(() => t.jobs.get(1)?.status === 'done');
+    pick(GEMINI_PROFILE.id);
+    await until(() => t.jobs.get(1)?.status === 'stopped');
+    await act(() => settle(30));
+    expect(t.jobs.get(1)?.stopError).toMatchObject({ kind: 'cors', cause: 'permission' });
+    expect(root.textContent).toContain('Grant access');
+    expect(root.textContent).toContain('generativelanguage.googleapis.com');
+  });
+
+  it('a switch waits for the privacy notice: nothing is sent until it is acknowledged', async () => {
+    const { f, t, calls } = setup();
+    await until(() => t.jobs.get(1)?.status === 'done');
+    await f.local.remove('privacyNotice');
+    await act(() => settle(20));
+    const n = calls.length;
+    pick(GEMINI_PROFILE.id);
+    await act(() => settle(80));
+    expect(calls.length).toBe(n);
+    expect(q('privacy-notice')).not.toBeNull();
+    await act(() => t.privacy.acknowledge());
+    await until(() => calls.includes(GEMINI_PROFILE.model));
+  });
+
+  it('ties "This tab only" and Make default to the select, and announces a switch politely', async () => {
+    const { t } = setup();
+    await until(() => t.jobs.get(1)?.status === 'done');
+    expect(q('switcher-live')?.getAttribute('aria-live')).toBe('polite');
+    expect(q('switcher-live')?.textContent).toContain('the default');
+    pick(GEMINI_PROFILE.id);
+    await until(() => q('switcher-tab-only') !== null);
+    const note = q('switcher-tab-only')?.id;
+    expect(note).toBeTruthy();
+    expect(q('model-switcher')?.getAttribute('aria-describedby')).toBe(note);
+    expect(q('make-default')?.getAttribute('aria-describedby')).toBe(note);
+    expect(q('switcher-live')?.textContent).toContain(`${GEMINI_PROFILE.model}, this tab only`);
+  });
+
+  it('offers the setup guide while no route can run and the guide was never finished; not after it was', async () => {
+    const { t } = setup({ keys: [] });
+    await until(() => t.jobs.get(1) !== undefined);
+    await until(() => q('setup-offer') !== null);
+    expect(q('setup-open')?.textContent).toBe('Set up Translate Side');
+  });
+
+  it('does not offer the guide once it was skipped or done, or when a key is there', async () => {
+    await browser.storage.local.set({ onboarding: { status: 'skipped', at: 1 } });
+    const a = setup({ keys: [] });
+    await until(() => a.t.jobs.get(1) !== undefined);
+    await act(() => settle(60));
+    expect(q('setup-offer')).toBeNull();
+    await browser.storage.local.remove('onboarding');
+    const b = setup();
+    await until(() => b.t.jobs.get(1)?.status === 'done');
+    await act(() => settle(60));
+    expect(q('setup-offer')).toBeNull();
   });
 });

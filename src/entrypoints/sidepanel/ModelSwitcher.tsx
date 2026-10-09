@@ -15,6 +15,7 @@ export interface ModelSwitcherProps {
 }
 
 const DEFAULT_VALUE = '';
+const options = (state: SwitcherState, id: string) => state.options.find((o) => o.id === id)?.model ?? id;
 
 export function ModelSwitcher({ state, model, onChoose, onMakeDefault, error }: ModelSwitcherProps) {
   const rule = state?.rule;
@@ -47,6 +48,7 @@ export function ModelSwitcher({ state, model, onChoose, onMakeDefault, error }: 
         data-testid="model-switcher"
         aria-label="Translate this tab with"
         title="Applies to this tab only. Your default stays the same."
+        aria-describedby={overridden ? 'switcher-note' : undefined}
         value={overridden ? state.tabId : DEFAULT_VALUE}
         onChange={(e) => {
           const v = (e.currentTarget as HTMLSelectElement).value;
@@ -66,14 +68,18 @@ export function ModelSwitcher({ state, model, onChoose, onMakeDefault, error }: 
       </select>
       {overridden && current ? (
         <>
-          <span class="panel__tabonly" data-testid="switcher-tab-only">
+          <span id="switcher-note" class="panel__tabonly" data-testid="switcher-tab-only">
             This tab only
           </span>
-          <button type="button" class="panel__action" data-testid="make-default" title="Use this model for every page from now on" onClick={() => onMakeDefault(current)}>
+          <button type="button" class="panel__action" data-testid="make-default" aria-describedby="switcher-note" title="Use this model for every page from now on" onClick={() => onMakeDefault(current)}>
             Make default
           </button>
         </>
       ) : null}
+      {/* Said aloud when a switch lands: the page below changes, not the focus. */}
+      <span class="panel__sr" role="status" aria-live="polite" data-testid="switcher-live">
+        {overridden && current ? `This tab now translates with ${options(state, current)}, this tab only.` : `This tab translates with ${defaultOption?.model ?? model}, the default.`}
+      </span>
       {error ? (
         <span class="panel__error" role="alert" data-testid="switcher-error">
           {error}

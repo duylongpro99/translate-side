@@ -6,6 +6,7 @@ import {
   listenForTabLifecycle,
   setupPanelBehavior,
 } from '@/shared/panel';
+import { openOnboarding } from '@/shared/onboarding';
 import { migrateProviders } from '@/shared/providers';
 
 // The worker is a coordinator only (decision S1): action, context menu, injection and tab
@@ -16,7 +17,13 @@ export default defineBackground(() => {
   listenForActionClicks(browser);
   listenForContextMenuClicks(browser);
   listenForTabLifecycle(browser);
-  browser.runtime.onInstalled.addListener(() => {
+  browser.runtime.onInstalled.addListener((details) => {
+    // First install: the 3-step guide opens once (plan M4-E13). An update or a reload does not.
+    if (details.reason === 'install') {
+      openOnboarding(browser).catch((err: unknown) => {
+        console.error('[translate-side] onboarding could not open', err);
+      });
+    }
     createContextMenu(browser).catch((err: unknown) => {
       console.error('[translate-side] context menu setup failed', err);
     });
