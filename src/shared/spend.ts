@@ -137,8 +137,11 @@ export async function readSpend(api: Browser): Promise<SpendTotals | undefined> 
   return cleanSpend(got[SPEND_KEY]);
 }
 
+/** Zeroes the totals (this month too) and re-arms the soft limit: a "Continue anyway" given this month no longer holds. */
 export async function resetSpend(api: Browser): Promise<void> {
   await api.storage.local.remove(SPEND_KEY);
+  const limit = await readSpendLimit(api);
+  if (limit?.continuedFor !== undefined) await api.storage.local.set({ [SPEND_LIMIT_KEY]: { monthlyUsd: limit.monthlyUsd } });
 }
 
 // ---- Estimates (M4-E10: "estimated spend per day and month") -----------------------------------

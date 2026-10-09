@@ -153,6 +153,12 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
           <div {...attrs} role="alert" data-testid="job-limit">
             <span class="job__text">
               This month's spend ({formatUsd(job.limit.monthUsd)}) reached your soft limit of {formatUsd(job.limit.limitUsd)}. Nothing was sent.
+              {job.limit.failed ? (
+                <>
+                  {' '}
+                  <span data-testid="limit-failed">{job.limit.failed}</span>
+                </>
+              ) : null}
             </span>
             <button type="button" class="job__button" data-testid="limit-continue" onClick={actions.continuePastLimit}>
               Continue anyway

@@ -58,6 +58,9 @@ async function readSettings(api: Browser): Promise<Settings> {
   return { prefs, glossary };
 }
 
+/** Why "Continue anyway" could not go on (review 3 #3): the bar shows it instead of nothing. */
+const limitFailure = (err: unknown) => `Could not save “Continue anyway” (${err instanceof Error ? err.message : String(err)}). Try again, or raise the limit in Settings.`;
+
 export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, options: TranslatorOptions = {}): Translator {
   // The running total in settings (M3-E9): pages and selections alike.
   const ledger = new SpendLedger(api);
@@ -321,7 +324,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     retranslateSegment: (id) => void jobs.retranslateSegment(tabId, id),
     retranslatePage: () => retranslate(tabId),
     // The soft limit's "Continue anyway" (M4-E10): holds for the rest of the month.
-    continuePastLimit: () => void continuePastLimit(api).then(() => resume(tabId)),
+    continuePastLimit: () => void continuePastLimit(api).then(() => resume(tabId), (err: unknown) => jobs.limitFailed(tabId, limitFailure(err))),
     grantAccess: () => {
       // The job's own connection's origin, never a default one (§8: per origin, the one in use).
       // Without one (a base URL that does not parse), the settings are where to fix it.
@@ -338,7 +341,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     ...actions(tabId),
     cancel: () => snippetJobs.cancel(tabId),
     resume: () => void snippetJobs.resume(tabId),
-    continuePastLimit: () => void continuePastLimit(api).then(() => snippetJobs.resume(tabId)),
+    continuePastLimit: () => void continuePastLimit(api).then(() => snippetJobs.resume(tabId), (err: unknown) => snippetJobs.limitFailed(tabId, limitFailure(err))),
     retrySegment: (id) => void snippetJobs.retrySegment(tabId, id),
     retranslateSegment: (id) => void snippetJobs.retranslateSegment(tabId, id),
     // A selection has no cache to skip: translating it again is a new run of the same text.

@@ -104,8 +104,11 @@ export interface JobView {
   unmetered: number;
   /** The error that stopped the job (status `stopped`). */
   stopError?: LLMError;
-  /** The monthly soft limit stopped the job before it sent anything (M4-E10): "Continue anyway" goes on. */
-  limit?: LimitReached;
+  /**
+   * The monthly soft limit stopped the job before it sent anything (M4-E10): "Continue anyway" goes
+   * on. `failed`: why that click could not go on (the setting was not saved, review 3 #3).
+   */
+  limit?: LimitReached & { failed?: string };
   /** The connection the job runs on, for "Fix key" (M3-E8). Absent until the client is resolved. */
   connection?: JobConnection;
   /** Requests waiting out a retryable failure right now, one per chunk (M3-E8). Absent when none. */
@@ -732,6 +735,13 @@ export class Jobs {
     };
     this.jobs.set(tabId, job);
     this.emit(tabId, job.view);
+  }
+
+  /** "Continue anyway" past the soft limit failed (its setting could not be saved): the stopped bar says so. */
+  limitFailed(tabId: number, message: string): void {
+    const job = this.jobs.get(tabId);
+    if (!job?.view.limit || job.view.status !== 'stopped') return;
+    this.patch(tabId, job, { limit: { ...job.view.limit, failed: message } });
   }
 
   /** Translates what the tab's job left (cancelled, failed or stopped segments) for the same document. */
