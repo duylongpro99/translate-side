@@ -53,7 +53,7 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
       return;
     }
     heading.current?.focus();
-  }, [step, saved === undefined]);
+  }, [step, saved === undefined, loaded !== undefined]);
 
   useEffect(() => {
     // What is stored (or the browser's language) is only the start: a choice already made stays.
@@ -211,6 +211,7 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
                 openGuide={false}
                 retestMs={retestMs}
                 initialPreset={presetId}
+                hideCancel
                 onDone={(text) => {
                   if (text === undefined) return setStep(2);
                   void reload();

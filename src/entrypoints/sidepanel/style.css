@@ -87,7 +87,7 @@ body {
   white-space: normal;
 }
 .panel__switcher .panel__select {
-  max-width: 14em;
+  max-width: 20em;
 }
 .panel__tabonly,
 .panel__rule {

@@ -308,10 +308,11 @@ describe('onboarding (M4-E13)', () => {
     expect(f.sync.has('routing')).toBe(false);
   });
 
-  it('Back from the connection form returns to step 2; Cancel does the same', async () => {
+  it('Back from the connection form returns to step 2, and the form has no second Cancel', async () => {
     await mount(fakeApi());
     await toStep3();
-    click(t('cancel-connection'));
+    expect(t('cancel-connection')).toBeNull();
+    click(t('onboarding-back'));
     await waitFor(() => t('onboarding-how') !== null);
   });
 

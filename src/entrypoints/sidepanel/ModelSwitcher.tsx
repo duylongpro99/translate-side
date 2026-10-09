@@ -36,7 +36,7 @@ export function ModelSwitcher({ state, model, onChoose, onMakeDefault, error }: 
         <span class="panel__rule" data-testid="switcher-site-rule">
           {' '}
           · site rule {rule.pattern}
-          {rule.localOnly ? ' (local only)' : ''}
+          {rule.localOnly ? ' (local only)' : ''} (overrides tab choice)
         </span>
       </span>
     );
@@ -51,13 +51,15 @@ export function ModelSwitcher({ state, model, onChoose, onMakeDefault, error }: 
   const current = state.currentId;
   const overridden = state.tabId !== undefined && state.tabId !== state.defaultId;
   const defaultOption = state.options.find((o) => o.id === state.defaultId);
+  const chosen = overridden ? state.options.find((o) => o.id === state.tabId) : defaultOption;
+  const selectedLabel = chosen ? `${chosen.model} · ${chosen.connection}` : model;
   return (
     <span class="panel__model panel__switcher" data-slot="quick-switcher" data-testid="header-model">
       <select
         class="panel__select"
         data-testid="model-switcher"
         aria-label="Translate this tab with"
-        title="Applies to this tab only. Your default stays the same."
+        title={`${selectedLabel} (applies to this tab only; your default stays the same)`}
         aria-describedby={overridden ? 'switcher-note' : undefined}
         value={overridden ? state.tabId : DEFAULT_VALUE}
         onChange={(e) => {

@@ -213,11 +213,20 @@ describe('quick switcher (M4-E11)', () => {
     await act(() => settle(30));
     expect(q('model-switcher')).toBeNull();
     expect(q('switcher-site-rule')?.textContent).toContain('example.com');
+    expect(q('switcher-site-rule')?.textContent).toContain('overrides tab choice');
     expect(q('header-model')?.textContent).toContain(GEMINI_PROFILE.model);
     expect(segText(t)).toBe(`${GEMINI_PROFILE.model}:${text(0)}`);
     expect(q('make-default')).toBeNull();
     const state = await readSwitcher(f.api, { tabId: 1, url: 'https://example.com/a' });
     expect(state.rule?.pattern).toBe('example.com');
+  });
+
+  it('the select carries the full model label in its title, for names the box clips', async () => {
+    const { t } = setup();
+    await until(() => t.jobs.get(1)?.status === 'done');
+    pick(GEMINI_PROFILE.id);
+    await until(() => q('switcher-tab-only') !== null);
+    expect(q('model-switcher')?.getAttribute('title')).toContain(`${GEMINI_PROFILE.model} · `);
   });
 
   it('says a local-only rule is local only', async () => {

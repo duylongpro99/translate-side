@@ -580,6 +580,7 @@ export function ConnectionForm({
   openGuide,
   retestMs,
   initialPreset,
+  hideCancel = false,
   onDone,
 }: {
   api: Browser;
@@ -589,6 +590,8 @@ export function ConnectionForm({
   openGuide: boolean;
   retestMs: number;
   initialPreset?: PresetId | undefined;
+  /** Onboarding has its own Back: the form's Cancel would do the same. */
+  hideCancel?: boolean;
   onDone: (text?: string) => void;
 }) {
   const routedModel = editing ? loaded.settings.profiles.find((p) => p.connectionId === editing.id && p.id === loaded.settings.routing.translate)?.model : undefined;
@@ -834,9 +837,11 @@ export function ConnectionForm({
         <button type="submit" data-testid="save-connection">
           Save
         </button>
-        <button type="button" onClick={cancel} data-testid="cancel-connection">
-          Cancel
-        </button>
+        {hideCancel ? null : (
+          <button type="button" onClick={cancel} data-testid="cancel-connection">
+            Cancel
+          </button>
+        )}
       </div>
     </form>
   );
