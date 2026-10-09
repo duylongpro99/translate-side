@@ -1,0 +1,39 @@
+{
+ "judgeModel": "ds/deepseek-v4-pro",
+ "prompt": "judge@1",
+ "at": "2026-10-09T06:17:55.504Z",
+ "scores": {
+  "docker-multistage": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 3,
+   "comment": "Main content is understandable but details shift: 'each of them begins a new stage' is rendered as 'mỗi hình ảnh đó bắt đầu...' (each image begins), and 'production image' becomes 'hình ảnh sản phẩm'. 'Artifact' is inconsistent and once translated as 'tài nguyên'."
+  },
+  "go-gofmt": {
+   "fidelity": 2,
+   "naturalness": 2,
+   "tone": 3,
+   "terminology": 3,
+   "comment": "The translation omits segment 6 entirely and has several awkward or inaccurate renderings, such as 'Mã nguồn được Gofmt là' and 'một cách trí tuệ'."
+  },
+  "wodehouse-jeeves": {
+   "fidelity": 1,
+   "naturalness": 2,
+   "tone": 2,
+   "terminology": 1,
+   "comment": "Main weakness is multiple clear mistranslations (fifty-one as fifteen, jute as 'mây', obsession as 'sáng chế', not bigoted as 'không thù địch') plus typos and literal calques that make the text read like clumsy translation."
+  }
+ },
+ "failed": [],
+ "usage": {
+  "input": 4478,
+  "cachedInput": 0,
+  "output": 12665
+ },
+ "costUsd": 0.01868812,
+ "reasoning": {
+  "effort": "medium",
+  "reserveTokens": 16000
+ }
+}

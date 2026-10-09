@@ -1,0 +1,188 @@
+{
+ "run": "2026-10-09T06-14-54-029Z",
+ "set": "eval",
+ "strategy": "single-pass",
+ "strategyVersion": 1,
+ "prompt": "translate@1",
+ "promptHash": "225254ef84c3",
+ "prompts": {
+  "translate": "translate@1"
+ },
+ "style": "natural",
+ "gloss": "first",
+ "glossary": 0,
+ "label": "openrouter-anthropic/poolside/laguna-s-2.1:free",
+ "thinking": {},
+ "reasoning": {
+  "calls": 0,
+  "tokens": 0,
+  "max": 0,
+  "outlierTokens": 2000,
+  "outliers": []
+ },
+ "brief": null,
+ "model": "poolside/laguna-s-2.1:free",
+ "target": "vi",
+ "chunkTokens": 1500,
+ "concurrency": 1,
+ "price": {
+  "input": 0,
+  "cachedInput": 0,
+  "output": 0,
+  "verified": true
+ },
+ "docs": [
+  {
+   "slug": "docker-multistage",
+   "segments": 10,
+   "translatable": 8,
+   "final": 8,
+   "failed": 0,
+   "lost": 0,
+   "repaired": 1,
+   "revised": 0,
+   "reviseKept": 0,
+   "calls": 2,
+   "input": 1258,
+   "cachedInput": 0,
+   "output": 957,
+   "wallMs": 26290,
+   "firstFinalMs": 1925,
+   "costUsd": 0,
+   "errors": [],
+   "chunks": 1,
+   "briefedChunks": 0,
+   "check": {
+    "rerequested": 0,
+    "kinds": {},
+    "repaired": 0,
+    "failed": 0,
+    "input": 0,
+    "output": 0,
+    "codeBearing": 3,
+    "codePreserved": 3,
+    "finalsFailingChecks": 0
+   }
+  },
+  {
+   "slug": "go-gofmt",
+   "segments": 7,
+   "translatable": 7,
+   "final": 6,
+   "failed": 1,
+   "lost": 1,
+   "repaired": 0,
+   "revised": 0,
+   "reviseKept": 0,
+   "calls": 6,
+   "input": 608,
+   "cachedInput": 0,
+   "output": 380,
+   "wallMs": 16449,
+   "firstFinalMs": 2328,
+   "costUsd": 0,
+   "errors": [
+    "rate_limit: Provider returned error"
+   ],
+   "chunks": 1,
+   "briefedChunks": 0,
+   "check": {
+    "rerequested": 1,
+    "kinds": {
+     "markers": 1
+    },
+    "repaired": 0,
+    "failed": 1,
+    "input": 0,
+    "output": 0,
+    "codeBearing": 0,
+    "codePreserved": 0,
+    "finalsFailingChecks": 0
+   }
+  },
+  {
+   "slug": "wodehouse-jeeves",
+   "segments": 4,
+   "translatable": 4,
+   "final": 4,
+   "failed": 0,
+   "lost": 0,
+   "repaired": 1,
+   "revised": 0,
+   "reviseKept": 0,
+   "calls": 6,
+   "input": 1411,
+   "cachedInput": 0,
+   "output": 1235,
+   "wallMs": 45098,
+   "firstFinalMs": 15722,
+   "costUsd": 0,
+   "errors": [],
+   "chunks": 1,
+   "briefedChunks": 0,
+   "check": {
+    "rerequested": 0,
+    "kinds": {},
+    "repaired": 0,
+    "failed": 0,
+    "input": 0,
+    "output": 0,
+    "codeBearing": 0,
+    "codePreserved": 0,
+    "finalsFailingChecks": 0
+   }
+  }
+ ],
+ "total": {
+  "translatable": 19,
+  "lost": 1,
+  "failed": 1,
+  "repaired": 2,
+  "revised": 0,
+  "reviseKept": 0,
+  "calls": 14,
+  "input": 3277,
+  "cachedInput": 0,
+  "output": 2572,
+  "wallMs": 87837,
+  "costUsd": 0
+ },
+ "check": {
+  "rerequested": 1,
+  "kinds": {
+   "markers": 1
+  },
+  "repaired": 0,
+  "failed": 1,
+  "input": 0,
+  "output": 0,
+  "codeBearing": 3,
+  "codePreserved": 3,
+  "finalsFailingChecks": 0
+ },
+ "nonce": null,
+ "charsPerToken": {
+  "calls": 5,
+  "input": 3.9911504424778763,
+  "output": 1.9167962674961119,
+  "assumed": 3.5
+ },
+ "thresholds": {
+  "chunks": 3,
+  "segments": 19,
+  "chunksWithFixes": 1,
+  "fixKinds": {
+   "cut": 1
+  },
+  "rerequested": 12,
+  "merged": 0,
+  "maxRatio": 1.2894736842105263,
+  "over": {
+   "1.2": 1,
+   "1.4": 0,
+   "1.6": 0
+  },
+  "maxBudgetUse": 1,
+  "partialTag": 0
+ }
+}

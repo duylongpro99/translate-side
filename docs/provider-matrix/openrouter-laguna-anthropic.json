@@ -1,0 +1,10 @@
+{
+  "provider": "openrouter",
+  "model": "poolside/laguna-s-2.1:free",
+  "status": "done",
+  "jobText": "Vietnamese · 0 of 69 · 69 failed · 13.9 s Retry failed",
+  "cost": null,
+  "costTitle": null,
+  "failedBlocks": 69,
+  "wallSeconds": 74.1
+}

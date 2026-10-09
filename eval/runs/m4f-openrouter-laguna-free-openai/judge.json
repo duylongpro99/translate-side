@@ -1,0 +1,39 @@
+{
+ "judgeModel": "ds/deepseek-v4-pro",
+ "prompt": "judge@1",
+ "at": "2026-10-09T06:17:42.418Z",
+ "scores": {
+  "docker-multistage": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 3,
+   "comment": "The main weakness is sentence [7], where 'None of the build tools... are included' is rendered with contradictory grammar, undermining the meaning. In addition, 'image' is inconsistently translated as 'hình ảnh' instead of the usual Docker term 'image'."
+  },
+  "go-gofmt": {
+   "fidelity": 2,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "Segment [6] is missing entirely, dropping the 'easier to maintain' point; [4]'s 'hacking away' is rendered awkwardly as 'sửa chữa nhanh chóng'."
+  },
+  "wodehouse-jeeves": {
+   "fidelity": 2,
+   "naturalness": 1,
+   "tone": 2,
+   "terminology": 2,
+   "comment": "The translation has several clear mistranslations (e.g. 'fifty-one' becomes 'mười tám', 'captain of industry' becomes 'tổng thống doanh nghiệp') and is full of typos and unnatural phrasing that make it read like poor machine translation."
+  }
+ },
+ "failed": [],
+ "usage": {
+  "input": 4444,
+  "cachedInput": 0,
+  "output": 9043
+ },
+ "costUsd": 0.01389212,
+ "reasoning": {
+  "effort": "medium",
+  "reserveTokens": 16000
+ }
+}
