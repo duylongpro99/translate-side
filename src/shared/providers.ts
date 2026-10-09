@@ -61,6 +61,25 @@ export const TAB_ROUTE_PREFIX = 'tabRoute:';
 
 /** Is `key` one of the sync items this module owns? */
 export const isProviderKey = (key: string) => key === SCHEMA_KEY || key === ROUTING_KEY || key === SITE_RULES_KEY || key.startsWith(CONNECTION_PREFIX) || key.startsWith(PROFILE_PREFIX);
+const STATUS_FIELDS = new Set(['status', 'lastError', 'lastErrorKind']);
+
+/**
+ * Does this sync change only mark a connection as failed (saveConnectionStatus after a refused
+ * key)? Such a write fixes nothing, so a job stopped on it must not run again (M4-D tester F1). A
+ * built-in connection not stored yet is compared with its built-in record.
+ */
+export function isErrorStatusWrite(key: string, change: { oldValue?: unknown; newValue?: unknown }): boolean {
+  if (!key.startsWith(CONNECTION_PREFIX) || !isRecord(change.newValue) || change.newValue.status !== 'error') return false;
+  const old = change.oldValue ?? BUILTIN_CONNECTIONS.find((c) => c.id === key.slice(CONNECTION_PREFIX.length));
+  if (!isRecord(old)) return false;
+  const keys = new Set([...Object.keys(old), ...Object.keys(change.newValue)]);
+  for (const k of keys) {
+    if (STATUS_FIELDS.has(k)) continue;
+    if (JSON.stringify(old[k]) !== JSON.stringify(change.newValue[k])) return false;
+  }
+  return true;
+}
+
 export const connectionKey = (id: string) => `${CONNECTION_PREFIX}${id}`;
 export const profileKey = (id: string) => `${PROFILE_PREFIX}${id}`;
 export const tabRouteKey = (tabId: number) => `${TAB_ROUTE_PREFIX}${tabId}`;

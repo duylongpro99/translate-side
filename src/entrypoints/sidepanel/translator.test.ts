@@ -702,3 +702,74 @@ describe('Grant access asks for the job’s own origin only (plan M4-E4, carry-o
     expect(opened).toBe(true);
   });
 });
+
+describe('a refused key stops once (M4-D tester F1)', () => {
+  /** Sync storage that writes and tells its listeners, as Chrome does (oldValue, newValue). */
+  function storingApi() {
+    const sync = new Map<string, unknown>([['prefs', { targetLang: 'vi', sourceLang: 'auto' }]]);
+    const onSync = new Set<(c: Record<string, { oldValue?: unknown; newValue?: unknown }>) => void>();
+    const listeners = () => ({ addListener: () => {}, removeListener: () => {} });
+    const set = (items: Record<string, unknown>) => {
+      const changes = Object.fromEntries(Object.entries(items).map(([k, v]) => [k, { ...(sync.has(k) ? { oldValue: sync.get(k) } : {}), newValue: v }]));
+      for (const [k, v] of Object.entries(items)) sync.set(k, v);
+      // Chrome tells the listeners later, after the job has stopped.
+      setTimeout(() => {
+        for (const fn of onSync) fn(changes);
+      }, 5);
+      return Promise.resolve();
+    };
+    const api = {
+      storage: {
+        sync: {
+          get: (k: string | null) => Promise.resolve(k === null ? Object.fromEntries(sync) : sync.has(k) ? { [k]: sync.get(k) } : {}),
+          set,
+          onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) },
+        },
+        local: { get: () => Promise.resolve({ privacyNotice: { version: 1, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
+        session: { onChanged: listeners(), get: () => Promise.resolve({}), remove: () => Promise.resolve() },
+      },
+      permissions: { onAdded: listeners() },
+      i18n: { getUILanguage: () => 'en' },
+    } as unknown as Api;
+    return { api, sync, set };
+  }
+  const refusing = () => {
+    const c = {
+      model: 'claude-haiku-4-5',
+      requests: 0,
+      reasoningReserveTokens: () => 0,
+      async *stream() {
+        c.requests++;
+        await Promise.resolve();
+        yield { type: 'error' as const, error: { kind: 'auth' as const, status: 401, message: 'Key invalid or missing' } };
+      },
+    };
+    return c;
+  };
+
+  it('marking the connection as failed does not run the job again with the same key', async () => {
+    const s = storingApi();
+    const primary = refusing();
+    const translateClient = () => Promise.resolve({ ok: true as const, client: primary as LLMClient, profile: { ...GEMINI_PROFILE, connectionId: 'anthropic' }, connection: { id: 'anthropic', label: 'Anthropic' } });
+    const t = createTranslator(s.api, { translateClient });
+    const stop = t.watch(() => 1);
+    const hooks = t.hooks as Required<SessionHooks>;
+    hooks.active(1);
+    hooks.ready(1, 'd', result);
+    await settle(50);
+    expect(t.jobs.get(1)?.status).toBe('stopped');
+    expect(t.jobs.get(1)?.stopError?.kind).toBe('auth');
+    // The panel's own mark landed in settings…
+    expect(s.sync.get('conn:anthropic')).toMatchObject({ status: 'error', lastErrorKind: 'auth' });
+    // …and the bad key was sent once, not a second round when the mark reached the panel.
+    await settle(50);
+    expect(primary.requests).toBe(1);
+    expect(t.jobs.get(1)?.status).toBe('stopped');
+
+    // A real change to the connection (here its base URL) does run the job again.
+    await s.set({ 'conn:anthropic': { ...(s.sync.get('conn:anthropic') as object), baseUrl: 'https://gw.example.com' } });
+    await settle(50);
+    expect(primary.requests).toBe(2);
+    stop();
+  });
+});

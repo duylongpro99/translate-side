@@ -12,7 +12,7 @@ import { checkSpendLimit, continuePastLimit, SpendLedger } from '@/shared/spend'
 import { anyDenylisted, clearSnippet, readSnippet, tabIdFromSnippetKey, type SnippetRecord } from '@/shared/snippet';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
 import { snippetDocId, snippetView, SnippetStore } from './snippet.ts';
-import { isProviderKey, saveConnectionStatus } from '@/shared/providers';
+import { isErrorStatusWrite, isProviderKey, saveConnectionStatus } from '@/shared/providers';
 import { routedSummary, translateClient, type Routed, type RouteTarget } from './route.ts';
 import { ViewportStore } from './viewport.ts';
 import { PrivacyGate } from './privacy.ts';
@@ -376,9 +376,10 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       if (Object.keys(changes).some((k) => k.startsWith(SECRET_PREFIX))) retryStopped();
     };
     /** Settings changed: the active tab's page is translated again if they concern it (refresh). */
-    const onSync = (changes: Record<string, unknown>) => {
-      // A connection, model or route changed (src/shared/providers.ts): a job stopped on it runs again.
-      if (Object.keys(changes).some(isProviderKey)) retryStopped();
+    const onSync = (changes: Record<string, { oldValue?: unknown; newValue?: unknown }>) => {
+      // A connection, model or route changed (src/shared/providers.ts): a job stopped on it runs
+      // again. Not the panel's own mark of a refused key (onAuthError): that changes nothing.
+      if (Object.entries(changes).some(([k, c]) => isProviderKey(k) && !isErrorStatusWrite(k, c))) retryStopped();
       if (!(PREFS_KEY in changes) && !(GLOSSARY_KEY in changes)) return;
       const tabId = activeTab();
       if (tabId !== undefined) refresh(tabId);

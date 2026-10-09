@@ -9,6 +9,7 @@ import {
   cleanSiteRules,
   clearTabOverride,
   fallbackRoutesIn,
+  isErrorStatusWrite,
   isLocalConnection,
   isProviderKey,
   matchesSite,
@@ -816,5 +817,22 @@ describe('fallback chain routing (plan M4-E9, DESIGN §4.3.5 privacy rule)', () 
     expect(withBrief.fallback).toBeUndefined();
     // Elsewhere: APIBOX first, then (another model on APIBOX itself, not named again) Home Ollama.
     expect(await routedSummary(f.api, { url: 'https://news.example.com/' })).toMatchObject({ label: 'APIBOX', fallback: [{ label: 'Home Ollama', host: 'localhost' }] });
+  });
+});
+
+describe('isErrorStatusWrite (M4-D tester F1: the panel marking a refused key does not re-run a stopped job)', () => {
+  const stored = { id: 'c1', label: 'Work', protocol: 'openai-chat', baseUrl: 'https://gw.example.com/v1', auth: { style: 'bearer' }, quirks: {}, status: 'ok' };
+  it('is true for a write that only marks a connection as failed', () => {
+    expect(isErrorStatusWrite('conn:c1', { oldValue: stored, newValue: { ...stored, status: 'error', lastError: 'Key invalid', lastErrorKind: 'auth' } })).toBe(true);
+    // A built-in connection not stored yet: compared with its built-in record.
+    const builtin = { id: 'anthropic', label: 'Anthropic', presetId: 'anthropic', protocol: 'anthropic-messages', baseUrl: 'https://api.anthropic.com', auth: { style: 'x-api-key' }, quirks: {} };
+    expect(isErrorStatusWrite('conn:anthropic', { newValue: { ...builtin, status: 'error', lastError: 'Key invalid', lastErrorKind: 'auth' } })).toBe(true);
+  });
+  it('is false for any other change: config, a status that is not an error, other keys, a new connection', () => {
+    expect(isErrorStatusWrite('conn:c1', { oldValue: stored, newValue: { ...stored, baseUrl: 'https://other.example.com/v1', status: 'error' } })).toBe(false);
+    expect(isErrorStatusWrite('conn:c1', { oldValue: { ...stored, status: 'error' }, newValue: stored })).toBe(false);
+    expect(isErrorStatusWrite('profile:p1', { oldValue: { status: 'ok' }, newValue: { status: 'error' } })).toBe(false);
+    expect(isErrorStatusWrite('conn:new', { newValue: { ...stored, id: 'new', status: 'error' } })).toBe(false);
+    expect(isErrorStatusWrite('conn:c1', { oldValue: stored })).toBe(false);
   });
 });
