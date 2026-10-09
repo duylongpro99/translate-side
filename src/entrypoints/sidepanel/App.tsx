@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { browser } from 'wxt/browser';
 import type { PanelController, PanelView } from './controller.ts';
 import { AboutDocument } from './AboutDocument.tsx';
@@ -182,6 +182,18 @@ export function App({ controller, translator }: { controller: PanelController; t
   const routed = useRouted(translator, tabId, view.kind === 'ready' ? view.result.url : undefined, job);
   const [switcherVersion, setSwitcherVersion] = useState(0);
   const switcherState = useSwitcher(translator, tabId, view.kind === 'ready' ? view.result.url : undefined, job, switcherVersion);
+  // The job bar sticks under the header: its offset is the header's real height, which grows when the controls wrap.
+  const headerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const set = () => document.documentElement.style.setProperty('--panel-header-h', `${el.offsetHeight}px`);
+    set();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(set);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   const onboarding = useOnboarding();
   // No route can run here yet and the guide was never finished: offer it (the page still reads as the original).
   const offerSetup = onboarding.read && onboarding.status === undefined && switcherState !== undefined && switcherState.currentUsable === false;
@@ -248,7 +260,7 @@ export function App({ controller, translator }: { controller: PanelController; t
   };
   return (
     <main class="panel">
-      <header class="panel__header">
+      <header class="panel__header" ref={headerRef}>
         <div class="panel__row">
           <h1 title={view.kind === 'ready' ? view.result.title : undefined}>{view.kind === 'ready' ? view.result.title || 'Translate Side' : 'Translate Side'}</h1>
           {import.meta.env.DEV && view.kind === 'ready' ? (

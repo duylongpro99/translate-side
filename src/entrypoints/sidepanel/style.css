@@ -283,7 +283,8 @@ body {
 /* Translation job (plan M1-E10) */
 .job {
   position: sticky;
-  top: 41px;
+  /* Under the header, whatever height its wrapped controls give it (App.tsx sets the variable). */
+  top: var(--panel-header-h, 41px);
   display: flex;
   align-items: center;
   flex-wrap: wrap;

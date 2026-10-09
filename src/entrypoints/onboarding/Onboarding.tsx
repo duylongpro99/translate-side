@@ -45,7 +45,8 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
   const [closed, setClosed] = useState<'done' | 'skipped' | undefined>();
 
   useEffect(() => {
-    readPreferences(api).then((p) => setLang(p.targetLang), () => setLang('en'));
+    // What is stored (or the browser's language) is only the start: a choice already made stays.
+    readPreferences(api).then((p) => setLang((cur) => cur || p.targetLang), () => setLang((cur) => cur || 'en'));
   }, [api]);
 
   const reload = () => load(api).then(setLoaded, () => {});
@@ -61,7 +62,8 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
     try {
       await updatePreferences(api, { targetLang: lang });
       setStep(2);
-    } catch {
+    } catch (err) {
+      console.error('[translate-side] onboarding: could not save the language', err);
       setNote("Couldn't save your language. Try again, or set it later in settings.");
     }
   };
