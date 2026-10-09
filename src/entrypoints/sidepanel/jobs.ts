@@ -36,6 +36,12 @@ export interface SegState {
   error?: LLMError;
   /** The last Retranslate of this final failed (M3-E5): the text shown is the earlier one. */
   redoError?: LLMError;
+  /**
+   * The model that produced the shown final (`producedBy.model`, §5.2). When it is not the job's
+   * model, a fallback translated the block (M4-E9): the block shows it as a badge, and its cache
+   * entry is keyed by it (§7). Absent for a final from the cache.
+   */
+  model?: string;
 }
 
 export type JobStatus =
@@ -102,6 +108,11 @@ export interface JobView {
   connection?: JobConnection;
   /** Requests waiting out a retryable failure right now, one per chunk (M3-E8). Absent when none. */
   backoff?: readonly Backoff[];
+  /**
+   * The latest hand-over to a fallback profile in this run (M4-E9): `from` gave up on `error`
+   * (rate limit, overloaded, network) and the job goes on with `to`. Absent when none.
+   */
+  fallback?: { from: string; to: string; error: LLMError };
   /** Epoch ms: when this run started, when its first text became visible, when it ended. */
   startedAt: number;
   firstVisibleAt?: number;
@@ -154,7 +165,7 @@ export function applySegmentEvent(cur: SegState | undefined, e: EngineEvent): Se
         const newer = e.revision > (cur.revision ?? 1) || (e.revision === cur.revision && attempt > (cur.attempt ?? 1));
         if (!newer) return cur;
       } else if (cur?.status === 'failed' && e.revision <= (cur.revision ?? 1)) return cur;
-      return { status: 'final', text: e.text, revision: e.revision, attempt };
+      return { status: 'final', text: e.text, revision: e.revision, attempt, model: e.producedBy.model };
     }
     case 'segment.failed':
       if (cur?.status === 'final' && (cur.revision ?? 1) > (e.revision ?? 1)) return { ...cur, error: e.error };
@@ -261,6 +272,20 @@ export function backoffClient(inner: LLMClient, watch: { waiting(chunk: number, 
   };
 }
 
+/** Tells of a request refused for its key (`auth`, §4.3.5): the job's connection is marked `error`. */
+export function authClient(inner: LLMClient, onAuth: (error: LLMError) => void): LLMClient {
+  return {
+    model: inner.model,
+    reasoningReserveTokens: (req) => inner.reasoningReserveTokens(req),
+    async *stream(req: NormalizedRequest) {
+      for await (const e of inner.stream(req)) {
+        if (e.type === 'error' && e.error.kind === 'auth') onAuth(e.error);
+        yield e;
+      }
+    },
+  };
+}
+
 // ---- Jobs ---------------------------------------------------------------------------------
 
 /** The connection a job runs on; `origin` is its host-permission pattern, for "Grant access". */
@@ -268,6 +293,13 @@ export interface JobConnection {
   id: string;
   label: string;
   origin?: string;
+}
+
+/** A fallback profile's client (§4.3.5 `Routing.fallback`, M4-E9), already filtered by the privacy rule. */
+export interface FallbackLink {
+  client: LLMClient;
+  profile: ModelProfile;
+  connection?: JobConnection;
 }
 
 /** A role's client for the routed profile, or why there is none. */
@@ -280,6 +312,8 @@ export type ClientResult =
       client: LLMClient;
       profile: ModelProfile;
       connection?: JobConnection;
+      /** The fallback chain after `client`, in order (M4-E9). Absent or empty: none. */
+      fallback?: FallbackLink[];
       /**
        * Resolves the `analyze` role's client (the document brief); called only when the run will
        * make an analyze call. Undefined from it = the translate client serves it (§4.3.1).
@@ -310,21 +344,40 @@ function pageCost(job: Job, profile: ModelProfile, usage: UsageTotals): number |
   return main === undefined && job.apart.usd === undefined ? undefined : (main ?? 0) + (job.apart.usd ?? 0);
 }
 
+/**
+ * The profile a usage event is priced with: the one whose client spent it (`event.client`, the
+ * profile id the job tags its clients with); else, for a test engine without ids, the analyze
+ * call's own profile or a fallback by its model (M4-E9); else the translate profile.
+ */
+function spendingProfile(job: Job, event: { role: string; model: string; client?: string }, profile: ModelProfile): ModelProfile {
+  const all = [profile, ...(job.analyzeProfile ? [job.analyzeProfile] : []), ...job.fallbackProfiles];
+  const byId = event.client === undefined ? undefined : all.find((p) => p.id === event.client);
+  if (byId) return byId;
+  if (event.role === 'analyze' && job.analyzeProfile !== undefined && event.model === job.analyzeProfile.model) return job.analyzeProfile;
+  if (event.model === profile.model) return profile;
+  return job.fallbackProfiles.find((p) => p.model === event.model) ?? (event.role === 'analyze' && job.analyzeProfile ? job.analyzeProfile : profile);
+}
+
 export interface JobDeps {
   /** Resolves the `translate` role (§4.3.5) for a page: key, host permission, profile. Called once per run. */
   translateClient: (target: ClientTarget) => Promise<ClientResult>;
   now?: () => number;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
-  /** Test seam: the engine to run (default: single-pass and contextual over the given client). */
-  engine?: (client: LLMClient, analyze?: LLMClient) => TranslationEngine;
+  /** Test seam: the engine to run (default: single-pass and contextual over the given clients). */
+  engine?: (client: LLMClient, analyze?: LLMClient, fallback?: readonly LLMClient[]) => TranslationEngine;
   /** Test seam: the strategy jobs run (default PANEL_STRATEGY). */
   strategy?: StrategyId;
   /** The translation cache (M3-E2). Absent: every run goes to the model. */
   cache?: TranslationCache | undefined;
   /** How long a run waits for the cache before it goes to the model without it (default 1500). */
   cacheTimeoutMs?: number;
-  /** Every usage report, priced (the running total in settings, M3-E9). */
+  /** Every usage report, priced (the running total in settings, M3-E9), with the profile that spent it (M4-E10). */
   onSpend?: (delta: SpendDelta) => void;
+  /**
+   * A request was refused for its key (401, 403: `auth`) on this connection: settings mark it
+   * `error` (§4.3.5). Not called for a missing key (nothing was sent).
+   */
+  onAuthError?: (connectionId: string, error: LLMError) => void;
 }
 
 export interface JobDoc {
@@ -377,11 +430,15 @@ interface Job {
   briefKey?: string | undefined;
   /** The analyze role's own profile, when routing sends it elsewhere than translate (its usage is priced with it). */
   analyzeProfile?: ModelProfile;
-  /** Usage on the analyze profile and its cost, across the page's runs; the rest of `view.usage` is priced with the translate profile. */
+  /** The fallback profiles of this run (M4-E9): usage a fallback answered is priced with its profile. */
+  fallbackProfiles: ModelProfile[];
+  /** Cache scope per model other than the job's (a fallback's finals are stored under it, §7). */
+  scopes: Map<string, string>;
+  /** Usage on profiles other than translate's (analyze, fallback) and its cost, across the page's runs; the rest of `view.usage` is priced with the translate profile. */
   apart: { usage: UsageTotals; usd: number | undefined };
-  /** Requests waiting out a retryable failure, and the failed attempts so far per chunk (M3-E8). */
+  /** Requests waiting out a retryable failure, and the failed attempts so far per link and chunk (M3-E8). */
   backoff: Map<number, Backoff>;
-  failures: Map<number, number>;
+  failures: Map<string, number>;
   /** Single-segment retries in flight, by segment id (M3-E8). */
   retrying: Map<string, AbortController>;
   /** Counts segment retries, for their backoff keys. */
@@ -500,6 +557,8 @@ export class Jobs {
       chain: Promise.resolve(),
       backoff: new Map(),
       failures: new Map(),
+      fallbackProfiles: [],
+      scopes: new Map(),
       retrying: new Map(),
       retrySeq: 0,
       replaceKeys: new Set(),
@@ -536,6 +595,7 @@ export class Jobs {
       return;
     }
     const { client, profile } = resolved;
+    job.fallbackProfiles = resolved.fallback?.map((l) => l.profile) ?? [];
     this.patch(tabId, job, { model: client.model });
     await this.fromCache(tabId, job, { todo, translatable, model: client.model, fresh });
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
@@ -556,7 +616,7 @@ export class Jobs {
       return;
     }
     if (analyze) job.analyzeProfile = analyze.profile;
-    const engine = this.engineFor(tabId, job, client, profile, undefined, analyze?.client);
+    const engine = this.engineFor(tabId, job, { client, profile, ...(resolved.connection ? { connection: resolved.connection } : {}) }, undefined, analyze, resolved.fallback);
     const engineJob: TranslationJob = {
       doc: {
         url: doc.url,
@@ -621,6 +681,8 @@ export class Jobs {
       chain: Promise.resolve(),
       backoff: new Map(),
       failures: new Map(),
+      fallbackProfiles: [],
+      scopes: new Map(),
       retrying: new Map(),
       retrySeq: 0,
       replaceKeys: new Set(),
@@ -734,7 +796,9 @@ export class Jobs {
         },
       };
       let outcome: SegState | undefined;
-      for await (const event of this.engineFor(tabId, job, resolved.client, resolved.profile, -2 - ++job.retrySeq).translateSnippet(request, signal)) {
+      job.fallbackProfiles = resolved.fallback?.map((l) => l.profile) ?? [];
+      const primary = { client: resolved.client, profile: resolved.profile, ...(resolved.connection ? { connection: resolved.connection } : {}) };
+      for await (const event of this.engineFor(tabId, job, primary, -2 - ++job.retrySeq, undefined, resolved.fallback).translateSnippet(request, signal)) {
         if (this.jobs.get(tabId) !== job) return;
         if (event.type === 'usage') this.onEvent(tabId, job, event, resolved.profile);
         if (event.type !== 'segment.partial' && event.type !== 'segment.final' && event.type !== 'segment.failed') continue;
@@ -750,7 +814,7 @@ export class Jobs {
       if (signal.aborted || !outcome || outcome.status === 'streaming' || outcome.status === 'pending') return settle(before);
       if (outcome.status === 'failed' && mode === 'retranslate') settle(failedWith(outcome.error ?? { kind: 'unknown', message: 'no translation came back' }));
       else {
-        const key = job.keys.get(id);
+        const key = this.keyFor(job, id, outcome.model);
         if (mode === 'retranslate' && key !== undefined) job.replaceKeys.add(key);
         settle(outcome);
       }
@@ -767,8 +831,13 @@ export class Jobs {
     job.retrying.clear();
   }
 
-  /** The engine over the job's client: counted, gated by the tab being active, and watched for backoff (M3-E8). */
-  private engineFor(tabId: number, job: Job, client: LLMClient, profile: ModelProfile, retryKey?: number, analyze?: LLMClient): TranslationEngine {
+  /**
+   * The engine over the job's clients: each counted, gated by the tab being active and watched for
+   * backoff (M3-E8), and for a refused key (§4.3.5: the connection is marked `error`, "Fix key"
+   * names it). `primary` is the routed profile; `fallback` its chain (M4-E9), shared by both roles.
+   */
+  private engineFor(tabId: number, job: Job, primary: FallbackLink, retryKey?: number, analyze?: FallbackLink, fallback: readonly FallbackLink[] = []): TranslationEngine {
+    const { profile } = primary;
     const meter = {
       start: () => void job.inflight++,
       end: (unmetered: boolean) => {
@@ -779,25 +848,46 @@ export class Jobs {
     const publish = () => this.patch(tabId, job, { backoff: job.backoff.size ? [...job.backoff.values()] : [] });
     // A segment retry has its own key (-2 and below), apart from the chunks (0 and up) and the analyze call (-1).
     const keyed = (chunk: number) => retryKey ?? chunk;
-    const watch = {
+    // Each link of a chain counts its own failed attempts: the next link starts its backoff afresh.
+    const watchFor = (link: number, next: FallbackLink | undefined, model: string) => ({
       waiting: (chunk: number, error: LLMError) => {
         chunk = keyed(chunk);
-        const attempt = (job.failures.get(chunk) ?? 0) + 1;
-        job.failures.set(chunk, attempt);
+        const at = `${link}:${chunk}`;
+        const attempt = (job.failures.get(at) ?? 0) + 1;
+        job.failures.set(at, attempt);
         // The engine gives up (or hands over) after its retries: that is a failure, not a wait.
-        if (decideRetry(error, attempt - 1).action !== 'retry') job.backoff.delete(chunk);
-        else job.backoff.set(chunk, { chunk, kind: error.kind, attempt, ...(error.retryAfterMs === undefined ? {} : { until: this.now() + error.retryAfterMs }) });
+        if (decideRetry(error, attempt - 1).action !== 'retry') {
+          job.backoff.delete(chunk);
+          job.failures.delete(at);
+          if (next && job.view.status === 'running') this.patch(tabId, job, { fallback: { from: model, to: next.client.model, error } });
+        } else job.backoff.set(chunk, { chunk, kind: error.kind, attempt, ...(error.retryAfterMs === undefined ? {} : { until: this.now() + error.retryAfterMs }) });
         publish();
       },
       started: (chunk: number) => {
         if (job.backoff.delete(keyed(chunk))) publish();
       },
-      streaming: (chunk: number) => void job.failures.delete(keyed(chunk)),
+      streaming: (chunk: number) => void job.failures.delete(`${link}:${keyed(chunk)}`),
+    });
+    const onAuth = (link: FallbackLink) => (error: LLMError) => {
+      if (!link.connection || this.jobs.get(tabId) !== job) return;
+      this.patch(tabId, job, { connection: link.connection });
+      this.deps.onAuthError?.(link.connection.id, error);
     };
-    const wrap = (c: LLMClient) => gatedClient(backoffClient(meteredClient(c, meter), watch), job.gate);
-    const gated = wrap(client);
-    const gatedAnalyze = analyze ? wrap(analyze) : undefined;
-    return this.deps.engine?.(gated, gatedAnalyze) ?? this.defaultEngine(gated, gatedAnalyze);
+    const wrapped = new Map<LLMClient, LLMClient>();
+    const wrap = (link: FallbackLink, index: number, next: FallbackLink | undefined) => {
+      let c = wrapped.get(link.client);
+      if (c === undefined) {
+        // Tagged with its profile (LLMClient.id): usage it spends is priced with that profile.
+        c = { ...gatedClient(authClient(backoffClient(meteredClient(link.client, meter), watchFor(index, next, link.client.model)), onAuth(link)), job.gate), id: link.profile.id };
+        wrapped.set(link.client, c);
+      }
+      return c;
+    };
+    const chain = [primary, ...fallback];
+    const gated = wrap(primary, 0, fallback[0]);
+    const gatedFallback = fallback.map((l, i) => wrap(l, i + 1, chain[i + 2]));
+    const gatedAnalyze = analyze ? wrap(analyze, -1, fallback[0]) : undefined;
+    return this.deps.engine?.(gated, gatedAnalyze, gatedFallback) ?? this.defaultEngine(gated, gatedAnalyze, gatedFallback);
   }
 
   /** The tab is gone (closed, moved to another window): cancel and forget its job. */
@@ -812,7 +902,7 @@ export class Jobs {
     for (const tabId of this.jobs.keys()) this.cancel(tabId);
   }
 
-  private defaultEngine(client: LLMClient, analyze?: LLMClient): TranslationEngine {
+  private defaultEngine(client: LLMClient, analyze?: LLMClient, fallback: readonly LLMClient[] = []): TranslationEngine {
     return createEngine({
       // The engine asks by role (§5.1); route.ts resolved each through routing (src/shared/providers.ts
       // resolveRoute): `analyze` has its own client only when routed elsewhere, else it is translate's (§4.3.1).
@@ -820,6 +910,8 @@ export class Jobs {
         if (role === 'review') throw new Error(`no model profile is routed for the ${role} role yet`);
         return role === 'analyze' && analyze ? analyze : client;
       },
+      // Both roles hand over to the same chain (M4-E9), so a link that gave up is skipped by both.
+      fallback: () => fallback,
       now: this.now,
       sleep: this.deps.sleep ?? abortableSleep,
       strategies: [singlePass, contextual],
@@ -863,10 +955,12 @@ export class Jobs {
       }
       case 'usage': {
         const spent = { input: event.input, cachedInput: event.cachedInput ?? 0, output: event.output };
-        // The analyze call on its own profile is priced with that profile (§4.3.5 usage meter).
-        const apart = event.role === 'analyze' && job.analyzeProfile !== undefined;
-        const usd = costUsd((apart ? job.analyzeProfile : profile)?.pricing, spent);
-        this.deps.onSpend?.({ usage: spent, usd });
+        // Priced with the profile that answered (§4.3.5 usage meter): the analyze call's own
+        // profile, or a fallback's (M4-E9); the rest is the translate profile's.
+        const by = spendingProfile(job, event, profile);
+        const apart = by !== profile;
+        const usd = costUsd(by.pricing, spent);
+        this.deps.onSpend?.({ usage: spent, usd, profileId: by.id, model: event.model });
         if (apart) job.apart = { usage: addUsage(job.apart.usage, spent), usd: usd === undefined ? job.apart.usd : (job.apart.usd ?? 0) + usd };
         const usage = addUsage(job.view.usage, spent);
         this.patch(tabId, job, { usage, cost: pageCost(job, profile, usage) });
@@ -931,7 +1025,8 @@ export class Jobs {
 
   /** Stores the final a segment now shows (the highest revision only), or drops the entry of one that failed. */
   private remember(job: Job, id: string, state: SegState): void {
-    const key = job.keys.get(id);
+    // A final is stored under the model that produced it (§7); a failure drops the job model's entry.
+    const key = state.status === 'final' ? this.keyFor(job, id, state.model) : job.keys.get(id);
     if (key === undefined || !this.deps.cache) return;
     if (state.status === 'final' && state.text !== undefined) {
       job.drops.delete(key);
@@ -944,6 +1039,21 @@ export class Jobs {
     job.flush = true;
     // Coalesced: one transaction for the finals of a tick.
     queueMicrotask(() => this.flushCache(job));
+  }
+
+  /** The cache key of a segment's final from `model` (the job's model when absent); undefined without a cache. */
+  private keyFor(job: Job, id: string, model: string | undefined): string | undefined {
+    const own = job.keys.get(id);
+    if (own === undefined || model === undefined || model === job.view.model) return own;
+    const segment = job.view.segments.find((s) => s.id === id);
+    if (!segment) return undefined;
+    let scope = job.scopes.get(model);
+    if (scope === undefined) {
+      const { doc } = job;
+      scope = scopeHash(keyScope({ targetLang: doc.targetLang, model, style: doc.style, gloss: doc.gloss, strategy: this.deps.strategy ?? PANEL_STRATEGY, glossary: doc.glossary }));
+      job.scopes.set(model, scope);
+    }
+    return segmentKey(scope, segment);
   }
 
   private flushCache(job: Job): void {

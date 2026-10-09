@@ -427,3 +427,16 @@ describe('the network drops mid-job (M3-E8)', () => {
     for (const [id, s] of finals) expect(done.segs.get(id)).toBe(s);
   });
 });
+
+describe('the fallback note (plan M4-E9)', () => {
+  it('says which model took over and why, while running and after', () => {
+    const base = { paused: false, model: 'qwen3:8b', targetLang: 'vi', sourceLang: 'en', segments: [], segs: new Map(), counts: { total: 3, final: 1, failed: 0 }, usage: { input: 0, cachedInput: 0, output: 0 }, cost: undefined, unmetered: 0, startedAt: 0 } satisfies Omit<JobView, 'status'>;
+    const fallback = { from: 'qwen3:8b', to: 'claude-haiku-4-5', error: { kind: 'network' as const, message: "Can't reach localhost:11434" } };
+    act(() => render(<JobBar job={{ ...base, status: 'running', fallback }} actions={actions([])} />, root));
+    expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('qwen3:8b is unreachable; continuing with claude-haiku-4-5. Blocks it translated are marked.');
+    act(() => render(<JobBar job={{ ...base, status: 'done', fallback: { ...fallback, error: { kind: 'rate_limit', message: 'slow' } } }} actions={actions([])} />, root));
+    expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('qwen3:8b is rate limited; continued with claude-haiku-4-5. Blocks it translated are marked.');
+    act(() => render(<JobBar job={{ ...base, status: 'done' }} actions={actions([])} />, root));
+    expect(root.querySelector('[data-testid="job-fallback"]')).toBeNull();
+  });
+});

@@ -56,7 +56,7 @@ export function checkFailure(error: LLMError): CheckFailedRaw | undefined {
 }
 
 /** How the check stage reaches a chunk's translate call (the strategy's translate stage builds it). */
-export type PrepareCall = (work: ChunkWork, ctx: StageContext) => Promise<{ readonly model: string; call: ChunkCall }>;
+export type PrepareCall = (work: ChunkWork, ctx: StageContext) => Promise<{ readonly model: string; readonly clientId?: string | undefined; call: ChunkCall }>;
 
 interface Row extends CheckedSegment {
   segment: Segment;
@@ -143,7 +143,7 @@ export function createCheckStage(strategyId: string, prepare: PrepareCall): AnyS
           answer: formatAnswer(wire, (e) => byN.get(e.n)?.translation ?? ''),
           fixes: fixesMessage(group.map((r) => ({ n: r.n, fixes: fixesFor(r.source, r.translation, failing.get(r.id) ?? []) }))),
         };
-        const result = yield* rerequestSegments(wire, (c, a) => call(c, a, followUp), { producedBy, revision: 1, role: 'translate' }, attempt);
+        const result = yield* rerequestSegments(wire, (c, a) => call(c, a, followUp), { producedBy, revision: 1, role: 'translate', clientId: () => prepared.clientId }, attempt);
         for (const r of group) {
           const text = result.accepted.get(r.n);
           if (text === undefined) {

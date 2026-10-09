@@ -8,6 +8,7 @@
 // The stage only fills memory: it yields no output value, so the job passes through to the
 // next stage unchanged (runner.ts).
 import type { LLMClient, NormalizedRequest } from '../../llm/types.ts';
+import { servedOf } from '../served.ts';
 import { cyrb53 } from '../hash.ts';
 import { parseBrief } from '../parsing/brief.ts';
 import { ANALYZE_PROMPT_ID, analyzeInput } from '../prompts/analyze.ts';
@@ -64,7 +65,8 @@ export const analyzeStage = defineStage<TranslationJob, never>({
         if (event.type === 'text') text += event.delta;
         else if (event.type === 'usage') {
           // The model that answered: a fallback chain may have handed the call on (fallback.ts).
-          yield { type: 'usage', role: 'analyze', model: client.servedBy?.(req) ?? req.model, input: event.input, output: event.output, ...(event.cachedInput === undefined ? {} : { cachedInput: event.cachedInput }) };
+          const by = servedOf(client, req);
+          yield { type: 'usage', role: 'analyze', model: by.model, ...(by.id === undefined ? {} : { client: by.id }), input: event.input, output: event.output, ...(event.cachedInput === undefined ? {} : { cachedInput: event.cachedInput }) };
         } else if (event.type === 'done') ok = event.stopReason === 'end';
       }
     } catch (error) {

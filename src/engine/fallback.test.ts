@@ -42,7 +42,7 @@ describe('withFallback (§4.3.5, plan M4 §5 retry vs fallback ownership)', () =
     expect(backup.requests).toHaveLength(1);
     expect(backup.requests[0]?.model).toBe('claude-haiku-4-5');
     expect(events.map((e) => e.type)).toEqual(['text', 'usage', 'done']);
-    expect(chain.servedBy?.(req)).toBe('claude-haiku-4-5');
+    expect(chain.servedBy?.(req)).toEqual({ model: 'claude-haiku-4-5' });
     expect(switched).toEqual([{ from: 'qwen3:8b', to: 'claude-haiku-4-5', error: err(kind) }]);
   });
 
@@ -108,12 +108,15 @@ describe('withFallback (§4.3.5, plan M4 §5 retry vs fallback ownership)', () =
     expect(backup.requests[0]?.maxOutputTokens).toBe(500);
   });
 
-  it('sums the failed links’ usage into the one usage event', async () => {
+  it('passes each link’s usage on while servedBy names that link (counted for the profile that spent it)', async () => {
     const usage: NormalizedEvent = { type: 'usage', input: 3, output: 0 };
     const primary = fakeClient([[usage, failed(err('overloaded'))]], { model: 'a' });
     const backup = fakeClient([success('ok')], { model: 'b' });
-    const events = await collect(withFallback([withRetry(primary, { sleep: fakeSleep(), policy: { ...DEFAULT_RETRY_POLICY, maxRetries: 0 } }), retrying(backup)]).stream(request('a')));
-    expect(events.filter((e) => e.type === 'usage')).toEqual([{ type: 'usage', input: 13, output: 5 }]);
+    const chain = withFallback([{ ...withRetry(primary, { sleep: fakeSleep(), policy: { ...DEFAULT_RETRY_POLICY, maxRetries: 0 } }), id: 'p1' }, { ...retrying(backup), id: 'p2' }]);
+    const req = request('a');
+    const seen: string[] = [];
+    for await (const e of chain.stream(req)) if (e.type === 'usage') seen.push(`${chain.servedBy?.(req)?.id}:${e.input}/${e.output}`);
+    expect(seen).toEqual(['p1:3/0', 'p2:10/5']);
   });
 
   it('one link is that link, unchanged', () => {
@@ -203,8 +206,22 @@ describe('the engine with a fallback chain', () => {
     expect(usage.some((u) => u.role === 'analyze')).toBe(true);
     expect(new Set(usage.map((u) => u.model))).toEqual(new Set(['b']));
     expect(events.some((e) => e.type === 'artifact')).toBe(true);
-    // Sticky across roles: the translate call never went to the primary.
-    expect(down.requests).toHaveLength(attempts);
+    // Analyze and the brief-free first chunk start together, so both back off on the primary at
+    // first; every later call goes straight to the fallback (sticky across roles).
+    expect(down.requests.length).toBeLessThanOrEqual(2 * attempts);
+    expect(backup.requests.length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('auth, quota, cors, model_not_found latch: a refused link is not asked again in the job', () => {
+  it.each(['auth', 'quota'] as const)('%s on the first chunk: the other chunks fail at once, one request in all, none to the fallback', async (kind) => {
+    const primary = fakeClient([[failed(err(kind, { status: kind === 'auth' ? 401 : 402 }))]], { model: 'a' });
+    const backup = translatorClient(undefined, { model: 'b' });
+    const segments = [seg('a', 'One. '.repeat(30)), seg('b', 'Two. '.repeat(30)), seg('c', 'Three. '.repeat(30))];
+    const events = await collect(createEngine(deps(primary, [backup])).translate(job(segments, 'single-pass', 40), new AbortController().signal));
+    expect(primary.requests).toHaveLength(1);
+    expect(backup.requests).toHaveLength(0);
+    expect(events.flatMap((e) => (e.type === 'segment.failed' ? [e.error.kind] : []))).toEqual([kind, kind, kind]);
   });
 });
 
@@ -232,15 +249,44 @@ describe('context_length: shrink the chunk and retry (§4.3.5)', () => {
     const events = await collect(createEngine(deps(tight, [])).translate(job([seg('a'), seg('b'), seg('c')], 'single-pass'), new AbortController().signal));
     expect(events.filter((e) => e.type === 'segment.final').map((e) => (e as { id: string }).id).sort()).toEqual(['a', 'b', 'c']);
     expect(events.some((e) => e.type === 'segment.failed')).toBe(false);
-    // 3 → [2 → 1, 1], 1
-    expect(sizes).toEqual([3, 2, 1, 1, 1]);
+    // 3 → too long: halves, and the job now knows the size: the half of 2 is split before it is sent.
+    expect(sizes).toEqual([3, 1, 1, 1]);
   });
 
-  it('a single segment still too long fails with the context_length error', async () => {
+  it('a single segment still too long is sent once more without its context, then fails with the context_length error', async () => {
     const client = fakeClient([[failed(err('context_length', { message: 'prompt is too long' }))]], { model: 'm' });
     const events = await collect(createEngine(deps(client, [])).translate(job([seg('a')], 'single-pass'), new AbortController().signal));
     const fails = events.flatMap((e) => (e.type === 'segment.failed' ? [e.error.kind] : []));
     expect(fails).toEqual(['context_length']);
-    expect(client.requests).toHaveLength(1);
+    expect(client.requests).toHaveLength(2);
+  });
+
+  it('the job remembers the shrink: later chunks start at the smaller size, no wasted request each', async () => {
+    const calls: number[] = [];
+    const client = translatorClient((lines) => {
+      calls.push(lines.length);
+      return lines.map((l) => `<seg id="${l.n}">vi:${l.source}</seg>`).join('\n');
+    }, { model: 'm' });
+    let tooLong = 0;
+    const tight: LLMClient = {
+      model: 'm',
+      reasoningReserveTokens: () => 0,
+      async *stream(req) {
+        const n = (req.messages[0]?.content.match(/<seg /g) ?? []).length;
+        if (n > 2) {
+          tooLong++;
+          yield { type: 'error', error: err('context_length', { message: 'prompt is too long' }) };
+          return;
+        }
+        yield* client.stream(req);
+      },
+    };
+    // Three chunks of four segments each (chunkTokens fits four).
+    const segments = Array.from({ length: 12 }, (_, i) => seg(`s${i}`, `Sentence number ${i} is here.`));
+    const events = await collect(createEngine(deps(tight, [])).translate(job(segments, 'single-pass', 32), new AbortController().signal));
+    expect(events.filter((e) => e.type === 'segment.final')).toHaveLength(12);
+    // Only the first chunk was refused; the next ones were split before they were sent.
+    expect(tooLong).toBe(1);
+    expect(calls.every((n) => n <= 2)).toBe(true);
   });
 });

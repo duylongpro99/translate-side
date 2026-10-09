@@ -48,6 +48,16 @@ describe('decideRetry (§4.3.5)', () => {
 });
 
 describe('withRetry', () => {
+  it('stops backing off when the caller has given the client up (abandon), and hands the error on', async () => {
+    const client = fakeClient([[rateLimited()]]);
+    let gaveUp = false;
+    const sleep = fakeSleep();
+    const events = await collect(withRetry(client, { sleep, abandon: () => gaveUp, onRetry: () => (gaveUp = true) }).stream(request()));
+    expect(client.requests).toHaveLength(2);
+    expect(sleep.delays).toHaveLength(1);
+    expect(events).toEqual([rateLimited()]);
+  });
+
   it('retries a rate limit until it succeeds, honoring Retry-After', async () => {
     const client = fakeClient([[rateLimited(14_000)], [rateLimited(11_000)], success('hello')]);
     const sleep = fakeSleep();

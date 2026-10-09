@@ -57,6 +57,8 @@ type Props = {
   /** The original is shown under the translation (Original, M3-E5). */
   original?: boolean;
   onOriginal?: ((id: string) => void) | undefined;
+  /** The job's model: a final produced by another one (a fallback, M4-E9) gets a badge naming it. */
+  model?: string | undefined;
 };
 
 const translated = (state: SegState | undefined): state is SegState & { text: string } => state?.status === 'final' && state.text !== undefined;
@@ -144,10 +146,25 @@ function statusAttrs(seg: Segment, state: SegState | undefined, extra = '') {
   };
 }
 
+/**
+ * A small badge naming the model that translated a block when it is not the job's (§4.3.5: "the
+ * panel shows which model translated each block"): the primary was rate-limited or down and a
+ * fallback profile took over (M4-E9).
+ */
+function ModelBadge({ state, model }: Props) {
+  if (state?.status !== 'final' || state.model === undefined || model === undefined || model === '' || state.model === model) return null;
+  return (
+    <span class="seg__badge" data-testid="seg-model-badge" title={`Translated by ${state.model}, because ${model} was unavailable`} aria-label={`Translated by the fallback model ${state.model}`}>
+      {state.model}
+    </span>
+  );
+}
+
 function Notes(props: Props) {
   const { seg, state, actions } = props;
   return (
     <>
+      <ModelBadge {...props} />
       <Original {...props} />
       {seg.hidden ? <span class="seg__note">hidden on the page (tab or collapsed section)</span> : null}
       {state?.status === 'failed' && state.error ? (
@@ -173,7 +190,7 @@ function Notes(props: Props) {
 /** Re-renders only when its segment's state object changes: a stream updates one block at a time. */
 class Block extends Component<Props> {
   override shouldComponentUpdate(next: Props): boolean {
-    return next.seg !== this.props.seg || next.state !== this.props.state || next.original !== this.props.original;
+    return next.seg !== this.props.seg || next.state !== this.props.state || next.original !== this.props.original || next.model !== this.props.model;
   }
 
   override render(props: Props) {
@@ -226,7 +243,7 @@ class Block extends Component<Props> {
 
 class Cell extends Component<Props> {
   override shouldComponentUpdate(next: Props): boolean {
-    return next.seg !== this.props.seg || next.state !== this.props.state || next.original !== this.props.original;
+    return next.seg !== this.props.seg || next.state !== this.props.state || next.original !== this.props.original || next.model !== this.props.model;
   }
 
   override render(props: Props) {
@@ -255,7 +272,7 @@ function tableOf(seg: Segment): string | undefined {
 type States = JobView['segs'] | undefined;
 
 /** Consecutive segments of one table, grouped into rows by groupId. */
-function Table({ cells, states, actions, originals, onOriginal }: { cells: Segment[]; states: States; actions?: SegmentActions | undefined; originals: ReadonlySet<string>; onOriginal?: ((id: string) => void) | undefined }) {
+function Table({ cells, states, actions, originals, onOriginal, model }: { cells: Segment[]; states: States; actions?: SegmentActions | undefined; originals: ReadonlySet<string>; onOriginal?: ((id: string) => void) | undefined; model?: string | undefined }) {
   const rows: Segment[][] = [];
   for (const c of cells) {
     const row = rows[rows.length - 1];
@@ -267,7 +284,7 @@ function Table({ cells, states, actions, originals, onOriginal }: { cells: Segme
       {rows.map((row) => (
         <div class="seg-row" role="row" key={row[0]?.id} data-group={row[0]?.groupId}>
           {row.map((c) => (
-            <Cell key={c.id} seg={c} state={states?.get(c.id)} actions={actions} original={originals.has(c.id)} onOriginal={onOriginal} />
+            <Cell key={c.id} seg={c} state={states?.get(c.id)} actions={actions} original={originals.has(c.id)} onOriginal={onOriginal} model={model} />
           ))}
         </div>
       ))}
@@ -275,7 +292,7 @@ function Table({ cells, states, actions, originals, onOriginal }: { cells: Segme
   );
 }
 
-export function SegmentList({ segments, states, actions }: { segments: readonly Segment[]; states?: States; actions?: SegmentActions }) {
+export function SegmentList({ segments, states, actions, model }: { segments: readonly Segment[]; states?: States; actions?: SegmentActions; model?: string }) {
   // Which blocks show their original (Original, M3-E5): per block, for as long as the list lives.
   const [originals, setOriginals] = useState<ReadonlySet<string>>(() => new Set());
   const onOriginal = useMemo(
@@ -296,10 +313,10 @@ export function SegmentList({ segments, states, actions }: { segments: readonly 
     if (table !== undefined) {
       let j = i;
       while (j < segments.length && tableOf(segments[j] as Segment) === table) j++;
-      out.push(<Table key={seg.id} cells={segments.slice(i, j)} states={states} actions={actions} originals={originals} onOriginal={toggle} />);
+      out.push(<Table key={seg.id} cells={segments.slice(i, j)} states={states} actions={actions} originals={originals} onOriginal={toggle} model={model} />);
       i = j;
     } else {
-      out.push(<Block key={seg.id} seg={seg} state={states?.get(seg.id)} actions={actions} original={originals.has(seg.id)} onOriginal={toggle} />);
+      out.push(<Block key={seg.id} seg={seg} state={states?.get(seg.id)} actions={actions} original={originals.has(seg.id)} onOriginal={toggle} model={model} />);
       i++;
     }
   }

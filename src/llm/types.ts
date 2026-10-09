@@ -106,7 +106,9 @@ export type StopReason = 'end' | 'max_tokens' | 'refusal' | 'other';
 
 /**
  * What a stream yields, in this order: `text` deltas, at most one `usage` (request totals), then
- * exactly one terminal event, `done` or `error`, after which the stream ends. Reasoning is never
+ * exactly one terminal event, `done` or `error`, after which the stream ends. A fallback chain
+ * (src/engine/fallback.ts) is the one exception: it passes on one `usage` per link that spent
+ * tokens, each while `servedBy` names that link, so each is counted for the profile that spent it. Reasoning is never
  * emitted as text (§5.7).
  *
  * `usage.input` counts every input token: uncached, cache reads and cache writes. For Anthropic
@@ -170,12 +172,23 @@ export interface LLMClient {
   reasoningReserveTokens(req: ReserveQuery): number;
   stream(req: NormalizedRequest): AsyncIterable<NormalizedEvent>;
   /**
-   * The model that answers `req` (a request this client is streaming or has streamed), when it may
-   * differ from `req.model`: a fallback chain (src/engine/fallback.ts, §4.3.5) sends a request on
-   * to the next profile's model. Known once the stream has yielded its first event. Absent, or
-   * undefined for a request it never saw: `req.model`.
+   * What is behind the client, e.g. the shell's model profile id: two clients with the same model
+   * (one model on two connections) are told apart by it. Wrappers pass it on. Optional.
    */
-  servedBy?(req: NormalizedRequest): string | undefined;
+  readonly id?: string | undefined;
+  /**
+   * Who answers `req` (a request this client is streaming or has streamed), when it may differ
+   * from `req.model`: a fallback chain (src/engine/fallback.ts, §4.3.5) sends a request on to the
+   * next profile. Updated as the stream moves from one link to the next; read it as events arrive.
+   * Absent, or undefined for a request it never saw: `req.model` and this client's `id`.
+   */
+  servedBy?(req: NormalizedRequest): Served | undefined;
+}
+
+/** The link of a fallback chain that is answering a request: its model and its client's `id`. */
+export interface Served {
+  model: string;
+  id?: string;
 }
 
 export interface ModelInfo {

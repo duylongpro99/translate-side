@@ -1,13 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, openaiStream, type ScriptedResponse } from '@/llm/testing';
 import type { NormalizedEvent } from '@/llm/types';
-import { translateClient } from '@/entrypoints/sidepanel/route';
+import { routedSummary, translateClient } from '@/entrypoints/sidepanel/route';
 import {
   cleanConnection,
   cleanProfile,
   cleanRouting,
   cleanSiteRules,
   clearTabOverride,
+  fallbackRoutesIn,
+  isLocalConnection,
   isProviderKey,
   matchesSite,
   migratedRouteFromM1,
@@ -743,5 +745,69 @@ describe('saveConnectionStatus (the guide\'s auto re-test, review C1 #5)', () =>
     expect(f.sync.data.get(`conn:${APIBOX_CONNECTION.id}`)).toMatchObject({ baseUrl: APIBOX_CONNECTION.baseUrl, status: 'error', lastError: 'Key invalid', lastErrorKind: 'auth' });
     expect(await saveConnectionStatus(f.api, 'nope', { status: 'ok' })).toBe(false);
     expect(f.sync.data.has('conn:nope')).toBe(false);
+  });
+});
+
+describe('fallback chain routing (plan M4-E9, DESIGN §4.3.5 privacy rule)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const ollama: ProviderConnection = { id: 'ollama', label: 'Home Ollama', presetId: 'ollama', protocol: 'openai-chat', baseUrl: 'http://localhost:11434/v1', auth: { style: 'none' }, quirks: {}, status: 'ok' };
+  const lan: ProviderConnection = { ...ollama, id: 'lan', label: 'Office box', baseUrl: 'http://192.168.1.20:11434/v1' };
+  const qwen: ModelProfile = { id: 'ollama-qwen', connectionId: 'ollama', model: 'qwen3:8b', maxConcurrency: 1, chunkTokens: 800 };
+  const lanQwen: ModelProfile = { ...qwen, id: 'lan-qwen', connectionId: 'lan' };
+  const base = settings({
+    connections: [structuredClone(APIBOX_CONNECTION), structuredClone(GEMINI_CONNECTION), ollama, lan],
+    profiles: [structuredClone(APIBOX_QWEN_PROFILE), structuredClone(APIBOX_PRO_PROFILE), structuredClone(GEMINI_PROFILE), qwen, lanQwen],
+    routing: { translate: qwen.id, fallback: [qwen.id, 'basic', GEMINI_PROFILE.id, 'gone', GEMINI_PROFILE.id, lanQwen.id, APIBOX_PRO_PROFILE.id] },
+  });
+  const routeOf = (s: ProviderSettings, url?: string) => {
+    const r = resolveRouteIn(s, 'translate', url === undefined ? {} : { url });
+    if (!r.ok) throw new Error(r.message);
+    return r;
+  };
+
+  it('local means a loopback base URL (or the browser itself); a LAN host or a preset mark alone is not', () => {
+    for (const baseUrl of ['http://localhost:11434/v1', 'http://127.0.0.1:1234/v1', 'http://[::1]:11434', 'http://ollama.localhost/v1']) expect(isLocalConnection({ protocol: 'openai-chat', baseUrl }), baseUrl).toBe(true);
+    for (const baseUrl of ['http://192.168.1.20:11434/v1', 'http://10.0.0.2/v1', 'https://ollama.com/v1', 'https://localhost.example.com/v1', 'not a url']) expect(isLocalConnection({ protocol: 'openai-chat', baseUrl }), baseUrl).toBe(false);
+    expect(isLocalConnection({ protocol: 'chrome-builtin', baseUrl: '' })).toBe(true);
+  });
+
+  it('keeps the stored order, and leaves out the route itself, repeats, the terminal `basic` entry (M5-E7) and ids with no profile', () => {
+    expect(fallbackRoutesIn(base, routeOf(base)).map((f) => f.profile.id)).toEqual([GEMINI_PROFILE.id, lanQwen.id, APIBOX_PRO_PROFILE.id]);
+  });
+
+  it('a local-only site rule never falls back to a cloud profile (§3 #6): only loopback links stay', () => {
+    const s: ProviderSettings = { ...base, routing: { ...base.routing, translate: GEMINI_PROFILE.id, fallback: [GEMINI_PROFILE.id, APIBOX_PRO_PROFILE.id, lanQwen.id, 'basic', qwen.id], siteOverrides: [{ pattern: '*.corp.example.com', translate: GEMINI_PROFILE.id, localOnly: true }] } };
+    const local = routeOf(s, 'https://wiki.corp.example.com/page');
+    expect(local.localOnly).toBe(true);
+    expect(fallbackRoutesIn(s, local).map((f) => f.profile.id)).toEqual([qwen.id]);
+    // The same settings off that site: the cloud links come back.
+    expect(fallbackRoutesIn(s, routeOf(s, 'https://other.com/')).map((f) => f.profile.id)).toEqual([APIBOX_PRO_PROFILE.id, lanQwen.id, qwen.id]);
+  });
+
+  it('the panel route builds a client per runnable link; a link without its key or access is left out, never an error', async () => {
+    const f = fakeApi({ local: M3_LOCAL, granted: ['https://api.ai-box.vn/*', 'http://localhost/*'] });
+    await migrateProviders(f.api);
+    await saveConnection(f.api, ollama);
+    await saveProfile(f.api, qwen);
+    // Gemini has no key on this device: it is skipped.
+    await saveRouting(f.api, { translate: qwen.id, fallback: ['basic', GEMINI_PROFILE.id, APIBOX_PRO_PROFILE.id] });
+    const r = await translateClient(f.api, {});
+    expect(r).toMatchObject({ ok: true, profile: { id: qwen.id } });
+    if (!r.ok) throw new Error('route');
+    expect(r.fallback?.map((l) => [l.profile.id, l.client.model, l.connection?.id])).toEqual([[APIBOX_PRO_PROFILE.id, APIBOX_PRO_PROFILE.model, 'apibox']]);
+  });
+
+  it('under a local-only rule the panel route has no cloud link, and the privacy notice names only what may be used', async () => {
+    const f = fakeApi({ local: M3_LOCAL, granted: ['https://api.ai-box.vn/*', 'http://localhost/*'] });
+    await migrateProviders(f.api);
+    await saveConnection(f.api, ollama);
+    await saveProfile(f.api, qwen);
+    await saveRouting(f.api, { translate: APIBOX_QWEN_PROFILE.id, fallback: [APIBOX_PRO_PROFILE.id, qwen.id, 'basic'], siteOverrides: [{ pattern: 'intra.example.com', translate: qwen.id, localOnly: true }] });
+    const r = await translateClient(f.api, { url: 'https://intra.example.com/doc', analyze: true });
+    expect(r).toMatchObject({ ok: true, profile: { id: qwen.id } });
+    expect(r.ok && r.fallback).toBeUndefined();
+    expect((await routedSummary(f.api, { url: 'https://intra.example.com/doc' }))?.fallback).toBeUndefined();
+    // Elsewhere: APIBOX first, then (another model on APIBOX itself, not named again) Home Ollama.
+    expect(await routedSummary(f.api, { url: 'https://news.example.com/' })).toMatchObject({ label: 'APIBOX', fallback: [{ label: 'Home Ollama', host: 'localhost' }] });
   });
 });

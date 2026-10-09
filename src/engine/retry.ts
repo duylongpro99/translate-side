@@ -65,6 +65,12 @@ export interface RetryOptions {
   policy?: RetryPolicy;
   random?: () => number;
   onRetry?: (info: RetryInfo) => void;
+  /**
+   * Asked before each retry: true when this client was given up on elsewhere (a fallback chain
+   * moved on while this request was backing off, fallback.ts). The error then goes to the caller
+   * at once, as if the retries had run out.
+   */
+  abandon?: () => boolean;
 }
 
 export type Usage = Extract<NormalizedEvent, { type: 'usage' }>;
@@ -92,6 +98,7 @@ export function withRetry(client: LLMClient, options: RetryOptions): LLMClient {
   const random = options.random ?? Math.random;
   const wrapped: LLMClient = {
     model: client.model,
+    ...(client.id === undefined ? {} : { id: client.id }),
     reasoningReserveTokens: (req) => client.reasoningReserveTokens(req),
     async *stream(req: NormalizedRequest): AsyncGenerator<NormalizedEvent> {
       let usage: Usage | undefined;
@@ -124,7 +131,7 @@ export function withRetry(client: LLMClient, options: RetryOptions): LLMClient {
           return;
         }
         const decision = decideRetry(failure, retries, policy, random);
-        if (decision.action !== 'retry') {
+        if (decision.action !== 'retry' || options.abandon?.() === true) {
           if (usage !== undefined) yield usage;
           yield { type: 'error', error: failure };
           return;

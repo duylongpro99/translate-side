@@ -6,9 +6,9 @@
 import type { browser } from 'wxt/browser';
 import { createClient } from '@/llm/client';
 import { DEFAULT_CONNECTION, hasHostPermission, originPattern, protocolOf, resolveConnection, withProfileQuirks, type ProviderConnection } from '@/shared/settings';
-import { resolveRoute, saveLearnedQuirk, type Route } from '@/shared/providers';
+import { resolveFallback, resolveRoute, saveLearnedQuirk, type Route } from '@/shared/providers';
 import { pricingFor } from '@/shared/pricing';
-import type { AnalyzeResult, ClientResult, JobConnection } from './jobs.ts';
+import type { AnalyzeResult, ClientResult, FallbackLink, JobConnection } from './jobs.ts';
 
 type Browser = typeof browser;
 
@@ -102,9 +102,33 @@ export async function translateClient(api: Browser, target: RouteTarget & { anal
     return settingsError(error);
   }
   const translate = await clientFor(api, route);
-  if (!translate.ok || !target.analyze) return translate;
+  if (!translate.ok || !route.ok) return translate;
+  const fallback = await fallbackClients(api, route);
+  const withFallback = fallback.length > 0 ? { ...translate, fallback } : translate;
+  if (!target.analyze) return withFallback;
   const profileId = translate.profile.id;
-  return { ...translate, analyze: () => analyzeClient(api, target, profileId) };
+  return { ...withFallback, analyze: () => analyzeClient(api, target, profileId) };
+}
+
+/**
+ * The route's fallback chain (§4.3.5, plan M4-E9): `Routing.fallback` without the `basic` entry
+ * (M5-E7) and, under a local-only site rule, without cloud connections (providers.ts
+ * fallbackRoutesIn). A link that can't run (no key, no access, no protocol) is left out: a fallback
+ * is a spare, so it never stops a job that its primary can run. Settings that can't be read: none.
+ */
+async function fallbackClients(api: Browser, route: Extract<Route, { ok: true }>): Promise<FallbackLink[]> {
+  let routes;
+  try {
+    routes = await resolveFallback(api, route);
+  } catch {
+    return [];
+  }
+  const links: FallbackLink[] = [];
+  for (const { profile, connection } of routes) {
+    const link = await clientFor(api, { ok: true, profile, connection, source: 'routing', localOnly: route.localOnly });
+    if (link.ok) links.push({ client: link.client, profile: link.profile, ...(link.connection ? { connection: link.connection } : {}) });
+  }
+  return links;
 }
 
 /** The routed model and where it sends text: what the header and the privacy notice name. */
@@ -112,20 +136,27 @@ export interface Routed {
   model: string;
   label: string;
   host: string;
+  /** Where text may go if this route fails (M4-E9 fallback, after the privacy rule); absent when none. */
+  fallback?: { label: string; host: string }[];
 }
+
+const hostOf = (baseUrl: string) => {
+  try {
+    return new URL(baseUrl).hostname;
+  } catch {
+    // A connection without a base URL (chrome-builtin) names no host.
+    return '';
+  }
+};
 
 /** The translate route for `target` in brief; undefined when it does not resolve or storage fails. */
 export async function routedSummary(api: Browser, target: RouteTarget = {}): Promise<Routed | undefined> {
   try {
     const route = await resolveRoute(api, 'translate', target);
     if (!route.ok) return undefined;
-    let host = '';
-    try {
-      host = new URL(route.connection.baseUrl).hostname;
-    } catch {
-      // A connection without a base URL (chrome-builtin) names no host.
-    }
-    return { model: route.profile.model, label: route.connection.label, host };
+    const fallback = (await resolveFallback(api, route).catch(() => [])).filter((f) => f.connection.id !== route.connection.id).map((f) => ({ label: f.connection.label, host: hostOf(f.connection.baseUrl) }));
+    const unique = fallback.filter((f, i) => fallback.findIndex((g) => g.label === f.label && g.host === f.host) === i);
+    return { model: route.profile.model, label: route.connection.label, host: hostOf(route.connection.baseUrl), ...(unique.length ? { fallback: unique } : {}) };
   } catch {
     return undefined;
   }

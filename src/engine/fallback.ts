@@ -12,17 +12,17 @@
 //
 // The switch is sticky for the job: a link that gave up is skipped by every later request of
 // every role (the set of given-up links is the job's, shared through `dead`), so a stopped local
-// server is not waited out again chunk after chunk. A new job starts on the first link again.
-// When every link has given up, a request goes to the last one again (a rate limit may have
-// passed), with its own backoff.
+// server is not waited out again chunk after chunk. A new job starts on the first link again. The
+// last link is never skipped: its errors are the stream's, and each request tries it again (with
+// its own backoff), since a rate limit may have passed.
 //
 // The request a link sends names the link's model, with the thinking reserve of that link in its
-// output cap; `servedBy(req)` says which model answered (producedBy, usage, the cache key, §7).
-// The usage of the links that failed (rarely any: they failed before text) is summed into the one
-// `usage` event of the stream (the contract, src/llm/types.ts), counted for the model that answered.
+// output cap. `servedBy(req)` says which link is answering (its model and its client's `id`), for
+// producedBy, usage and the cache key (§7). Each link's usage is passed on while `servedBy` names
+// that link, so tokens a failed link spent are counted for its profile, not the next one's.
 
-import type { LLMClient, LLMError, NormalizedEvent, NormalizedRequest } from '../llm/types.ts';
-import { addUsage, isRetryable, type Usage } from './retry.ts';
+import type { LLMClient, LLMError, NormalizedEvent, NormalizedRequest, Served } from '../llm/types.ts';
+import { isRetryable } from './retry.ts';
 
 /** A link handing a request over to the next one. */
 export interface FallbackInfo {
@@ -37,61 +37,88 @@ export interface FallbackOptions {
   onFallback?: (info: FallbackInfo) => void;
 }
 
+const servedOf = (link: LLMClient): Served => ({ model: link.model, ...(link.id === undefined ? {} : { id: link.id }) });
+
 /** One client over `links` (each already retrying), first to last. One link: that link, unchanged. */
 export function withFallback(links: readonly LLMClient[], options: FallbackOptions = {}): LLMClient {
   const chain = [...new Set(links)];
   const first = chain[0];
   if (first === undefined) throw new Error('a fallback chain needs at least one client');
   if (chain.length === 1) return first;
-  const last = chain[chain.length - 1] as LLMClient;
   const dead = options.dead ?? new Set<LLMClient>();
-  const current = (): LLMClient => chain.find((l) => !dead.has(l)) ?? last;
-  const served = new WeakMap<NormalizedRequest, string>();
+  const live = chain.filter((_, i) => i < chain.length - 1);
+  const last = chain[chain.length - 1] as LLMClient;
+  const current = (): LLMClient => live.find((l) => !dead.has(l)) ?? last;
+  const served = new WeakMap<NormalizedRequest, Served>();
   return {
     get model() {
       return current().model;
     },
+    get id() {
+      return current().id;
+    },
     reasoningReserveTokens: (req) => current().reasoningReserveTokens(req),
     servedBy: (req) => served.get(req),
     async *stream(req: NormalizedRequest): AsyncGenerator<NormalizedEvent> {
-      // The link the request was built for: its reserve is in `maxOutputTokens`.
-      const builtFor = chain.find((l) => l.model === req.model) ?? current();
-      let usage: Usage | undefined;
-      const start = chain.every((l) => dead.has(l)) ? chain.length - 1 : 0;
-      for (let i = start; i < chain.length; i++) {
+      // The link the request was built for (its reserve is in `maxOutputTokens`): the current one,
+      // which the caller just read the model from; else the first with that model.
+      const now = current();
+      const builtFor = now.model === req.model ? now : (chain.find((l) => l.model === req.model) ?? now);
+      for (let i = chain.indexOf(now); i < chain.length; i++) {
         const link = chain[i] as LLMClient;
-        const isLast = i === chain.length - 1;
+        const isLast = link === last;
         if (dead.has(link) && !isLast) continue;
         const sent = link === builtFor ? req : { ...req, model: link.model, maxOutputTokens: Math.max(1, req.maxOutputTokens - builtFor.reasoningReserveTokens(req) + link.reasoningReserveTokens(req)) };
-        served.set(req, link.model);
+        served.set(req, servedOf(link));
         let sawText = false;
         let failure: LLMError | undefined;
         for await (const event of link.stream(sent)) {
-          if (event.type === 'usage') {
-            usage = addUsage(usage, event);
-            continue;
-          }
           if (event.type === 'error' && !sawText && !isLast && isRetryable(event.error)) {
             failure = event.error;
             break;
           }
-          if (event.type === 'text') {
-            if (event.delta !== '') sawText = true;
-            yield event;
-            continue;
-          }
-          if (usage !== undefined) yield usage;
+          if (event.type === 'text' && event.delta !== '') sawText = true;
+          // Usage is passed on as it comes, while `servedBy` still names this link.
           yield event;
-          return;
+          if (event.type === 'done' || event.type === 'error') return;
         }
-        if (failure === undefined) {
-          // The link's stream ended without a terminal event (a broken adapter): keep the usage.
-          if (usage !== undefined) yield usage;
-          return;
-        }
+        // The link's stream ended without a terminal event (a broken adapter).
+        if (failure === undefined) return;
         dead.add(link);
         const next = chain.slice(i + 1).find((l) => !dead.has(l) || l === last) ?? last;
         options.onFallback?.({ from: link.model, to: next.model, error: failure });
+      }
+    },
+  };
+}
+
+/**
+ * The errors that every later request to the same link would hit too: a refused key (`auth`), no
+ * allowance (`quota`), no access (`cors`), a missing model (`model_not_found`). §4.3.5 says
+ * "stop": once a link answered with one, it is not asked again in this job.
+ */
+const LATCHING = new Set<LLMError['kind']>(['auth', 'quota', 'cors', 'model_not_found']);
+
+/**
+ * `client`, except that once it fails with a latching error (above), every later request fails
+ * with that error at once, without being sent (`latched` is the job's, by client). The chain
+ * never hands these errors over, so nothing goes to another provider either.
+ */
+export function withLatch(client: LLMClient, latched: Map<LLMClient, LLMError>): LLMClient {
+  return {
+    model: client.model,
+    ...(client.id === undefined ? {} : { id: client.id }),
+    reasoningReserveTokens: (req) => client.reasoningReserveTokens(req),
+    async *stream(req: NormalizedRequest): AsyncGenerator<NormalizedEvent> {
+      const known = latched.get(client);
+      if (known !== undefined) {
+        req.signal.throwIfAborted();
+        yield { type: 'error', error: known };
+        return;
+      }
+      for await (const event of client.stream(req)) {
+        if (event.type === 'error' && LATCHING.has(event.error.kind)) latched.set(client, event.error);
+        yield event;
       }
     },
   };

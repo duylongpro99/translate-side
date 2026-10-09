@@ -16,11 +16,14 @@
 //   that call that has no accepted text, with that error;
 // - except `context_length` (§4.3.5 "shrink chunkTokens and retry"): the segments without accepted
 //   text are split in two halves, each sent as a chunk of its own (and split again if still too
-//   long); a single segment that is still too long fails with the error.
+//   long), and the job remembers the smaller size (`shrink`), so its later chunks start split. A
+//   single segment still too long is sent once more without the chunk's `<context>` block (`lean`);
+//   if that fails too, it fails with the error.
 // Usage from both calls is passed on as `usage` events. An abort propagates as a throw.
 
 import type { LLMError, ModelRole, NormalizedEvent, StopReason } from '../../llm/types.ts';
 import { BUDGET_MESSAGE } from '../budget.ts';
+import { estimateTokens } from '../tokens.ts';
 import type { EngineEvent } from '../types.ts';
 import { copiesNeighbour, type Rendered } from './duplicate.ts';
 import { planRepair, type RepairPlan, type RepairRule } from './repair.ts';
@@ -37,10 +40,21 @@ export interface FollowUp {
   fixes: string;
 }
 
-export type ChunkCall = (chunk: WireChunk, attempt: number, followUp?: FollowUp) => AsyncIterable<NormalizedEvent>;
+/** `lean`: leave out the chunk's `<context>` block (a single segment too long for the model, §4.3.5). */
+export type ChunkCall = (chunk: WireChunk, attempt: number, followUp?: FollowUp, lean?: boolean) => AsyncIterable<NormalizedEvent>;
+
+/**
+ * The job's memory of a `context_length` shrink: the most source tokens a call may carry. Absent
+ * `maxTokens`: no limit learned yet. Shared by the job's chunks (one object per job).
+ */
+export interface Shrink {
+  maxTokens?: number;
+}
 
 export interface TranslateChunkOptions {
   producedBy: { strategy: string; stage: string; model: string };
+  /** The id of the client that answered the call (LLMClient.id), put on its usage events: who spent it. */
+  clientId?: () => string | undefined;
   /** Revision of the finals (1 for a draft; refine uses 2). */
   revision: number;
   role: ModelRole;
@@ -50,6 +64,8 @@ export interface TranslateChunkOptions {
    * chunk (the context tail) that no segment may copy, besides the call's own earlier segments.
    */
   neighbours?: readonly Rendered[];
+  /** The job's shrink memory (context_length): chunks larger than it are split before they are sent. */
+  shrink?: Shrink;
   /**
    * The job's budget (§5.6), asked before the repair call: once exhausted, the segments left fail
    * with BUDGET_MESSAGE instead of being re-requested.
@@ -96,6 +112,7 @@ async function* runCall(
   emitFinals: boolean,
   /** Ids already shown as final: their text is not replaced by a partial preview. */
   shown: ReadonlySet<number> = new Set(),
+  lean = false,
 ): AsyncGenerator<EngineEvent, CallOutcome> {
   const idOf = new Map(chunk.segments.map((e) => [e.n, e.segment.id]));
   const source = new Map(chunk.segments.map((e) => [e.n, e.segment.inlineMarkup]));
@@ -124,13 +141,14 @@ async function* runCall(
   // A stream that ends in an error, or with no terminal event, was cut: its open segment is not accepted.
   let stopReason: StopReason = 'max_tokens';
   let error: LLMError | undefined;
-  for await (const event of call(chunk, attempt)) {
+  for await (const event of lean ? call(chunk, attempt, undefined, true) : call(chunk, attempt)) {
     if (event.type === 'text') parser.push(event.delta);
     else if (event.type === 'usage') {
       pending.push({
         type: 'usage',
         role: options.role,
         model: options.producedBy.model,
+        ...clientOf(options),
         input: event.input,
         output: event.output,
         ...(event.cachedInput === undefined ? {} : { cachedInput: event.cachedInput }),
@@ -151,6 +169,11 @@ async function* runCall(
   return { result, plan, accepted, ...(copied.size ? { copied: [...copied] } : {}), ...(error === undefined ? {} : { error }) };
 }
 
+function clientOf(options: TranslateChunkOptions): { client?: string } {
+  const id = options.clientId?.();
+  return id === undefined ? {} : { client: id };
+}
+
 function final(id: string, text: string, attempt: number, options: TranslateChunkOptions): EngineEvent {
   return {
     type: 'segment.final',
@@ -167,8 +190,56 @@ export function translateChunk(chunk: WireChunk, call: ChunkCall, options: Trans
   return translateChunkWith(chunk, call, options);
 }
 
+/** The `first` of a chunk split before anything was sent (its parts' calls are under `split`). */
+const NOT_SENT: CallReport = {
+  result: { strict: true, segs: new Map(), missing: [], cut: null, fixes: [], stray: '', stopReason: 'end' },
+  plan: { rerequest: [], ambiguous: false, merged: [], empty: [], truncated: [], tagMismatch: [], cut: null },
+};
+
+const sourceTokens = (entries: readonly WireSegment[]) => entries.reduce((n, e) => n + estimateTokens(e.segment.inlineMarkup), 0);
+
+/** Consecutive groups of at most `maxTokens` source tokens each (a segment larger than that alone). */
+function splitByTokens(entries: readonly WireSegment[], maxTokens: number): WireSegment[][] {
+  const groups: WireSegment[][] = [];
+  let group: WireSegment[] = [];
+  let size = 0;
+  for (const e of entries) {
+    const t = estimateTokens(e.segment.inlineMarkup);
+    if (group.length > 0 && size + t > maxTokens) {
+      groups.push(group);
+      group = [];
+      size = 0;
+    }
+    group.push(e);
+    size += t;
+  }
+  if (group.length > 0) groups.push(group);
+  return groups;
+}
+
+/** Each group as a chunk of its own, the reports gathered under `report.split`. */
+async function* runSplit(groups: readonly WireSegment[][], call: ChunkCall, options: TranslateChunkTestOptions, report: ChunkReport): AsyncGenerator<EngineEvent, ChunkReport> {
+  report.split = [];
+  for (const part of groups) {
+    const sub = yield* translateChunkWith(toWire(part), call, options);
+    report.split.push(sub);
+    report.failed.push(...sub.failed);
+  }
+  return report;
+}
+
 export async function* translateChunkWith(chunk: WireChunk, call: ChunkCall, options: TranslateChunkTestOptions): AsyncGenerator<EngineEvent, ChunkReport> {
-  const first = yield* runCall(chunk, 1, call, options, true);
+  // The job already learned that calls this large are too long for the model: split up front.
+  const limit = options.shrink?.maxTokens;
+  if (limit !== undefined && chunk.segments.length > 1 && sourceTokens(chunk.segments) > limit) {
+    const groups = splitByTokens(chunk.segments, limit);
+    if (groups.length > 1) return yield* runSplit(groups, call, options, { first: NOT_SENT, failed: [] });
+  }
+  let first = yield* runCall(chunk, 1, call, options, true);
+  if (first.error?.kind === 'context_length' && chunk.segments.length === 1 && first.accepted.size === 0) {
+    // One segment too long with its context: once more without the `<context>` block.
+    first = yield* runCall(chunk, 1, call, options, true, new Set(), true);
+  }
   const report: ChunkReport = { first: strip(first), failed: [] };
   const fail = function* (entries: readonly WireSegment[], error: LLMError): Generator<EngineEvent> {
     for (const e of entries) {
@@ -180,14 +251,10 @@ export async function* translateChunkWith(chunk: WireChunk, call: ChunkCall, opt
   const todo = chunk.segments.filter((e) => !first.accepted.has(e.n));
   if (todo.length === 0) return report;
   if (first.error?.kind === 'context_length' && todo.length > 1) {
-    report.split = [];
+    // Remembered for the job's later chunks (they start at this size), never grown back.
+    if (options.shrink) options.shrink.maxTokens = Math.min(options.shrink.maxTokens ?? Infinity, Math.max(1, Math.floor(sourceTokens(todo) / 2)));
     const half = Math.ceil(todo.length / 2);
-    for (const part of [todo.slice(0, half), todo.slice(half)]) {
-      const sub = yield* translateChunkWith(toWire(part), call, options);
-      report.split.push(sub);
-      report.failed.push(...sub.failed);
-    }
-    return report;
+    return yield* runSplit([todo.slice(0, half), todo.slice(half)], call, options, report);
   }
   if (first.error !== undefined) {
     yield* fail(todo, first.error);
@@ -228,7 +295,7 @@ export interface RerequestResult {
  */
 export async function* rerequestSegments(chunk: WireChunk, call: ChunkCall, options: TranslateChunkOptions, attempt: number): AsyncGenerator<EngineEvent, RerequestResult> {
   // No copy guard here: the caller checks the texts against their neighbours itself.
-  const plain: TranslateChunkOptions = { producedBy: options.producedBy, revision: options.revision, role: options.role };
+  const plain: TranslateChunkOptions = { producedBy: options.producedBy, revision: options.revision, role: options.role, ...(options.clientId === undefined ? {} : { clientId: options.clientId }) };
   const out = yield* runCall(chunk, attempt, call, plain, false, new Set(chunk.segments.map((e) => e.n)));
   return { accepted: out.accepted, report: strip(out), ...(out.error === undefined ? {} : { error: out.error }) };
 }

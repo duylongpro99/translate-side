@@ -212,7 +212,7 @@ export function App({ controller, translator }: { controller: PanelController; t
             </p>
           )}
           {job?.brief ? <AboutDocument brief={job.brief} sourceLang={job.sourceLang} /> : null}
-          <SegmentList segments={job?.segments ?? view.result.segments} states={job?.segs} {...(job && pageActions ? { actions: { retry: pageActions.retrySegment, retranslate: pageActions.retranslateSegment } } : {})} />
+          <SegmentList segments={job?.segments ?? view.result.segments} states={job?.segs} {...(job?.model ? { model: job.model } : {})} {...(job && pageActions ? { actions: { retry: pageActions.retrySegment, retranslate: pageActions.retranslateSegment } } : {})} />
         </>
       )}
     </main>

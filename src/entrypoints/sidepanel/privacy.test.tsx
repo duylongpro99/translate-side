@@ -9,6 +9,7 @@ import type { SnippetRecord } from '@/shared/snippet';
 import { App } from './App.tsx';
 import type { PanelController, PanelView, SessionHooks } from './controller.ts';
 import { PRIVACY_KEY, PrivacyGate } from './privacy.ts';
+import { PrivacyNotice } from './PrivacyNotice.tsx';
 import { createTranslator } from './translator.ts';
 
 // The first-run privacy notice (plan M3-E10): shown once, dismissible, persisted; nothing is sent before it.
@@ -200,5 +201,14 @@ describe('first-run privacy notice in the panel', () => {
     expect(root.querySelector('[data-testid=privacy-notice]')?.textContent).toContain('api.ai-box.vn');
     expect(root.querySelector('[data-testid=privacy-notice]')?.getAttribute('aria-modal')).toBe('true');
     expect(document.activeElement).toBe(root.querySelector('[data-testid=privacy-ok]'));
+  });
+});
+
+describe('the notice names the fallback providers too (plan M4-E9)', () => {
+  it('lists where text may go if the chosen provider is busy or down', () => {
+    const root = document.createElement('div');
+    document.body.replaceChildren(root);
+    act(() => render(<PrivacyNotice to={{ label: 'Home Ollama', host: 'localhost', fallback: [{ label: 'My Anthropic', host: 'api.anthropic.com' }] }} onAcknowledge={() => {}} />, root));
+    expect(root.querySelector('[data-testid=privacy-fallback]')?.textContent).toBe(', and if it is busy or down, My Anthropic (api.anthropic.com)');
   });
 });

@@ -2,11 +2,11 @@
 // the outside comes through EngineDeps ports, so it runs unchanged in the panel, in tests and in
 // the Node harness (§5.1).
 
-import type { LLMClient, ModelRole } from '../llm/types.ts';
+import type { LLMClient, LLMError, ModelRole } from '../llm/types.ts';
 import { createBudget } from './budget.ts';
 import { DEFAULT_CONTEXT_PROVIDERS } from './context/budget.ts';
 import { createWorkingMemory } from './memory.ts';
-import { withFallback, type FallbackInfo } from './fallback.ts';
+import { withFallback, withLatch, type FallbackInfo } from './fallback.ts';
 import { withRetry, type RetryPolicy } from './retry.ts';
 import type {
   ContextProvider,
@@ -104,6 +104,8 @@ function createStageContext(deps: EngineDeps, job: TranslationJob, signal: Abort
   const clients = new Map<ModelRole, LLMClient>();
   const retrying = new Map<LLMClient, LLMClient>();
   const dead = new Set<LLMClient>();
+  // A link refused for its key, allowance, access or model is not asked again in this job (withLatch).
+  const latched = new Map<LLMClient, LLMError>();
   const retry = {
     sleep: deps.sleep,
     ...(deps.retry === undefined ? {} : { policy: deps.retry }),
@@ -112,7 +114,9 @@ function createStageContext(deps: EngineDeps, job: TranslationJob, signal: Abort
   const retried = (raw: LLMClient): LLMClient => {
     let client = retrying.get(raw);
     if (client === undefined) {
-      client = withRetry(raw, retry);
+      // A request still backing off on a link the chain has given up on stops waiting.
+      const own: LLMClient = withRetry(withLatch(raw, latched), { ...retry, abandon: () => dead.has(own) });
+      client = own;
       retrying.set(raw, client);
     }
     return client;

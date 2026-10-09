@@ -11,12 +11,12 @@
 // §5.7 for the segments of THAT call: the whole chunk on attempt 1, only the re-requested segments
 // on the repair (a smaller budget, so a repair can't be cut by the first pass's size).
 
-import type { LLMClient, LLMError, NormalizedRequest } from '../../llm/types.ts';
+import type { LLMClient, LLMError, NormalizedRequest, Served } from '../../llm/types.ts';
 import { producedByOf, servedStream } from '../served.ts';
 import { BUDGET_MESSAGE, maxOutputTokens } from '../budget.ts';
 import { chunkLimits, chunkSegments, type Chunk } from '../chunker.ts';
 import { formatWire, toWire, type WireChunk } from '../parsing/wire.ts';
-import { translateChunk, type ChunkCall, type ChunkReport, type FollowUp } from '../parsing/translate-chunk.ts';
+import { translateChunk, type ChunkCall, type ChunkReport, type FollowUp, type Shrink } from '../parsing/translate-chunk.ts';
 import { DEFAULT_GLOSS, renderContextBlock, renderSystemPromptV2 } from '../context/assemble.ts';
 import { gatherContext } from '../context/budget.ts';
 import { segmentsBefore } from '../context/glossary.ts';
@@ -252,6 +252,8 @@ export interface PreparedChunk {
    * profile, fallback.ts); before any call, the one it will be sent to. Read it when emitting.
    */
   readonly model: string;
+  /** The `id` of the client that answered the latest call (LLMClient.id), if it has one: who spent its usage. */
+  readonly clientId?: string | undefined;
   call: ChunkCall;
   /** translate@2 only: the context tail's translated paragraphs, for the copy guard (translate-chunk.ts). */
   neighbours?: Rendered[];
@@ -285,17 +287,28 @@ export async function prepareChunk(work: ChunkWork, ctx: StageContext, memory: R
   } else {
     system = renderSystemPrompt(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
   }
-  let model = client.model;
-  const call: ChunkCall = (wire, attempt, followUp) => servedStream(client, translateRequest(client, system, wire, ctx.signal, context, startOrder(ctx, work.chunk.index, false), attempt, followUp), (m) => (model = m));
+  let served: Served = { model: client.model, ...(client.id === undefined ? {} : { id: client.id }) };
+  const call: ChunkCall = (wire, attempt, followUp, lean) => servedStream(client, translateRequest(client, system, wire, ctx.signal, lean ? '' : context, startOrder(ctx, work.chunk.index, false), attempt, followUp), (s) => (served = s));
   return {
     get model() {
-      return model;
+      return served.model;
+    },
+    get clientId() {
+      return served.id;
     },
     call,
     ...(neighbours === undefined ? {} : { neighbours }),
   };
 }
 
+/** The job's memory of a context_length shrink (translate-chunk.ts), one per job. */
+const shrinks = new WeakMap<StageContext, Shrink>();
+
+function shrinkOf(ctx: StageContext): Shrink {
+  let shrink = shrinks.get(ctx);
+  if (shrink === undefined) shrinks.set(ctx, (shrink = {}));
+  return shrink;
+}
 
 /** The translate stage's work for one chunk, typed (createTranslateStage wraps it; contextual's revise pass calls it). */
 export function createTranslateRun(strategyId: string, brief?: BriefWait, promptId: string = TRANSLATE_PROMPT_ID, revision: number = REVISION): TranslateRun {
@@ -323,6 +336,8 @@ export function createTranslateRun(strategyId: string, brief?: BriefWait, prompt
     const { call, neighbours } = prepared;
     const gen = translateChunk(toWire(work.chunk.segments), call, {
       producedBy: producedByOf(strategyId, 'translate', prepared),
+      clientId: () => prepared.clientId,
+      shrink: shrinkOf(ctx),
       revision,
       role: 'translate',
       ...(neighbours === undefined ? {} : { neighbours }),

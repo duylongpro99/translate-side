@@ -23,7 +23,7 @@ export function SelectionView({ snippet, job, actions, onClose, pageReady }: { s
       ) : (
         <>
           {job ? <JobBar job={job} actions={actions} /> : <p class="panel__meta">Translating the selection…</p>}
-          <SegmentList segments={job?.segments ?? snippet.segments} states={job?.segs} actions={{ retry: actions.retrySegment, retranslate: actions.retranslateSegment }} />
+          <SegmentList segments={job?.segments ?? snippet.segments} states={job?.segs} {...(job?.model ? { model: job.model } : {})} actions={{ retry: actions.retrySegment, retranslate: actions.retranslateSegment }} />
           {snippet.truncated ? <p class="state__hint">Only the first part of a long selection is translated.</p> : null}
         </>
       )}

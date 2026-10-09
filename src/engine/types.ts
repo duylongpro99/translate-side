@@ -155,7 +155,8 @@ export type EngineEvent =
   /** Shown in UI, cached. */
   | { type: 'artifact'; kind: 'brief' | 'glossary'; data: unknown }
   /** `input` includes cached tokens; `cachedInput` is how many were cache reads (plan M1 §5). */
-  | { type: 'usage'; role: string; model: string; input: number; output: number; cachedInput?: number }
+  /** `client`: the `id` of the client that spent it (LLMClient.id, e.g. the shell's profile id), when it has one. */
+  | { type: 'usage'; role: string; model: string; client?: string; input: number; output: number; cachedInput?: number }
   | { type: 'done' };
 
 export type EngineEventType = EngineEvent['type'];

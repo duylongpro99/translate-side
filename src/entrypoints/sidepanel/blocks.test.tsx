@@ -237,3 +237,22 @@ describe('block actions in the panel (M3-E5)', () => {
     expect(block('p2').textContent).toContain('Cái thứ hai.');
   });
 });
+
+describe('model badges (plan M4-E9, DESIGN §4.3.5: the panel shows which model translated each block)', () => {
+  const seg = (id: string): Segment => ({ id, kind: 'p', text: `Block ${id}`, inlineMarkup: `Block ${id}`, domPath: `/p[${id}]`, translate: true });
+
+  it('badges only the blocks a fallback model translated, naming it', () => {
+    const root = document.createElement('div');
+    document.body.replaceChildren(root);
+    const states = new Map<string, SegState>([
+      ['1', { status: 'final', text: 'Một', revision: 1, model: 'qwen3:8b' }],
+      ['2', { status: 'final', text: 'Hai', revision: 1, model: 'claude-haiku-4-5' }],
+      ['3', { status: 'final', text: 'Ba', revision: 1 }],
+      ['4', { status: 'pending' }],
+    ]);
+    act(() => render(<SegmentList segments={['1', '2', '3', '4'].map(seg)} states={states as JobView['segs']} model="qwen3:8b" />, root));
+    const badges = [...root.querySelectorAll('[data-testid=seg-model-badge]')];
+    expect(badges.map((b) => [b.closest('[data-id]')?.getAttribute('data-id'), b.textContent])).toEqual([['2', 'claude-haiku-4-5']]);
+    expect(badges[0]?.getAttribute('title')).toBe('Translated by claude-haiku-4-5, because qwen3:8b was unavailable');
+  });
+});

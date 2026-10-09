@@ -1,13 +1,18 @@
-// Which model answered a call (plan M4-E9). A fallback chain (fallback.ts) may hand a request to
-// another profile's model, so `producedBy.model` and a usage event's model are read from the call
-// as it streams (LLMClient.servedBy), not from the client the prompt was built for.
+// Which link answered a call (plan M4-E9). A fallback chain (fallback.ts) may hand a request to
+// another profile, so `producedBy.model` and a usage event's model and client id are read from
+// the call as it streams (LLMClient.servedBy), not from the client the prompt was built for.
 
-import type { LLMClient, NormalizedEvent, NormalizedRequest } from '../llm/types.ts';
+import type { LLMClient, NormalizedEvent, NormalizedRequest, Served } from '../llm/types.ts';
 
-/** `client.stream(req)`, telling `onModel` which model answers it (LLMClient.servedBy) as its events arrive. */
-export async function* servedStream(client: LLMClient, req: NormalizedRequest, onModel: (model: string) => void): AsyncGenerator<NormalizedEvent> {
+/** Who answers `req` now: the chain's link (servedBy), else the request's model and the client's id. */
+export function servedOf(client: LLMClient, req: NormalizedRequest): Served {
+  return client.servedBy?.(req) ?? { model: req.model, ...(client.id === undefined ? {} : { id: client.id }) };
+}
+
+/** `client.stream(req)`, telling `onServed` who answers it as each event arrives (before it is passed on). */
+export async function* servedStream(client: LLMClient, req: NormalizedRequest, onServed: (served: Served) => void): AsyncGenerator<NormalizedEvent> {
   for await (const event of client.stream(req)) {
-    onModel(client.servedBy?.(req) ?? req.model);
+    onServed(servedOf(client, req));
     yield event;
   }
 }

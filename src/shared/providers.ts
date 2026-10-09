@@ -726,3 +726,62 @@ export async function resolveRoute(api: Browser, role: ModelRole, ctx: { url?: s
   ]);
   return resolveRouteIn(settings, role, { url: ctx.url, tabProfileId });
 }
+
+// ---- Fallback (§4.3.5, plan M4-E9) -------------------------------------------------------------
+
+/** The `Routing.fallback` entry M5-E7 gives meaning to: the `basic` strategy (Chrome Translator), not a profile. */
+export const BASIC_FALLBACK = 'basic';
+
+/**
+ * A loopback host: `localhost` (and `*.localhost`), 127.0.0.0/8, `::1`. Nothing else counts as
+ * local for the privacy rule: a LAN address may be a company proxy that forwards to the cloud.
+ */
+export function isLoopbackHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (h === 'localhost' || h.endsWith('.localhost') || h === '::1' || h === '0:0:0:0:0:0:0:1') return true;
+  return /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h);
+}
+
+/**
+ * Does this connection keep text on this device (§4.3.5 privacy rule)? Its base URL is a loopback
+ * address, or it runs in the browser (`chrome-builtin`, M5). A preset's `local` mark is not enough
+ * on its own: an Ollama connection pointed at another host sends text there.
+ */
+export function isLocalConnection(connection: Pick<ProviderConnection, 'protocol' | 'baseUrl'>): boolean {
+  if (connection.protocol === 'chrome-builtin') return true;
+  try {
+    return isLoopbackHost(new URL(connection.baseUrl).hostname);
+  } catch {
+    return false;
+  }
+}
+
+export type FallbackRoute = { profile: ModelProfile; connection: ProviderConnection };
+
+/**
+ * The fallback profiles of a resolved route, in order (`Routing.fallback`): the route's own
+ * profile, repeats, entries that name no profile (the `basic` entry until M5-E7, a removed
+ * profile) and profiles without a connection are left out. Under a local-only site rule only
+ * local connections stay (`isLocalConnection`): the page never falls back to a cloud provider.
+ */
+export function fallbackRoutesIn(settings: ProviderSettings, route: Extract<Route, { ok: true }>): FallbackRoute[] {
+  const profiles = new Map(settings.profiles.map((p) => [p.id, p]));
+  const connections = new Map(settings.connections.map((c) => [c.id, c]));
+  const seen = new Set([route.profile.id]);
+  const out: FallbackRoute[] = [];
+  for (const id of settings.routing.fallback ?? []) {
+    if (id === BASIC_FALLBACK || seen.has(id)) continue;
+    seen.add(id);
+    const profile = profiles.get(id);
+    const connection = profile && connections.get(profile.connectionId);
+    if (!profile || !connection) continue;
+    if (route.localOnly && !isLocalConnection(connection)) continue;
+    out.push({ profile, connection });
+  }
+  return out;
+}
+
+/** `fallbackRoutesIn` on the stored settings. */
+export async function resolveFallback(api: Browser, route: Extract<Route, { ok: true }>): Promise<FallbackRoute[]> {
+  return fallbackRoutesIn(await readProviderSettings(api), route);
+}

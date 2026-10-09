@@ -12,7 +12,7 @@ import { SpendLedger } from '@/shared/spend';
 import { anyDenylisted, clearSnippet, readSnippet, tabIdFromSnippetKey, type SnippetRecord } from '@/shared/snippet';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
 import { snippetDocId, snippetView, SnippetStore } from './snippet.ts';
-import { isProviderKey } from '@/shared/providers';
+import { isProviderKey, saveConnectionStatus } from '@/shared/providers';
 import { routedSummary, translateClient, type Routed, type RouteTarget } from './route.ts';
 import { ViewportStore } from './viewport.ts';
 import { PrivacyGate } from './privacy.ts';
@@ -61,7 +61,15 @@ async function readSettings(api: Browser): Promise<Settings> {
 export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, options: TranslatorOptions = {}): Translator {
   // The running total in settings (M3-E9): pages and selections alike.
   const ledger = new SpendLedger(api);
-  deps = { onSpend: (delta) => void ledger.add(delta), ...deps };
+  deps = {
+    onSpend: (delta) => void ledger.add(delta),
+    // §4.3.5: a key the provider refused marks its connection `error` in settings ("Fix key" there too).
+    onAuthError: (connectionId, error) =>
+      void saveConnectionStatus(api, connectionId, { status: 'error', lastError: error.message, lastErrorKind: 'auth' }).catch((err: unknown) => {
+        console.warn('[translate-side] could not mark the connection', err);
+      }),
+    ...deps,
+  };
   const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), ...deps });
   // No cache: a selection is a one-off, and its text is not kept beyond the session.
   // Single-pass: one request per chunk, never the contextual brief (analyze) call for a selection.

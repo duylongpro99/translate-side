@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'preact/hooks';
 // The first-run privacy notice (DESIGN.md §8, plan M3-E10). Shown until acknowledged; nothing is
 // sent before that (privacy.ts).
 /** `to`: where page text goes, the connection the translate route uses now (§4.3.5 Resolve). */
-export function PrivacyNotice({ to, onAcknowledge }: { to?: { label: string; host: string } | undefined; onAcknowledge: () => void }) {
+export function PrivacyNotice({ to, onAcknowledge }: { to?: { label: string; host: string; fallback?: { label: string; host: string }[] } | undefined; onAcknowledge: () => void }) {
   const ok = useRef<HTMLButtonElement>(null);
   // The panel waits on this notice: focus its button, so the keyboard lands where the choice is.
   useEffect(() => ok.current?.focus(), []);
@@ -18,6 +18,16 @@ export function PrivacyNotice({ to, onAcknowledge }: { to?: { label: string; hos
           <>
             {' '}
             — now <strong data-testid="privacy-provider">{to.label}</strong> {to.host ? `(${to.host})` : ''}
+            {to.fallback?.length ? (
+              <span data-testid="privacy-fallback">
+                , and if it is busy or down, {to.fallback.map((f, i) => (
+                  <span key={i}>
+                    {i > 0 ? ', then ' : ''}
+                    <strong>{f.label}</strong> {f.host ? `(${f.host})` : ''}
+                  </span>
+                ))}
+              </span>
+            ) : null}
           </>
         ) : null}
         . Only pages you open the panel on are sent, and only after you click below.

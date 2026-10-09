@@ -30,6 +30,10 @@ export interface SpendDelta {
   usage: UsageTotals;
   /** Undefined when the model has no price. */
   usd: number | undefined;
+  /** The model profile that spent it (M4-E10 usage per profile); absent: not counted per profile. */
+  profileId?: string;
+  /** The model that answered, shown for a profile removed since. */
+  model?: string;
 }
 
 export const monthKey = (at: number) => {

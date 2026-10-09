@@ -3,6 +3,7 @@ import { languageLabel } from '@/engine/index';
 import { formatUsd } from '@/shared/cost';
 import type { Backoff, JobView } from './jobs.ts';
 import { failureText } from './status.ts';
+import type { LLMError } from '@/llm/types';
 
 // The job's status line (plan M1-E10): progress, Cancel, and the cost readout. On the page view
 // Cancel sits in the header (M3-E6), so the bar leaves it out there (`cancel={false}`).
@@ -65,6 +66,12 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
       {job.unmetered > 0 ? <span class="job__cost-note"> · excludes cancelled requests</span> : null}
     </span>
   );
+  // A fallback took over (M4-E9): say which model is translating now, and why.
+  const fallbackNote = job.fallback ? (
+    <span class="job__fallback" data-testid="job-fallback" role="note">
+      {job.fallback.from} {fallbackWhy(job.fallback.error)}; {job.status === 'running' ? 'continuing' : 'continued'} with {job.fallback.to}. Blocks it translated are marked.
+    </span>
+  ) : null;
   const attrs = {
     class: `job job--${job.status}`,
     'data-testid': 'job',
@@ -90,6 +97,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
             </button>
           ) : null}
           {job.backoff?.length ? <BackoffNote entries={job.backoff} /> : null}
+          {fallbackNote}
         </div>
       );
     case 'done':
@@ -106,6 +114,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
               Retry failed
             </button>
           ) : null}
+          {fallbackNote}
         </div>
       );
     case 'cancelled':
@@ -164,5 +173,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
     }
   }
 }
+
+const fallbackWhy = (error: LLMError) => (error.kind === 'rate_limit' ? 'is rate limited' : error.kind === 'network' ? 'is unreachable' : 'is overloaded');
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

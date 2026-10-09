@@ -318,6 +318,23 @@ body {
   margin-left: -10px;
   padding-left: 8px;
 }
+.seg__badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--muted);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.job__fallback {
+  flex-basis: 100%;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
 .seg__note--failed {
   color: var(--danger);
 }

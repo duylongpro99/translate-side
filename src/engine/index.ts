@@ -6,7 +6,7 @@ export const ENGINE_VERSION = 1;
 
 export { DEGRADED_MESSAGE, createEngine, type EngineDeps } from './engine.ts';
 export { defineStage, defineStrategy, isEngineEvent, multiplex, runStages, type AnyStage, type StrategyDefinition } from './runner.ts';
-export { withFallback, type FallbackInfo, type FallbackOptions } from './fallback.ts';
+export { withFallback, withLatch, type FallbackInfo, type FallbackOptions } from './fallback.ts';
 export { DEFAULT_RETRY_POLICY, addUsage, decideRetry, isRetryable, withRetry, type RetryDecision, type RetryInfo, type RetryOptions, type RetryPolicy } from './retry.ts';
 export { BUDGET_MESSAGE, createBudget, maxOutputTokens } from './budget.ts';
 export { createWorkingMemory } from './memory.ts';
