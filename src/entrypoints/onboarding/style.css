@@ -4,7 +4,11 @@
 .onb__steps li { padding: 0.15rem 0.6rem; border-radius: 1rem; border: 1px solid currentColor; }
 .onb__steps li[aria-current='step'] { font-weight: 600; color: inherit; }
 .onb__cards { display: grid; gap: 0.75rem; margin: 1rem 0; }
-.onb__card { border: 1px solid #8884; border-radius: 0.5rem; padding: 0.75rem 1rem; display: block; cursor: pointer; }
+.onb__cards { border: 0; padding: 0; min-inline-size: 0; }
+.onb__legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.onb__card { border: 1px solid #8884; border-radius: 0.5rem; padding: 0.75rem 1rem; display: block; }
+.onb__card .onb__title { cursor: pointer; }
+h2[tabindex='-1']:focus { outline: none; }
 .onb__card[aria-disabled='true'] { opacity: 0.6; cursor: not-allowed; }
 .onb__card input[type='radio'] { margin-right: 0.5rem; }
 .onb__card--on { border-color: #4a7bd8; box-shadow: 0 0 0 1px #4a7bd8; }

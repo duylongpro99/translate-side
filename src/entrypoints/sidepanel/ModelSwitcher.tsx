@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { SwitcherState } from './switcher.ts';
 
 // The quick switcher in the panel header (DESIGN.md §3, §4.3.3 B, plan M4-E11): the model profiles
@@ -19,6 +20,15 @@ const options = (state: SwitcherState, id: string) => state.options.find((o) => 
 
 export function ModelSwitcher({ state, model, onChoose, onMakeDefault, error }: ModelSwitcherProps) {
   const rule = state?.rule;
+  // Said aloud only when the choice changes, not for the model the panel opens with.
+  const choice = state ? `${state.tabId ?? ''}|${state.defaultId ?? ''}` : undefined;
+  const seen = useRef<string | undefined>(undefined);
+  const [announce, setAnnounce] = useState(false);
+  useEffect(() => {
+    if (choice === undefined) return;
+    if (seen.current !== undefined && seen.current !== choice) setAnnounce(true);
+    seen.current = choice;
+  }, [choice]);
   if (rule) {
     return (
       <span class="panel__model panel__model--rule" data-slot="quick-switcher" data-testid="header-model" title={`The site rule for ${rule.pattern} sets the model, so a tab choice would not apply`}>
@@ -78,7 +88,7 @@ export function ModelSwitcher({ state, model, onChoose, onMakeDefault, error }: 
       ) : null}
       {/* Said aloud when a switch lands: the page below changes, not the focus. */}
       <span class="panel__sr" role="status" aria-live="polite" data-testid="switcher-live">
-        {overridden && current ? `This tab now translates with ${options(state, current)}, this tab only.` : `This tab translates with ${defaultOption?.model ?? model}, the default.`}
+        {!announce ? '' : overridden && current ? `This tab now translates with ${options(state, current)}, this tab only.` : `This tab translates with ${defaultOption?.model ?? model}, the default.`}
       </span>
       {error ? (
         <span class="panel__error" role="alert" data-testid="switcher-error">

@@ -43,6 +43,17 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
   const [saved, setSaved] = useState<string | undefined>();
   const [note, setNote] = useState<string | undefined>();
   const [closed, setClosed] = useState<'done' | 'skipped' | undefined>();
+  const heading = useRef<HTMLHeadingElement>(null);
+  const firstStep = useRef(true);
+
+  // A step change moves focus to the new step's heading, so a keyboard or screen-reader user lands on it.
+  useEffect(() => {
+    if (firstStep.current) {
+      firstStep.current = false;
+      return;
+    }
+    heading.current?.focus();
+  }, [step, saved === undefined]);
 
   useEffect(() => {
     // What is stored (or the browser's language) is only the start: a choice already made stays.
@@ -101,7 +112,7 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
 
       {step === 1 ? (
         <section data-testid="onboarding-language">
-          <h2>What is your language?</h2>
+          <h2 ref={heading} tabIndex={-1}>What is your language?</h2>
           <p class="opt__hint">Pages are translated into it. You can change it any time in the panel.</p>
           <div class="opt__row">
             <label for="onb-lang">Translate into</label>
@@ -125,12 +136,13 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
 
       {step === 2 ? (
         <section data-testid="onboarding-how">
-          <h2>How do you want to translate?</h2>
-          <div class="onb__cards" role="radiogroup" aria-label="How to translate">
-            <label class={`onb__card${path === 'key' ? ' onb__card--on' : ''}`}>
-              <input type="radio" name="onb-path" data-testid="path-key" checked={path === 'key'} onChange={() => setPath('key')} />
-              <span class="onb__title">Best quality: an API key</span>
-              <p class="onb__sub">Anthropic (Claude) is recommended. Pages are sent to the provider you pick, and you pay it per use.</p>
+          <h2 ref={heading} tabIndex={-1}>How do you want to translate?</h2>
+          <fieldset class="onb__cards">
+            <legend class="onb__legend">How to translate</legend>
+            <div class={`onb__card${path === 'key' ? ' onb__card--on' : ''}`}>
+              <input type="radio" id="onb-path-key" name="onb-path" data-testid="path-key" aria-describedby="onb-path-key-sub" checked={path === 'key'} onChange={() => setPath('key')} />
+              <label for="onb-path-key" class="onb__title">Best quality: an API key</label>
+              <p class="onb__sub" id="onb-path-key-sub">Anthropic (Claude) is recommended. Pages are sent to the provider you pick, and you pay it per use.</p>
               {path === 'key' ? (
                 <p class="onb__sub">
                   <label for="onb-cloud">Provider </label>
@@ -144,11 +156,11 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
                   </select>
                 </p>
               ) : null}
-            </label>
-            <label class={`onb__card${path === 'local' ? ' onb__card--on' : ''}`}>
-              <input type="radio" name="onb-path" data-testid="path-local" checked={path === 'local'} onChange={() => setPath('local')} />
-              <span class="onb__title">Private and free: a model on this computer</span>
-              <p class="onb__sub">Runs with Ollama or LM Studio, so the text never leaves this device. Needs one of them installed; the next step walks you through the setup.</p>
+            </div>
+            <div class={`onb__card${path === 'local' ? ' onb__card--on' : ''}`}>
+              <input type="radio" id="onb-path-local" name="onb-path" data-testid="path-local" aria-describedby="onb-path-local-sub" checked={path === 'local'} onChange={() => setPath('local')} />
+              <label for="onb-path-local" class="onb__title">Private and free: a model on this computer</label>
+              <p class="onb__sub" id="onb-path-local-sub">Runs with Ollama or LM Studio, so the text never leaves this device. Needs one of them installed; the next step walks you through the setup.</p>
               {path === 'local' ? (
                 <p class="onb__sub">
                   <label for="onb-local">Runs with </label>
@@ -161,13 +173,13 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
                   </select>
                 </p>
               ) : null}
-            </label>
-            <label class="onb__card" aria-disabled="true" data-testid="path-builtin-card">
-              <input type="radio" name="onb-path" data-testid="path-builtin" disabled />
-              <span class="onb__title">Just try it: Chrome's built-in translator</span>
-              <p class="onb__sub">Coming soon. It is not available in this version.</p>
-            </label>
-          </div>
+            </div>
+            <div class="onb__card" aria-disabled="true" data-testid="path-builtin-card">
+              <input type="radio" id="onb-path-builtin" name="onb-path" data-testid="path-builtin" aria-describedby="onb-path-builtin-sub" disabled />
+              <label for="onb-path-builtin" class="onb__title">Just try it: Chrome's built-in translator</label>
+              <p class="onb__sub" id="onb-path-builtin-sub">Coming soon. It is not available in this version.</p>
+            </div>
+          </fieldset>
           <div class="onb__nav">
             <button type="button" onClick={() => setStep(1)} data-testid="onboarding-back">
               Back
@@ -182,7 +194,7 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
 
       {step === 3 && loaded ? (
         <section data-testid="onboarding-try">
-          <h2>{saved ? 'Try it' : 'Connect and test'}</h2>
+          <h2 ref={heading} tabIndex={-1}>{saved ? 'Try it' : 'Connect and test'}</h2>
           {saved ? (
             <Sample api={api} lang={lang} saved={saved} injected={injected} injectedGate={injectedGate} onDone={() => close('done')} onChange={() => setSaved(undefined)} onSkip={() => close('skipped')} />
           ) : (
@@ -242,8 +254,13 @@ function Sample({ api, lang, saved, injected, injectedGate, onDone, onChange, on
   const [view, setView] = useState<JobView | undefined>(() => jobs.get(SAMPLE_TAB));
   const [asked, setAsked] = useState(false);
   const [to, setTo] = useState<Routed | undefined>();
+  const noticeButton = useRef<HTMLButtonElement>(null);
   const sample = sampleFor(lang);
   useEffect(() => jobs.subscribe((id) => id === SAMPLE_TAB && setView(jobs.get(SAMPLE_TAB))), [jobs]);
+  // The notice is an alert: its button takes focus when it appears, so Enter acknowledges it.
+  useEffect(() => {
+    if (asked && privacy !== 'acknowledged') noticeButton.current?.focus();
+  }, [asked, privacy]);
   useEffect(() => {
     routedSummary(api).then(setTo, () => {});
   }, [api]);
@@ -281,7 +298,7 @@ function Sample({ api, lang, saved, injected, injectedGate, onDone, onChange, on
               ) : null}
               . Here that is the sample paragraph above. Mail and sign-in pages, and anything you type into, are never read.
             </p>
-            <button type="button" data-testid="onboarding-privacy-ok" onClick={() => void gate.acknowledge().catch(() => {})}>
+            <button type="button" ref={noticeButton} data-testid="onboarding-privacy-ok" onClick={() => void gate.acknowledge().catch(() => {})}>
               Got it, translate the sample
             </button>
           </div>

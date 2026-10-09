@@ -264,7 +264,8 @@ describe('quick switcher (M4-E11)', () => {
     const { t } = setup();
     await until(() => t.jobs.get(1)?.status === 'done');
     expect(q('switcher-live')?.getAttribute('aria-live')).toBe('polite');
-    expect(q('switcher-live')?.textContent).toContain('the default');
+    // Nothing is announced for the model the panel opens with.
+    expect(q('switcher-live')?.textContent).toBe('');
     pick(GEMINI_PROFILE.id);
     await until(() => q('switcher-tab-only') !== null);
     const note = q('switcher-tab-only')?.id;

@@ -46,12 +46,14 @@ function fakeApi(opts: { local?: Record<string, unknown> } = {}) {
   const sync = area({ prefs: { targetLang: 'vi', sourceLang: 'auto', style: 'natural' } });
   const local = area(opts.local ?? {});
   const perms = new Set<string>();
+  const requested: string[][] = [];
   const tabs: string[] = [];
   const api = {
     storage: { sync, local, session: area({}) },
     permissions: {
       contains: ({ origins }: { origins: string[] }) => Promise.resolve(origins.every((o) => perms.has(o))),
       request: ({ origins }: { origins: string[] }) => {
+        requested.push([...origins]);
         origins.forEach((o) => perms.add(o));
         return Promise.resolve(true);
       },
@@ -62,7 +64,7 @@ function fakeApi(opts: { local?: Record<string, unknown> } = {}) {
     runtime: { getURL: (p: string) => `chrome-extension://abc${p}` },
     tabs: { create: (o: { url: string }) => (tabs.push(o.url), Promise.resolve({})) },
   } as unknown as Api;
-  return { api, sync: sync.m, local: local.m, tabs };
+  return { api, sync: sync.m, local: local.m, tabs, requested };
 }
 
 function server() {
@@ -167,6 +169,47 @@ describe('onboarding (M4-E13)', () => {
     expect(t('path-local')).not.toBeNull();
     expect($<HTMLInputElement>('[data-testid=path-builtin]').disabled).toBe(true);
     expect(t('path-builtin-card')?.textContent).toContain('Coming soon');
+  });
+
+  it('asks the browser for the chosen provider\'s origin only, and for nothing wider', async () => {
+    const f = fakeApi();
+    await mount(f, server(), { jobs: sampleJobs(f).jobs });
+    await toStep3();
+    await connectAnthropic();
+    const origins = f.requested.flat();
+    expect(origins.length).toBeGreaterThan(0);
+    expect(new Set(origins)).toEqual(new Set(['https://api.anthropic.com/*']));
+  });
+
+  it('step 2 cards keep their selects out of the radio labels, so names stay clean and a select click does not toggle', async () => {
+    await mount(fakeApi());
+    click(t('onboarding-next'));
+    await waitFor(() => t('onboarding-how') !== null);
+    expect(root.querySelector('fieldset legend')?.textContent).toBe('How to translate');
+    expect(root.querySelector('label select, label label')).toBeNull();
+    const label = root.querySelector('label[for=onb-path-key]');
+    expect(label?.textContent).toBe('Best quality: an API key');
+    expect(t('path-key')?.getAttribute('aria-describedby')).toBe('onb-path-key-sub');
+    click(t('path-local'));
+    await waitFor(() => t('local-preset') !== null);
+    click($('[data-testid=local-preset]'));
+    expect($<HTMLInputElement>('[data-testid=path-local]').checked).toBe(true);
+  });
+
+  it('focus follows the step: the new heading after Next, the privacy button when the notice appears', async () => {
+    const f = fakeApi();
+    await mount(f, server(), { jobs: sampleJobs(f).jobs });
+    click(t('onboarding-next'));
+    await waitFor(() => t('onboarding-how') !== null);
+    expect(document.activeElement?.tagName).toBe('H2');
+    expect(document.activeElement?.textContent).toBe('How do you want to translate?');
+    click(t('onboarding-next'));
+    await waitFor(() => t('connection-form') !== null);
+    expect(document.activeElement?.tagName).toBe('H2');
+    await connectAnthropic();
+    click(t('translate-sample'));
+    await waitFor(() => t('onboarding-privacy') !== null);
+    await waitFor(() => document.activeElement === t('onboarding-privacy-ok'));
   });
 
   it('a local model goes to the Ollama form with no key field, and says nothing leaves the computer', async () => {
