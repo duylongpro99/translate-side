@@ -159,6 +159,20 @@ describe('auto-detect (§4.2.5, plan M4-E6)', () => {
     expect(claude).toMatchObject({ ok: true, detected: ['anthropic-messages', 'openai-chat'], protocol: 'anthropic-messages', baseUrl: 'https://openrouter.ai/api/v1' });
   });
 
+  it('M4-F: an OpenAI listing with no `object` field (OpenRouter sends data, total_count, links) still counts, both protocols are found, and the model family picks', async () => {
+    const noObject = { status: 200, body: { data: [{ id: 'openai/gpt-5-mini', name: 'GPT-5 mini', created: 0 }, { id: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku', created: 0 }], total_count: 2, links: {} } };
+    const s = server((h) => (path(h.url) === '/api/v1/models' && !h.headers['anthropic-version'] ? noObject : gateway(h)));
+    const auto = (model: string) => input('custom-auto', { baseUrl: 'https://openrouter.ai/api/v1', model });
+    const gpt = await testConnection(auto('openai/gpt-5-mini'), ports(s.fetch));
+    expect(gpt).toMatchObject({ ok: true, detected: ['anthropic-messages', 'openai-chat'], protocol: 'openai-chat' });
+    expect(gpt.ok && gpt.checks.every((c) => c.error === undefined)).toBe(true);
+    const claude = await testConnection(auto('anthropic/claude-haiku-4.5'), ports(s.fetch));
+    expect(claude).toMatchObject({ ok: true, detected: ['anthropic-messages', 'openai-chat'], protocol: 'anthropic-messages' });
+    // The Anthropic path's own listing keeps its shape check: an Anthropic-shaped body on the OpenAI path is not OpenAI.
+    const onlyAnthropic = server((h) => (path(h.url) === '/api/v1/models' ? anthropicList('anthropic/claude-haiku-4.5') : h.url.endsWith('/messages') ? anthropicOk : notFound));
+    expect(await testConnection(auto('anthropic/claude-haiku-4.5'), ports(onlyAnthropic.fetch))).toMatchObject({ ok: true, detected: ['anthropic-messages'] });
+  });
+
   it('a protocol whose listing has the other shape is not detected, even with no model to test (§4.2.5 steps 1–2)', async () => {
     // A gateway that answers every /v1/models with the OpenAI list and has no models yet.
     const s = server((h) => (path(h.url) === '/v1/models' ? openaiList() : notFound));
