@@ -53,7 +53,9 @@ function useTranslateRoute(api: Browser): TranslateRoute {
       );
     void load();
     // A route chosen or a key saved in Providers shows here at once (tester C1 #8).
-    const onChange = () => void load();
+    // A read already in flight is shared (providers.ts migrateProviders) and may predate the
+    // change: wait for it, then read again.
+    const onChange = () => void resolveRoute(api, 'translate').finally(load);
     api.storage.sync.onChanged.addListener(onChange);
     api.storage.local.onChanged.addListener(onChange);
     return () => {

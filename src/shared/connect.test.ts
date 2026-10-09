@@ -3,7 +3,7 @@ import { createAnthropicAdapter } from '@/llm/anthropic';
 import { createOpenAIAdapter } from '@/llm/openai';
 import { anthropicStream, openaiStream } from '@/llm/testing';
 import type { LLMError, Protocol } from '@/llm/types';
-import { anthropicBase, connectMessage, corsGuide, endpointBase, fixBaseUrl, OLLAMA_ORIGINS, preferredProtocol, testConnection, type TestInput } from './connect.ts';
+import { anthropicBase, connectMessage, corsGuide, displayModels, endpointBase, fixBaseUrl, OLLAMA_ORIGINS, preferredProtocol, testConnection, type TestInput } from './connect.ts';
 import { presetFor, type PresetId } from './presets.ts';
 
 interface Hit {
@@ -318,5 +318,15 @@ describe('local-server guides (§4.3.6, plan M4-E12)', () => {
 
   it('tells LM Studio users to turn on CORS in the server settings', () => {
     expect(corsGuide('lmstudio').steps[0]?.text).toContain('Enable CORS');
+  });
+});
+
+describe('model ids (tester C1 #5)', () => {
+  it('Gemini lists models/<id>: the bare id is shown, saved and sent; other servers are left alone', async () => {
+    const s = server((h) => (path(h.url).endsWith('/models') ? openaiList('models/gemini-3-flash-preview', 'models/gemma-4-31b-it') : openaiOk));
+    const result = await testConnection(input('gemini', { model: 'gemini-3-flash-preview' }), ports(s.fetch));
+    expect(result.ok && result.models.map((m) => m.id)).toEqual(['gemini-3-flash-preview', 'gemma-4-31b-it']);
+    expect(s.hits[1]?.body).toMatchObject({ model: 'gemini-3-flash-preview' });
+    expect(displayModels('https://gw.example.com/v1', [{ id: 'models/x' }])).toEqual([{ id: 'models/x' }]);
   });
 });

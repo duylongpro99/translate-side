@@ -458,6 +458,39 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     await waitFor(() => $$('[data-testid=model-list] option').length === 2);
   });
 
+  it('the access hint names the host and says the grant covers all its ports (tester C1 #3)', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1 } });
+    await mount(f, server(() => openaiList()));
+    await startAdd('lmstudio');
+    expect($('[data-testid=access-hint]').textContent).toBe('Chrome asks for access to http://localhost only (all its ports, not just 1234).');
+    type('#c-base', 'https://gw.example.com/v1');
+    expect($('[data-testid=access-hint]').textContent).toBe('Chrome asks for access to https://gw.example.com only.');
+  });
+
+  it('with no model chosen, the test tries none and says to pick one from the list (tester C1 #6)', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1 } });
+    const srv = server((path) => (path === '/v1/models' ? openaiList('kimi-k3', 'gpt-oss:120b') : { status: 403, body: { error: 'this model requires a subscription' } }));
+    await mount(f, srv);
+    await startAdd('ollama-cloud');
+    type('#c-key', 'ollama-key-0123456789');
+    type('#c-model', '');
+    click($('[data-testid=test-connection]'));
+    await waitFor(() => $('[data-testid=test-result]') !== null);
+    expect($('[data-testid=test-result]').textContent).toContain('✓ Connected');
+    expect($('[data-testid=pick-model]').textContent).toContain('pick one below and test again to check the key');
+    expect(srv.hits.every((h) => !h.includes('/chat/completions'))).toBe(true);
+  });
+
+  it('removing a keyless local connection does not mention a key (tester C1 #4)', async () => {
+    const conn = { id: 'o2', label: 'Ollama (local)', presetId: 'ollama', protocol: 'openai-chat', baseUrl: 'http://localhost:11434/v1', auth: { style: 'none' }, quirks: {}, status: 'ok' };
+    const f = fakeApi({ sync: { schemaVersion: 1, 'conn:o2': conn }, granted: ['http://localhost/*'] });
+    await mount(f, server(() => openaiList()));
+    click(rowOf('Ollama (local)')?.querySelector('[data-testid=remove-connection]') ?? null);
+    click($('[data-testid=confirm-remove-yes]'));
+    await waitFor(() => $('[data-testid=providers-note]') !== null);
+    expect($('[data-testid=providers-note]').textContent).toBe('Removed Ollama (local) and access to localhost:11434.');
+  });
+
   it('removing a keyed built-in that no route uses says it is now hidden (review C1 #7)', async () => {
     // An APIBOX key too: with only Gemini's, the migration routes to Gemini (M4 §3 #7).
     const f = fakeApi({ sync: { schemaVersion: 1 }, local: { 'secret:gemini': 'AIza-0123456789', 'secret:apibox': 'sk-apibox-0123456789' } });

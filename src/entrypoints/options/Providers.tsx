@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
 import { createAdapter } from '@/llm/client';
 import type { ModelInfo, Protocol, ProtocolAdapter } from '@/llm/types';
-import { connectMessage, corsGuide, fixBaseUrl, isClaudeModel, preferredProtocol, testConnection, URL_FIX_TEXT, type ConnectMessage, type GuideKind, type GuideStep, type TestResult } from '@/shared/connect';
+import { connectMessage, corsGuide, displayModels, fixBaseUrl, isClaudeModel, preferredProtocol, testConnection, URL_FIX_TEXT, type ConnectMessage, type GuideKind, type GuideStep, type TestResult } from '@/shared/connect';
 import { AUTH_LABELS, PICKER_GROUPS, presetFor, PROTOCOL_LABELS, ROLE_LABELS, type PresetId } from '@/shared/presets';
 import { pricingFor } from '@/shared/pricing';
 import { isProviderKey, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnectionStatus, saveProfile, saveRouting, saveSetup, type ProviderSettings } from '@/shared/providers';
@@ -183,7 +183,8 @@ function Connections({ api, loaded, onAdd, onEdit, onNote }: { api: Browser; loa
         const access = revoked ? ` and access to ${hostOf(c.baseUrl)}` : '';
         // Name only what there was (a keyless local server has no key, tester C1 #4).
         const parts = [hasModels ? 'its models' : '', keyed ? 'its key' : '', revoked ? `access to ${hostOf(c.baseUrl)}` : ''].filter(Boolean);
-        if (!builtIn) return onNote(`Removed ${c.label}${parts.length ? `, ${parts.slice(0, -1).join(', ')}${parts.length > 1 ? ' and ' : ''}${parts.at(-1)}` : ''}.`);
+        const what = parts.length > 1 ? `, ${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts.length === 1 ? ` and ${parts[0]}` : '';
+        if (!builtIn) return onNote(`Removed ${c.label}${what}.`);
         // Say what the list will show: a built-in stays listed (keyless) only while a route uses it.
         const listed = visibleConnections(await load(api)).some((x) => x.id === c.id);
         onNote(
@@ -404,7 +405,7 @@ function ModelForm({ api, adapterFor, loaded, onDone }: { api: Browser; adapterF
       const conn = await resolveConnection(api, connection);
       if (!conn) return setError('This connection has no key.');
       const result = await adapterFor(conn.protocol).probe(conn);
-      if (result.ok) return setModels(result.models ?? []);
+      if (result.ok) return setModels(displayModels(conn.baseUrl, result.models ?? []));
       const message = connectMessage(result.error, { preset: presetFor(connection.presetId, connection.protocol), baseUrl: connection.baseUrl, model });
       setError(message.text);
       setNeedsAccess(message.action === 'grant');

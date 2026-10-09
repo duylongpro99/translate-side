@@ -16,16 +16,20 @@ function fakeApi({ grant = true, answer = Promise.resolve() } = {}) {
   const sync = new Map<string, unknown>();
   const granted = new Set<string>();
   const log: string[] = [];
-  const area = (m: Map<string, unknown>, name: string) => ({
-    get: (k: string | null) => Promise.resolve(k === null ? Object.fromEntries(m) : m.has(k) ? { [k]: m.get(k) } : {}),
-    set: (o: Record<string, unknown>) => {
-      log.push(`${name}.set ${Object.keys(o).join(',')}`);
-      for (const [k, v] of Object.entries(o)) m.set(k, v);
-      return Promise.resolve();
-    },
-    remove: (k: string) => Promise.resolve(void m.delete(k)),
-    onChanged: { addListener: () => {}, removeListener: () => {} },
-  });
+  const area = (m: Map<string, unknown>, name: string) => {
+    const listeners = new Set<(c: Record<string, unknown>) => void>();
+    return {
+      get: (k: string | null) => Promise.resolve(k === null ? Object.fromEntries(m) : m.has(k) ? { [k]: m.get(k) } : {}),
+      set: (o: Record<string, unknown>) => {
+        log.push(`${name}.set ${Object.keys(o).join(',')}`);
+        for (const [k, v] of Object.entries(o)) m.set(k, v);
+        listeners.forEach((l) => l(Object.fromEntries(Object.keys(o).map((k) => [k, {}]))));
+        return Promise.resolve();
+      },
+      remove: (k: string) => Promise.resolve(void m.delete(k)),
+      onChanged: { addListener: (l: (c: Record<string, unknown>) => void) => listeners.add(l), removeListener: (l: (c: Record<string, unknown>) => void) => listeners.delete(l) },
+    };
+  };
   const api = {
     storage: { local: area(local, 'local'), sync: area(sync, 'sync') },
     permissions: {
@@ -280,5 +284,17 @@ describe('usage and cost (plan M3-E9)', () => {
     act(() => (root.querySelector('[data-testid=spend-reset]') as HTMLButtonElement).click());
     await waitFor(() => root.querySelector('[data-testid=spend-total]')?.textContent === 'Nothing spent yet.');
     expect(f.local.has('spend')).toBe(false);
+  });
+
+  it('shows the new route’s price as soon as Providers saves it (tester C1 #8)', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} cache={undefined} />, root));
+    await waitFor(() => root.querySelector('[data-testid=spend-price]')?.textContent?.includes(DEFAULT_PROFILE.model) === true);
+    const conn = { id: 'c1', label: 'Work', presetId: 'custom-openai', protocol: 'openai-chat', baseUrl: 'https://gw.example.com/v1', auth: { style: 'none' }, quirks: {}, status: 'ok' };
+    const prof = { id: 'p1', connectionId: 'c1', model: 'work-model', maxConcurrency: 2, chunkTokens: 1200, pricing: { inPerM: 1, cachedInPerM: 0.5, outPerM: 2 } };
+    await act(async () => {
+      await f.api.storage.sync.set({ schemaVersion: 1, 'conn:c1': conn, 'profile:p1': prof, routing: { translate: 'p1' } });
+    });
+    await waitFor(() => root.querySelector('[data-testid=spend-price]')?.textContent?.startsWith('work-model: $1') === true);
   });
 });
