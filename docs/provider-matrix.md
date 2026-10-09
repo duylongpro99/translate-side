@@ -21,8 +21,8 @@ Judge scores are 1–5 means over 23 passages (fidelity / naturalness / tone / t
 | Gemini · `gemini-3.5-flash-lite` (OpenAI endpoint) · chunk 1500 × 2, quirks `{}`, 4 s pause between passages | lost 0/149, 1 repaired, 0 failing finals, code 25/25 | **4.24** | 4.17 · 3.78 · 4.57 · 4.43 | **$0.0318** (verified price $0.30 / $2.50 per M) | 3.5 s · 107 s¹ | 73/73, 21.6 s, $0.0179 |
 | APIBOX · `qwen3.8-flash` (OpenAI chat; the app default) · chunk 1500 × 2, the app's thinking policy (chunk 1 off, later `minimal` + 6000 reserve) | lost 0/149, 0 repaired, code 25/25 | **4.49** | 4.39 · 3.96 · 4.78 · 4.83 | **$0.0015** (nominal USD, price unverified) | 7.5 s · 173 s | 73/73, 73.6 s, $0.0013 |
 | Ollama cloud · `gemma4:31b` (OpenAI chat) · chunk 1200 × 4, quirks `{}` | lost 0/149, 0 repaired, code 25/25 | **4.46** | 4.04 · 4.39 · 4.65 · 4.74 | n/a: Ollama cloud bills a plan, not tokens | 13.5 s · 320 s³ | 73/73, 23.3 s, no cost shown |
-| Ollama cloud · `gpt-oss:20b`, default quirks · chunk 1200 × 4 | **lost 127/149** (every call stopped at `max_tokens`) | not scored | – | n/a | 11.1 s · – | **10/73, 63 failed** |
-| Ollama cloud · `gpt-oss:20b`, `reasoning: effort low, reserve 6000` · chunk 1200 × 4 | lost 0–1 of 149 across runs (0 in the first run; the tester's rerun lost 1: `so-regex-html` failed the markers+code check after one re-request), 0 repaired, code 25/25 | **3.48**² | 3.43 · 3.17 · 3.78 · 3.52 | n/a | 5.8 s · 136 s | 72/73, 1 failed (also 1 in the harness rerun: not stable) |
+| Ollama cloud · `gpt-oss:20b`, default quirks · chunk 1200 × 4 | **lost 127/149** (every call stopped at `max_tokens`) | not scored | – | n/a | 11.1 s · – | **6–10 of 73 across runs** (10 with 63 failed here; 6 with 67 failed in the tester's unloaded rerun) |
+| Ollama cloud · `gpt-oss:20b`, `reasoning: effort low, reserve 6000` · chunk 1200 × 4 | lost 0–1 of 149 across runs (0 in the first run; the tester's rerun lost 1: `so-regex-html` failed the markers+code check after one re-request), 0 repaired, code 25/25 | **3.48**² | 3.43 · 3.17 · 3.78 · 3.52 | n/a | 5.8 s · 136 s | 69–72 of 73 across runs (1–4 failed; not stable) |
 | Anthropic · direct (`anthropic-messages`) | **not run — skipped by user (no key)** | – | – | – | – | **not run — skipped by user (no key)** |
 | OpenRouter · `anthropic/claude-haiku-4.5`, OpenAI protocol | **not run — account has 0 credits** (402 quota on every call) | – | – | – | – | not run |
 | OpenRouter · `anthropic/claude-haiku-4.5`, Anthropic protocol | **not run — account has 0 credits** | – | – | – | – | not run |
@@ -47,8 +47,8 @@ Tokens for the eval set (the same ≈18 k in / ≈10 k out for every model; the 
 | Gemini | 73 of 73 · 21.6 s · $0.0179 | `docs/provider-matrix/gemini.png` | `gemini.json` |
 | APIBOX | 73 of 73 · 73.6 s · $0.0013 | `apibox.png` | `apibox.json` |
 | Ollama cloud `gemma4:31b` | 73 of 73 · 23.3 s | `ollama-cloud-gemma4-31b.png` | `ollama-cloud-gemma4-31b.json` |
-| Ollama cloud `gpt-oss:20b`, default | **10 of 73 · 63 failed** · 215 s | `ollama-cloud-gpt-oss-default.png` | `…-default.json` |
-| Ollama cloud `gpt-oss:20b`, reasoning low | 72 of 73 · 1 failed · 79.9 s | `ollama-cloud-gpt-oss-reasoning-low.png` | `…-reasoning-low.json` |
+| Ollama cloud `gpt-oss:20b`, default | **10 of 73 · 63 failed** · 215 s (rerun: 6 of 73 · 67 failed; range 6–10) | `ollama-cloud-gpt-oss-default.png` | `…-default.json` |
+| Ollama cloud `gpt-oss:20b`, reasoning low | 72 of 73 · 1 failed · 79.9 s (rerun: 69 of 73 · 4 failed · 84.7 s; range 1–4 failed) | `ollama-cloud-gpt-oss-reasoning-low.png` | `…-reasoning-low.json` |
 
 Method limits, stated plainly: a headless run cannot press the toolbar icon or answer Chrome's permission prompt, so the driver (a) adds `host_permissions` for 127.0.0.1 and the provider's origin to a temporary copy of the manifest, and (b) does what the worker's action handler does (inject `content-scripts/content.js`, write the tab's `access:<id>` record) instead of clicking. The panel, the job engine, the provider client and the storage reads are the real built code. The permission prompt itself and the real Alt+T gesture remain covered by unit tests and by a human check.
 
