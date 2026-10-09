@@ -1,0 +1,288 @@
+{
+ "run": "2026-10-09T04-37-08-445Z",
+ "set": "eval",
+ "strategy": "single-pass",
+ "strategyVersion": 1,
+ "prompt": "translate@1",
+ "promptHash": "225254ef84c3",
+ "prompts": {
+  "translate": "translate@1"
+ },
+ "style": "natural",
+ "gloss": "first",
+ "glossary": 0,
+ "label": "openrouter-anthropic/nvidia/nemotron-3-super-120b-a12b:free",
+ "thinking": {},
+ "reasoning": {
+  "calls": 0,
+  "tokens": 0,
+  "max": 0,
+  "outlierTokens": 2000,
+  "outliers": []
+ },
+ "brief": null,
+ "model": "nvidia/nemotron-3-super-120b-a12b:free",
+ "target": "vi",
+ "chunkTokens": 1500,
+ "concurrency": 1,
+ "price": {
+  "input": 0,
+  "cachedInput": 0,
+  "output": 0,
+  "verified": true
+ },
+ "docs": [
+  {
+   "slug": "go-errors-are-values",
+   "segments": 9,
+   "translatable": 7,
+   "final": 0,
+   "failed": 7,
+   "lost": 7,
+   "repaired": 0,
+   "revised": 0,
+   "reviseKept": 0,
+   "calls": 2,
+   "input": 1778,
+   "cachedInput": 0,
+   "output": 2304,
+   "wallMs": 34548,
+   "firstFinalMs": null,
+   "costUsd": 0,
+   "errors": [
+    "unknown: The model did not return this segment in a usable form"
+   ],
+   "chunks": 1,
+   "briefedChunks": 0,
+   "check": {
+    "rerequested": 0,
+    "kinds": {},
+    "repaired": 0,
+    "failed": 0,
+    "input": 0,
+    "output": 0,
+    "codeBearing": 3,
+    "codePreserved": 0,
+    "finalsFailingChecks": 0
+   }
+  },
+  {
+   "slug": "docker-multistage",
+   "segments": 10,
+   "translatable": 8,
+   "final": 0,
+   "failed": 8,
+   "lost": 8,
+   "repaired": 0,
+   "revised": 0,
+   "reviseKept": 0,
+   "calls": 2,
+   "input": 1480,
+   "cachedInput": 0,
+   "output": 1584,
+   "wallMs": 16073,
+   "firstFinalMs": null,
+   "costUsd": 0,
+   "errors": [
+    "unknown: The model did not return this segment in a usable form"
+   ],
+   "chunks": 1,
+   "briefedChunks": 0,
+   "check": {
+    "rerequested": 0,
+    "kinds": {},
+    "repaired": 0,
+    "failed": 0,
+    "input": 0,
+    "output": 0,
+    "codeBearing": 3,
+    "codePreserved": 0,
+    "finalsFailingChecks": 0
+   }
+  },
+  {
+   "slug": "mdn-closures",
+   "segments": 7,
+   "translatable": 6,
+   "final": 0,
+   "failed": 6,
+   "lost": 6,
+   "repaired": 0,
+   "revised": 0,
+   "reviseKept": 0,
+   "calls": 2,
+   "input": 1536,
+   "cachedInput": 0,
+   "output": 1792,
+   "wallMs": 16186,
+   "firstFinalMs": null,
+   "costUsd": 0,
+   "errors": [
+    "unknown: The model did not return this segment in a usable form"
+   ],
+   "chunks": 1,
+   "briefedChunks": 0,
+   "check": {
+    "rerequested": 0,
+    "kinds": {},
+    "repaired": 0,
+    "failed": 0,
+    "input": 0,
+    "output": 0,
+    "codeBearing": 2,
+    "codePreserved": 0,
+    "finalsFailingChecks": 0
+   }
+  },
+  {
+   "slug": "go-gofmt",
+   "segments": 7,
+   "translatable": 7,
+   "final": 0,
+   "failed": 7,
+   "lost": 7,
+   "repaired": 0,
+   "revised": 0,
+   "reviseKept": 0,
+   "calls": 2,
+   "input": 1200,
+   "cachedInput": 0,
+   "output": 788,
+   "wallMs": 8295,
+   "firstFinalMs": null,
+   "costUsd": 0,
+   "errors": [
+    "unknown: The model did not return this segment in a usable form"
+   ],
+   "chunks": 1,
+   "briefedChunks": 0,
+   "check": {
+    "rerequested": 0,
+    "kinds": {},
+    "repaired": 0,
+    "failed": 0,
+    "input": 0,
+    "output": 0,
+    "codeBearing": 0,
+    "codePreserved": 0,
+    "finalsFailingChecks": 0
+   }
+  },
+  {
+   "slug": "pep20-zen",
+   "segments": 21,
+   "translatable": 21,
+   "final": 0,
+   "failed": 21,
+   "lost": 21,
+   "repaired": 0,
+   "revised": 0,
+   "reviseKept": 0,
+   "calls": 2,
+   "input": 1650,
+   "cachedInput": 0,
+   "output": 1656,
+   "wallMs": 13257,
+   "firstFinalMs": null,
+   "costUsd": 0,
+   "errors": [
+    "unknown: The model did not return this segment in a usable form"
+   ],
+   "chunks": 1,
+   "briefedChunks": 0,
+   "check": {
+    "rerequested": 0,
+    "kinds": {},
+    "repaired": 0,
+    "failed": 0,
+    "input": 0,
+    "output": 0,
+    "codeBearing": 0,
+    "codePreserved": 0,
+    "finalsFailingChecks": 0
+   }
+  },
+  {
+   "slug": "wodehouse-jeeves",
+   "segments": 4,
+   "translatable": 4,
+   "final": 0,
+   "failed": 4,
+   "lost": 4,
+   "repaired": 0,
+   "revised": 0,
+   "reviseKept": 0,
+   "calls": 2,
+   "input": 1674,
+   "cachedInput": 0,
+   "output": 1900,
+   "wallMs": 15449,
+   "firstFinalMs": null,
+   "costUsd": 0,
+   "errors": [
+    "unknown: The model did not return this segment in a usable form"
+   ],
+   "chunks": 1,
+   "briefedChunks": 0,
+   "check": {
+    "rerequested": 0,
+    "kinds": {},
+    "repaired": 0,
+    "failed": 0,
+    "input": 0,
+    "output": 0,
+    "codeBearing": 0,
+    "codePreserved": 0,
+    "finalsFailingChecks": 0
+   }
+  }
+ ],
+ "total": {
+  "translatable": 53,
+  "lost": 53,
+  "failed": 53,
+  "repaired": 0,
+  "revised": 0,
+  "reviseKept": 0,
+  "calls": 12,
+  "input": 9318,
+  "cachedInput": 0,
+  "output": 10024,
+  "wallMs": 103808,
+  "costUsd": 0
+ },
+ "check": {
+  "rerequested": 0,
+  "kinds": {},
+  "repaired": 0,
+  "failed": 0,
+  "input": 0,
+  "output": 0,
+  "codeBearing": 8,
+  "codePreserved": 0,
+  "finalsFailingChecks": 0
+ },
+ "nonce": null,
+ "charsPerToken": {
+  "calls": 12,
+  "input": 4.050440008585533,
+  "output": 0,
+  "assumed": 3.5
+ },
+ "thresholds": {
+  "chunks": 6,
+  "segments": 53,
+  "chunksWithFixes": 0,
+  "fixKinds": {},
+  "rerequested": 53,
+  "merged": 0,
+  "maxRatio": 0,
+  "over": {
+   "1.2": 0,
+   "1.4": 0,
+   "1.6": 0
+  },
+  "maxBudgetUse": 1,
+  "partialTag": 0
+ }
+}
