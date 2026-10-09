@@ -1,0 +1,84 @@
+import type { SwitcherState } from './switcher.ts';
+
+// The quick switcher in the panel header (DESIGN.md §3, §4.3.3 B, plan M4-E11): the model profiles
+// to translate this tab with. A choice applies to this tab only and the routing stays as it was,
+// until "Make default". A site rule wins over it (§4.3.5), so a page one covers says so instead.
+
+export interface ModelSwitcherProps {
+  state: SwitcherState | undefined;
+  /** The model the job (or the route) names, while the switcher's own state is still being read. */
+  model: string;
+  /** undefined = back to the default model. */
+  onChoose(profileId: string | undefined): void;
+  onMakeDefault(profileId: string): void;
+  error?: string | undefined;
+}
+
+const DEFAULT_VALUE = '';
+
+export function ModelSwitcher({ state, model, onChoose, onMakeDefault, error }: ModelSwitcherProps) {
+  const rule = state?.rule;
+  if (rule) {
+    return (
+      <span class="panel__model panel__model--rule" data-slot="quick-switcher" data-testid="header-model" title={`The site rule for ${rule.pattern} sets the model, so a tab choice would not apply`}>
+        {rule.model}
+        <span class="panel__rule" data-testid="switcher-site-rule">
+          {' '}
+          · site rule {rule.pattern}
+          {rule.localOnly ? ' (local only)' : ''}
+        </span>
+      </span>
+    );
+  }
+  if (!state || state.options.length <= 1) {
+    return (
+      <span class="panel__model" data-slot="quick-switcher" data-testid="header-model" title={model ? `Model: ${model}` : 'Model'}>
+        {model}
+      </span>
+    );
+  }
+  const current = state.currentId;
+  const overridden = state.tabId !== undefined && state.tabId !== state.defaultId;
+  const defaultOption = state.options.find((o) => o.id === state.defaultId);
+  return (
+    <span class="panel__model panel__switcher" data-slot="quick-switcher" data-testid="header-model">
+      <select
+        class="panel__select"
+        data-testid="model-switcher"
+        aria-label="Translate this tab with"
+        title="Applies to this tab only. Your default stays the same."
+        value={overridden ? state.tabId : DEFAULT_VALUE}
+        onChange={(e) => {
+          const v = (e.currentTarget as HTMLSelectElement).value;
+          onChoose(v === DEFAULT_VALUE ? undefined : v);
+        }}
+      >
+        <option value={DEFAULT_VALUE}>{defaultOption ? `${defaultOption.model} (default)` : (model || 'Default model')}</option>
+        {state.options
+          .filter((o) => o.id !== state.defaultId)
+          .map((o) => (
+            <option key={o.id} value={o.id} disabled={!o.usable && o.id !== current}>
+              {o.model} · {o.connection}
+              {o.local ? ' · local' : ''}
+              {o.usable ? '' : ' · no key'}
+            </option>
+          ))}
+      </select>
+      {overridden && current ? (
+        <>
+          <span class="panel__tabonly" data-testid="switcher-tab-only">
+            This tab only
+          </span>
+          <button type="button" class="panel__action" data-testid="make-default" title="Use this model for every page from now on" onClick={() => onMakeDefault(current)}>
+            Make default
+          </button>
+        </>
+      ) : null}
+      {error ? (
+        <span class="panel__error" role="alert" data-testid="switcher-error">
+          {error}
+        </span>
+      ) : null}
+    </span>
+  );
+}

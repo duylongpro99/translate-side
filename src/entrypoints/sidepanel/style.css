@@ -76,6 +76,27 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The quick switcher (M4-E11): the select, "This tab only" and Make default sit on their own line. */
+.panel__switcher {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: none;
+  overflow: visible;
+  white-space: normal;
+}
+.panel__switcher .panel__select {
+  max-width: 14em;
+}
+.panel__tabonly,
+.panel__rule {
+  font-size: 0.85em;
+}
+.panel__model--rule {
+  max-width: none;
+  white-space: normal;
+}
 .panel__action {
   font: inherit;
   margin-left: auto;

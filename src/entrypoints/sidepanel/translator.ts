@@ -12,6 +12,7 @@ import { checkSpendLimit, continuePastLimit, SpendLedger } from '@/shared/spend'
 import { anyDenylisted, clearSnippet, readSnippet, tabIdFromSnippetKey, type SnippetRecord } from '@/shared/snippet';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
 import { snippetDocId, snippetView, SnippetStore } from './snippet.ts';
+import { chooseForTab, makeDefault, readSwitcher, type SwitcherState } from './switcher.ts';
 import { isErrorStatusWrite, isProviderKey, saveConnectionStatus } from '@/shared/providers';
 import { routedSummary, translateClient, type Routed, type RouteTarget } from './route.ts';
 import { ViewportStore } from './viewport.ts';
@@ -34,6 +35,13 @@ export interface Translator {
   actions(tabId: number): JobActions;
   /** The model and provider the translate role resolves to for a tab and page now (§4.3.5), for the header and the privacy notice. */
   routed(target: RouteTarget): Promise<Routed | undefined>;
+  /** The quick switcher (plan M4-E11): the models to choose from for a tab, a tab-only choice, and "Make default". */
+  switcher: {
+    read(target: RouteTarget): Promise<SwitcherState>;
+    /** This tab only (the routing is not touched), then the page is translated again under it; `undefined` goes back to the default. */
+    choose(tabId: number, profileId: string | undefined): Promise<void>;
+    makeDefault(tabId: number, profileId: string): Promise<void>;
+  };
   /** Settings listeners and the panel-close cancel. Returns the cleanup. */
   watch(activeTab: () => number | undefined): () => void;
 }
@@ -316,6 +324,34 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     },
   };
 
+  /**
+   * The quick switcher's choice took effect (plan M4-E11): the page is translated again under the
+   * route as it resolves now, keeping its cost and brief. Not "Retranslate page": the cache is read,
+   * and its key holds the model, so a model already used on this page comes back from it and a new
+   * one translates. A page skipped as already in the target language stays as it is.
+   */
+  const rerun = (tabId: number) => {
+    const current = jobs.docFor(tabId);
+    if (current === undefined || jobs.get(tabId)?.status === 'skipped') return;
+    const { doc, docId } = current;
+    void readSettings(api).then(async (settings) => {
+      const got = await prepare(tabId, settings, doc);
+      if (got === undefined) return;
+      if (jobs.docOf(tabId) !== docId || !isLive(tabId, docId)) return got.unmark();
+      void jobs.start(tabId, docId, got.prepared.doc, { keepCost: true, keepBrief: true });
+    });
+  };
+
+  const switcher: Translator['switcher'] = {
+    read: (target) => readSwitcher(api, target),
+    choose: async (tabId, profileId) => {
+      await chooseForTab(api, tabId, profileId);
+      rerun(tabId);
+    },
+    // The page already runs on the profile (it was this tab's choice): nothing to translate again.
+    makeDefault: (tabId, profileId) => makeDefault(api, tabId, profileId),
+  };
+
   const actions = (tabId: number): JobActions => ({
     cancel: () => jobs.cancel(tabId),
     resume: () => resume(tabId),
@@ -420,5 +456,5 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     };
   };
 
-  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, privacy, prefs, hooks, actions, routed: (target) => routedSummary(api, target), watch };
+  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, privacy, prefs, hooks, actions, switcher, routed: (target) => routedSummary(api, target), watch };
 }

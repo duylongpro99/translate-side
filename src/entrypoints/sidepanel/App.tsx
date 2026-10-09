@@ -11,6 +11,8 @@ import { SegmentList } from './SegmentList.tsx';
 import { PrivacyNotice } from './PrivacyNotice.tsx';
 import type { PrefsStore } from './prefs.ts';
 import type { Routed, RouteTarget } from './route.ts';
+import type { SwitcherState } from './switcher.ts';
+import type { Translator } from './translator.ts';
 import type { PrivacyGate, PrivacyState } from './privacy.ts';
 import { SelectionView } from './SelectionView.tsx';
 import { StateMessage } from './StateMessage.tsx';
@@ -31,6 +33,8 @@ export interface TranslatorProps {
   prefs?: PrefsStore;
   /** The model and provider the translate role resolves to for a tab and page (§4.3.5). */
   routed?(target: RouteTarget): Promise<Routed | undefined>;
+  /** The quick switcher (plan M4-E11). */
+  switcher?: Translator['switcher'];
 }
 
 /** What the translate role resolves to for the tab and page on screen; re-read when they or the job change. */
@@ -49,6 +53,38 @@ function useRouted(translator: TranslatorProps | undefined, tabId: number | unde
     };
   }, [translator, tabId, url, status]);
   return routed;
+}
+
+/** What the quick switcher shows for the tab and page on screen; read again after a choice, a job change or a settings change. */
+function useSwitcher(translator: TranslatorProps | undefined, tabId: number | undefined, url: string | undefined, job: JobView | undefined, version: number): SwitcherState | undefined {
+  const [state, setState] = useState<SwitcherState | undefined>(undefined);
+  const status = job?.status;
+  useEffect(() => {
+    if (!translator?.switcher || tabId === undefined) return setState(undefined);
+    let live = true;
+    // Reads can finish out of order (a model change writes two items): the latest one decides.
+    let latest = 0;
+    const read = () => {
+      const mine = ++latest;
+      return translator.switcher?.read({ tabId, url }).then(
+        (s) => live && mine === latest && setState(s),
+        () => live && mine === latest && setState(undefined),
+      );
+    };
+    void read();
+    // A model, key or route changed in settings, or a tab choice was made elsewhere.
+    const on = () => void read();
+    browser.storage.sync.onChanged.addListener(on);
+    browser.storage.local.onChanged.addListener(on);
+    browser.storage.session.onChanged.addListener(on);
+    return () => {
+      live = false;
+      browser.storage.sync.onChanged.removeListener(on);
+      browser.storage.local.onChanged.removeListener(on);
+      browser.storage.session.onChanged.removeListener(on);
+    };
+  }, [translator, tabId, url, status, version]);
+  return state;
 }
 
 const nextFrame = (fn: () => void) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 16));
@@ -124,6 +160,30 @@ export function App({ controller, translator }: { controller: PanelController; t
   const privacy = usePrivacy(translator?.privacy);
   const prefs = usePrefs(translator?.prefs);
   const routed = useRouted(translator, tabId, view.kind === 'ready' ? view.result.url : undefined, job);
+  const [switcherVersion, setSwitcherVersion] = useState(0);
+  const switcherState = useSwitcher(translator, tabId, view.kind === 'ready' ? view.result.url : undefined, job, switcherVersion);
+  const [switcherError, setSwitcherError] = useState<string | undefined>();
+  const switcherActions =
+    translator?.switcher && tabId !== undefined
+      ? {
+          state: switcherState,
+          error: switcherError,
+          onChoose: (profileId: string | undefined) => {
+            setSwitcherError(undefined);
+            translator.switcher?.choose(tabId, profileId).then(
+              () => setSwitcherVersion((v) => v + 1),
+              () => setSwitcherError("Couldn't switch the model for this tab. Try again."),
+            );
+          },
+          onMakeDefault: (profileId: string) => {
+            setSwitcherError(undefined);
+            translator.switcher?.makeDefault(tabId, profileId).then(
+              () => setSwitcherVersion((v) => v + 1),
+              () => setSwitcherError("Couldn't save the default. Try again, or set it in settings."),
+            );
+          },
+        }
+      : undefined;
   const snippet = useSnippet(translator?.snippets?.store, tabId);
   const snippetJob = useJob(translator?.snippets?.jobs, tabId, snippet?.docId);
   // A site on the denylist is never read, selection included (M3-D13): its own message wins.
@@ -193,7 +253,7 @@ export function App({ controller, translator }: { controller: PanelController; t
             ✕
           </button>
         </div>
-        {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} routedModel={routed?.model} actions={job ? pageActions : undefined} onPrefs={switchPrefs} error={prefsError ? "Couldn't save that setting. Try again, or change it in settings." : undefined} /> : null}
+        {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} routedModel={routed?.model} switcher={switcherActions} actions={job ? pageActions : undefined} onPrefs={switchPrefs} error={prefsError ? "Couldn't save that setting. Try again, or change it in settings." : undefined} /> : null}
       </header>
       {privacy === 'needed' && translator?.privacy ? <PrivacyNotice to={routed} onAcknowledge={() => void translator.privacy?.acknowledge().catch(() => {})} /> : null}
       {selecting && tabId !== undefined && snippet && translator?.snippets ? (
