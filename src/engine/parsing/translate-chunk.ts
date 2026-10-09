@@ -13,7 +13,10 @@
 //   same call, or `neighbours`, the context tail's translated paragraphs) is not accepted: it is
 //   re-requested like a malformed one;
 // - a stream `error` (the pipeline's retries are already spent, retry.ts) fails every segment of
-//   that call that has no accepted text, with that error.
+//   that call that has no accepted text, with that error;
+// - except `context_length` (§4.3.5 "shrink chunkTokens and retry"): the segments without accepted
+//   text are split in two halves, each sent as a chunk of its own (and split again if still too
+//   long); a single segment that is still too long fails with the error.
 // Usage from both calls is passed on as `usage` events. An abort propagates as a throw.
 
 import type { LLMError, ModelRole, NormalizedEvent, StopReason } from '../../llm/types.ts';
@@ -71,6 +74,8 @@ export interface CallReport {
 export interface ChunkReport {
   first: CallReport;
   repair?: CallReport;
+  /** The first call was too long for the model (`context_length`): the halves it was split into. */
+  split?: ChunkReport[];
   /** Segment ids that ended in `segment.failed`. */
   failed: string[];
 }
@@ -152,7 +157,8 @@ function final(id: string, text: string, attempt: number, options: TranslateChun
     id,
     text,
     revision: options.revision,
-    producedBy: options.producedBy,
+    // A copy: the model is read now (a fallback chain may have moved it, single-pass.ts producedByOf).
+    producedBy: { ...options.producedBy },
     ...(attempt > 1 ? { attempt } : {}),
   };
 }
@@ -173,6 +179,16 @@ export async function* translateChunkWith(chunk: WireChunk, call: ChunkCall, opt
   // Without accepted text: re-requested by the plan, or never closed before a stream error.
   const todo = chunk.segments.filter((e) => !first.accepted.has(e.n));
   if (todo.length === 0) return report;
+  if (first.error?.kind === 'context_length' && todo.length > 1) {
+    report.split = [];
+    const half = Math.ceil(todo.length / 2);
+    for (const part of [todo.slice(0, half), todo.slice(half)]) {
+      const sub = yield* translateChunkWith(toWire(part), call, options);
+      report.split.push(sub);
+      report.failed.push(...sub.failed);
+    }
+    return report;
+  }
   if (first.error !== undefined) {
     yield* fail(todo, first.error);
     return report;

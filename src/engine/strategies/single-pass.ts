@@ -12,6 +12,7 @@
 // on the repair (a smaller budget, so a repair can't be cut by the first pass's size).
 
 import type { LLMClient, LLMError, NormalizedRequest } from '../../llm/types.ts';
+import { producedByOf, servedStream } from '../served.ts';
 import { BUDGET_MESSAGE, maxOutputTokens } from '../budget.ts';
 import { chunkLimits, chunkSegments, type Chunk } from '../chunker.ts';
 import { formatWire, toWire, type WireChunk } from '../parsing/wire.ts';
@@ -246,7 +247,11 @@ export function createTranslateStage(strategyId: string, brief?: BriefWait, prom
 
 /** What one chunk's translate calls go through: the first pass, its repair, the check stage's re-request. */
 export interface PreparedChunk {
-  model: string;
+  /**
+   * The model that answered the chunk's latest call (a fallback chain may hand a call to another
+   * profile, fallback.ts); before any call, the one it will be sent to. Read it when emitting.
+   */
+  readonly model: string;
   call: ChunkCall;
   /** translate@2 only: the context tail's translated paragraphs, for the copy guard (translate-chunk.ts). */
   neighbours?: Rendered[];
@@ -280,9 +285,17 @@ export async function prepareChunk(work: ChunkWork, ctx: StageContext, memory: R
   } else {
     system = renderSystemPrompt(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
   }
-  const call: ChunkCall = (wire, attempt, followUp) => client.stream(translateRequest(client, system, wire, ctx.signal, context, startOrder(ctx, work.chunk.index, false), attempt, followUp));
-  return { model: client.model, call, ...(neighbours === undefined ? {} : { neighbours }) };
+  let model = client.model;
+  const call: ChunkCall = (wire, attempt, followUp) => servedStream(client, translateRequest(client, system, wire, ctx.signal, context, startOrder(ctx, work.chunk.index, false), attempt, followUp), (m) => (model = m));
+  return {
+    get model() {
+      return model;
+    },
+    call,
+    ...(neighbours === undefined ? {} : { neighbours }),
+  };
 }
+
 
 /** The translate stage's work for one chunk, typed (createTranslateStage wraps it; contextual's revise pass calls it). */
 export function createTranslateRun(strategyId: string, brief?: BriefWait, promptId: string = TRANSLATE_PROMPT_ID, revision: number = REVISION): TranslateRun {
@@ -306,9 +319,10 @@ export function createTranslateRun(strategyId: string, brief?: BriefWait, prompt
       }
       return outcome;
     }
-    const { model, call, neighbours } = await prepareChunk(work, ctx, memory, promptId);
+    const prepared = await prepareChunk(work, ctx, memory, promptId);
+    const { call, neighbours } = prepared;
     const gen = translateChunk(toWire(work.chunk.segments), call, {
-      producedBy: { strategy: strategyId, stage: 'translate', model },
+      producedBy: producedByOf(strategyId, 'translate', prepared),
       revision,
       role: 'translate',
       ...(neighbours === undefined ? {} : { neighbours }),

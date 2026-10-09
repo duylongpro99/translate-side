@@ -59,10 +59,12 @@ export const analyzeStage = defineStage<TranslationJob, never>({
     try {
       const client = ctx.llm('analyze');
       const system = ctx.prompts.get(ANALYZE_PROMPT_ID).render({ TARGET_LANG: languageLabel(job.doc.targetLang) });
-      for await (const event of client.stream(analyzeRequest(client, system, job.doc, job.doc.segments, ctx.signal))) {
+      const req = analyzeRequest(client, system, job.doc, job.doc.segments, ctx.signal);
+      for await (const event of client.stream(req)) {
         if (event.type === 'text') text += event.delta;
         else if (event.type === 'usage') {
-          yield { type: 'usage', role: 'analyze', model: client.model, input: event.input, output: event.output, ...(event.cachedInput === undefined ? {} : { cachedInput: event.cachedInput }) };
+          // The model that answered: a fallback chain may have handed the call on (fallback.ts).
+          yield { type: 'usage', role: 'analyze', model: client.servedBy?.(req) ?? req.model, input: event.input, output: event.output, ...(event.cachedInput === undefined ? {} : { cachedInput: event.cachedInput }) };
         } else if (event.type === 'done') ok = event.stopReason === 'end';
       }
     } catch (error) {

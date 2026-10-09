@@ -6,6 +6,7 @@ import type { LLMClient, ModelRole } from '../llm/types.ts';
 import { createBudget } from './budget.ts';
 import { DEFAULT_CONTEXT_PROVIDERS } from './context/budget.ts';
 import { createWorkingMemory } from './memory.ts';
+import { withFallback, type FallbackInfo } from './fallback.ts';
 import { withRetry, type RetryPolicy } from './retry.ts';
 import type {
   ContextProvider,
@@ -21,6 +22,15 @@ import type {
 export interface EngineDeps {
   /** Routing port: the shell maps a role to a model profile and returns its client (§4.3.1). */
   llm: (role: ModelRole) => LLMClient;
+  /**
+   * The role's fallback clients, in order (§4.3.5, `Routing.fallback`): tried when `llm(role)` gives
+   * up on a rate limit, an overloaded provider or the network (fallback.ts). The shell has already
+   * applied the privacy rule. Absent or empty: no fallback. Pass the same client object for a
+   * profile every role uses, so a link that gave up is skipped by every role.
+   */
+  fallback?: (role: ModelRole) => readonly LLMClient[];
+  /** A link of a role's chain handed a request over to the next one (fallback.ts). */
+  onFallback?: (info: FallbackInfo & { role: ModelRole }) => void;
   /** Clock port (ms). */
   now: () => number;
   /** Timer port: resolves after `ms`, rejects with `signal.reason` when it aborts. */
@@ -88,18 +98,32 @@ export function createEngine(deps: EngineDeps): TranslationEngine {
 }
 
 function createStageContext(deps: EngineDeps, job: TranslationJob, signal: AbortSignal): StageContext {
-  // One retrying client per role, built once: the pipeline is the single retry owner.
+  // One client per role, built once: each link retrying on its own (the pipeline is the single
+  // retry owner), then the role's fallback chain over them (fallback.ts). A client shared by two
+  // roles gets one retrying wrapper, so a link that gave up is skipped by both (`dead`).
   const clients = new Map<ModelRole, LLMClient>();
+  const retrying = new Map<LLMClient, LLMClient>();
+  const dead = new Set<LLMClient>();
   const retry = {
     sleep: deps.sleep,
     ...(deps.retry === undefined ? {} : { policy: deps.retry }),
     ...(deps.random === undefined ? {} : { random: deps.random }),
   };
+  const retried = (raw: LLMClient): LLMClient => {
+    let client = retrying.get(raw);
+    if (client === undefined) {
+      client = withRetry(raw, retry);
+      retrying.set(raw, client);
+    }
+    return client;
+  };
   return {
     llm(role) {
       let client = clients.get(role);
       if (client === undefined) {
-        client = withRetry(deps.llm(role), retry);
+        const links = [deps.llm(role), ...(deps.fallback?.(role) ?? [])].map(retried);
+        const onFallback = deps.onFallback;
+        client = withFallback(links, { dead, ...(onFallback === undefined ? {} : { onFallback: (info: FallbackInfo) => onFallback({ ...info, role }) }) });
         clients.set(role, client);
       }
       return client;

@@ -169,6 +169,13 @@ export interface LLMClient {
    */
   reasoningReserveTokens(req: ReserveQuery): number;
   stream(req: NormalizedRequest): AsyncIterable<NormalizedEvent>;
+  /**
+   * The model that answers `req` (a request this client is streaming or has streamed), when it may
+   * differ from `req.model`: a fallback chain (src/engine/fallback.ts, §4.3.5) sends a request on
+   * to the next profile's model. Known once the stream has yielded its first event. Absent, or
+   * undefined for a request it never saw: `req.model`.
+   */
+  servedBy?(req: NormalizedRequest): string | undefined;
 }
 
 export interface ModelInfo {

@@ -33,6 +33,12 @@ export type RetryDecision = { action: 'retry'; delayMs: number } | { action: 'st
 /** §4.3.5: 429 (honor Retry-After), 5xx and network errors back off and retry. */
 const RETRYABLE = new Set<LLMError['kind']>(['rate_limit', 'overloaded', 'network']);
 
+/**
+ * The kinds the pipeline backs off on, then hands to the next fallback profile (plan M4 §5 "Retry
+ * vs fallback ownership"). Never `auth`, `quota`, `cors` or `model_not_found`: those stop.
+ */
+export const isRetryable = (error: LLMError): boolean => RETRYABLE.has(error.kind);
+
 export function decideRetry(error: LLMError, retriesSoFar: number, policy: RetryPolicy = DEFAULT_RETRY_POLICY, random: () => number = Math.random): RetryDecision {
   if (error.kind === 'context_length') return { action: 'shrink' };
   if (!RETRYABLE.has(error.kind)) return { action: 'stop' };
@@ -61,9 +67,10 @@ export interface RetryOptions {
   onRetry?: (info: RetryInfo) => void;
 }
 
-type Usage = Extract<NormalizedEvent, { type: 'usage' }>;
+export type Usage = Extract<NormalizedEvent, { type: 'usage' }>;
 
-function addUsage(sum: Usage | undefined, next: Usage): Usage {
+/** Sums two `usage` events (either may lack the optional fields). */
+export function addUsage(sum: Usage | undefined, next: Usage): Usage {
   if (sum === undefined) return next;
   const cached = sum.cachedInput === undefined && next.cachedInput === undefined ? {} : { cachedInput: (sum.cachedInput ?? 0) + (next.cachedInput ?? 0) };
   const reasoning = sum.reasoningOutput === undefined && next.reasoningOutput === undefined ? {} : { reasoningOutput: (sum.reasoningOutput ?? 0) + (next.reasoningOutput ?? 0) };

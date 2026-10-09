@@ -26,6 +26,7 @@ import { copiesNeighbour } from '../parsing/duplicate.ts';
 import { rerequestSegments, type ChunkCall } from '../parsing/translate-chunk.ts';
 import { formatAnswer, toWire, type WireSegment } from '../parsing/wire.ts';
 import { defineStage, multiplex, type AnyStage } from '../runner.ts';
+import { producedByOf } from '../served.ts';
 import type { EngineEvent, Segment, StageContext } from '../types.ts';
 import type { CheckSummary, ChunkOutcome, ChunkWork } from '../strategies/single-pass.ts';
 
@@ -55,7 +56,7 @@ export function checkFailure(error: LLMError): CheckFailedRaw | undefined {
 }
 
 /** How the check stage reaches a chunk's translate call (the strategy's translate stage builds it). */
-export type PrepareCall = (work: ChunkWork, ctx: StageContext) => Promise<{ model: string; call: ChunkCall }>;
+export type PrepareCall = (work: ChunkWork, ctx: StageContext) => Promise<{ readonly model: string; call: ChunkCall }>;
 
 interface Row extends CheckedSegment {
   segment: Segment;
@@ -131,7 +132,9 @@ export function createCheckStage(strategyId: string, prepare: PrepareCall): AnyS
           for (const r of group) yield fail(r, { kind: 'unknown', message: CHECK_MESSAGE, raw: raw(r, 'budget') });
           return;
         }
-        const { model, call } = await prepare(work, ctx);
+        const prepared = await prepare(work, ctx);
+        const { call } = prepared;
+        const producedBy = producedByOf(strategyId, 'check', prepared);
         const wire = toWire(group.map((r): WireSegment => ({ n: r.n, segment: r.segment })));
         const attempt = Math.max(...group.map((r) => r.attempt)) + 1;
         // No finals come from the call itself (they are checked below), so its `revision` is unused.
@@ -140,7 +143,7 @@ export function createCheckStage(strategyId: string, prepare: PrepareCall): AnyS
           answer: formatAnswer(wire, (e) => byN.get(e.n)?.translation ?? ''),
           fixes: fixesMessage(group.map((r) => ({ n: r.n, fixes: fixesFor(r.source, r.translation, failing.get(r.id) ?? []) }))),
         };
-        const result = yield* rerequestSegments(wire, (c, a) => call(c, a, followUp), { producedBy: { strategy: strategyId, stage: 'check', model }, revision: 1, role: 'translate' }, attempt);
+        const result = yield* rerequestSegments(wire, (c, a) => call(c, a, followUp), { producedBy, revision: 1, role: 'translate' }, attempt);
         for (const r of group) {
           const text = result.accepted.get(r.n);
           if (text === undefined) {
@@ -159,7 +162,7 @@ export function createCheckStage(strategyId: string, prepare: PrepareCall): AnyS
           }
           r.translation = text;
           summary.repaired++;
-          yield { type: 'segment.final', id: r.id, text, revision: r.revision, producedBy: { strategy: strategyId, stage: 'check', model }, attempt };
+          yield { type: 'segment.final', id: r.id, text, revision: r.revision, producedBy: { ...producedBy }, attempt };
         }
       }
       for await (const { value } of multiplex(groups, concurrency, recheck, ctx.signal)) yield value as EngineEvent;
