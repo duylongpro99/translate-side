@@ -134,6 +134,83 @@ describe('the panel: Continue anyway (M4-E10, review 3 #3)', () => {
   });
 });
 
+describe('Continue anyway carries out what the limit stopped (M4-D tester)', () => {
+  it('a Retranslate page stopped at the limit goes on as a retranslate: the cache is skipped', async () => {
+    const cache = openTranslationCache({ factory: new IDBFactory() }) as TranslationCache;
+    const gate: { limit?: LimitReached } = {};
+    const client = translatorClient();
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: () => Promise.resolve({ ok: true, client, profile: GEMINI_PROFILE }), cache, spendLimit: () => Promise.resolve(gate.limit) });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc);
+    await jobs.cacheIdle();
+    const firstRun = client.requests.length;
+    gate.limit = reached;
+    await jobs.start(1, 'd', doc, { fresh: true, keepCost: true });
+    expect(jobs.get(1)?.limit).toEqual(reached);
+    expect(client.requests).toHaveLength(firstRun);
+    delete gate.limit;
+    const next = jobs.takeAfterLimit(1);
+    expect(jobs.get(1)?.limit).toBeUndefined();
+    await next?.();
+    expect(jobs.get(1)?.status).toBe('done');
+    expect(jobs.get(1)?.cached).toBe(0);
+    expect(client.requests).toHaveLength(2 * firstRun);
+  });
+
+  it('a block redo stopped at the limit shows the limit on the bar; Continue anyway redoes that block', async () => {
+    const gate: { limit?: LimitReached } = {};
+    const client = translatorClient((lines, call) => lines.map((l) => `<seg id="${l.n}"${l.nonce === undefined ? '' : ` n="${l.nonce}"`}>run ${call}: ${l.source}</seg>`).join('\n'));
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: () => Promise.resolve({ ok: true, client, profile: GEMINI_PROFILE }), spendLimit: () => Promise.resolve(gate.limit) });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc);
+    const sent = client.requests.length;
+    gate.limit = reached;
+    await jobs.retranslateSegment(1, 's2');
+    expect(jobs.get(1)?.status).toBe('done');
+    expect(jobs.get(1)?.limit).toEqual(reached);
+    const root = document.createElement('div');
+    document.body.replaceChildren(root);
+    act(() => render(<JobBar job={jobs.get(1) as JobView} actions={{} as JobActions} />, root));
+    expect(root.querySelector('[data-testid=limit-continue]')).not.toBeNull();
+    delete gate.limit;
+    await jobs.takeAfterLimit(1)?.();
+    expect(client.requests).toHaveLength(sent + 1);
+    expect(jobs.get(1)?.segs.get('s2')?.text).toContain(`run ${sent + 1}:`);
+    expect(jobs.get(1)?.segs.get('s2')?.redoError).toBeUndefined();
+  });
+
+  it('in the panel: Retranslate page past the limit, then Continue anyway, sends the page again', async () => {
+    const local = new Map<string, unknown>([['privacyNotice', { version: 1, at: 0 }]]);
+    const none = { addListener: () => {}, removeListener: () => {} };
+    const api = {
+      storage: {
+        sync: { get: (k: string) => Promise.resolve(k === 'prefs' ? { prefs: { targetLang: 'vi', sourceLang: 'auto' } } : {}), onChanged: none },
+        local: { get: (k: string) => Promise.resolve(local.has(k) ? { [k]: structuredClone(local.get(k)) } : {}), set: (o: Record<string, unknown>) => (Object.entries(o).forEach(([k, v]) => local.set(k, v)), Promise.resolve()), onChanged: none },
+        session: { get: () => Promise.resolve({}), remove: () => Promise.resolve(), onChanged: none },
+      },
+      permissions: { onAdded: none },
+      i18n: { getUILanguage: () => 'en' },
+    } as unknown as Parameters<typeof createTranslator>[0];
+    const client = translatorClient();
+    const cache = openTranslationCache({ factory: new IDBFactory() }) as TranslationCache;
+    const t = createTranslator(api, { translateClient: () => Promise.resolve({ ok: true as const, client, profile: GEMINI_PROFILE }), strategy: 'single-pass', cache, onSpend: () => {} }, { detector: undefined });
+    (t.hooks as Required<SessionHooks>).active(1);
+    (t.hooks as Required<SessionHooks>).ready(1, 'd', { ok: true, via: 'walk', url: 'https://example.com/', title: 'T', lang: 'en', segments });
+    await until(() => t.jobs.get(1)?.status === 'done');
+    await t.jobs.cacheIdle();
+    const firstRun = client.requests.length;
+    // This month is now over a limit set meanwhile.
+    local.set(SPEND_LIMIT_KEY, { monthlyUsd: 1 });
+    local.set(SPEND_KEY, { since: 0, usd: 2, input: 1, cachedInput: 0, output: 1, unpricedTokens: 0, months: { [monthKey(Date.now())]: 2 }, days: {}, profiles: {} });
+    t.actions(1).retranslatePage();
+    await until(() => t.jobs.get(1)?.limit !== undefined);
+    expect(client.requests).toHaveLength(firstRun);
+    t.actions(1).continuePastLimit();
+    await until(() => t.jobs.get(1)?.status === 'done' && client.requests.length === 2 * firstRun);
+    expect(t.jobs.get(1)?.cached).toBe(0);
+  });
+});
+
 describe('the bar at the limit (M4-E10)', () => {
   const view: JobView = { status: 'stopped', paused: false, model: 'm', targetLang: 'vi', sourceLang: 'en', segments: [], segs: new Map(), counts: { total: 6, final: 0, failed: 0 }, usage: { input: 0, cachedInput: 0, output: 0 }, cost: undefined, unmetered: 0, startedAt: 0, limit: reached };
   const actions = (calls: string[]): JobActions => ({

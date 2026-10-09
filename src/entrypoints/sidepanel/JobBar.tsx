@@ -84,6 +84,29 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
     ...(job.endedAt === undefined ? {} : { 'data-ended': job.endedAt }),
   };
 
+  // The soft limit stopped a run or a block's redo (M4-E10): Continue anyway carries it out.
+  if (job.limit && job.status !== 'running') {
+    return (
+      <div {...attrs} role="alert" data-testid="job-limit">
+        <span class="job__text">
+          This month's spend ({formatUsd(job.limit.monthUsd)}) reached your soft limit of {formatUsd(job.limit.limitUsd)}. Nothing was sent.
+          {job.limit.failed ? (
+            <>
+              {' '}
+              <span data-testid="limit-failed">{job.limit.failed}</span>
+            </>
+          ) : null}
+        </span>
+        <button type="button" class="job__button" data-testid="limit-continue" onClick={actions.continuePastLimit}>
+          Continue anyway
+        </button>
+        <button type="button" class="job__button" onClick={actions.openOptions}>
+          Settings
+        </button>
+      </div>
+    );
+  }
+
   switch (job.status) {
     case 'running':
       return (
@@ -148,27 +171,6 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
       );
     }
     case 'stopped': {
-      if (job.limit) {
-        return (
-          <div {...attrs} role="alert" data-testid="job-limit">
-            <span class="job__text">
-              This month's spend ({formatUsd(job.limit.monthUsd)}) reached your soft limit of {formatUsd(job.limit.limitUsd)}. Nothing was sent.
-              {job.limit.failed ? (
-                <>
-                  {' '}
-                  <span data-testid="limit-failed">{job.limit.failed}</span>
-                </>
-              ) : null}
-            </span>
-            <button type="button" class="job__button" data-testid="limit-continue" onClick={actions.continuePastLimit}>
-              Continue anyway
-            </button>
-            <button type="button" class="job__button" onClick={actions.openOptions}>
-              Settings
-            </button>
-          </div>
-        );
-      }
       const error = job.stopError;
       const fix =
         error?.kind === 'auth' ? (

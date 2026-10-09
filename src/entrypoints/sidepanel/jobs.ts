@@ -420,6 +420,11 @@ export interface JobDoc {
 }
 
 interface Job {
+  /**
+   * What the soft limit stopped (M4-E10): "Continue anyway" carries it out, whether a run (with
+   * its own options: a Retranslate page skips the cache) or one block's redo.
+   */
+  afterLimit?: () => Promise<void>;
   /** The document the job belongs to (content script `docId`). */
   docId: string;
   doc: JobDoc;
@@ -539,7 +544,8 @@ export class Jobs {
    * glossary): the brief doesn't depend on them, so no second analyze call. `fresh` ignores the
    * translation cache for this run (retranslate, M3 decision D2); results are still stored.
    */
-  async start(tabId: number, docId: string, doc: JobDoc, { resume = false, keepCost = false, keepBrief = false, fresh = false } = {}): Promise<void> {
+  async start(tabId: number, docId: string, doc: JobDoc, options: { resume?: boolean; keepCost?: boolean; keepBrief?: boolean; fresh?: boolean } = {}): Promise<void> {
+    const { resume = false, keepCost = false, keepBrief = false, fresh = false } = options;
     const prev = this.jobs.get(tabId);
     const keep = resume && prev?.docId === docId && prev.view.status !== 'running' ? prev : undefined;
     const costFrom = keep ?? (keepCost && prev?.docId === docId ? prev : undefined);
@@ -630,6 +636,8 @@ export class Jobs {
     const limit = await this.deps.spendLimit?.().catch(() => undefined);
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
     if (limit) {
+      // The same run again, its cost kept: a Retranslate page still skips the cache.
+      job.afterLimit = () => this.start(tabId, docId, doc, { ...options, keepCost: true });
       this.patch(tabId, job, { limit });
       this.finish(tabId, job, 'stopped', limitError(limit));
       return;
@@ -737,10 +745,26 @@ export class Jobs {
     this.emit(tabId, job.view);
   }
 
+  /**
+   * "Continue anyway" (M4-E10): what the limit stopped, to run now that it no longer applies, or
+   * undefined when nothing waits on it. The limit leaves the view.
+   */
+  takeAfterLimit(tabId: number): (() => Promise<void>) | undefined {
+    const job = this.jobs.get(tabId);
+    if (!job?.view.limit) return undefined;
+    const next = job.afterLimit;
+    delete job.afterLimit;
+    const view = { ...job.view };
+    delete view.limit;
+    job.view = view;
+    this.emit(tabId, job.view);
+    return next;
+  }
+
   /** "Continue anyway" past the soft limit failed (its setting could not be saved): the stopped bar says so. */
   limitFailed(tabId: number, message: string): void {
     const job = this.jobs.get(tabId);
-    if (!job?.view.limit || job.view.status !== 'stopped') return;
+    if (!job?.view.limit) return;
     this.patch(tabId, job, { limit: { ...job.view.limit, failed: message } });
   }
 
@@ -814,7 +838,12 @@ export class Jobs {
       if (signal.aborted) return settle(before);
       const limit = await this.deps.spendLimit?.().catch(() => undefined);
       if (signal.aborted) return settle(before);
-      if (limit) return settle(failedWith(limitError(limit)));
+      if (limit) {
+        // The bar offers "Continue anyway", which redoes this block (M4-E10).
+        job.afterLimit = () => this.redoSegment(tabId, id, mode);
+        this.patch(tabId, job, { limit });
+        return settle(failedWith(limitError(limit)));
+      }
       if (!resolved.ok) {
         settle(failedWith(resolved.error));
         if (stopsJob(resolved.error) && job.view.status !== 'running') this.finish(tabId, job, 'stopped', resolved.error);

@@ -324,7 +324,16 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     retranslateSegment: (id) => void jobs.retranslateSegment(tabId, id),
     retranslatePage: () => retranslate(tabId),
     // The soft limit's "Continue anyway" (M4-E10): holds for the rest of the month.
-    continuePastLimit: () => void continuePastLimit(api).then(() => resume(tabId), (err: unknown) => jobs.limitFailed(tabId, limitFailure(err))),
+    // It carries out what the limit stopped: a Retranslate page skips the cache, a block redo redoes it.
+    continuePastLimit: () =>
+      void continuePastLimit(api).then(
+        () => {
+          const next = jobs.takeAfterLimit(tabId);
+          if (next) void next();
+          else resume(tabId);
+        },
+        (err: unknown) => jobs.limitFailed(tabId, limitFailure(err)),
+      ),
     grantAccess: () => {
       // The job's own connection's origin, never a default one (§8: per origin, the one in use).
       // Without one (a base URL that does not parse), the settings are where to fix it.
@@ -341,7 +350,11 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     ...actions(tabId),
     cancel: () => snippetJobs.cancel(tabId),
     resume: () => void snippetJobs.resume(tabId),
-    continuePastLimit: () => void continuePastLimit(api).then(() => snippetJobs.resume(tabId), (err: unknown) => snippetJobs.limitFailed(tabId, limitFailure(err))),
+    continuePastLimit: () =>
+      void continuePastLimit(api).then(
+        () => void (snippetJobs.takeAfterLimit(tabId) ?? (() => snippetJobs.resume(tabId)))(),
+        (err: unknown) => snippetJobs.limitFailed(tabId, limitFailure(err)),
+      ),
     retrySegment: (id) => void snippetJobs.retrySegment(tabId, id),
     retranslateSegment: (id) => void snippetJobs.retranslateSegment(tabId, id),
     // A selection has no cache to skip: translating it again is a new run of the same text.
