@@ -180,6 +180,21 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
         );
       // A dropped connection: what is translated stays, Retry does only the rest (M3-E8).
       const text = error?.kind === 'network' ? `Lost the connection · ${final} of ${total} translated, the rest is waiting` : error ? capitalize(failureText(error)) : 'Stopped';
+      // Under a local-only site rule the job had no cloud fallback to go on with (M4-D tester O1).
+      const local = job.localOnly !== undefined && error !== undefined && (error.kind === 'network' || error.kind === 'rate_limit' || error.kind === 'overloaded');
+      if (local) {
+        const who = job.connection?.label ?? 'The local model';
+        const what = error.kind === 'network' ? `${who} can't be reached · ${final} of ${total} translated, the rest is waiting` : `${who} ${fallbackWhy(error)} · ${final} of ${total} translated`;
+        return (
+          <div {...attrs} role="alert" data-testid="job-local-only">
+            <span class="job__text">
+              {what}. The local-only rule for {job.localOnly} keeps this page off cloud providers, so it did not fall back to one.
+            </span>
+            {cost}
+            {fix}
+          </div>
+        );
+      }
       return (
         <div {...attrs} role="alert">
           <span class="job__text">{text}</span>

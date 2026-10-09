@@ -183,3 +183,23 @@ describe('review 2', () => {
     expect(jobs.get(1)?.backoff ?? []).toEqual([]);
   });
 });
+
+describe('a local-only page (M4-D tester O1)', () => {
+  it('a stopped local server stops the job (nothing goes to the cloud); the view names the rule', async () => {
+    const local = stoppable(1);
+    const jobs = new Jobs({
+      strategy: 'single-pass',
+      // Under a local-only rule the route has no cloud link: no fallback at all here.
+      translateClient: () => Promise.resolve({ ok: true, client: local, profile: LOCAL, connection: { id: 'ollama', label: 'Home Ollama' }, localOnly: 'intra.example.com' }),
+      sleep: instant,
+    });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(4));
+    const view = jobs.get(1);
+    expect(view?.status).toBe('stopped');
+    expect(view?.stopError?.kind).toBe('network');
+    expect(view?.localOnly).toBe('intra.example.com');
+    expect(view?.connection).toMatchObject({ label: 'Home Ollama' });
+    expect(view?.fallback).toBeUndefined();
+  });
+});

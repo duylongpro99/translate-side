@@ -36,7 +36,7 @@ export function PrivacyNotice({ to, onAcknowledge }: { to?: { label: string; hos
         <li>Mail and sign-in pages, browser pages and the Chrome Web Store are never read or sent.</li>
         <li>Password and other form fields, and anything you can type into, are never read. A page with a password field in use is skipped.</li>
         <li>
-          For sensitive pages, don't translate them with a cloud provider. Local options that keep the text on this device (Ollama, Chrome's built-in model) are coming in a later version.
+          For sensitive pages, don't translate them with a cloud provider. A local model on this computer (Ollama or LM Studio, set up in Providers) keeps the text on this device.
         </li>
       </ul>
       <button type="button" ref={ok} class="privacy__ok" data-testid="privacy-ok" onClick={onAcknowledge}>

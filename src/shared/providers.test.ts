@@ -805,7 +805,7 @@ describe('fallback chain routing (plan M4-E9, DESIGN §4.3.5 privacy rule)', () 
     await saveProfile(f.api, qwen);
     await saveRouting(f.api, { translate: APIBOX_QWEN_PROFILE.id, fallback: [APIBOX_PRO_PROFILE.id, qwen.id, 'basic'], siteOverrides: [{ pattern: 'intra.example.com', translate: qwen.id, localOnly: true }] });
     const r = await translateClient(f.api, { url: 'https://intra.example.com/doc', analyze: true });
-    expect(r).toMatchObject({ ok: true, profile: { id: qwen.id } });
+    expect(r).toMatchObject({ ok: true, profile: { id: qwen.id }, localOnly: 'intra.example.com' });
     expect(r.ok && r.fallback).toBeUndefined();
     expect((await routedSummary(f.api, { url: 'https://intra.example.com/doc' }))?.fallback).toBeUndefined();
     // The analyze role too (review 2 #2): with its own cloud route set, a local-only site still

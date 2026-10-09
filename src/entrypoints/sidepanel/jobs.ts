@@ -115,6 +115,8 @@ export interface JobView {
    * (rate limit, overloaded, network) and the job goes on with `to`. Absent when none.
    */
   fallback?: { from: string; to: string; error: LLMError };
+  /** The page is under a local-only site rule (its pattern): a stop says why nothing fell back to the cloud (M4-D tester O1). */
+  localOnly?: string;
   /** Epoch ms: when this run started, when its first text became visible, when it ended. */
   startedAt: number;
   firstVisibleAt?: number;
@@ -316,6 +318,8 @@ export type ClientResult =
       connection?: JobConnection;
       /** The fallback chain after `client`, in order (M4-E9). Absent or empty: none. */
       fallback?: FallbackLink[];
+      /** The local-only site rule (its pattern) that routed the page: no cloud link in `fallback` (§4.3.5). */
+      localOnly?: string;
       /**
        * Resolves the `analyze` role's client (the document brief); called only when the run will
        * make an analyze call. Undefined from it = the translate client serves it (§4.3.1).
@@ -607,6 +611,7 @@ export class Jobs {
       return;
     }
     const { client, profile } = resolved;
+    if (resolved.localOnly !== undefined) this.patch(tabId, job, { localOnly: resolved.localOnly });
     job.fallbackProfiles = resolved.fallback?.map((l) => l.profile) ?? [];
     this.patch(tabId, job, { model: client.model });
     await this.fromCache(tabId, job, { todo, translatable, model: client.model, fresh });

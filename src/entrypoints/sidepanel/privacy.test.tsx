@@ -211,4 +211,13 @@ describe('the notice names the fallback providers too (plan M4-E9)', () => {
     act(() => render(<PrivacyNotice to={{ label: 'Home Ollama', host: 'localhost', fallback: [{ label: 'My Anthropic', host: 'api.anthropic.com' }] }} onAcknowledge={() => {}} />, root));
     expect(root.querySelector('[data-testid=privacy-fallback]')?.textContent).toBe(', and if it is busy or down, My Anthropic (api.anthropic.com)');
   });
+
+  it('points to the local models this version supports, not to a later version (M4-D tester O2)', () => {
+    const root = document.createElement('div');
+    document.body.replaceChildren(root);
+    act(() => render(<PrivacyNotice onAcknowledge={() => {}} />, root));
+    const text = root.textContent ?? '';
+    expect(text).toContain('A local model on this computer (Ollama or LM Studio, set up in Providers) keeps the text on this device.');
+    expect(text).not.toContain('later version');
+  });
 });

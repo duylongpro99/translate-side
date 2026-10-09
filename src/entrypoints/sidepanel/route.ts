@@ -104,7 +104,8 @@ export async function translateClient(api: Browser, target: RouteTarget & { anal
   const translate = await clientFor(api, route);
   if (!translate.ok || !route.ok) return translate;
   const fallback = await fallbackClients(api, route);
-  const withFallback = fallback.length > 0 ? { ...translate, fallback } : translate;
+  const routed = route.localOnly && route.rule ? { ...translate, localOnly: route.rule.pattern } : translate;
+  const withFallback = fallback.length > 0 ? { ...routed, fallback } : routed;
   if (!target.analyze) return withFallback;
   const profileId = translate.profile.id;
   return { ...withFallback, analyze: () => analyzeClient(api, target, profileId) };
