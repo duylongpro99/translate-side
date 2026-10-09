@@ -249,3 +249,22 @@ body {
 .prov__radios input {
   margin: 0;
 }
+.prov__label {
+  min-width: 120px;
+}
+.prov__chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.prov__small {
+  font: inherit;
+  padding: 1px 8px;
+}
+.prov__fallback .opt__hint {
+  flex-basis: 100%;
+}

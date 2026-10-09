@@ -329,6 +329,34 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     expect($('[data-testid=providers-note]').textContent).toBe('Document brief route saved.');
   });
 
+  it('routing: "If it fails" adds and removes fallback models; a `basic` entry (M5) is kept until removed (plan M4-E9)', async () => {
+    const conn = { id: 'o1', label: 'Home Ollama', presetId: 'ollama', protocol: 'openai-chat', baseUrl: 'http://localhost:11434/v1', auth: { style: 'none' }, quirks: {}, status: 'ok' };
+    const f = fakeApi({
+      sync: {
+        schemaVersion: 1,
+        'conn:o1': conn,
+        'profile:q': { id: 'q', connectionId: 'o1', model: 'qwen3:8b', maxConcurrency: 1, chunkTokens: 600 },
+        'profile:g': { id: 'g', connectionId: 'o1', model: 'gemma3:12b', maxConcurrency: 1, chunkTokens: 600 },
+        routing: { translate: 'q', fallback: ['basic'] },
+      },
+    });
+    await mount(f, server(() => openaiList()));
+    const chain = () => $('[data-testid=route-fallback]');
+    expect(chain().textContent).toContain('Chrome built-in (basic)');
+    click($('[data-testid=fallback-add]'));
+    await waitFor(() => (f.sync.get('routing') as { fallback?: string[] }).fallback?.length === 2);
+    // The model not routed yet is offered first; the keyless built-in is not listed.
+    expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['basic', 'g'] });
+    await waitFor(() => chain().querySelector('select') !== null);
+    expect((chain().querySelector('select') as HTMLSelectElement).value).toBe('g');
+    click(chain().querySelector('[aria-label^="Remove fallback 1"]'));
+    await waitFor(() => (f.sync.get('routing') as { fallback?: string[] }).fallback?.length === 1);
+    expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['g'] });
+    click(chain().querySelector('[aria-label^="Remove fallback 1"]'));
+    await waitFor(() => (f.sync.get('routing') as { fallback?: string[] }).fallback === undefined);
+    expect($('[data-testid=providers-note]').textContent).toBe('Fallback removed.');
+  });
+
   const GW = { id: 'c9', label: 'Work gateway', presetId: 'custom-openai', protocol: 'openai-chat', baseUrl: 'https://gw.example.com/v1', auth: { style: 'bearer' }, quirks: {}, status: 'ok' };
 
   it('moving a connection to another origin needs its key again: the stored key is never sent there (review C1 #1)', async () => {

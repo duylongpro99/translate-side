@@ -2,6 +2,7 @@
 // and the add / edit connection flow: pick a preset → key → Test connection (asks for that origin
 // only, §8) → pick a discovered model → save. Failures say what to do (src/shared/connect.ts); a
 // local server's CORS refusal opens its guide and the test runs again by itself (§4.3.6).
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
 import { createAdapter } from '@/llm/client';
@@ -9,7 +10,7 @@ import type { ModelInfo, Protocol, ProtocolAdapter } from '@/llm/types';
 import { connectMessage, corsGuide, displayModels, fixBaseUrl, isClaudeModel, preferredProtocol, testConnection, URL_FIX_TEXT, type ConnectMessage, type GuideKind, type GuideStep, type TestResult } from '@/shared/connect';
 import { AUTH_LABELS, PICKER_GROUPS, presetFor, PROTOCOL_LABELS, ROLE_LABELS, type PresetId } from '@/shared/presets';
 import { pricingFor } from '@/shared/pricing';
-import { isProviderKey, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnectionStatus, saveProfile, saveRouting, saveSetup, type ProviderSettings } from '@/shared/providers';
+import { BASIC_FALLBACK, isProviderKey, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnectionStatus, saveProfile, saveRouting, saveSetup, type ProviderSettings } from '@/shared/providers';
 import { BUILTIN_CONNECTIONS, hasHostPermission, maskKey, originPattern, readApiKey, resolveConnection, SECRET_PREFIX, type ModelProfile, type ProviderConnection } from '@/shared/settings';
 import { draftFromConnection, draftFromPreset, fieldsFor, originMoved, testInputOf, toConnection, toProfile, usableStoredKey, type ConnectionDraft, type TestStatus } from './form.ts';
 
@@ -339,9 +340,9 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
       ))}
     </>
   );
-  const save = (patch: { translate?: string; analyze?: string | undefined }, said: string) => {
-    const { analyze, ...rest } = { ...settings.routing, ...patch };
-    const next: ProviderSettings['routing'] = analyze === undefined ? rest : { ...rest, analyze };
+  const save = (patch: { translate?: string; analyze?: string | undefined; fallback?: string[] }, said: string) => {
+    const { analyze, fallback, ...rest } = { ...settings.routing, ...patch };
+    const next: ProviderSettings['routing'] = { ...rest, ...(analyze === undefined ? {} : { analyze }), ...(fallback?.length ? { fallback } : {}) };
     saveRouting(api, next).then(
       () => onNote(said),
       (err: unknown) => onNote(err instanceof Error ? err.message : String(err), true),
@@ -372,6 +373,7 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
         </select>
       </div>
       <p class="opt__hint">The document brief is one short call per page that finds its topic, tone and key terms; a cheaper model often does it well.</p>
+      <FallbackChain settings={settings} profiles={profiles} options={options} onSave={(fallback, said) => save({ fallback }, said)} />
       {sites.length ? (
         <ul class="prov__list" data-testid="site-rules">
           {sites.map((r) => (
@@ -382,6 +384,62 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
           ))}
         </ul>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * "If it fails" (DESIGN §4.3.3 A, plan M4-E9): the fallback chain, tried in order when the model
+ * routed for a page is rate-limited, overloaded or unreachable. Entries that are not profiles
+ * (the `basic` entry of M5-E7) are kept as they are and can only be removed.
+ */
+function FallbackChain({ settings, profiles, options, onSave }: { settings: ProviderSettings; profiles: readonly ModelProfile[]; options: (selected: string | undefined) => ComponentChildren; onSave: (fallback: string[], said: string) => void }) {
+  const chain = settings.routing.fallback ?? [];
+  const unused = profiles.filter((p) => p.id !== settings.routing.translate && !chain.includes(p.id));
+  const named = (id: string) => (id === BASIC_FALLBACK ? 'Chrome built-in (basic)' : (profiles.find((p) => p.id === id)?.model ?? '(missing model)'));
+  return (
+    <div class="opt__row prov__fallback" data-testid="route-fallback">
+      <span class="prov__label" id="route-fallback-label">
+        If it fails
+      </span>
+      <ol class="prov__chain" aria-labelledby="route-fallback-label">
+        {chain.map((id, i) => (
+          <li key={`${i}:${id}`}>
+            {i > 0 ? <span aria-hidden="true">→ </span> : null}
+            {profiles.some((p) => p.id === id) ? (
+              <select
+                aria-label={`Fallback ${i + 1}`}
+                value={id}
+                onChange={(e) => {
+                  const next = [...chain];
+                  next[i] = (e.target as HTMLSelectElement).value;
+                  onSave(next.filter((x, j) => next.indexOf(x) === j), 'Fallback saved.');
+                }}
+              >
+                {options(id)}
+              </select>
+            ) : (
+              <span>{named(id)}</span>
+            )}{' '}
+            <button type="button" class="prov__small" aria-label={`Remove fallback ${i + 1} (${named(id)})`} onClick={() => onSave(chain.filter((_, j) => j !== i), 'Fallback removed.')}>
+              ×
+            </button>
+          </li>
+        ))}
+        {unused.length ? (
+          <li>
+            <button type="button" class="prov__small" data-testid="fallback-add" onClick={() => onSave([...chain, (unused[0] as ModelProfile).id], 'Fallback added.')}>
+              {chain.length ? '+' : '+ Add a fallback model'}
+            </button>
+          </li>
+        ) : chain.length === 0 ? (
+          <li class="opt__hint">Add a second model to use one.</li>
+        ) : null}
+      </ol>
+      <p class="opt__hint">
+        Used when the routed model is rate-limited, overloaded or unreachable; never when its key is refused or out of credit, so text never goes to another provider for those. A site rule marked “local only” falls back only to
+        models on this device.
+      </p>
     </div>
   );
 }
