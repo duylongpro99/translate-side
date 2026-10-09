@@ -30,6 +30,11 @@ export interface Quirks {
   supportsJsonMode?: boolean;
   /** An Anthropic-format gateway may strip it. */
   supportsCacheControl?: boolean;
+  /**
+   * A prefix the server's model list puts on ids it also takes bare (Gemini: `models/`). The
+   * settings show and save the bare id (src/shared/connect.ts displayModels). Set by the preset.
+   */
+  modelIdPrefix?: string;
   /** Decision S2. */
   reasoning?: {
     /** An effort level (OpenAI-style), a token budget (Anthropic-style), or not at all. */

@@ -71,19 +71,14 @@ export const hasVersionSegment = (baseUrl: string) => {
 // ---- Model ids ------------------------------------------------------------------------------
 
 /**
- * The model list as the settings show and save it. Gemini's OpenAI endpoint lists `models/<id>`
- * and takes the bare id too (checked against the live API): the bare one is shown and saved,
- * like its docs and the built-in profiles (tester C1 #5). Other servers' ids are left as they are.
+ * The model list as the settings show and save it: without the prefix the connection's
+ * `modelIdPrefix` quirk names (the Gemini preset sets `models/`; the bare id works too), so the
+ * ids read like the provider's docs and the built-in profiles (tester C1 #5, review C3 #2).
  */
-export function displayModels(baseUrl: string, models: readonly ModelInfo[]): ModelInfo[] {
-  let host = '';
-  try {
-    host = new URL(baseUrl).hostname;
-  } catch {
-    // Not a URL: nothing to adjust.
-  }
-  if (host !== 'generativelanguage.googleapis.com') return [...models];
-  return models.map((m) => (m.id.startsWith('models/') ? { ...m, id: m.id.slice('models/'.length) } : m));
+export function displayModels(quirks: Quirks, models: readonly ModelInfo[]): ModelInfo[] {
+  const prefix = quirks.modelIdPrefix;
+  if (!prefix) return [...models];
+  return models.map((m) => (m.id.startsWith(prefix) ? { ...m, id: m.id.slice(prefix.length) } : m));
 }
 
 // ---- Test connection --------------------------------------------------------------------------
@@ -223,7 +218,7 @@ async function checkProtocol(input: TestInput, protocol: Protocol, base: string,
   // §4.2.5 steps 1–2: on Auto-detect a protocol is a candidate only when its listing has that
   // protocol's shape (a 200 from a gateway that lists for both is not enough).
   if (input.protocol === 'auto' && probe.shape !== true) return { protocol, baseUrl, auth, error: shapeMismatch(protocol) };
-  const models = displayModels(baseUrl, probe.models ?? []);
+  const models = displayModels(input.quirks, probe.models ?? []);
   // Only the model the user chose: a listed one picked for them may be outside their plan, and its
   // refusal would read as a problem with the key (tester C1 #6).
   const chatModel = input.model?.trim() || undefined;

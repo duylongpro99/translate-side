@@ -73,7 +73,7 @@ export const GEMINI_CONNECTION: BuiltinConnection = {
   protocol: 'openai-chat',
   baseUrl: GEMINI_OPENAI_BASE_URL,
   auth: { style: 'bearer' },
-  quirks: {},
+  quirks: { modelIdPrefix: 'models/' },
   status: 'unverified',
 };
 

@@ -297,4 +297,28 @@ describe('usage and cost (plan M3-E9)', () => {
     });
     await waitFor(() => root.querySelector('[data-testid=spend-price]')?.textContent?.startsWith('work-model: $1') === true);
   });
+
+  it('reads the route again only for provider records and keys, not the usage ledger (review C3 #3)', async () => {
+    const f = fakeApi();
+    const reads: number[] = [];
+    const get = f.api.storage.sync.get.bind(f.api.storage.sync);
+    (f.api.storage.sync as { get: unknown }).get = (k: string | null) => {
+      if (k === null) reads.push(Date.now());
+      return get(k);
+    };
+    act(() => render(<Options api={f.api} cache={undefined} />, root));
+    await flush();
+    await flush();
+    const before = reads.length;
+    await act(async () => {
+      await f.api.storage.local.set({ spend: { since: 0, usd: 0, input: 0, cachedInput: 0, output: 0, unpricedTokens: 0, months: {} } });
+      await f.api.storage.sync.set({ prefs: { targetLang: 'vi' } });
+    });
+    await flush();
+    expect(reads.length).toBe(before);
+    await act(async () => {
+      await f.api.storage.local.set({ 'secret:apibox': 'sk-apibox-0123456789' });
+    });
+    await waitFor(() => reads.length > before);
+  });
 });

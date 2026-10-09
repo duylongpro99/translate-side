@@ -405,7 +405,7 @@ function ModelForm({ api, adapterFor, loaded, onDone }: { api: Browser; adapterF
       const conn = await resolveConnection(api, connection);
       if (!conn) return setError('This connection has no key.');
       const result = await adapterFor(conn.protocol).probe(conn);
-      if (result.ok) return setModels(displayModels(conn.baseUrl, result.models ?? []));
+      if (result.ok) return setModels(displayModels(conn.quirks, result.models ?? []));
       const message = connectMessage(result.error, { preset: presetFor(connection.presetId, connection.protocol), baseUrl: connection.baseUrl, model });
       setError(message.text);
       setNeedsAccess(message.action === 'grant');

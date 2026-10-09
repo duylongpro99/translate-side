@@ -106,3 +106,20 @@ describe('the auth Auto-detect found (review C2 N2)', () => {
     expect(explicit.auth).toEqual({ style: 'custom-header', headerName: 'api-key' });
   });
 });
+
+describe('editing an Auto-detect connection without testing again (review C3 #1)', () => {
+  const both = { 'anthropic-messages': { style: 'x-api-key' as const }, 'openai-chat': { style: 'bearer' as const } };
+  const saved = toConnection({ ...draftFromPreset('custom-auto'), baseUrl: 'https://gw.example.com/v1' }, 'g', undefined, passed({ detected: ['anthropic-messages', 'openai-chat'], auth: { style: 'x-api-key' }, authByProtocol: both }), { status: 'ok' });
+
+  it('keeps the learned auth per protocol while the auth and the origin are unchanged', () => {
+    expect(toConnection({ ...draftFromConnection(saved), label: 'Renamed' }, 'g', saved, undefined, { status: 'ok' }).authByProtocol).toEqual(both);
+  });
+
+  it('drops it when the user picks another auth or moves the connection, so the new choice applies', () => {
+    const header = toConnection({ ...draftFromConnection(saved), authStyle: 'custom-header', headerName: 'api-key' }, 'g', saved, undefined, { status: 'ok' });
+    expect(header).toMatchObject({ auth: { style: 'custom-header', headerName: 'api-key' } });
+    expect(header).not.toHaveProperty('authByProtocol');
+    const moved = toConnection({ ...draftFromConnection(saved), baseUrl: 'https://other.example.com/v1' }, 'g', saved, undefined, { status: 'ok' });
+    expect(moved).not.toHaveProperty('authByProtocol');
+  });
+});

@@ -327,6 +327,10 @@ describe('model ids (tester C1 #5)', () => {
     const result = await testConnection(input('gemini', { model: 'gemini-3-flash-preview' }), ports(s.fetch));
     expect(result.ok && result.models.map((m) => m.id)).toEqual(['gemini-3-flash-preview', 'gemma-4-31b-it']);
     expect(s.hits[1]?.body).toMatchObject({ model: 'gemini-3-flash-preview' });
-    expect(displayModels('https://gw.example.com/v1', [{ id: 'models/x' }])).toEqual([{ id: 'models/x' }]);
+    // The preset's flag does it, not the host: a connection without it keeps the ids as listed.
+    expect(displayModels({}, [{ id: 'models/x' }])).toEqual([{ id: 'models/x' }]);
+    expect(displayModels({ modelIdPrefix: 'models/' }, [{ id: 'models/x' }, { id: 'y' }])).toEqual([{ id: 'x' }, { id: 'y' }]);
+    const custom = await testConnection(input('custom-openai', { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'models/gemini-3-flash-preview' }), ports(s.fetch));
+    expect(custom.ok && custom.models.map((m) => m.id)).toEqual(['models/gemini-3-flash-preview', 'models/gemma-4-31b-it']);
   });
 });

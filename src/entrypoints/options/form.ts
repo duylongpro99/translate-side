@@ -169,7 +169,10 @@ export function toConnection(d: ConnectionDraft, id: string, previous: ProviderC
   const detected = passed ? passed.detected : previous?.detectedProtocols;
   // Auto-detect found which auth each path takes (§4.2.5 step 1): that is what is saved.
   const learned = d.protocol === 'auto' && passed ? passed : undefined;
-  const authByProtocol = learned ? learned.authByProtocol : d.protocol === 'auto' ? previous?.authByProtocol : undefined;
+  // Without a new test, what was learned holds only while the auth and the origin are as they were
+  // (review C3 #1): otherwise it would override the user's new choice at runtime.
+  const same = previous !== undefined && JSON.stringify(auth(d)) === JSON.stringify(previous.auth) && !originMoved(d, previous);
+  const authByProtocol = learned ? learned.authByProtocol : d.protocol === 'auto' && same ? previous.authByProtocol : undefined;
   return {
     id,
     label: d.label.trim() || preset.label,

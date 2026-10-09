@@ -89,7 +89,8 @@ export const PRESETS: readonly ConnectionPreset[] = [
     baseUrl: GEMINI_OPENAI_BASE_URL,
     auth: 'bearer',
     keyUrl: 'https://aistudio.google.com/apikey',
-    quirks: {},
+    // Its list says models/<id>; chat takes the bare id too (checked against the live API).
+    quirks: { modelIdPrefix: 'models/' },
     keyCheck: 'list',
     defaultModel: 'gemini-3.5-flash-lite',
     profile: CLOUD,
