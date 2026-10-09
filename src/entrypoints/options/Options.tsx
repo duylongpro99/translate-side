@@ -22,12 +22,12 @@ import {
   type Preferences,
   type ProviderConnection,
 } from '@/shared/settings';
-import { isProviderKey, resolveRoute } from '@/shared/providers';
+import { isProviderKey, readProviderSettings, resolveRoute, type ProviderSettings } from '@/shared/providers';
 import { ProvidersSection, type AdapterFor } from './Providers.tsx';
 import { openTranslationCache, type CacheStats, type TranslationCache } from '@/shared/cache';
 import { formatUsd } from '@/shared/cost';
 import { pricingFor } from '@/shared/pricing';
-import { monthKey, readSpend, resetSpend, SPEND_KEY, type SpendTotals } from '@/shared/spend';
+import { estimateSpend, monthKey, readSpend, readSpendLimit, resetSpend, saveSpendLimit, SPEND_KEY, SPEND_LIMIT_KEY, type SpendLimit, type SpendTotals } from '@/shared/spend';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
 
@@ -351,23 +351,48 @@ function CacheSection({ cache }: { cache: TranslationCache | undefined }) {
 const tokens = (n: number) => n.toLocaleString('en-US');
 const perM = (usd: number) => `$${Number(usd.toFixed(4))}`;
 
-/** The running total of what translations cost (plan M3-E9), and the price it is computed with. */
+/**
+ * The running total of what translations cost (plan M3-E9), and the price it is computed with;
+ * per model profile, today / this month / the month at this rate, and the monthly soft limit (M4-E10).
+ */
 function SpendSection({ api, now = Date.now }: { api: Browser; now?: () => number }) {
   const [spend, setSpend] = useState<SpendTotals | undefined | null>(null);
+  const [limit, setLimit] = useState<SpendLimit | undefined>();
+  const [providers, setProviders] = useState<ProviderSettings | undefined>();
   useEffect(() => {
     const load = () => void readSpend(api).then(setSpend, () => setSpend(undefined));
+    const loadLimit = () => void readSpendLimit(api).then(setLimit, () => setLimit(undefined));
+    const loadProviders = () => void readProviderSettings(api).then(setProviders, () => {});
     load();
-    // Live: a panel translating in another window adds to it.
+    loadLimit();
+    loadProviders();
+    // Live: a panel translating in another window adds to it, or goes on past the limit.
     const onLocal = (changes: Record<string, unknown>) => {
       if (SPEND_KEY in changes) load();
+      if (SPEND_LIMIT_KEY in changes) loadLimit();
+    };
+    const onSync = (changes: Record<string, unknown>) => {
+      if (Object.keys(changes).some(isProviderKey)) loadProviders();
     };
     api.storage.local.onChanged.addListener(onLocal);
-    return () => api.storage.local.onChanged.removeListener(onLocal);
+    api.storage.sync.onChanged.addListener(onSync);
+    return () => {
+      api.storage.local.onChanged.removeListener(onLocal);
+      api.storage.sync.onChanged.removeListener(onSync);
+    };
   }, [api]);
   const { profile, connection } = useTranslateRoute(api);
   const pricing = pricingFor(profile, connection);
   const builtIn = pricing !== undefined && profile.pricing === undefined;
-  const month = spend?.months[monthKey(now())] ?? 0;
+  const estimate = estimateSpend(spend ?? undefined, now());
+  /** A profile by its settings name (model · connection), or its last model when it is gone. */
+  const nameOf = (id: string, model: string) => {
+    const p = providers?.profiles.find((x) => x.id === id);
+    if (!p) return `${model || id} (removed)`;
+    const c = providers?.connections.find((x) => x.id === p.connectionId);
+    return c ? `${p.model} · ${c.label}` : p.model;
+  };
+  const rows = Object.entries(spend?.profiles ?? {}).sort(([, a], [, b]) => b.usd - a.usd || b.input + b.output - (a.input + a.output));
   return (
     <section class="opt__section" aria-labelledby="spend-h">
       <h2 id="spend-h">Usage and cost</h2>
@@ -385,15 +410,42 @@ function SpendSection({ api, now = Date.now }: { api: Browser; now?: () => numbe
       ) : (
         <>
           <p data-testid="spend-total">
-            <strong>{formatUsd(spend.usd)}</strong> since {new Date(spend.since).toLocaleDateString()} · this month {formatUsd(month)}
+            <strong>{formatUsd(spend.usd)}</strong> since {new Date(spend.since).toLocaleDateString()} · this month {formatUsd(estimate.month)}
+          </p>
+          <p data-testid="spend-estimate">
+            Today {formatUsd(estimate.today)} · about {formatUsd(estimate.perDay)} a day this month · {formatUsd(estimate.monthProjected)} by the end of the month at this rate
           </p>
           <p class="opt__hint" data-testid="spend-tokens">
             {tokens(spend.input)} input tokens ({tokens(spend.cachedInput)} cached), {tokens(spend.output)} output tokens
             {spend.unpricedTokens > 0 ? ` · ${tokens(spend.unpricedTokens)} tokens on models without a price are not in the total` : ''}.
           </p>
+          {rows.length ? (
+            <table class="opt__table" data-testid="spend-profiles">
+              <caption class="opt__hint">By model, since {new Date(spend.since).toLocaleDateString()}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Model</th>
+                  <th scope="col">Cost</th>
+                  <th scope="col">Tokens in / out</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(([id, p]) => (
+                  <tr key={id}>
+                    <th scope="row">{nameOf(id, p.model)}</th>
+                    <td>{p.usd > 0 || p.unpricedTokens === 0 ? formatUsd(p.usd) : 'no price'}</td>
+                    <td>
+                      {tokens(p.input)} / {tokens(p.output)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : null}
         </>
       )}
       <p class="opt__hint">An estimate from the tokens each response reports and the price above; your provider's bill is the real figure. Cache writes are priced as plain input, so a provider that charges more for them is slightly undercounted. Requests cancelled before they finished are not counted. Kept on this device.</p>
+      <SpendLimitRow api={api} limit={limit} month={monthKey(now())} onSaved={setLimit} />
       {spend ? (
         <div class="opt__row">
           <button type="button" data-testid="spend-reset" onClick={() => void resetSpend(api).then(() => setSpend(undefined))}>
@@ -402,6 +454,62 @@ function SpendSection({ api, now = Date.now }: { api: Browser; now?: () => numbe
         </div>
       ) : null}
     </section>
+  );
+}
+
+/** The monthly soft limit (M4-E10): set, change or remove it; says when "Continue anyway" holds it off. */
+function SpendLimitRow({ api, limit, month, onSaved }: { api: Browser; limit: SpendLimit | undefined; month: string; onSaved: (limit: SpendLimit | undefined) => void }) {
+  const [draft, setDraft] = useState('');
+  const [note, setNote] = useState<{ text: string; warn?: boolean } | undefined>();
+  useEffect(() => setDraft(limit ? String(limit.monthlyUsd) : ''), [limit?.monthlyUsd]);
+  const save = (amount: number | undefined) =>
+    void saveSpendLimit(api, amount).then(
+      () => {
+        onSaved(amount === undefined ? undefined : { monthlyUsd: amount });
+        setNote({ text: amount === undefined ? 'Limit removed.' : 'Limit saved.' });
+      },
+      (err: unknown) => setNote({ text: err instanceof Error ? err.message : String(err), warn: true }),
+    );
+  return (
+    <>
+      <div class="opt__row">
+        <label for="spend-limit">Monthly soft limit (USD)</label>
+        <input
+          id="spend-limit"
+          type="number"
+          min="0"
+          step="0.01"
+          inputMode="decimal"
+          placeholder="None"
+          value={draft}
+          onInput={(e) => setDraft((e.target as HTMLInputElement).value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') save(Number(draft));
+          }}
+        />
+        <button type="button" data-testid="spend-limit-save" disabled={draft.trim() === ''} onClick={() => save(Number(draft))}>
+          Save limit
+        </button>
+        {limit ? (
+          <button type="button" data-testid="spend-limit-remove" onClick={() => save(undefined)}>
+            Remove
+          </button>
+        ) : null}
+      </div>
+      {note ? (
+        <p class={note.warn ? 'opt__hint opt__status--warn' : 'opt__hint'} role="status" data-testid="spend-limit-note">
+          {note.text}
+        </p>
+      ) : null}
+      {limit?.continuedFor === month ? (
+        <p class="opt__hint" data-testid="spend-limit-continued">
+          You chose Continue anyway this month: no more warnings until next month.
+        </p>
+      ) : null}
+      <p class="opt__hint">
+        Once this month's spend reaches the limit, a new translation stops before it sends anything and asks first; a translation already running is not cut off. Only priced spend counts: tokens on a local model or a model without a price don't count toward it. Reset total zeroes this month's spend too and re-arms the limit.
+      </p>
+    </>
   );
 }
 

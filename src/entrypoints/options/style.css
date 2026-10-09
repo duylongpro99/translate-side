@@ -268,3 +268,24 @@ body {
 .prov__fallback .opt__hint {
   flex-basis: 100%;
 }
+.opt__table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+  font-variant-numeric: tabular-nums;
+}
+.opt__table caption {
+  text-align: start;
+}
+.opt__table th,
+.opt__table td {
+  border-bottom: 1px solid var(--line);
+  padding: 4px 6px;
+  text-align: end;
+}
+.opt__table th[scope='row'],
+.opt__table thead th:first-child {
+  text-align: start;
+  font-weight: normal;
+  overflow-wrap: anywhere;
+}

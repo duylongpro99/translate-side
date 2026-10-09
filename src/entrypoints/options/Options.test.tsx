@@ -3,10 +3,11 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_PROFILE, GLOSSARY_KEY, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/settings';
+import { DEFAULT_CONNECTION, DEFAULT_PROFILE, GLOSSARY_KEY, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/settings';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import { openTranslationCache, type TranslationCache } from '@/shared/cache';
-import { monthKey } from '@/shared/spend';
+import { dayKey, estimateSpend, monthKey } from '@/shared/spend';
+import { formatUsd } from '@/shared/cost';
 import { Options } from './Options.tsx';
 
 type Api = Parameters<typeof Options>[0]['api'];
@@ -320,5 +321,73 @@ describe('usage and cost (plan M3-E9)', () => {
       await f.api.storage.local.set({ 'secret:apibox': 'sk-apibox-0123456789' });
     });
     await waitFor(() => reads.length > before);
+  });
+});
+
+describe('usage per model, the estimate and the soft limit (plan M4-E10)', () => {
+  const type = (sel: string, value: string) =>
+    act(() => {
+      const input = root.querySelector(sel) as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  const click = (sel: string) => act(() => (root.querySelector(sel) as HTMLButtonElement).click());
+
+  it('lists spend per model profile (a removed one by its last model) and today, this month and the projection', async () => {
+    const f = fakeApi();
+    const now = Date.now();
+    const spend = {
+      since: now - 3 * 86_400_000,
+      usd: 0.9,
+      input: 30000,
+      cachedInput: 0,
+      output: 9000,
+      unpricedTokens: 4000,
+      months: { [monthKey(now)]: 0.6 },
+      days: { [dayKey(now)]: 0.2 },
+      profiles: {
+        [DEFAULT_PROFILE.id]: { model: DEFAULT_PROFILE.model, usd: 0.7, input: 20000, cachedInput: 0, output: 6000, unpricedTokens: 0 },
+        gone: { model: 'old-model', usd: 0.2, input: 7000, cachedInput: 0, output: 2000, unpricedTokens: 0 },
+        local: { model: 'qwen3:8b', usd: 0, input: 3000, cachedInput: 0, output: 1000, unpricedTokens: 4000 },
+      },
+    };
+    f.local.set('spend', spend);
+    act(() => render(<Options api={f.api} cache={undefined} />, root));
+    await waitFor(() => root.querySelector('[data-testid=spend-profiles]') !== null);
+    const e = estimateSpend(spend, Date.now());
+    expect(root.querySelector('[data-testid=spend-estimate]')?.textContent).toBe(`Today ${formatUsd(e.today)} · about ${formatUsd(e.perDay)} a day this month · ${formatUsd(e.monthProjected)} by the end of the month at this rate`);
+    await waitFor(() => root.querySelector('[data-testid=spend-profiles] tbody th')?.textContent?.includes('·') === true);
+    const rows = [...root.querySelectorAll('[data-testid=spend-profiles] tbody tr')].map((tr) => [...tr.children].map((c) => c.textContent));
+    expect(rows).toEqual([
+      [`${DEFAULT_PROFILE.model} · ${DEFAULT_CONNECTION.label}`, formatUsd(0.7), '20,000 / 6,000'],
+      ['old-model (removed)', formatUsd(0.2), '7,000 / 2,000'],
+      ['qwen3:8b (removed)', 'no price', '3,000 / 1,000'],
+    ]);
+  });
+
+  it('sets, shows and removes the monthly soft limit; says when Continue anyway holds it off; explains what counts', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} cache={undefined} />, root));
+    await waitFor(() => root.querySelector('#spend-limit') !== null);
+    expect(root.querySelector('[data-testid=spend-limit-remove]')).toBeNull();
+    expect(root.textContent).toContain("Only priced spend counts: tokens on a local model or a model without a price don't count toward it. Reset total zeroes this month's spend too and re-arms the limit.");
+    type('#spend-limit', '0');
+    click('[data-testid=spend-limit-save]');
+    await waitFor(() => root.querySelector('[data-testid=spend-limit-note]') !== null);
+    expect(root.querySelector('[data-testid=spend-limit-note]')?.textContent).toBe('The limit must be an amount above $0');
+    expect(f.local.has('spendLimit')).toBe(false);
+    type('#spend-limit', '2.5');
+    click('[data-testid=spend-limit-save]');
+    await waitFor(() => f.local.has('spendLimit'));
+    expect(f.local.get('spendLimit')).toEqual({ monthlyUsd: 2.5 });
+    await waitFor(() => root.querySelector('[data-testid=spend-limit-note]')?.textContent === 'Limit saved.');
+    // The panel's Continue anyway (another page) shows here at once.
+    await act(() => f.api.storage.local.set({ spendLimit: { monthlyUsd: 2.5, continuedFor: monthKey(Date.now()) } }));
+    await waitFor(() => root.querySelector('[data-testid=spend-limit-continued]') !== null);
+    expect((root.querySelector('#spend-limit') as HTMLInputElement).value).toBe('2.5');
+    click('[data-testid=spend-limit-remove]');
+    await waitFor(() => !f.local.has('spendLimit'));
+    await waitFor(() => root.querySelector('[data-testid=spend-limit-remove]') === null);
+    expect(root.querySelector('[data-testid=spend-limit-continued]')).toBeNull();
   });
 });
