@@ -262,8 +262,9 @@ For a **Custom** connection, the user can pick the protocol, or leave it on **Au
 **Test connection** then runs:
 1. `GET {base}/v1/models` with Anthropic-style headers. If the response looks like Anthropic
    (`data[].type == "model"`), it's a candidate for `anthropic-messages`.
-2. `GET {base}/models` with Bearer. If the response is OpenAI-shaped (`object: "list"`), it's a
-   candidate for `openai-chat`.
+2. `GET {base}/models` with Bearer. If the response is OpenAI-shaped (`object: "list"`, or no
+   `object` and no Anthropic-style `type: "model"` entries; OpenRouter's listing has no `object`),
+   it's a candidate for `openai-chat`.
 3. Send a 1-token test call on each candidate. Keep those that succeed.
 4. If **both** work (common for LiteLLM / OpenRouter-style gateways), choose by model family
    (`claude-*` → `anthropic-messages`, so prompt caching works fully; otherwise `openai-chat`) and
