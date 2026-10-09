@@ -330,10 +330,11 @@ const saveProfileProtocol = (api: Browser, p: ModelProfile, protocol: Protocol) 
 function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; onNote: (text: string, warn?: boolean) => void }) {
   const { settings } = loaded;
   const profiles = visibleProfiles(loaded);
-  const options = (selected: string | undefined) => (
+  /** The profiles to choose from; `exclude` leaves some out (never the selected one). */
+  const options = (selected: string | undefined, exclude: readonly string[] = []) => (
     <>
       {selected !== undefined && !profiles.some((p) => p.id === selected) ? <option value={selected}>(missing model)</option> : null}
-      {profiles.map((p) => (
+      {profiles.filter((p) => p.id === selected || !exclude.includes(p.id)).map((p) => (
         <option key={p.id} value={p.id}>
           {profileName(p, settings.connections)}
         </option>
@@ -393,7 +394,7 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
  * routed for a page is rate-limited, overloaded or unreachable. Entries that are not profiles
  * (the `basic` entry of M5-E7) are kept as they are and can only be removed.
  */
-function FallbackChain({ settings, profiles, options, onSave }: { settings: ProviderSettings; profiles: readonly ModelProfile[]; options: (selected: string | undefined) => ComponentChildren; onSave: (fallback: string[], said: string) => void }) {
+function FallbackChain({ settings, profiles, options, onSave }: { settings: ProviderSettings; profiles: readonly ModelProfile[]; options: (selected: string | undefined, exclude?: readonly string[]) => ComponentChildren; onSave: (fallback: string[], said: string) => void }) {
   const chain = settings.routing.fallback ?? [];
   const unused = profiles.filter((p) => p.id !== settings.routing.translate && !chain.includes(p.id));
   const named = (id: string) => (id === BASIC_FALLBACK ? 'Chrome built-in (basic)' : (profiles.find((p) => p.id === id)?.model ?? '(missing model)'));
@@ -416,7 +417,8 @@ function FallbackChain({ settings, profiles, options, onSave }: { settings: Prov
                   onSave(next.filter((x, j) => next.indexOf(x) === j), 'Fallback saved.');
                 }}
               >
-                {options(id)}
+                {/* Not the translate model itself, nor a model already in the chain (M4-D tester). */}
+                {options(id, [settings.routing.translate, ...chain])}
               </select>
             ) : (
               <span>{named(id)}</span>

@@ -349,6 +349,8 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['basic', 'g'] });
     await waitFor(() => chain().querySelector('select') !== null);
     expect((chain().querySelector('select') as HTMLSelectElement).value).toBe('g');
+    // The translate model itself is never offered as its own fallback (M4-D tester).
+    expect([...(chain().querySelector('select') as HTMLSelectElement).options].map((o) => o.value)).toEqual(['g']);
     click(chain().querySelector('[aria-label^="Remove fallback 1"]'));
     await waitFor(() => (f.sync.get('routing') as { fallback?: string[] }).fallback?.length === 1);
     expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['g'] });
