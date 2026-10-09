@@ -45,6 +45,8 @@ function fakeApi({ grant = true, answer = Promise.resolve() } = {}) {
       remove: ({ origins }: { origins: string[] }) => Promise.resolve(origins.every((o) => granted.delete(o))),
     },
     i18n: { getUILanguage: () => 'en-US' },
+    runtime: { getURL: (p: string) => `chrome-extension://abc${p}` },
+    tabs: { create: (o: { url: string }) => (log.push(`tab ${o.url}`), Promise.resolve({})) },
   } as unknown as Api;
   return { api, local, sync, log };
 }
@@ -62,6 +64,17 @@ const waitFor = async (cond: () => boolean, ms = 3000) => {
   }
 };
 const flush = () => act(async () => new Promise((r) => setTimeout(r, 10)));
+
+describe('options: set up guide (plan M4-E13)', () => {
+  it('opens the onboarding page in a tab, so the guide can be reopened at any time', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    act(() => void (root.querySelector('[data-testid=open-onboarding]') as HTMLElement).click());
+    await flush();
+    expect(f.log).toContain('tab chrome-extension://abc/onboarding.html');
+  });
+});
 
 describe('options: languages (plan M1-E9)', () => {
   it('stores the target and source languages in sync', async () => {
