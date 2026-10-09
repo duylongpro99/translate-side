@@ -21,6 +21,8 @@ export interface JobActions {
   retranslatePage(): void;
   /** Asks for the provider's host permission. Must run inside the click (a user gesture, §4.3.3). */
   grantAccess(): void;
+  /** Past the monthly soft limit (M4-E10): no more warnings this month, and the translation goes on. */
+  continuePastLimit(): void;
 }
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
@@ -146,6 +148,21 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
       );
     }
     case 'stopped': {
+      if (job.limit) {
+        return (
+          <div {...attrs} role="alert" data-testid="job-limit">
+            <span class="job__text">
+              This month's spend ({formatUsd(job.limit.monthUsd)}) reached your soft limit of {formatUsd(job.limit.limitUsd)}. Nothing was sent.
+            </span>
+            <button type="button" class="job__button" data-testid="limit-continue" onClick={actions.continuePastLimit}>
+              Continue anyway
+            </button>
+            <button type="button" class="job__button" onClick={actions.openOptions}>
+              Settings
+            </button>
+          </div>
+        );
+      }
       const error = job.stopError;
       const fix =
         error?.kind === 'auth' ? (

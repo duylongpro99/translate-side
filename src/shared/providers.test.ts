@@ -807,6 +807,13 @@ describe('fallback chain routing (plan M4-E9, DESIGN §4.3.5 privacy rule)', () 
     expect(r).toMatchObject({ ok: true, profile: { id: qwen.id } });
     expect(r.ok && r.fallback).toBeUndefined();
     expect((await routedSummary(f.api, { url: 'https://intra.example.com/doc' }))?.fallback).toBeUndefined();
+    // The analyze role too (review 2 #2): with its own cloud route set, a local-only site still
+    // briefs on the site's profile (translate's client), with no cloud link in the chain it shares.
+    await saveRouting(f.api, { translate: APIBOX_QWEN_PROFILE.id, analyze: APIBOX_PRO_PROFILE.id, fallback: [APIBOX_PRO_PROFILE.id, qwen.id, 'basic'], siteOverrides: [{ pattern: 'intra.example.com', translate: qwen.id, localOnly: true }] });
+    const withBrief = await translateClient(f.api, { url: 'https://intra.example.com/doc', analyze: true });
+    if (!withBrief.ok || !withBrief.analyze) throw new Error('no analyze resolver');
+    expect(await withBrief.analyze()).toBeUndefined();
+    expect(withBrief.fallback).toBeUndefined();
     // Elsewhere: APIBOX first, then (another model on APIBOX itself, not named again) Home Ollama.
     expect(await routedSummary(f.api, { url: 'https://news.example.com/' })).toMatchObject({ label: 'APIBOX', fallback: [{ label: 'Home Ollama', host: 'localhost' }] });
   });

@@ -39,7 +39,7 @@ describe('running total of spend (plan M3-E9)', () => {
 
   it('cleanSpend drops junk and keeps a valid record', () => {
     expect(cleanSpend(null)).toBeUndefined();
-    expect(cleanSpend({ usd: -3, input: 'x', months: { bad: 1, '2026-10': 2 } })).toEqual({ since: 0, usd: 0, input: 0, cachedInput: 0, output: 0, unpricedTokens: 0, months: { '2026-10': 2 } });
+    expect(cleanSpend({ usd: -3, input: 'x', months: { bad: 1, '2026-10': 2 } })).toEqual({ since: 0, usd: 0, input: 0, cachedInput: 0, output: 0, unpricedTokens: 0, months: { '2026-10': 2 }, days: {}, profiles: {} });
   });
 
   it('the ledger persists to storage.local; two adds at once both count; reset clears', async () => {

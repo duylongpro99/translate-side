@@ -15,13 +15,13 @@
 // - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
-import { briefCacheKey, contextual, createDefaultPromptRegistry, createEngine, decideRetry, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob } from '@/engine/index';
+import { briefCacheKey, contextual, createDefaultPromptRegistry, createEngine, decideRetry, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy } from '@/engine/index';
 import type { SnippetRequest } from '@/engine/types';
 import type { LLMClient, LLMError, LLMErrorKind, NormalizedRequest } from '@/llm/types';
 import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
-import { costUsd, type UsageTotals } from '@/shared/cost';
+import { costUsd, formatUsd, type UsageTotals } from '@/shared/cost';
 import type { Detection } from '@/shared/language';
-import type { SpendDelta } from '@/shared/spend';
+import type { LimitReached, SpendDelta } from '@/shared/spend';
 import type { ModelProfile } from '@/shared/settings';
 
 export type SegStatus = 'pending' | 'streaming' | 'final' | 'failed';
@@ -104,6 +104,8 @@ export interface JobView {
   unmetered: number;
   /** The error that stopped the job (status `stopped`). */
   stopError?: LLMError;
+  /** The monthly soft limit stopped the job before it sent anything (M4-E10): "Continue anyway" goes on. */
+  limit?: LimitReached;
   /** The connection the job runs on, for "Fix key" (M3-E8). Absent until the client is resolved. */
   connection?: JobConnection;
   /** Requests waiting out a retryable failure right now, one per chunk (M3-E8). Absent when none. */
@@ -363,6 +365,8 @@ export interface JobDeps {
   translateClient: (target: ClientTarget) => Promise<ClientResult>;
   now?: () => number;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
+  /** The engine's retry policy (default DEFAULT_RETRY_POLICY); the backoff and fallback notes follow the same one. */
+  retry?: RetryPolicy;
   /** Test seam: the engine to run (default: single-pass and contextual over the given clients). */
   engine?: (client: LLMClient, analyze?: LLMClient, fallback?: readonly LLMClient[]) => TranslationEngine;
   /** Test seam: the strategy jobs run (default PANEL_STRATEGY). */
@@ -378,7 +382,15 @@ export interface JobDeps {
    * `error` (§4.3.5). Not called for a missing key (nothing was sent).
    */
   onAuthError?: (connectionId: string, error: LLMError) => void;
+  /**
+   * The monthly soft limit (M4-E10), asked before a run sends its first request (after the cache:
+   * a page that is all cached costs nothing): reached → the run stops and says so. Absent: none.
+   */
+  spendLimit?: () => Promise<LimitReached | undefined>;
 }
+
+/** What a run stopped by the soft limit shows as its error. */
+export const limitError = (l: LimitReached): LLMError => ({ kind: 'unknown', message: `This month's spend (${formatUsd(l.monthUsd)}) reached your soft limit of ${formatUsd(l.limitUsd)}` });
 
 export interface JobDoc {
   url: string;
@@ -606,6 +618,14 @@ export class Jobs {
       this.finish(tabId, job, 'done');
       return;
     }
+    // The soft limit warns before anything is sent (M4-E10); a run already going is never cut.
+    const limit = await this.deps.spendLimit?.().catch(() => undefined);
+    if (signal.aborted || this.jobs.get(tabId) !== job) return;
+    if (limit) {
+      this.patch(tabId, job, { limit });
+      this.finish(tabId, job, 'stopped', limitError(limit));
+      return;
+    }
     // The analyze role is resolved only when the brief will be asked for: a kept or cached brief
     // means no analyze call, so its route must not stop the run.
     const analyze = resolved.analyze && !job.view.brief ? await resolved.analyze() : undefined;
@@ -777,6 +797,9 @@ export class Jobs {
     try {
       const resolved = await this.deps.translateClient({ tabId, url: job.doc.url });
       if (signal.aborted) return settle(before);
+      const limit = await this.deps.spendLimit?.().catch(() => undefined);
+      if (signal.aborted) return settle(before);
+      if (limit) return settle(failedWith(limitError(limit)));
       if (!resolved.ok) {
         settle(failedWith(resolved.error));
         if (stopsJob(resolved.error) && job.view.status !== 'running') this.finish(tabId, job, 'stopped', resolved.error);
@@ -856,7 +879,7 @@ export class Jobs {
         const attempt = (job.failures.get(at) ?? 0) + 1;
         job.failures.set(at, attempt);
         // The engine gives up (or hands over) after its retries: that is a failure, not a wait.
-        if (decideRetry(error, attempt - 1).action !== 'retry') {
+        if (decideRetry(error, attempt - 1, this.deps.retry).action !== 'retry') {
           job.backoff.delete(chunk);
           job.failures.delete(at);
           if (next && job.view.status === 'running') this.patch(tabId, job, { fallback: { from: model, to: next.client.model, error } });
@@ -873,20 +896,22 @@ export class Jobs {
       this.patch(tabId, job, { connection: link.connection });
       this.deps.onAuthError?.(link.connection.id, error);
     };
-    const wrapped = new Map<LLMClient, LLMClient>();
+    // One wrapped client per profile: the analyze route and a fallback on the same profile are one
+    // link to the engine, so a link that gave up is skipped by both (fallback.ts `dead`).
+    const wrapped = new Map<string, LLMClient>();
     const wrap = (link: FallbackLink, index: number, next: FallbackLink | undefined) => {
-      let c = wrapped.get(link.client);
+      let c = wrapped.get(link.profile.id);
       if (c === undefined) {
         // Tagged with its profile (LLMClient.id): usage it spends is priced with that profile.
         c = { ...gatedClient(authClient(backoffClient(meteredClient(link.client, meter), watchFor(index, next, link.client.model)), onAuth(link)), job.gate), id: link.profile.id };
-        wrapped.set(link.client, c);
+        wrapped.set(link.profile.id, c);
       }
       return c;
     };
     const chain = [primary, ...fallback];
     const gated = wrap(primary, 0, fallback[0]);
     const gatedFallback = fallback.map((l, i) => wrap(l, i + 1, chain[i + 2]));
-    const gatedAnalyze = analyze ? wrap(analyze, -1, fallback[0]) : undefined;
+    const gatedAnalyze = analyze ? wrap(analyze, chain.findIndex((l) => l.profile.id === analyze.profile.id), fallback[0]) : undefined;
     return this.deps.engine?.(gated, gatedAnalyze, gatedFallback) ?? this.defaultEngine(gated, gatedAnalyze, gatedFallback);
   }
 
@@ -914,6 +939,7 @@ export class Jobs {
       fallback: () => fallback,
       now: this.now,
       sleep: this.deps.sleep ?? abortableSleep,
+      ...(this.deps.retry === undefined ? {} : { retry: this.deps.retry }),
       strategies: [singlePass, contextual],
       prompts: createDefaultPromptRegistry(),
     });

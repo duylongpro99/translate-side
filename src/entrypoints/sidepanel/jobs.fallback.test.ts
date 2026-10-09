@@ -148,3 +148,38 @@ describe('Jobs with a fallback chain (§3 #3: stop Ollama mid-page → blocks co
     expect(backupRequests).toBe(1);
   });
 });
+
+describe('review 2', () => {
+  it('the analyze route and a fallback on the same profile are one client to the engine (a link that gave up is skipped by both)', async () => {
+    const seen: { client: LLMClient; analyze?: LLMClient; fallback?: readonly LLMClient[] }[] = [];
+    const primary = translatorClient(undefined, { model: LOCAL.model });
+    const jobs = new Jobs({
+      strategy: 'contextual',
+      translateClient: () =>
+        Promise.resolve({
+          ok: true,
+          client: primary,
+          profile: LOCAL,
+          fallback: [{ client: translatorClient(undefined, { model: CLOUD.model }), profile: CLOUD }],
+          // The analyze route resolves its own client object for the same profile.
+          analyze: () => Promise.resolve({ ok: true, client: translatorClient(undefined, { model: CLOUD.model }), profile: CLOUD }),
+        }),
+      engine: (client, analyze, fallback) => {
+        seen.push({ client, ...(analyze ? { analyze } : {}), ...(fallback ? { fallback } : {}) });
+        return { translate: async function* () {}, translateSnippet: async function* () {} } as never;
+      },
+    });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(3));
+    expect(seen[0]?.analyze).toBeDefined();
+    expect(seen[0]?.analyze).toBe(seen[0]?.fallback?.[0]);
+  });
+
+  it('the fallback note follows the job’s retry policy (deps.retry)', async () => {
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: chain(stoppable(0), translatorClient(undefined, { model: CLOUD.model })), sleep: instant, retry: { maxRetries: 0, baseDelayMs: 1, maxDelayMs: 1, maxRetryAfterMs: 1 } });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(2));
+    expect(jobs.get(1)?.fallback).toMatchObject({ from: LOCAL.model, to: CLOUD.model });
+    expect(jobs.get(1)?.backoff ?? []).toEqual([]);
+  });
+});

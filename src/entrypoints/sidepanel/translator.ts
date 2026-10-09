@@ -8,7 +8,7 @@ import { GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences, SECRET_PREFIX, 
 import type { SessionHooks } from './controller.ts';
 import type { JobActions } from './JobBar.tsx';
 import { openTranslationCache } from '@/shared/cache';
-import { SpendLedger } from '@/shared/spend';
+import { checkSpendLimit, continuePastLimit, SpendLedger } from '@/shared/spend';
 import { anyDenylisted, clearSnippet, readSnippet, tabIdFromSnippetKey, type SnippetRecord } from '@/shared/snippet';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
 import { snippetDocId, snippetView, SnippetStore } from './snippet.ts';
@@ -68,6 +68,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       void saveConnectionStatus(api, connectionId, { status: 'error', lastError: error.message, lastErrorKind: 'auth' }).catch((err: unknown) => {
         console.warn('[translate-side] could not mark the connection', err);
       }),
+    spendLimit: () => checkSpendLimit(api),
     ...deps,
   };
   const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), ...deps });
@@ -319,6 +320,8 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     retrySegment: (id) => void jobs.retrySegment(tabId, id),
     retranslateSegment: (id) => void jobs.retranslateSegment(tabId, id),
     retranslatePage: () => retranslate(tabId),
+    // The soft limit's "Continue anyway" (M4-E10): holds for the rest of the month.
+    continuePastLimit: () => void continuePastLimit(api).then(() => resume(tabId)),
     grantAccess: () => {
       // The job's own connection's origin, never a default one (§8: per origin, the one in use).
       // Without one (a base URL that does not parse), the settings are where to fix it.
@@ -335,6 +338,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     ...actions(tabId),
     cancel: () => snippetJobs.cancel(tabId),
     resume: () => void snippetJobs.resume(tabId),
+    continuePastLimit: () => void continuePastLimit(api).then(() => snippetJobs.resume(tabId)),
     retrySegment: (id) => void snippetJobs.retrySegment(tabId, id),
     retranslateSegment: (id) => void snippetJobs.retranslateSegment(tabId, id),
     // A selection has no cache to skip: translating it again is a new run of the same text.
