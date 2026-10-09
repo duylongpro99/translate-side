@@ -1,0 +1,38 @@
+[
+ {
+  "id": "1emzy2uyqp8",
+  "kind": "p",
+  "translate": true,
+  "source": "Wikipedia offers many user talk templates to warn users about possible violations of vandalism, the three-revert rule, and other policies and guidelines. You should use these templates carefully.",
+  "text": "Wikipedia cung cấp nhiều mẫu tin nhắn để cảnh báo người dùng về các hành vi có thể vi phạm quy định phá hoại, quy tắc hoàn tác ba lần và các chính sách, hướng dẫn khác. Bạn nên sử dụng những mẫu này một cách thận trọng.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1jy74mo1rdh",
+  "kind": "p",
+  "translate": true,
+  "source": "These templates explain the various policies to new editors. When novice editors breach policies, it is quite possible (if we assume good faith, which we must) that they are unaware of them, and educating them is helpful. On the other hand, most editors who have been around for a while are aware of these policies. If you believe that they have broken (or are about to breach) one, it may be the result of some disagreement over the interpretation of the policy, or temporarily heated tempers. In such situations, the \"did you know we had a policy here\" approach can be counterproductive in resolving the issue, as it can be construed as being patronising and uncivil.",
+  "text": "Các mẫu này giải thích cho biên tập viên mới về những chính sách khác nhau. Khi biên tập viên chưa có kinh nghiệm vi phạm chính sách, rất có thể (nếu chúng ta giả định thiện chí, điều mà chúng ta bắt buộc phải làm) họ không biết đến các quy định đó, và việc giáo dục họ là hữu ích. Mặt khác, hầu hết biên tập viên đã hoạt động lâu năm đều nhận thức rõ về các chính sách này. Nếu bạn tin rằng họ đã vi phạm (hoặc sắp vi phạm) một chính sách, thì đó có thể là do bất đồng trong cách diễn giải chính sách, hoặc do nóng nảy nhất thời. Trong những tình huống như vậy, cách tiếp cận kiểu \"bạn có biết ở đây có chính sách không\" có thể phản tác dụng trong việc giải quyết vấn đề, vì nó có thể bị hiểu là trịch thượng và thiếu lịch sự.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1ukk9ppjkzz",
+  "kind": "heading",
+  "translate": true,
+  "source": "The problem with templated messages",
+  "text": "Vấn đề với tin nhắn dạng mẫu",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "27q822nj6v5",
+  "kind": "p",
+  "translate": true,
+  "source": "Template warnings are very generic, and sometimes out of date. Sometimes a template says never to do something which is nevertheless allowed in certain circumstances. Theoretically speaking, all things are allowed in some conceivable circumstance under Ignore All Rules. Sometimes Wikipedia has multiple policies which are contradictory. If a policy violation is not clear-cut, an amicable resolution to the problem is going to require a human explanation, not an automated template.",
+  "text": "Cảnh báo bằng mẫu rất chung chung và đôi khi lỗi thời. Đôi khi một mẫu nói rằng tuyệt đối không được làm điều gì đó, nhưng thực tế lại được phép trong một số trường hợp cụ thể. Về mặt lý thuyết, mọi thứ đều được phép trong một số tình huống tưởng tượng nào đó theo nguyên tắc Ignore All Rules. Đôi khi Wikipedia có nhiều chính sách mâu thuẫn nhau. Nếu một vi phạm chính sách không rõ ràng, thì việc giải quyết ổn thỏa đòi hỏi lời giải thích từ con người, chứ không phải một mẫu tự động.",
+  "attempt": 1,
+  "error": null
+ }
+]

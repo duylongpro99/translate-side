@@ -1,0 +1,92 @@
+[
+ {
+  "id": "29vgy8mryp7",
+  "kind": "heading",
+  "translate": true,
+  "source": "Multi-stage builds",
+  "text": "Multi-stage builds",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0hqk7t83q7w",
+  "kind": "p",
+  "translate": true,
+  "source": "Multi-stage builds are useful to anyone who has struggled to optimize Dockerfiles while keeping them easy to read and maintain.",
+  "text": "Multi-stage builds cực kỳ hữu ích cho những ai từng gặp khó khăn trong việc tối ưu hóa Dockerfile mà vẫn muốn giữ cho chúng dễ đọc và dễ bảo trì.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0tuc93anusm",
+  "kind": "heading",
+  "translate": true,
+  "source": "Use multi-stage builds",
+  "text": "Sử dụng multi-stage builds",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0ufc9pnvcti",
+  "kind": "p",
+  "translate": true,
+  "source": "With multi-stage builds, you use multiple `FROM` statements in your Dockerfile. Each `FROM` instruction can use a different base, and each of them begins a new stage of the build. You can selectively copy artifacts from one stage to another, leaving behind everything you don't want in the final image.",
+  "text": "Với multi-stage builds, bạn sử dụng nhiều câu lệnh `FROM` trong Dockerfile. Mỗi chỉ thị `FROM` có thể dùng một base image khác nhau, và mỗi lệnh như vậy sẽ bắt đầu một giai đoạn (stage) build mới. Bạn có thể chọn lọc để copy các artifact từ stage này sang stage khác, loại bỏ tất cả những thứ không cần thiết khỏi image cuối cùng.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "169o9cb9n5s",
+  "kind": "p",
+  "translate": true,
+  "source": "The following Dockerfile has two separate stages: one for building a binary, and another where the binary gets copied from the first stage into the next stage.",
+  "text": "Dockerfile dưới đây có hai stage riêng biệt: một stage để build file binary, và một stage để copy file binary đó từ stage trước sang.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0m72kdsv816",
+  "kind": "code",
+  "translate": false,
+  "source": "# syntax=docker/dockerfile:1\nFROM golang:1.24\nWORKDIR /src\nCOPY <<EOF ./main.go\npackage main\n\nimport \"fmt\"\n\nfunc main() {\n  fmt.Println(\"hello, world\")\n}\nEOF\nRUN go build -o /bin/hello ./main.go\n\nFROM scratch\nCOPY --from=0 /bin/hello /bin/hello\nCMD [\"/bin/hello\"]",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "1ae8lg2yi1z",
+  "kind": "p",
+  "translate": true,
+  "source": "You only need the single Dockerfile. No need for a separate build script. Just run `docker build`.",
+  "text": "Bạn chỉ cần duy nhất một Dockerfile mà không cần đến script build riêng biệt. Chỉ cần chạy `docker build` là xong.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0bdgt3uywkw",
+  "kind": "code",
+  "translate": false,
+  "source": "$ docker build -t hello .",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "09g7lwvuur3",
+  "kind": "p",
+  "translate": true,
+  "source": "The end result is a tiny production image with nothing but the binary inside. None of the build tools required to build the application are included in the resulting image.",
+  "text": "Kết quả cuối cùng là một production image siêu nhỏ, chỉ chứa duy nhất file binary. Mọi công cụ build cần thiết để tạo ra ứng dụng đều không xuất hiện trong image thành phẩm.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1ad4um4wpta",
+  "kind": "p",
+  "translate": true,
+  "source": "How does it work? The second `FROM` instruction starts a new build stage with the `scratch` image as its base. The `COPY --from=0` line copies just the built artifact from the previous stage into this new stage. The Go SDK and any intermediate artifacts are left behind, and not saved in the final image.",
+  "text": "Cơ chế hoạt động ra sao? Chỉ thị `FROM` thứ hai sẽ bắt đầu một stage build mới với base image là `scratch`. Dòng `COPY --from=0` sẽ copy đúng artifact đã build từ stage trước đó vào stage mới này. Go SDK và các artifact trung gian sẽ bị loại bỏ và không được lưu vào image cuối cùng.",
+  "attempt": 1,
+  "error": null
+ }
+]

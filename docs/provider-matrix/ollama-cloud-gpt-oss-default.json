@@ -1,0 +1,10 @@
+{
+  "provider": "ollama-cloud",
+  "model": "gpt-oss:20b",
+  "status": "done",
+  "jobText": "Vietnamese · 10 of 73 · 63 failed · 215.4 s Retry failed",
+  "cost": null,
+  "costTitle": null,
+  "failedBlocks": 63,
+  "wallSeconds": 275.6
+}

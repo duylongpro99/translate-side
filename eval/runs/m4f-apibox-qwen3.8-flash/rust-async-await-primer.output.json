@@ -1,0 +1,92 @@
+[
+ {
+  "id": "0nuc1g1goky",
+  "kind": "heading",
+  "translate": true,
+  "source": "Async-await: a quick primer",
+  "text": "Async-await: một cái nhìn tổng quan nhanh",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0qj628atsco",
+  "kind": "p",
+  "translate": true,
+  "source": "So, what is async await? Async-await is a way to write functions that can \"pause\", return control to the runtime, and then pick up from where they left off. Typically those pauses are to wait for I/O, but there can be any number of uses.",
+  "text": "Vậy, async await là gì? Async-await là cách viết các hàm có thể \"tạm dừng\", trả lại quyền điều khiển cho runtime, rồi tiếp tục từ chỗ chúng đã dừng. Thông thường, những lần tạm dừng này là để chờ I/O, nhưng cũng có thể dùng cho nhiều mục đích khác.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "05rrzzscwut",
+  "kind": "p",
+  "translate": true,
+  "source": "To use async-await, you start by writing `async fn` instead of `fn`:",
+  "text": "Để sử dụng async-await, bạn bắt đầu bằng cách viết `async fn` thay vì `fn`:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "18nfmcp4ayd",
+  "kind": "code",
+  "translate": false,
+  "source": "async fn first_function() -> u32 { .. }",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "2bxk9kxm1r6",
+  "kind": "p",
+  "translate": true,
+  "source": "Unlike a regular function, calling an `async fn` doesn't have any immediate effect. Instead, it returns a `Future`. This is a suspended computation that is waiting to be executed. To actually *execute* the future, use the `.await` operator:",
+  "text": "Khác với một hàm thông thường, việc gọi một `async fn` không gây ra tác động tức thì nào. Thay vào đó, nó trả về một `Future`. Đây là một phép tính đang bị treo và chờ được thực thi. Để thực sự *thực thi* future đó, hãy dùng toán tử `.await`:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0s3g5bha5ek",
+  "kind": "code",
+  "translate": false,
+  "source": "async fn another_function() {\n    // Create the future:\n    let future = first_function();\n\n    // Await the future, which will execute it (and suspend\n    // this function if we encounter a need to wait for I/O):\n    let result: u32 = future.await;\n}",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "1cp5g6ffnem",
+  "kind": "p",
+  "translate": true,
+  "source": "This example shows the first difference between Rust and other languages: we write `future.await` instead of `await future`. This syntax integrates better with Rust's `?` operator for propagating errors (which, after all, are very common in I/O). You can simply write `future.await?` to await the result of a future and propagate errors. It also has the advantage of making method chaining painless.",
+  "text": "Ví dụ này cho thấy điểm khác biệt đầu tiên giữa Rust và các ngôn ngữ khác: chúng ta viết `future.await` thay vì `await future`. Cú pháp này tích hợp tốt hơn với toán tử `?` của Rust dùng để lan truyền lỗi (mà suy cho cùng, rất phổ biến trong I/O). Bạn chỉ cần viết `future.await?` để chờ kết quả của một future và lan truyền lỗi. Nó cũng có ưu điểm là giúp việc nối chuỗi phương thức trở nên dễ dàng.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "08n15eb9i8p",
+  "kind": "heading",
+  "translate": true,
+  "source": "Zero-cost futures",
+  "text": "Futures zero-cost",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "21rxmx66677",
+  "kind": "p",
+  "translate": true,
+  "source": "The other difference between Rust futures and futures in JS and C# is that they are based on a \"poll\" model, which makes them *zero cost*. In other languages, invoking an async function immediately creates a future and schedules it for execution: awaiting the future isn't necessary for it to execute. But this implies some overhead for each future that is created.",
+  "text": "Điểm khác biệt còn lại giữa futures trong Rust và futures trong JS hay C# là chúng dựa trên mô hình \"poll\", khiến chúng trở nên *zero cost*. Ở các ngôn ngữ khác, khi gọi một hàm async, hệ thống sẽ ngay lập tức tạo ra một future và lên lịch cho nó thực thi: việc await future không cần thiết để nó chạy. Nhưng điều này đồng nghĩa với một số chi phí phát sinh cho mỗi future được tạo ra.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "015ndo1mh9e",
+  "kind": "p",
+  "translate": true,
+  "source": "In contrast, in Rust, calling an async function does not do any scheduling in and of itself, which means that we can compose a complex nest of futures without incurring a per-future cost. As an end-user, though, the main thing you'll notice is that *futures feel \"lazy\"*: they don't do anything until you await them.",
+  "text": "Ngược lại, trong Rust, việc gọi một hàm async tự bản thân nó không thực hiện bất kỳ việc lên lịch nào, nghĩa là chúng ta có thể kết hợp nhiều future lồng ghép phức tạp mà không phải chịu chi phí cho từng future. Tuy nhiên, với tư cách người dùng cuối, điều bạn sẽ nhận thấy rõ nhất là *futures hoạt động theo kiểu \"lazy\"*: chúng không làm gì cả cho đến khi bạn await chúng.",
+  "attempt": 1,
+  "error": null
+ }
+]

@@ -146,6 +146,10 @@ function connection(): { client: LLMClient; label: string; translateClient?: LLM
 const PROVIDERS: Record<string, { keyName: string; conn: Pick<ResolvedConnection, 'protocol' | 'baseUrl' | 'auth' | 'quirks'>; model: string; modelQuirks?: Record<string, Quirks> }> = {
   apibox: { keyName: 'AIBOX_API_KEY', conn: { protocol: 'openai-chat', baseUrl: APIBOX_BASE_URL, auth: { style: 'bearer' }, quirks: APIBOX_DEEPSEEK_QUIRKS }, model: 'qwen3.8-flash', modelQuirks: { 'qwen3.8-flash': APIBOX_QWEN_QUIRKS } },
   gemini: { keyName: 'GEMINI_API_KEY', conn: { protocol: 'openai-chat', baseUrl: GEMINI_OPENAI_BASE_URL, auth: { style: 'bearer' }, quirks: {} }, model: 'gemini-3.5-flash-lite' },
+  // M4-F (G5): Ollama cloud replaces the local runs; no Qwen is hosted, gemma4:31b is the multilingual pick.
+  'ollama-cloud': { keyName: 'OLLAMA_API_KEY', conn: { protocol: 'openai-chat', baseUrl: 'https://ollama.com/v1', auth: { style: 'bearer' }, quirks: {} }, model: 'gemma4:31b' },
+  openrouter: { keyName: 'OPENROUTER_API_KEY', conn: { protocol: 'openai-chat', baseUrl: 'https://openrouter.ai/api/v1', auth: { style: 'bearer' }, quirks: {} }, model: 'anthropic/claude-haiku-4.5' },
+  'openrouter-anthropic': { keyName: 'OPENROUTER_API_KEY', conn: { protocol: 'anthropic-messages', baseUrl: 'https://openrouter.ai/api', auth: { style: 'bearer' }, quirks: {} }, model: 'anthropic/claude-haiku-4.5' },
   anthropic: { keyName: 'ANTHROPIC_API_KEY', conn: { protocol: 'anthropic-messages', baseUrl: 'https://api.anthropic.com', auth: { style: 'x-api-key' }, quirks: {} }, model: 'claude-haiku-4-5-20251001' },
 };
 

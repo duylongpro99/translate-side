@@ -1,0 +1,191 @@
+[
+ {
+  "id": "1tucl8bond8",
+  "kind": "heading",
+  "translate": true,
+  "source": "The Zen of Python",
+  "text": "Triết lý Zen của Python",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "201mk47nvbv",
+  "kind": "p",
+  "translate": true,
+  "source": "Long time Pythoneer Tim Peters succinctly channels the BDFL's guiding principles for Python's design into 20 aphorisms, only 19 of which have been written down.",
+  "text": "Tim Peters, một lập trình viên Python kỳ cựu, đã đúc kết một cách súc tích những nguyên tắc định hướng thiết kế Python của BDFL thành 20 câu châm ngôn, nhưng hiện chỉ có 19 câu được ghi lại.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "10o4hbz1d5k",
+  "kind": "li",
+  "translate": true,
+  "source": "Beautiful is better than ugly.",
+  "text": "Đẹp tốt hơn là xấu.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1swrmh7jw4c",
+  "kind": "li",
+  "translate": true,
+  "source": "Explicit is better than implicit.",
+  "text": "Rõ ràng tốt hơn là ngầm định.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1wmcsypn4xq",
+  "kind": "li",
+  "translate": true,
+  "source": "Simple is better than complex.",
+  "text": "Đơn giản tốt hơn là phức tạp.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0pop4a7unzz",
+  "kind": "li",
+  "translate": true,
+  "source": "Complex is better than complicated.",
+  "text": "Phức tạp tốt hơn là rắc rối.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "29srs96qmhc",
+  "kind": "li",
+  "translate": true,
+  "source": "Flat is better than nested.",
+  "text": "Phẳng tốt hơn là phân cấp.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "12432zlb1zx",
+  "kind": "li",
+  "translate": true,
+  "source": "Sparse is better than dense.",
+  "text": "Thưa tốt hơn là dày đặc.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0ayng18bhyk",
+  "kind": "li",
+  "translate": true,
+  "source": "Readability counts.",
+  "text": "Khả năng đọc hiểu là rất quan trọng.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1cucfpet4ct",
+  "kind": "li",
+  "translate": true,
+  "source": "Special cases aren't special enough to break the rules.",
+  "text": "Các trường hợp đặc biệt không đủ đặc biệt để phá vỡ các quy tắc.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "03jyshrhq3x",
+  "kind": "li",
+  "translate": true,
+  "source": "Although practicality beats purity.",
+  "text": "Dù vậy, tính thực tiễn quan trọng hơn sự thuần khiết.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "05a5gk10rv9",
+  "kind": "li",
+  "translate": true,
+  "source": "Errors should never pass silently.",
+  "text": "Lỗi không bao giờ được phép bỏ qua trong im lặng.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1kvjre6c5qj",
+  "kind": "li",
+  "translate": true,
+  "source": "Unless explicitly silenced.",
+  "text": "Trừ khi được yêu cầu im lặng một cách rõ ràng.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "19mhblt0szi",
+  "kind": "li",
+  "translate": true,
+  "source": "In the face of ambiguity, refuse the temptation to guess.",
+  "text": "Khi đối mặt với sự mơ hồ, đừng cố gắng đoán mò.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1tadez9qa1w",
+  "kind": "li",
+  "translate": true,
+  "source": "There should be one-- and preferably only one --obvious way to do it.",
+  "text": "Nên có một — và tốt nhất là chỉ một — cách hiển nhiên để thực hiện điều đó.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1y0yew61bc9",
+  "kind": "li",
+  "translate": true,
+  "source": "Although that way may not be obvious at first unless you're Dutch.",
+  "text": "Mặc dù cách đó có thể không hiển nhiên ngay từ đầu, trừ khi bạn là người Hà Lan.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "2fo51wgk3ei",
+  "kind": "li",
+  "translate": true,
+  "source": "Now is better than never.",
+  "text": "Làm ngay bây giờ tốt hơn là không bao giờ.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "298pujzku6v",
+  "kind": "li",
+  "translate": true,
+  "source": "Although never is often better than *right* now.",
+  "text": "Mặc dù không bao giờ thường vẫn tốt hơn là làm *ngay lập tức*.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1rwk62xn1dl",
+  "kind": "li",
+  "translate": true,
+  "source": "If the implementation is hard to explain, it's a bad idea.",
+  "text": "Nếu cách triển khai khó giải thích, đó là một ý tưởng tồi.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1jvl2j32yac",
+  "kind": "li",
+  "translate": true,
+  "source": "If the implementation is easy to explain, it may be a good idea.",
+  "text": "Nếu cách triển khai dễ giải thích, đó có thể là một ý tưởng hay.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "28opx7b22eh",
+  "kind": "li",
+  "translate": true,
+  "source": "Namespaces are one honking great idea -- let's do more of those!",
+  "text": "Namespaces là một ý tưởng tuyệt vời — hãy áp dụng nó nhiều hơn nữa!",
+  "attempt": 1,
+  "error": null
+ }
+]

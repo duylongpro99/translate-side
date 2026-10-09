@@ -1,0 +1,65 @@
+[
+ {
+  "id": "09xp8se84d1",
+  "kind": "heading",
+  "translate": true,
+  "source": "Closures",
+  "text": "Closures",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1jee0paywgz",
+  "kind": "p",
+  "translate": true,
+  "source": "A *closure* is the combination of a function bundled together (enclosed) with references to its surrounding state (the *lexical environment*). In other words, a closure gives a function access to its outer scope. In JavaScript, closures are created every time a function is created, at function creation time.",
+  "text": "Một *closure* là sự kết hợp giữa một hàm và các tham chiếu đến trạng thái xung quanh nó (gọi là *lexical environment* - môi trường từ vựng). Nói cách khác, closure cho phép một hàm truy cập vào phạm vi (scope) bên ngoài của nó. Trong JavaScript, closure được tạo ra mỗi khi một hàm được khởi tạo.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "12i83dy01nd",
+  "kind": "heading",
+  "translate": true,
+  "source": "Lexical scoping",
+  "text": "Lexical scoping",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "28v3e927jsp",
+  "kind": "p",
+  "translate": true,
+  "source": "Consider the following example code:",
+  "text": "Hãy xem ví dụ sau:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "06hkv422x19",
+  "kind": "code",
+  "translate": false,
+  "source": "function init() {\n  var name = \"Mozilla\"; // name is a local variable created by init\n  function displayName() {\n    // displayName() is the inner function, that forms a closure\n    console.log(name); // use variable declared in the parent function\n  }\n  displayName();\n}\ninit();",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "1rlpugamuix",
+  "kind": "p",
+  "translate": true,
+  "source": "`init()` creates a local variable called `name` and a function called `displayName()`. The `displayName()` function is an inner function that is defined inside `init()` and is available only within the body of the `init()` function. Note that the `displayName()` function has no local variables of its own. However, since inner functions have access to the variables of outer scopes, `displayName()` can access the variable `name` declared in the parent function, `init()`.",
+  "text": "`init()` tạo ra một biến cục bộ tên là `name` và một hàm tên là `displayName()`. Hàm `displayName()` là một hàm con được định nghĩa bên trong `init()` và chỉ có hiệu lực trong thân hàm `init()`. Lưu ý rằng bản thân hàm `displayName()` không có biến cục bộ nào. Tuy nhiên, vì các hàm con có quyền truy cập vào các biến của phạm vi bên ngoài, nên `displayName()` có thể truy cập biến `name` được khai báo trong hàm cha `init()`.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1lh3lhav3wh",
+  "kind": "p",
+  "translate": true,
+  "source": "If you run this code in your console, you can see that the `console.log()` statement within the `displayName()` function successfully displays the value of the `name` variable, which is declared in its parent function. This is an example of *lexical scoping*, which describes how a parser resolves variable names when functions are nested. The word *lexical* refers to the fact that lexical scoping uses the location where a variable is declared within the source code to determine where that variable is available. Nested functions have access to variables declared in their outer scope.",
+  "text": "Nếu bạn chạy đoạn mã này trong console, bạn sẽ thấy câu lệnh `console.log()` trong hàm `displayName()` hiển thị thành công giá trị của biến `name` được khai báo ở hàm cha. Đây là một ví dụ về *lexical scoping* (phạm vi từ vựng), khái niệm mô tả cách trình phân tích cú pháp (parser) giải quyết tên biến khi các hàm được lồng nhau. Từ *lexical* ám chỉ việc lexical scoping dựa vào vị trí khai báo biến trong mã nguồn để xác định nơi biến đó có hiệu lực. Các hàm lồng nhau có quyền truy cập vào các biến được khai báo trong phạm vi bên ngoài của chúng.",
+  "attempt": 1,
+  "error": null
+ }
+]

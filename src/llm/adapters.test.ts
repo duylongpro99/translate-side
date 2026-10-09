@@ -213,6 +213,10 @@ describe.each(harnesses)('$name adapter (shared contract)', (h) => {
     expect(ok.ok && ok.shape).toBe(true);
     const other = h.name === 'anthropic-messages' ? { object: 'list', data: [{ id: 'gpt-x', object: 'model', created: 0, owned_by: 'x' }] } : { data: [{ type: 'model', id: 'claude-x', display_name: 'X', created_at: '2025-10-01T00:00:00Z' }], has_more: false };
     expect(await h.adapter(mockFetch([{ status: 200, body: JSON.stringify(other) }]).fetch).probe(h.conn())).toMatchObject({ ok: true, shape: false });
+    // OpenRouter's listing has no `object` field (M4-F): still OpenAI-shaped, and not Anthropic-shaped.
+    const noObject = { data: [{ id: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku', created: 0 }], total_count: 1, links: {} };
+    if (h.name === 'openai-chat') expect(await h.adapter(mockFetch([{ status: 200, body: JSON.stringify(noObject) }]).fetch).probe(h.conn())).toMatchObject({ ok: true, shape: true });
+    else expect(await h.adapter(mockFetch([{ status: 200, body: JSON.stringify(noObject) }]).fetch).probe(h.conn())).toMatchObject({ ok: true, shape: false });
     expect(f.requests[0]?.method).toBe('GET');
     expect(f.requests[0]?.url).toBe(h.name === 'anthropic-messages' ? `${ANTHROPIC}/v1/models?limit=100` : `${OPENAI}/models`);
     const bad = await h.adapter(mockFetch([{ status: 401, body: '{"error":{"type":"authentication_error","message":"invalid x-api-key"}}' }]).fetch).probe(h.conn());

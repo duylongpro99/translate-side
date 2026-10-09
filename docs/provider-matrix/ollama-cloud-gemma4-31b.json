@@ -1,0 +1,10 @@
+{
+  "provider": "ollama-cloud",
+  "model": "gemma4:31b",
+  "status": "done",
+  "jobText": "Vietnamese · 73 of 73 · 23.3 s",
+  "cost": null,
+  "costTitle": null,
+  "failedBlocks": 0,
+  "wallSeconds": 83.4
+}

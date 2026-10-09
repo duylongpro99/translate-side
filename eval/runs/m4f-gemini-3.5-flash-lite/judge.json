@@ -1,0 +1,179 @@
+{
+ "judgeModel": "ds/deepseek-v4-pro",
+ "prompt": "judge@1",
+ "at": "2026-10-09T04:23:01.665Z",
+ "scores": {
+  "bierce-devils-dictionary": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "The translation is largely faithful and keeps the satirical voice, but a few word choices are softened or shifted, such as 'masquerading' as 'đóng vai trò', 'contemplating' as 'ngắm nhìn', and 'BORE' as 'KẺ LẮM LỜI'."
+  },
+  "docker-multistage": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "The main weakness is rendering Docker 'base' as 'nền tảng' rather than the usual 'image nền/base image' in segments [4] and [8]; otherwise the translation is faithful and fluent."
+  },
+  "go-errors-are-values": {
+   "fidelity": 5,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The translation is faithful and terminology is consistent, but a few phrases are overly literal or awkward, such as 'mục tiêu bị chĩa mũi nhọn vào hiển nhiên chính là ngôn ngữ Go' and 'Có lẽ sự việc là', which weaken naturalness."
+  },
+  "go-gofmt": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The translation is accurate, but slightly flattens the informal source tone, especially 'while hacking away' as 'khi đang ngồi viết code', and the future 'sẽ' in [3] adds a small shift."
+  },
+  "go-share-memory": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "The translation is accurate and fluent; the main weakness is that 'concurrency primitives' is rendered loosely as 'cơ chế đồng thời cốt lõi' rather than a more precise term like 'nguyên thủy đồng thời'."
+  },
+  "go2-here-we-come": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Dịch 'major release' thành 'bản phát hành chính thức duy nhất' làm lệch nghĩa; 'Sau gần 10 năm tiếp xúc' hơi dịch sát và kém tự nhiên."
+  },
+  "k8s-pods": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch bám sát và sạch; điểm yếu chính là một vài sắc thái bị trượt nhẹ (bỏ 'relatively', 'models' thành 'mô phỏng') và một số cụm hơi dịch từng từ."
+  },
+  "mdn-closures": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Mainly accurate and fluent, but the heading is slightly expanded and some renderings like 'đi kèm' and 'phạm vi từ vựng' are a bit literal or less idiomatic."
+  },
+  "mdn-using-promises": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Bản dịch giữ đúng ý chính nhưng còn dịch sát từ ngữ ở tiêu thụ promise và bản ghi cấu hình, đồng thời thêm chú giải không có trong nguồn."
+  },
+  "pep20-zen": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "The meaning is largely intact, but a few aphorisms read as translationese, especially line 18 and 'explicitly silenced' rendered as 'được yêu cầu im lặng'; this weakens the pithy, natural tone."
+  },
+  "rust-async-await-primer": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Có một chút lệch sắc thái ở 'does not do any scheduling in and of itself' bị dịch thành 'không tự động lên lịch gì cả'; ngoài ra 'zero-cost' được dịch chưa nhất quán giữa tiêu đề và thân bài."
+  },
+  "rust-async-ecosystem": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "The main weakness is terminology and slight translationese: 'Minimum Viable Product' is rendered as 'Sản phẩm khả dụng tối thiểu' rather than the usual 'khả thi tối thiểu', and phrases like 'future 'chi phí bằng không' (zero-cost futures)' feel overly literal."
+  },
+  "rust-async-executor": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The main flaw is the truncated word 'tiến n' in segment [3], which should be 'tiến triển' for 'make progress'; otherwise the translation is accurate and terminology is handled well."
+  },
+  "rust-book-ownership": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Minor nuance shift in the plate analogy ('wouldn't work as well' rendered as 'không khả thi bằng') and some slight translationese in places, but overall the meaning and friendly tone are well preserved."
+  },
+  "rust-book-panic": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The main weakness is that 'robust error-handling code' is rendered as 'mã xử lý lỗi cồng kềnh' with 'nhồi nhét', adding a negative, bulky connotation not present in the source."
+  },
+  "so-branch-prediction": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Main weakness is the awkward railway wording: 'gác gian switch' is not natural and 'switch' is rendered inconsistently; the branch-prediction terms are otherwise consistent."
+  },
+  "so-regex-html": {
+   "fidelity": 5,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "Bản dịch trung thành và giữ được giọng hài hước, nhưng còn nhiều chỗ dịch word-for-word, ví dụ 'không được trang bị để chia nhỏ HTML thành các thành phần có ý nghĩa của nó' và 'biểu thức chính quy không chính quy được cải tiến', khiến văn phong cứng."
+  },
+  "swift-modest-proposal": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 3,
+   "terminology": 4,
+   "comment": "Main weakness is several mistranslated or unidiomatic phrases, such as 'nặc danh nài' for 'should be urged', 'cho những thứ vô nghĩa' for 'for nothing', and 'biết ơn động lòng thương xót' for 'have at least one degree of mercy', which shift details and weaken the satire."
+  },
+  "wodehouse-jeeves": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 3,
+   "terminology": 4,
+   "comment": "Bản dịch giữ được mạch chính nhưng có một số chi tiết dịch sai hoặc lệch rõ như 'put the cat out' thành 'cho mèo ăn' và 'poor old Corky' thành 'Corky cũ kỹ'; các cụm như 'chân lon ton', 'khóa văn phòng đi ngủ' khiến văn phong kém tự nhiên."
+  },
+  "wp-beans": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch trung thành và giữ được giọng hài hước, cách dùng thành ngữ 'đừng vẽ đường cho hươu chạy' phù hợp; điểm yếu chính là vài chỗ hơi translationese như 'Hy vọng ngăn chặn...' và 'cảnh báo trước họ'."
+  },
+  "wp-dont-bite-newcomers": {
+   "fidelity": 3,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The main weaknesses are meaning shifts: 'valuable contributors' becomes 'valuable contributions' and 'invites new editors to mature' is rendered as 'thu hút các biên tập viên mới trưởng thành' (attracts newly mature editors). Otherwise the tone and terminology are well maintained."
+  },
+  "wp-not-a-dictionary": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is accurate and consistent, but a few phrases are slightly literal/translationese, such as 'người bạn đồng hành về từ vựng' and 'tác phẩm đang được thực hiện'."
+  },
+  "wp-template-regulars": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Cụm 'if we assume good faith, which we must' bị dịch sai nhẹ thành 'nếu chúng ta thiện chí' thay vì 'nếu chúng ta giả định thiện chí'; thuật ngữ 'template' chưa theo chuẩn Wikipedia tiếng Việt khi dịch là 'mẫu tin nhắn' thay vì 'bản mẫu'."
+  }
+ },
+ "failed": [],
+ "usage": {
+  "input": 37463,
+  "cachedInput": 35968,
+  "output": 100222
+ },
+ "costUsd": 0.1334759728,
+ "reasoning": {
+  "effort": "medium",
+  "reserveTokens": 16000
+ }
+}

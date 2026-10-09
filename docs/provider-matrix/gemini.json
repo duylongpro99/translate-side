@@ -1,0 +1,10 @@
+{
+  "provider": "gemini",
+  "model": null,
+  "status": "done",
+  "jobText": "Vietnamese · 73 of 73 · 21.6 s $0.0179",
+  "cost": "$0.0179",
+  "costTitle": "13513 input tokens (0 cached), 5520 output tokens",
+  "failedBlocks": 0,
+  "wallSeconds": 21.7
+}

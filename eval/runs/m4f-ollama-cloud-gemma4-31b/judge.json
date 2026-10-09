@@ -1,0 +1,179 @@
+{
+ "judgeModel": "ds/deepseek-v4-pro",
+ "prompt": "judge@1",
+ "at": "2026-10-09T04:21:49.313Z",
+ "scores": {
+  "bierce-devils-dictionary": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "A few nuances shift slightly, such as 'contest of principles' rendered as 'cuộc tranh luận' and 'edifice' as 'lâu đài'; otherwise the translation is faithful and fluent."
+  },
+  "docker-multistage": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The translation is fluent and technical, but a few details shift: [5] omits 'into the next stage' and [2] adds emphasis with 'cực kỳ'."
+  },
+  "go-errors-are-values": {
+   "fidelity": 3,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The main fidelity issues are the reversed frequency in “once per page or two” (translated as “one or two times per page”) and the paraphrase of “errors can be programmed” into “we can program error handling”, which blunts the central point."
+  },
+  "go-gofmt": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The main weakness is a slight meaning shift: 'mechanical changes' is rendered as 'thay đổi mang tính kỹ thuật' (technical changes), and 'Gofmt'd code is:' becomes future tense with 'sẽ'."
+  },
+  "go-share-memory": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "The main weakness is 'concurrency primitives' rendered as 'nguyên ngữ đồng thời', which is not the usual Vietnamese terminology; the English gloss partly compensates. Otherwise the translation is faithful and fluent."
+  },
+  "go2-here-we-come": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "The main issues are the parenthetical “backward-compatible” after “không tương thích ngược,” which is contradictory, and rendering “almost 10 years of exposure” as “gần 10 năm ra mắt,” which shifts the meaning slightly."
+  },
+  "k8s-pods": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The main weakness is a couple of omitted nuances: 'deployable' in the opening definition and 'relatively' when describing coupling; otherwise the translation is fluent and accurate."
+  },
+  "mdn-closures": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Very faithful and clear; the only notable weakness is slightly literal phrasing such as 'giải quyết tên biến' where 'phân giải tên biến' would be more natural."
+  },
+  "mdn-using-promises": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is accurate and consistent, but a few phrases are slightly literal or awkward, such as 'bên sử dụng' for 'consumers' and 'một bản ghi cấu hình', giving it a mild translationese feel."
+  },
+  "pep20-zen": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 3,
+   "terminology": 3,
+   "comment": "Một số chi tiết và sắc thái bị lệch: 'nested' bị dịch thành 'phân cấp' thay vì 'lồng nhau', và cách nói hài hước, nhấn mạnh như 'honking great' bị làm nhạt."
+  },
+  "rust-async-await-primer": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "The main weakness is occasional translationese and a mistranslation of \"suspended computation\" as \"phép toán\" (operation), where \"tính toán\" would be more accurate."
+  },
+  "rust-async-ecosystem": {
+   "fidelity": 5,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is highly accurate and fluent; the only minor nuance is that 'Rust's story' is rendered interpretively as 'hành trình phát triển của Rust' rather than preserving the original metaphor."
+  },
+  "rust-async-executor": {
+   "fidelity": 5,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is accurate, fluent, and preserves the technical terms and instructive tone well; no significant weaknesses."
+  },
+  "rust-book-ownership": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The main weakness is the final plate-stack example: “wouldn’t work as well” is rendered as an absolute “chắc chắn sẽ không hiệu quả,” losing the comparative nuance."
+  },
+  "rust-book-panic": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "Main weakness is a slight fidelity shift in [6]: 'for when you’re ready to make your program more robust' becomes 'so you know what to do when you want...'; some phrasing like 'mã nguồn xảy ra panic' is mildly unnatural, and the title wordplay is somewhat flattened."
+  },
+  "so-branch-prediction": {
+   "fidelity": 5,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is highly faithful and natural; only tiny nuance shifts such as 'không thể biết' for 'doesn't know' in segment 9 are noticeable, without affecting meaning."
+  },
+  "so-regex-html": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The dark-humored rant is carried well, with only minor figurative shifts (e.g. \"watery putty\" as \"đất sét nhão\") and a few slightly clunky passive or translated constructions."
+  },
+  "swift-modest-proposal": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Meaning is largely intact, but 'hearty' is shifted to 'quyết liệt' (drastic), and 'for nothing' is translated literally as 'với giá không đồng', which sounds slightly unnatural."
+  },
+  "wodehouse-jeeves": {
+   "fidelity": 2,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The Vietnamese reads fluently and keeps the humorous voice, but two details are mistranslated: 'not bigoted' becomes 'ích kỷ' and 'put the cat out' becomes 'đuổi hết nhân viên,' inventing staff not in the source."
+  },
+  "wp-beans": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "Minor narrative details are omitted in the story opening (e.g., 'old story,' 'little boy's mother,' 'all the milk'), and 'ham hố' in [4] is more colloquial than 'don't be tempted'; otherwise the translation is fluent and clear."
+  },
+  "wp-dont-bite-newcomers": {
+   "fidelity": 3,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "Một số chi tiết bị lệch nghĩa: “Not having a clue” bị dịch thành “mơ hồ” chưa sát, và “valuable contributors” thành “người đóng góp tiềm năng”; “regular editors” dịch là “biên tập viên kỳ cựu” cũng hơi lệch so với nguyên bản."
+  },
+  "wp-not-a-dictionary": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The main weaknesses are translating 'people' as 'một cộng đồng' (losing the sense of 'a people/ethnic group') and the awkward phrase 'thường xuyên dẫn liên kết đến nhau', which reads like translationese."
+  },
+  "wp-template-regulars": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is fluent and accurate, with only a minor omission in segment 2: 'in resolving the issue' is left out."
+  }
+ },
+ "failed": [],
+ "usage": {
+  "input": 37173,
+  "cachedInput": 21248,
+  "output": 86604
+ },
+ "costUsd": 0.12163450079999999,
+ "reasoning": {
+  "effort": "medium",
+  "reserveTokens": 16000
+ }
+}

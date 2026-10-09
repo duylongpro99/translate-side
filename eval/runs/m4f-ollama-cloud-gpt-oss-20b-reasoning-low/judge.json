@@ -1,0 +1,179 @@
+{
+ "judgeModel": "ds/deepseek-v4-pro",
+ "prompt": "judge@1",
+ "at": "2026-10-09T04:22:18.741Z",
+ "scores": {
+  "bierce-devils-dictionary": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 3,
+   "terminology": 3,
+   "comment": "Main weakness is 'eel' mistranslated as 'cá ngựa' (seahorse), which breaks the politician metaphor; a few phrases such as 'Hành động công việc công cộng' are also translationese."
+  },
+  "docker-multistage": {
+   "fidelity": 5,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 3,
+   "comment": "Main weakness is terminology and translationese: Docker 'image' is rendered as 'ảnh' (e.g., 'ảnh sản xuất') and 'artifact' as 'artefact', which are unusual in Vietnamese Docker docs; some phrases like 'sao chép chỉ artefact đã được xây dựng' are literal."
+  },
+  "go-errors-are-values": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 3,
+   "comment": "Main message is preserved, but a few key renderings are too literal or wrong: \"lament\" is left untranslated, \"client code\" becomes \"mã khách hàng\" (customer code), and \"flow of control\" is calqued as \"dòng chảy điều khiển\" instead of \"luồng điều khiển\"."
+  },
+  "go-gofmt": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "The clearest issue is 'mechanical changes' translated as 'những thay đổi cơ bản' (basic), which changes the meaning. A few phrases are slightly unnatural, and 'brace position' could be more precise as 'dấu ngoặc nhọn'."
+  },
+  "go-share-memory": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "The main weakness is rendering 'polls a list of URLs' as 'đang lấy dữ liệu từ một danh sách URL', which loses the technical sense of polling; otherwise the translation is clear and consistent."
+  },
+  "go2-here-we-come": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The main weakness is a clear mistranslation: 'informally' is rendered as 'ngắn gọn' instead of 'không chính thức'. Some phrasing is also translationese, such as 'một cú nổ lớn' and 'trong phần của quy trình đó'."
+  },
+  "k8s-pods": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "The parenthetical “pod of whales or pea pod” is mistranslated as “bó cá voi hoặc bó đậu,” and several phrases read as translationese (e.g. “đơn vị triển khai nhỏ nhất của tính toán,” “những điều giống như cách mà container được cách ly”)."
+  },
+  "mdn-closures": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 5,
+   "terminology": 3,
+   "comment": "Thuật ngữ 'Closures' bị dịch thành 'Đóng gói' và 'lexical scoping' thành 'phạm vi từ ngữ' chưa tự nhiên, thiếu nhất quán; một số câu còn lủng củng kiểu dịch từng từ."
+  },
+  "mdn-using-promises": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "Bản dịch giữ đúng nội dung chính nhưng còn dịch sát từng chữ ở các cụm như “người tiêu thụ/cách tiêu thụ promise”, gây cảm giác translationese; một số sắc thái nhỏ bị lệch như “Essentially” thành “Nói một cách ngắn gọn” và “classic” bị lược bỏ."
+  },
+  "pep20-zen": {
+   "fidelity": 2,
+   "naturalness": 3,
+   "tone": 3,
+   "terminology": 2,
+   "comment": "Several key concepts are mistranslated: 'Zen' becomes 'Tâm lý', 'implicit' becomes 'mơ hồ', and 'sparse' is rendered as 'rất ít dữ liệu'. The added 'luôn' in many lines also weakens the terse aphoristic tone."
+  },
+  "rust-async-await-primer": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "The translation is largely faithful but has noticeable translationese, especially 'một lồng nested phức tạp' in [8]; phrases like 'Sự khác biệt khác' and 'trong chính nó' also make it read less naturally."
+  },
+  "rust-async-ecosystem": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "Bản dịch trung thành và giữ được giọng điệu, nhưng còn một số cách dịch word-for-word như “Sản phẩm Tối thiểu Thực thi” và “futures không chi phí” khiến văn bản kém tự nhiên."
+  },
+  "rust-async-executor": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch trung thành, giữ nguyên các thuật ngữ kỹ thuật và nhất quán; chỉ còn một vài chỗ hơi dịch sát như 'chính executor' hoặc 'đặt lại bản thân vào hàng đợi' khiến văn phong chưa hoàn toàn tự nhiên."
+  },
+  "rust-book-ownership": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 3,
+   "comment": "The main weakness is literal, unnatural wording in places: 'Cái gì là Quyền sở hữu?', 'bộ sưu tập rác', and 'họ' referring to programs read like calques. The key term 'garbage collection' should be 'thu gom rác' or kept in English."
+  },
+  "rust-book-panic": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 3,
+   "terminology": 5,
+   "comment": "The translation is accurate and preserves all technical terms, but some phrasing is literal or unnatural, especially the title 'Để panic! hay không panic!' and 'bạn đang nguyên mẫu' for 'you're prototyping'; the Shakespearean tone of the title is not fully recreated."
+  },
+  "so-branch-prediction": {
+   "fidelity": 3,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 3,
+   "comment": "Main weaknesses are technical accuracy and wording: 'inertia' is mistranslated as 'động lượng' (momentum) instead of 'quán tính', and 'victim of branch prediction fail' is softened to 'bị lừa bởi dự đoán nhánh'."
+  },
+  "so-regex-html": {
+   "fidelity": 2,
+   "naturalness": 2,
+   "tone": 2,
+   "terminology": 2,
+   "comment": "Thuật ngữ 'regular language' bị dịch sai thành 'ngôn ngữ định kỳ' (nên là 'ngôn ngữ chính quy'), và một số cụm hài hước/ẩn dụ như 'unholy child', 'ritual infanticide' bị dịch lệch hoặc làm mất giọng văn."
+  },
+  "swift-modest-proposal": {
+   "fidelity": 2,
+   "naturalness": 3,
+   "tone": 3,
+   "terminology": 2,
+   "comment": "Several key terms are mistranslated, such as 'urged' as 'khuyến khích', 'gaming' as 'chơi cờ', 'parsimony' as 'lạc quan', 'consciences' as 'linh hồn', and 'mercy' as 'ân xá', which distorts the satirical list. The Vietnamese is mostly readable but has noticeable translationese in places."
+  },
+  "wodehouse-jeeves": {
+   "fidelity": 2,
+   "naturalness": 3,
+   "tone": 3,
+   "terminology": 2,
+   "comment": "Clear errors: 'fifty-one' is rendered as 'bốn mốt' (forty-one) and 'jute' is mistranslated as 'bông tơ'. The translation also reads literally ('Worple trên') and loses much of Wodehouse's light tone."
+  },
+  "wp-beans": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 3,
+   "terminology": 5,
+   "comment": "The main weakness is a clear mistranslation of \"don't be tempted to go further\" as \"đừng dám tiếp tục,\" which shifts the meaning toward \"don't dare continue.\" Some phrasing is also literal or translationese, and the colloquial punch of \"don't give 'em any ideas\" is lost in a formal literal rendering."
+  },
+  "wp-dont-bite-newcomers": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The main weakness is a clear mistranslation of 'unkind and rigid' as 'khắc nghiệt và lạnh lùng' ('rigid' should be 'cứng nhắc'), plus literal calques like 'Không có ý tưởng' for 'Not having a clue'."
+  },
+  "wp-not-a-dictionary": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 2,
+   "comment": "Several key terms are rendered with calques or non-standard equivalents (e.g., “phrasebook” as “sách câu”, “sister project” as “dự án chị gái”, “dictionary entry” as “mục nhập từ điển”), which weakens both precision and fluency."
+  },
+  "wp-template-regulars": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "The translation is mostly faithful but has noticeable translationese and a few small additions or shifts, such as 'Lý thuyết cho rằng' for 'Theoretically speaking' and 'giáo dục họ' for 'educating them'."
+  }
+ },
+ "failed": [],
+ "usage": {
+  "input": 36288,
+  "cachedInput": 17024,
+  "output": 98708
+ },
+ "costUsd": 0.1390192704,
+ "reasoning": {
+  "effort": "medium",
+  "reserveTokens": 16000
+ }
+}

@@ -1,0 +1,110 @@
+[
+ {
+  "id": "1l3o128o7o4",
+  "kind": "p",
+  "translate": true,
+  "source": "You are a victim of branch prediction fail.",
+  "text": "Bạn đang bị lừa bởi dự đoán nhánh.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "03noz7oq04n",
+  "kind": "heading",
+  "translate": true,
+  "source": "What is Branch Prediction?",
+  "text": "Dự đoán nhánh là gì?",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "15x3nropg9z",
+  "kind": "p",
+  "translate": true,
+  "source": "Consider a railroad junction. Now for the sake of argument, suppose this is back in the 1800s - before long-distance or radio communication.",
+  "text": "Hãy tưởng tượng một ngã tư đường sắt. Giả sử đây là năm 1800, trước khi có liên lạc đường dài hay radio.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1ju8q3vb8lp",
+  "kind": "p",
+  "translate": true,
+  "source": "You are a blind operator of a junction and you hear a train coming. You have no idea which way it is supposed to go. You stop the train to ask the driver which direction they want. And then you set the switch appropriately.",
+  "text": "Bạn là người điều khiển ngã tư mù lòa và nghe thấy một đoàn tàu tới. Bạn không biết đoàn tàu sẽ đi hướng nào. Bạn dừng tàu để hỏi lái xe muốn đi hướng nào, rồi đặt công tắc theo hướng đó.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0pdfm9pu6zf",
+  "kind": "p",
+  "translate": true,
+  "source": "Trains are heavy and have a lot of inertia, so they take forever to start up and slow down.",
+  "text": "Tàu nặng và có nhiều động lượng, nên chúng mất rất nhiều thời gian để khởi động và giảm tốc.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "153ezh30cig",
+  "kind": "p",
+  "translate": true,
+  "source": "Is there a better way? You guess which direction the train will go! If you guessed right, it continues on. If you guessed wrong, the driver will stop, back up, and yell at you to flip the switch. Then it can restart down the other path.",
+  "text": "Có cách nào tốt hơn không? Bạn đoán hướng tàu sẽ đi! Nếu đoán đúng, tàu tiếp tục. Nếu đoán sai, lái xe sẽ dừng, lùi lại và la mắng bạn để đổi công tắc. Sau đó tàu có thể khởi động lại trên đường khác.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "23x5d37wi1b",
+  "kind": "p",
+  "translate": true,
+  "source": "If you guess right every time, the train will never have to stop. If you guess wrong too often, the train will spend a lot of time stopping, backing up, and restarting.",
+  "text": "Nếu bạn đoán đúng mọi lần, tàu sẽ không bao giờ phải dừng. Nếu bạn đoán sai quá thường xuyên, tàu sẽ mất nhiều thời gian dừng lại, lùi lại và khởi động lại.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0tnw4hdljyf",
+  "kind": "p",
+  "translate": true,
+  "source": "Consider an if-statement: At the processor level, it is a branch instruction. You are a processor and you see a branch. You have no idea which way it will go. What do you do? You halt execution and wait until the previous instructions are complete. Then you continue down the correct path.",
+  "text": "Hãy xem một câu if: ở cấp độ bộ xử lý, đó là một lệnh nhánh. Bạn là bộ xử lý và thấy một nhánh. Bạn không biết nhánh sẽ đi hướng nào. Bạn làm gì? Bạn tạm dừng thực thi và chờ cho các lệnh trước hoàn thành. Sau đó bạn tiếp tục theo đường đúng.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1p2oh5q3h6c",
+  "kind": "p",
+  "translate": true,
+  "source": "This is branch prediction. I admit it's not the best analogy since the train could just signal the direction with a flag. But in computers, the processor doesn't know which direction a branch will go until the last moment.",
+  "text": "Đây là dự đoán nhánh. Tôi thừa nhận đây không phải là ví dụ tốt nhất vì tàu có thể chỉ báo hướng bằng cờ. Nhưng trong máy tính, bộ xử lý không biết nhánh sẽ đi hướng nào cho đến phút cuối cùng.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "24hxk39i6ia",
+  "kind": "p",
+  "translate": true,
+  "source": "As hinted from above, the culprit is this if-statement:",
+  "text": "Như đã gợi ý ở trên, nguyên nhân là câu if sau:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0d7z3i8qyal",
+  "kind": "code",
+  "translate": false,
+  "source": "if (data[c] >= 128)\n    sum += data[c];",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "0ey4uk2cjue",
+  "kind": "p",
+  "translate": true,
+  "source": "Notice that the data is evenly distributed between 0 and 255. When the data is sorted, roughly the first half of the iterations will not enter the if-statement. After that, they will all enter the if-statement. This is very friendly to the branch predictor since the branch consecutively goes the same direction many times.",
+  "text": "Nhận thấy dữ liệu được phân bố đều giữa 0 và 255. Khi dữ liệu được sắp xếp, khoảng một nửa lần lặp đầu tiên sẽ không vào câu if. Sau đó, tất cả sẽ vào câu if. Điều này rất thân thiện với bộ dự đoán nhánh vì nhánh liên tục đi cùng một hướng nhiều lần.",
+  "attempt": 1,
+  "error": null
+ }
+]

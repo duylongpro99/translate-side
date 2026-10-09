@@ -1,0 +1,29 @@
+[
+ {
+  "id": "1i01cqbep43",
+  "kind": "p",
+  "translate": true,
+  "source": "Wikipedia is not a dictionary, phrasebook, or a slang, jargon, or usage guide. Instead, the goal of this project is to create an encyclopedia. Our sister project Wiktionary aims to create a dictionary. It is the \"lexical companion to Wikipedia\", and the two often link to each other. Wiktionary welcomes all editors who wish to write a dictionary.",
+  "text": "Wikipedia không phải là từ điển, sách câu, hay hướng dẫn ngôn ngữ lóng, thuật ngữ hay cách dùng. Thay vào đó, mục tiêu của dự án này là tạo ra một bách khoa toàn thư. Dự án chị gái của chúng tôi, Wiktionary, nhằm xây dựng một từ điển. Nó là “đối tác từ vựng của Wikipedia”, và hai dự án thường liên kết với nhau. Wiktionary chào đón mọi biên tập viên muốn viết một từ điển.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0ephejzt990",
+  "kind": "p",
+  "translate": true,
+  "source": "Both dictionary entries at Wiktionary and encyclopedia articles at Wikipedia may start as stubs, but they are works in progress, to be expanded. Wikipedia articles should begin with a good definition, but they should provide other types of information about that topic as well. The full articles that Wikipedia's stubs grow into are very different from dictionary entries.",
+  "text": "Cả mục nhập từ điển trên Wiktionary và bài viết bách khoa trên Wikipedia có thể bắt đầu dưới dạng stub, nhưng chúng là những công trình đang được hoàn thiện, sẽ được mở rộng. Các bài viết Wikipedia nên bắt đầu với một định nghĩa tốt, nhưng cũng cần cung cấp các loại thông tin khác về chủ đề đó. Các bài viết hoàn chỉnh mà các stub của Wikipedia phát triển thành rất khác biệt với mục nhập từ điển.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "25h5d8jyswo",
+  "kind": "p",
+  "translate": true,
+  "source": "Each article in an encyclopedia is about a person, people, a concept, a place, an event, a thing, etc., whereas a dictionary entry is primarily about a word, an idiom, or a term and its meaning(s), usage and history.",
+  "text": "Mỗi bài viết trong một bách khoa nói về một người, một nhóm người, một khái niệm, một địa điểm, một sự kiện, một vật thể, v.v., trong khi một mục nhập từ điển chủ yếu nói về một từ, một thành ngữ hoặc một thuật ngữ cùng với nghĩa, cách dùng và lịch sử của nó.",
+  "attempt": 1,
+  "error": null
+ }
+]

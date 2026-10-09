@@ -1,0 +1,29 @@
+[
+ {
+  "id": "1i01cqbep43",
+  "kind": "p",
+  "translate": true,
+  "source": "Wikipedia is not a dictionary, phrasebook, or a slang, jargon, or usage guide. Instead, the goal of this project is to create an encyclopedia. Our sister project Wiktionary aims to create a dictionary. It is the \"lexical companion to Wikipedia\", and the two often link to each other. Wiktionary welcomes all editors who wish to write a dictionary.",
+  "text": "Wikipedia không phải là từ điển, sách cụm từ (phrasebook), hay cẩm nang về tiếng lóng, biệt ngữ hoặc cách sử dụng. Thay vào đó, mục tiêu của dự án này là xây dựng một bách khoa toàn thư. Dự án chị em của chúng ta là Wiktionary hướng tới việc tạo ra một từ điển. Đây là \"người bạn đồng hành về từ vựng của Wikipedia\", và hai trang này thường liên kết với nhau. Wiktionary chào đón tất cả các biên tập viên muốn viết từ điển.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0ephejzt990",
+  "kind": "p",
+  "translate": true,
+  "source": "Both dictionary entries at Wiktionary and encyclopedia articles at Wikipedia may start as stubs, but they are works in progress, to be expanded. Wikipedia articles should begin with a good definition, but they should provide other types of information about that topic as well. The full articles that Wikipedia's stubs grow into are very different from dictionary entries.",
+  "text": "Cả mục từ trên Wiktionary và bài viết bách khoa toàn thư trên Wikipedia đều có thể bắt đầu dưới dạng bài sơ khai (stub), nhưng chúng đều là những tác phẩm đang được thực hiện và sẽ còn được mở rộng. Các bài viết trên Wikipedia nên bắt đầu bằng một định nghĩa hay, nhưng chúng cũng cần cung cấp các loại thông tin khác về chủ đề đó. Các bài viết hoàn chỉnh phát triển từ các bài sơ khai của Wikipedia rất khác biệt so với các mục từ trong từ điển.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "25h5d8jyswo",
+  "kind": "p",
+  "translate": true,
+  "source": "Each article in an encyclopedia is about a person, people, a concept, a place, an event, a thing, etc., whereas a dictionary entry is primarily about a word, an idiom, or a term and its meaning(s), usage and history.",
+  "text": "Mỗi bài viết trong bách khoa toàn thư nói về một cá nhân, nhóm người, một khái niệm, địa điểm, sự kiện, sự vật, v.v., trong khi một mục từ trong từ điển chủ yếu nói về một từ, thành ngữ hoặc thuật ngữ cùng với (các) nghĩa, cách sử dụng và lịch sử của từ đó.",
+  "attempt": 1,
+  "error": null
+ }
+]

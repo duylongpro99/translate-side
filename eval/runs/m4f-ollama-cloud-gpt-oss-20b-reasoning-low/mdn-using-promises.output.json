@@ -1,0 +1,101 @@
+[
+ {
+  "id": "01sh8ofy9es",
+  "kind": "heading",
+  "translate": true,
+  "source": "Using promises",
+  "text": "Sử dụng promise",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "07qvmtgvka4",
+  "kind": "p",
+  "translate": true,
+  "source": "A `Promise` is an object representing the eventual completion or failure of an asynchronous operation. Since most people are consumers of already-created promises, this guide will explain consumption of returned promises before explaining how to create them.",
+  "text": "Một `Promise` là một đối tượng đại diện cho việc hoàn thành hoặc thất bại cuối cùng của một thao tác bất đồng bộ. Vì hầu hết mọi người là người tiêu thụ các promise đã được tạo sẵn, hướng dẫn này sẽ giải thích cách tiêu thụ promise trả về trước khi đi vào cách tạo chúng.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1hxurutb44l",
+  "kind": "p",
+  "translate": true,
+  "source": "Essentially, a promise is a returned object to which you attach callbacks, instead of passing callbacks into a function. Imagine a function, `createAudioFileAsync()`, which asynchronously generates a sound file given a configuration record and two callback functions: one called if the audio file is successfully created, and the other called if an error occurs.",
+  "text": "Nói một cách ngắn gọn, một promise là một đối tượng trả về mà bạn gắn các callback vào, thay vì truyền callback vào một hàm. Hãy tưởng tượng một hàm, `createAudioFileAsync()`, sẽ tạo một tệp âm thanh bất đồng bộ dựa trên một bản ghi cấu hình và hai hàm callback: một được gọi khi tệp âm thanh được tạo thành công, và một được gọi khi có lỗi.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "2ee5ddkvjbd",
+  "kind": "p",
+  "translate": true,
+  "source": "Here's some code that uses `createAudioFileAsync()`:",
+  "text": "Dưới đây là một đoạn mã sử dụng `createAudioFileAsync()`:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "14hdv817tk4",
+  "kind": "code",
+  "translate": false,
+  "source": "function successCallback(result) {\n  console.log(`Audio file ready at URL: ${result}`);\n}\n\nfunction failureCallback(error) {\n  console.error(`Error generating audio file: ${error}`);\n}\n\ncreateAudioFileAsync(audioSettings, successCallback, failureCallback);",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "0l0rcuqhwph",
+  "kind": "p",
+  "translate": true,
+  "source": "If `createAudioFileAsync()` were rewritten to return a promise, you would attach your callbacks to it instead:",
+  "text": "Nếu `createAudioFileAsync()` được viết lại để trả về một promise, bạn sẽ gắn các callback của mình vào promise đó thay vì truyền vào hàm:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1wh6ser031w",
+  "kind": "code",
+  "translate": false,
+  "source": "createAudioFileAsync(audioSettings).then(successCallback, failureCallback);",
+  "text": null,
+  "attempt": null,
+  "error": null
+ },
+ {
+  "id": "1bbu8h2epim",
+  "kind": "p",
+  "translate": true,
+  "source": "This convention has several advantages. We will explore each one.",
+  "text": "Quy tắc này có nhiều ưu điểm. Chúng ta sẽ đi sâu vào từng điểm.",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "053vim222jb",
+  "kind": "heading",
+  "translate": true,
+  "source": "Chaining",
+  "text": "Chuỗi promise",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "1ay1epbwq26",
+  "kind": "p",
+  "translate": true,
+  "source": "A common need is to execute two or more asynchronous operations back to back, where each subsequent operation starts when the previous operation succeeds, with the result from the previous step. In the old days, doing several asynchronous operations in a row would lead to the classic [link]callback hell[/link]:",
+  "text": "Một nhu cầu thường gặp là thực thi hai hoặc nhiều thao tác bất đồng bộ liên tiếp, trong đó mỗi thao tác tiếp theo bắt đầu khi thao tác trước đó thành công, sử dụng kết quả từ bước trước. Trong thời gian qua, việc thực hiện nhiều thao tác bất đồng bộ một cách tuần tự thường dẫn đến cái gọi là [link]callback hell[/link]:",
+  "attempt": 1,
+  "error": null
+ },
+ {
+  "id": "0lls9a9zu58",
+  "kind": "code",
+  "translate": false,
+  "source": "doSomething(function (result) {\n  doSomethingElse(result, function (newResult) {\n    doThirdThing(newResult, function (finalResult) {\n      console.log(`Got the final result: ${finalResult}`);\n    }, failureCallback);\n  }, failureCallback);\n}, failureCallback);",
+  "text": null,
+  "attempt": null,
+  "error": null
+ }
+]

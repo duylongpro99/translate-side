@@ -130,15 +130,21 @@ async function* attempt(client: OpenAI, req: NormalizedRequest, quirks: Quirks):
 const MAX_MODELS = 500;
 
 export function createOpenAIAdapter(options: AdapterOptions = {}): ProtocolAdapter {
-  /** The models, and whether the listing is OpenAI-shaped (`object: "list"`, §4.2.5 step 2). */
+  /**
+   * The models, and whether the listing is OpenAI-shaped (§4.2.5 step 2): `object: "list"`, or, for a
+   * gateway that leaves `object` out (OpenRouter sends `data`, `total_count`, `links`), a non-empty `data`
+   * whose entries are not Anthropic's (`type: "model"`).
+   */
   const list = async (conn: ResolvedConnection): Promise<{ models: ModelInfo[]; shape: boolean }> => {
     const page = await clientFor(conn, options).models.list();
     const models: ModelInfo[] = [];
+    let anthropicEntry = false;
     for await (const m of page) {
+      if ((m as { type?: unknown }).type === 'model') anthropicEntry = true;
       models.push({ id: m.id });
       if (models.length >= MAX_MODELS) break;
     }
-    return { models, shape: page.object === 'list' };
+    return { models, shape: page.object === 'list' || (page.object === undefined && models.length > 0 && !anthropicEntry) };
   };
   const listModels = async (conn: ResolvedConnection): Promise<ModelInfo[]> => (await list(conn)).models;
   return {
