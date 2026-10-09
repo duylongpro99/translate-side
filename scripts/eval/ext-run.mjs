@@ -3,7 +3,7 @@
 // Testing, a fixture page served from 127.0.0.1, one provider seeded into storage, the panel driven to
 // translate the page, a screenshot of the result. Needs playwright-core (not a dependency of this repo):
 //   PLAYWRIGHT_CORE=/path/to/node_modules/playwright-core  CHROME=<Chrome for Testing binary>
-//   node scripts/eval/ext-run.mjs <provider> [--fixture goblog-pipelines] [--out dir] [--model id] [--reasoning low --reserve 6000]
+//   node scripts/eval/ext-run.mjs <provider> [--fixture goblog-pipelines] [--out dir] [--model id] [--reasoning low --reserve 6000] [--protocol auto|anthropic-messages]
 // Providers: gemini | ollama-cloud | apibox | anthropic | openrouter | openrouter-anthropic (keys from .env, never printed).
 // The build is copied to a temp dir with host_permissions for the page and the provider origin added, because a
 // headless run cannot answer Chrome's permission prompt (the permission request itself is covered by unit tests).
@@ -61,8 +61,11 @@ try {
   const local = { [`secret:${P.conn}`]: key, privacyNotice: { version: 1, at: 1 } };
   if (P.model) {
     const pid = `${P.conn}-${P.model.replace(/[^a-z0-9]+/gi, '-')}`;
-    sync[`conn:${P.conn}`] = { id: P.conn, label: P.conn, presetId: P.presetId, protocol: P.protocol, baseUrl: P.baseUrl, auth: { style: P.auth }, quirks: {}, status: 'ok' };
-    sync[`profile:${pid}`] = { id: pid, connectionId: P.conn, model: P.model, maxConcurrency: P.max, chunkTokens: P.chunk, ...(opt('reasoning', '') ? { quirks: { reasoning: { control: 'effort', lowest: opt('reasoning', ''), reserveTokens: Number(opt('reserve', '6000')) } } } : {}) };
+    // `--protocol auto` (OpenRouter): what Auto-detect saves on a dual-protocol gateway (src/shared/connect.ts, per-protocol auth);
+    // `--protocol anthropic-messages` forces that path (profile protocolOverride).
+    const auto = opt('protocol', '') === 'auto' || opt('protocol', '') === 'anthropic-messages';
+    sync[`conn:${P.conn}`] = { id: P.conn, label: P.conn, presetId: P.presetId, protocol: auto ? 'auto' : P.protocol, baseUrl: P.baseUrl, auth: { style: P.auth }, quirks: {}, status: 'ok', ...(auto ? { detectedProtocols: ['openai-chat', 'anthropic-messages'], authByProtocol: { 'anthropic-messages': { style: 'x-api-key' }, 'openai-chat': { style: 'bearer' } } } : {}) };
+    sync[`profile:${pid}`] = { id: pid, connectionId: P.conn, model: P.model, maxConcurrency: P.max, chunkTokens: P.chunk, ...(opt('protocol', '') === 'anthropic-messages' ? { protocolOverride: 'anthropic-messages' } : {}), ...(opt('reasoning', '') ? { quirks: { reasoning: { control: 'effort', lowest: opt('reasoning', ''), reserveTokens: Number(opt('reserve', '6000')) } } } : {}) };
     sync.routing = { translate: pid };
   } else sync.routing = { translate: P.profile };
   await sw.evaluate(async ([s, l]) => { await chrome.storage.sync.set(s); await chrome.storage.local.set(l); }, [sync, local]);
