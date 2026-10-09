@@ -226,3 +226,26 @@ body {
 .prov__switch select {
   font: inherit;
 }
+
+.prov__protocol {
+  border: none;
+  padding: 0;
+  margin: 8px 0;
+}
+.prov__protocol legend {
+  padding: 0;
+  margin-bottom: 4px;
+}
+.prov__radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.prov__radios label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.prov__radios input {
+  margin: 0;
+}

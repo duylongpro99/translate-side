@@ -44,12 +44,22 @@ interface TranslateRoute {
 function useTranslateRoute(api: Browser): TranslateRoute {
   const [route, setRoute] = useState<TranslateRoute>({ connection: DEFAULT_CONNECTION, profile: DEFAULT_PROFILE });
   useEffect(() => {
-    resolveRoute(api, 'translate').then(
-      (r) => {
-        if (r.ok) setRoute({ connection: r.connection, profile: r.profile });
-      },
-      () => {},
-    );
+    const load = () =>
+      resolveRoute(api, 'translate').then(
+        (r) => {
+          if (r.ok) setRoute({ connection: r.connection, profile: r.profile });
+        },
+        () => {},
+      );
+    void load();
+    // A route chosen or a key saved in Providers shows here at once (tester C1 #8).
+    const onChange = () => void load();
+    api.storage.sync.onChanged.addListener(onChange);
+    api.storage.local.onChanged.addListener(onChange);
+    return () => {
+      api.storage.sync.onChanged.removeListener(onChange);
+      api.storage.local.onChanged.removeListener(onChange);
+    };
   }, [api]);
   return route;
 }

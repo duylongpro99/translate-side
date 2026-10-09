@@ -103,14 +103,23 @@ describe('Test connection (plan M4-E5)', () => {
 
   it('Ollama cloud: the listing is public, so the key is checked with a 1-token chat call (S4)', async () => {
     const s = server((h) => (path(h.url) === '/v1/models' ? openaiList('gpt-oss:120b') : { status: 401, body: { error: 'unauthorized' } }));
-    const result = await testConnection(input('ollama-cloud'), ports(s.fetch));
+    const result = await testConnection(input('ollama-cloud', { model: 'gpt-oss:120b' }), ports(s.fetch));
     expect(result.ok).toBe(false);
     expect(!result.ok && result.error.kind).toBe('auth');
     expect(s.hits.map((h) => path(h.url))).toEqual(['/v1/models', '/v1/chat/completions']);
     expect(s.hits[1]?.body).toMatchObject({ model: 'gpt-oss:120b' });
-    // With no model listed and none typed, it can't: the result says the key is unchecked.
-    const empty = server(() => openaiList());
-    expect(await testConnection(input('ollama-cloud'), ports(empty.fetch))).toMatchObject({ ok: true, keyUnchecked: true });
+  });
+
+  it('with no model chosen, never picks one for the 1-token call: it lists the models and says to pick one (tester C1 #6)', async () => {
+    // The first listed model may be outside the plan: its refusal would read as a key problem.
+    const s = server((h) => (path(h.url) === '/v1/models' ? openaiList('kimi-k3', 'gpt-oss:120b') : { status: 403, body: { error: 'this model requires a subscription' } }));
+    const result = await testConnection(input('ollama-cloud'), ports(s.fetch));
+    expect(result).toMatchObject({ ok: true, modelUnchecked: true, keyUnchecked: true, models: [{ id: 'kimi-k3' }, { id: 'gpt-oss:120b' }] });
+    expect(s.hits.map((h) => path(h.url))).toEqual(['/v1/models']);
+    const auto = await testConnection(input('custom-auto', { baseUrl: 'https://ollama.com/v1' }), ports(s.fetch));
+    expect(auto).toMatchObject({ ok: true, modelUnchecked: true });
+    expect(auto.ok && 'keyUnchecked' in auto).toBe(false);
+    expect(s.hits.some((h) => path(h.url).endsWith('/chat/completions') || path(h.url).endsWith('/messages'))).toBe(false);
   });
 
   it('fixes a pasted /chat/completions and tries a missing /v1 on a 404', async () => {
@@ -133,7 +142,7 @@ describe('auto-detect (§4.2.5, plan M4-E6)', () => {
   /** An OpenRouter-style gateway: OpenAI under /api/v1, Anthropic under /api (its /v1/messages). */
   const gateway = (h: Hit): Reply => {
     const p = path(h.url);
-    // Both SDKs send the Bearer key here; the Anthropic one also sends anthropic-version.
+    // The Anthropic SDK sends anthropic-version (and, on Auto-detect, x-api-key).
     if (p === '/api/v1/models') return h.headers['anthropic-version'] ? anthropicList('anthropic/claude-haiku-4.5') : openaiList('openai/gpt-5-mini', 'anthropic/claude-haiku-4.5');
     if (p === '/api/v1/chat/completions') return openaiOk;
     if (p === '/api/v1/messages') return anthropicOk;
@@ -167,15 +176,60 @@ describe('auto-detect (§4.2.5, plan M4-E6)', () => {
       if (p === '/v1/chat/completions') return openaiOk;
       return notFound;
     });
-    const result = await testConnection(input('custom-auto', { baseUrl: 'https://llm.example.com/v1' }), ports(s.fetch));
+    const result = await testConnection(input('custom-auto', { baseUrl: 'https://llm.example.com/v1', model: 'llama' }), ports(s.fetch));
     expect(result).toMatchObject({ ok: true, detected: ['openai-chat'], protocol: 'openai-chat' });
   });
 
   it('reports the failure that got furthest when neither works', async () => {
     const s = server((h) => (path(h.url).endsWith('/models') && h.headers['authorization'] ? openaiList('m') : path(h.url).endsWith('/chat/completions') ? { status: 401, body: { error: { message: 'bad key' } } } : notFound));
-    const result = await testConnection(input('custom-auto', { baseUrl: 'https://llm.example.com/v1' }), ports(s.fetch));
+    const result = await testConnection(input('custom-auto', { baseUrl: 'https://llm.example.com/v1', model: 'm' }), ports(s.fetch));
     expect(result).toMatchObject({ ok: false, protocol: 'openai-chat' });
     expect(!result.ok && result.error.kind).toBe('auth');
+  });
+
+  it('when neither listing has its shape, says neither format answered (review C2 N3)', async () => {
+    const s = server((h) => (path(h.url).endsWith('/models') ? { status: 200, body: { models: ['a'] } } : notFound));
+    const result = await testConnection(input('custom-auto', { baseUrl: 'https://llm.example.com/v1' }), ports(s.fetch));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(connectMessage(result.error, { preset: presetFor('custom-auto'), baseUrl: result.baseUrl })).toEqual({ status: 'Wrong base URL', text: 'Neither format answered as expected; check the base URL.' });
+  });
+
+  it('probes the Anthropic path with x-api-key + anthropic-version and the OpenAI path with Bearer (review C2 N2, §4.2.5 step 1)', async () => {
+    const s = server((h) => {
+      const p = path(h.url);
+      if (p === '/v1/models' && h.headers['x-api-key'] === 'sk-test-0123456789' && h.headers['anthropic-version'] && !h.headers['authorization']) return anthropicList('claude-haiku-4-5');
+      if (p === '/v1/models' && h.headers['authorization'] === 'Bearer sk-test-0123456789' && !h.headers['x-api-key']) return openaiList('claude-haiku-4-5');
+      if (p === '/v1/messages' && h.headers['x-api-key']) return anthropicOk;
+      if (p === '/v1/chat/completions' && h.headers['authorization']) return openaiOk;
+      return { status: 401, body: { error: { message: 'wrong auth' } } };
+    });
+    // The form's auth (Bearer, the Custom default) does not decide the Anthropic path.
+    const result = await testConnection(input('custom-auto', { baseUrl: 'https://gw.example.com/v1', auth: { style: 'bearer' }, model: 'claude-haiku-4-5' }), ports(s.fetch));
+    expect(result).toMatchObject({
+      ok: true,
+      detected: ['anthropic-messages', 'openai-chat'],
+      protocol: 'anthropic-messages',
+      auth: { style: 'x-api-key' },
+      authByProtocol: { 'anthropic-messages': { style: 'x-api-key' }, 'openai-chat': { style: 'bearer' } },
+    });
+  });
+
+  it('falls back to Bearer on an Anthropic path that refuses x-api-key, and records it', async () => {
+    const s = server((h) => {
+      if (!h.headers['authorization']) return { status: 401, body: { error: { message: 'missing bearer' } } };
+      return gateway(h);
+    });
+    const result = await testConnection(input('custom-auto', { baseUrl: 'https://openrouter.ai/api/v1', model: 'anthropic/claude-haiku-4.5' }), ports(s.fetch));
+    expect(result).toMatchObject({ ok: true, detected: ['anthropic-messages', 'openai-chat'], auth: { style: 'bearer' } });
+    expect(result.ok && result.authByProtocol).toBeUndefined();
+  });
+
+  it('a custom header (or no auth) is the user\'s choice and goes to both paths', async () => {
+    const s = server((h) => (h.headers['api-key'] === 'sk-test-0123456789' ? gateway(h) : { status: 401, body: { error: { message: 'no' } } }));
+    const result = await testConnection(input('custom-auto', { baseUrl: 'https://openrouter.ai/api/v1', auth: { style: 'custom-header', headerName: 'api-key' }, model: 'openai/gpt-5-mini' }), ports(s.fetch));
+    expect(result).toMatchObject({ ok: true, detected: ['anthropic-messages', 'openai-chat'], auth: { style: 'custom-header', headerName: 'api-key' } });
+    expect(s.hits.every((h) => h.headers['api-key'] === 'sk-test-0123456789' && !h.headers['x-api-key'] && !h.headers['authorization'])).toBe(true);
   });
 });
 

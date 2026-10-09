@@ -4,7 +4,7 @@ import { presetFor } from '@/shared/presets';
 import { ANTHROPIC_CONNECTION } from '@/shared/settings';
 import { draftFromConnection, draftFromPreset, fieldsFor, originMoved, parseLines, quirksOf, testInputOf, toConnection, toProfile, usableStoredKey } from './form.ts';
 
-const passed = (over: Partial<Extract<TestResult, { ok: true }>> = {}): TestResult => ({ ok: true, protocol: 'openai-chat', detected: ['openai-chat'], baseUrl: 'https://gw.example.com/v1', models: [], fixes: [], checks: [], ...over });
+const passed = (over: Partial<Extract<TestResult, { ok: true }>> = {}): TestResult => ({ ok: true, protocol: 'openai-chat', detected: ['openai-chat'], baseUrl: 'https://gw.example.com/v1', models: [], fixes: [], auth: { style: 'bearer' }, checks: [], ...over });
 
 describe('connection form (plan M4-E3)', () => {
   it('shows only the relevant fields per preset (§4.3.3 step 1)', () => {
@@ -91,5 +91,18 @@ describe('a connection moved to another origin (review C1 #1, §4.3.4)', () => {
     expect(usableStoredKey(draft('https://evil.example.net/v1'), editing, 'sk-stored')).toBeUndefined();
     expect(testInputOf(draft('https://evil.example.net/v1'), usableStoredKey(draft('https://evil.example.net/v1'), editing, 'sk-stored')).apiKey).toBeUndefined();
     expect(usableStoredKey(draft('https://anything.example/v1'), undefined, undefined)).toBeUndefined();
+  });
+});
+
+describe('the auth Auto-detect found (review C2 N2)', () => {
+  it('is what the connection saves, per protocol when the two paths differ; an explicit protocol keeps the form\'s', () => {
+    const both = { 'anthropic-messages': { style: 'x-api-key' as const }, 'openai-chat': { style: 'bearer' as const } };
+    const auto = toConnection({ ...draftFromPreset('custom-auto'), baseUrl: 'https://gw.example.com/v1' }, 'g', undefined, passed({ detected: ['anthropic-messages', 'openai-chat'], protocol: 'anthropic-messages', auth: { style: 'x-api-key' }, authByProtocol: both }), { status: 'ok' });
+    expect(auto).toMatchObject({ protocol: 'auto', auth: { style: 'x-api-key' }, authByProtocol: both });
+    const single = toConnection({ ...draftFromPreset('custom-auto'), baseUrl: 'https://gw.example.com/v1' }, 'g', undefined, passed({ auth: { style: 'bearer' } }), { status: 'ok' });
+    expect(single).toMatchObject({ protocol: 'openai-chat', auth: { style: 'bearer' } });
+    expect(single).not.toHaveProperty('authByProtocol');
+    const explicit = toConnection({ ...draftFromPreset('custom-openai'), baseUrl: 'https://gw.example.com/v1', authStyle: 'custom-header', headerName: 'api-key' }, 'c', undefined, passed({ auth: { style: 'bearer' } }), { status: 'ok' });
+    expect(explicit.auth).toEqual({ style: 'custom-header', headerName: 'api-key' });
   });
 });

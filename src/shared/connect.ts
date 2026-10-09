@@ -95,8 +95,10 @@ export interface ProtocolCheck {
   protocol: Protocol;
   baseUrl: string;
   models?: ModelInfo[];
-  /** The model the 1-token call used; undefined when none was known (the key is then checked by the listing only). */
+  /** The model the 1-token call used; undefined when none was chosen (the key is then checked by the listing only). */
   chatModel?: string;
+  /** The auth this protocol was tried with (on Auto-detect, its own style, §4.2.5 step 1). */
+  auth: TestInput['auth'];
   error?: LLMError;
 }
 
@@ -111,8 +113,14 @@ export type TestResult =
       baseUrl: string;
       models: ModelInfo[];
       fixes: UrlFix[];
-      /** No model was known, so a preset that checks its key with a chat call could not: pick a model and test again. */
+      /** No model was chosen, so no 1-token call was made: pick one from the list and test again. */
+      modelUnchecked?: boolean;
+      /** And this preset checks its key with that call, so the key is not checked yet. */
       keyUnchecked?: boolean;
+      /** The auth to save: the chosen protocol's. */
+      auth: TestInput['auth'];
+      /** On a dual-protocol gateway whose two paths took different auth styles, each one's. */
+      authByProtocol?: Partial<Record<Protocol, TestInput['auth']>>;
       checks: ProtocolCheck[];
     }
   | { ok: false; error: LLMError; baseUrl: string; fixes: UrlFix[]; models?: ModelInfo[]; protocol?: Protocol; checks: ProtocolCheck[] };
@@ -126,18 +134,22 @@ export const isClaudeModel = (model: string | undefined) => model !== undefined 
  */
 export const preferredProtocol = (model: string | undefined): Protocol => (isClaudeModel(model) ? 'anthropic-messages' : 'openai-chat');
 
-/** The model the 1-token call uses when the form has none: a Claude one on Anthropic, else the first listed. */
-function modelForChat(models: readonly ModelInfo[], protocol: Protocol): string | undefined {
-  if (protocol === 'anthropic-messages') return (models.find((m) => isClaudeModel(m.id)) ?? models[0])?.id;
-  return models[0]?.id;
+/**
+ * The auth a protocol is first tried with. On Auto-detect each path gets its own style (§4.2.5
+ * step 1: the Anthropic one x-api-key, which the SDK sends with anthropic-version; the OpenAI one
+ * Bearer); a custom header or no auth is the user's choice and is kept for both.
+ */
+export function autoAuth(input: Pick<TestInput, 'protocol' | 'auth'>, protocol: Protocol): TestInput['auth'] {
+  if (input.protocol !== 'auto' || input.auth.style === 'custom-header' || input.auth.style === 'none') return input.auth;
+  return { style: protocol === 'anthropic-messages' ? 'x-api-key' : 'bearer' };
 }
 
-function resolved(input: TestInput, protocol: Protocol, baseUrl: string, hasHostPermission: () => Promise<boolean>): ResolvedConnection {
+function resolved(input: TestInput, protocol: Protocol, baseUrl: string, hasHostPermission: () => Promise<boolean>, auth: TestInput['auth'] = input.auth): ResolvedConnection {
   return {
     id: 'test',
     protocol,
     baseUrl,
-    auth: input.auth,
+    auth,
     ...(input.apiKey === undefined || input.apiKey === '' ? {} : { apiKey: input.apiKey.trim() }),
     ...(input.extraHeaders ? { extraHeaders: input.extraHeaders } : {}),
     ...(input.queryParams ? { queryParams: input.queryParams } : {}),
@@ -158,32 +170,48 @@ async function chatOnce(adapter: ProtocolAdapter, conn: ResolvedConnection, mode
 
 const isWrongPath = (e: LLMError) => e.kind === 'bad_request' && e.status === 404;
 
+/** A listing that answered, but not in the protocol's shape (Auto-detect only). */
+const shapeMismatch = (protocol: Protocol): LLMError => ({ kind: 'bad_request', message: `The model list is not ${protocol === 'anthropic-messages' ? 'Anthropic' : 'OpenAI'}-shaped` });
+/** Auto-detect when both listings answered, neither in its protocol's shape (review C2 N3). */
+const NEITHER_FORMAT = 'Neither format answered as expected; check the base URL.';
+const isShapeMismatch = (c: ProtocolCheck) => c.error !== undefined && c.error.message === shapeMismatch(c.protocol).message;
+
 async function checkProtocol(input: TestInput, protocol: Protocol, base: string, ports: TestPorts, signal: AbortSignal): Promise<ProtocolCheck & { fix?: UrlFix }> {
   const adapter = ports.adapter(protocol);
   let baseUrl = endpointBase(protocol, base);
+  let auth = autoAuth(input, protocol);
   let fix: UrlFix | undefined;
-  let probe = await adapter.probe(resolved(input, protocol, baseUrl, ports.hasHostPermission));
+  let probe = await adapter.probe(resolved(input, protocol, baseUrl, ports.hasHostPermission, auth));
+  // A gateway may take Bearer on its Anthropic path too (OpenRouter does): tried once on Auto-detect.
+  if (!probe.ok && probe.error.kind === 'auth' && input.protocol === 'auto' && auth.style === 'x-api-key') {
+    const bearer: TestInput['auth'] = { style: 'bearer' };
+    const retry = await adapter.probe(resolved(input, protocol, baseUrl, ports.hasHostPermission, bearer));
+    if (retry.ok) {
+      auth = bearer;
+      probe = retry;
+    }
+  }
   // §4.2.5: a missing /v1. Only tried where the API needs a version and the URL has none.
   if (!probe.ok && isWrongPath(probe.error) && protocol === 'openai-chat' && !hasVersionSegment(baseUrl)) {
     const withV1 = `${baseUrl}/v1`;
-    const retry = await adapter.probe(resolved(input, protocol, withV1, ports.hasHostPermission));
+    const retry = await adapter.probe(resolved(input, protocol, withV1, ports.hasHostPermission, auth));
     if (retry.ok) {
       fix = { reason: 'missing-v1', from: baseUrl, to: withV1 };
       baseUrl = withV1;
       probe = retry;
     }
   }
-  if (!probe.ok) return { protocol, baseUrl, error: probe.error };
+  if (!probe.ok) return { protocol, baseUrl, auth, error: probe.error };
   // §4.2.5 steps 1–2: on Auto-detect a protocol is a candidate only when its listing has that
   // protocol's shape (a 200 from a gateway that lists for both is not enough).
-  if (input.protocol === 'auto' && probe.shape !== true) {
-    return { protocol, baseUrl, error: { kind: 'bad_request', message: `The model list is not ${protocol === 'anthropic-messages' ? 'Anthropic' : 'OpenAI'}-shaped` } };
-  }
+  if (input.protocol === 'auto' && probe.shape !== true) return { protocol, baseUrl, auth, error: shapeMismatch(protocol) };
   const models = probe.models ?? [];
-  const chatModel = input.model?.trim() || (input.preset.keyCheck === 'chat' || input.protocol === 'auto' ? modelForChat(models, protocol) : undefined);
-  const out: ProtocolCheck & { fix?: UrlFix } = { protocol, baseUrl, models, ...(fix ? { fix } : {}) };
+  // Only the model the user chose: a listed one picked for them may be outside their plan, and its
+  // refusal would read as a problem with the key (tester C1 #6).
+  const chatModel = input.model?.trim() || undefined;
+  const out: ProtocolCheck & { fix?: UrlFix } = { protocol, baseUrl, auth, models, ...(fix ? { fix } : {}) };
   if (chatModel === undefined) return out;
-  const error = await chatOnce(adapter, resolved(input, protocol, baseUrl, ports.hasHostPermission), chatModel, signal);
+  const error = await chatOnce(adapter, resolved(input, protocol, baseUrl, ports.hasHostPermission, auth), chatModel, signal);
   return { ...out, chatModel, ...(error ? { error } : {}) };
 }
 
@@ -210,19 +238,37 @@ export async function testConnection(input: TestInput, ports: TestPorts): Promis
   for (const protocol of protocols) checks.push(await checkProtocol(input, protocol, url, ports, signal));
   const working = checks.filter((c) => c.error === undefined);
   if (working.length === 0) {
+    if (checks.length > 1 && checks.every(isShapeMismatch)) {
+      return { ok: false, error: { kind: 'bad_request', message: NEITHER_FORMAT }, baseUrl: url, fixes, checks };
+    }
     const shown = worstFirst(checks) as ProtocolCheck;
     return { ok: false, error: shown.error as LLMError, baseUrl: shown.baseUrl, fixes, protocol: shown.protocol, ...(shown.models ? { models: shown.models } : {}), checks };
   }
   const detected = working.map((c) => c.protocol);
-  const model = input.model?.trim() || working.find((c) => c.protocol === 'openai-chat')?.chatModel || working[0]?.chatModel;
+  const model = input.model?.trim() || undefined;
   const chosen = working.find((c) => c.protocol === preferredProtocol(model)) ?? (working[0] as ProtocolCheck & { fix?: UrlFix });
   // What is saved: on Auto-detect the OpenAI-style URL when that works (the Anthropic one is
   // derived from it at runtime); otherwise the URL of the protocol that works.
   const saved = working.find((c) => c.protocol === 'openai-chat') ?? chosen;
   const allFixes = [...fixes, ...(saved.fix ? [saved.fix] : [])];
   if (saved.protocol === 'anthropic-messages' && saved.baseUrl !== url) allFixes.push({ reason: 'anthropic-v1', from: url, to: saved.baseUrl });
-  const keyUnchecked = input.preset.keyCheck === 'chat' && chosen.chatModel === undefined;
-  return { ok: true, protocol: chosen.protocol, detected, baseUrl: saved.baseUrl, models: chosen.models ?? [], fixes: allFixes, ...(keyUnchecked ? { keyUnchecked } : {}), checks };
+  const modelUnchecked = model === undefined;
+  const keyUnchecked = input.preset.keyCheck === 'chat' && modelUnchecked;
+  const differ = working.some((c) => c.auth.style !== chosen.auth.style);
+  const authByProtocol = differ ? Object.fromEntries(working.map((c) => [c.protocol, c.auth])) : undefined;
+  return {
+    ok: true,
+    protocol: chosen.protocol,
+    detected,
+    baseUrl: saved.baseUrl,
+    models: chosen.models ?? [],
+    fixes: allFixes,
+    ...(modelUnchecked ? { modelUnchecked } : {}),
+    ...(keyUnchecked ? { keyUnchecked } : {}),
+    auth: chosen.auth,
+    ...(authByProtocol ? { authByProtocol } : {}),
+    checks,
+  };
 }
 
 // ---- What the settings say (§4.3.5, §4.3.6) ---------------------------------------------------
@@ -315,6 +361,7 @@ export function connectMessage(error: LLMError, ctx: MessageContext): ConnectMes
         const text = `Nothing at ${ctx.baseUrl} answers as ${api}. Check the base URL.`;
         return ctx.suggestion ? { status: 'Wrong base URL', text: `${text} Did you mean ${ctx.suggestion}?`, action: 'use-url', suggestion: ctx.suggestion } : { status: 'Wrong base URL', text };
       }
+      if (error.message === NEITHER_FORMAT) return { status: 'Wrong base URL', text: NEITHER_FORMAT };
       if (error.status === undefined && /base URL/i.test(error.message)) return { status: 'Invalid base URL', text: 'Enter a base URL that starts with https:// (or http:// for a local server).' };
       return { status: 'Test failed', text: error.message };
     default:

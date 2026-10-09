@@ -704,6 +704,16 @@ describe('dual-protocol base URL at runtime (§4.2.5)', () => {
     expect((await resolveConnection(f.api, gw, prof('anthropic-messages')))?.baseUrl).toBe('https://openrouter.ai/api');
     expect((await resolveConnection(f.api, gw, prof('openai-chat')))?.baseUrl).toBe('https://openrouter.ai/api/v1');
   });
+
+  it('each protocol uses the auth Auto-detect found for it (review C2 N2), kept through a storage round trip', async () => {
+    const raw = { ...MY_ANTHROPIC, id: 'gw2', protocol: 'auto', baseUrl: 'https://gw.example.com/v1', detectedProtocols: ['anthropic-messages', 'openai-chat'], auth: { style: 'x-api-key' }, authByProtocol: { 'anthropic-messages': { style: 'x-api-key' }, 'openai-chat': { style: 'bearer' }, bogus: { style: 'bearer' }, auto: { style: 'none' } } };
+    const gw = cleanConnection(raw) as ProviderConnection;
+    expect(gw.authByProtocol).toEqual({ 'anthropic-messages': { style: 'x-api-key' }, 'openai-chat': { style: 'bearer' } });
+    const f = permApi({ local: { 'secret:gw2': 'sk-gw-0123456789' } });
+    const prof = (protocolOverride: 'anthropic-messages' | 'openai-chat'): ModelProfile => ({ id: 'p', connectionId: 'gw2', model: 'm', maxConcurrency: 2, chunkTokens: 1200, protocolOverride });
+    expect((await resolveConnection(f.api, gw, prof('anthropic-messages')))?.auth).toEqual({ style: 'x-api-key' });
+    expect((await resolveConnection(f.api, gw, prof('openai-chat')))?.auth).toEqual({ style: 'bearer' });
+  });
 });
 
 describe('saveConnectionStatus (the guide\'s auto re-test, review C1 #5)', () => {

@@ -167,13 +167,17 @@ export function toConnection(d: ConnectionDraft, id: string, previous: ProviderC
   const baseUrl = passed ? passed.baseUrl : fixBaseUrl(d.baseUrl).url;
   const protocol: Protocol | 'auto' = d.protocol === 'auto' ? (passed && passed.detected.length === 1 ? (passed.detected[0] as Protocol) : 'auto') : d.protocol;
   const detected = passed ? passed.detected : previous?.detectedProtocols;
+  // Auto-detect found which auth each path takes (§4.2.5 step 1): that is what is saved.
+  const learned = d.protocol === 'auto' && passed ? passed : undefined;
+  const authByProtocol = learned ? learned.authByProtocol : d.protocol === 'auto' ? previous?.authByProtocol : undefined;
   return {
     id,
     label: d.label.trim() || preset.label,
     presetId: preset.id,
     protocol,
     baseUrl,
-    auth: auth(d),
+    auth: learned ? learned.auth : auth(d),
+    ...(authByProtocol ? { authByProtocol } : {}),
     ...(extraHeaders ? { extraHeaders } : {}),
     ...(queryParams ? { queryParams } : {}),
     quirks: quirksOf(d, previous?.quirks ?? preset.quirks),

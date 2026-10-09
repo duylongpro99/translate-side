@@ -28,6 +28,11 @@ export interface ProviderConnection {
   /** From the preset, refined by probing and learned errors (§4.2.4, persisted by providers.ts saveLearnedQuirk). */
   quirks: Quirks;
   detectedProtocols?: Protocol[];
+  /**
+   * A dual-protocol gateway's auth per protocol, when the two differ (Auto-detect probes the
+   * Anthropic path with x-api-key and the OpenAI path with Bearer, §4.2.5 step 1). Over `auth`.
+   */
+  authByProtocol?: Partial<Record<Protocol, ProviderConnection['auth']>>;
   status: 'unverified' | 'ok' | 'error';
   /** What the last Test connection said when it failed ("Key invalid", "CORS blocked"…, src/shared/connect.ts). */
   lastError?: string;
@@ -220,7 +225,7 @@ export async function resolveConnection(api: Browser, connection: ProviderConnec
     protocol,
     // A base URL saved with /v1 serves both protocols on a dual-protocol gateway: the Anthropic SDK adds its own (§4.2.5).
     baseUrl: endpointBase(protocol, connection.baseUrl),
-    auth: connection.auth,
+    auth: connection.authByProtocol?.[protocol] ?? connection.auth,
     ...(apiKey === undefined ? {} : { apiKey }),
     ...(connection.extraHeaders ? { extraHeaders: { ...connection.extraHeaders } } : {}),
     ...(connection.queryParams ? { queryParams: { ...connection.queryParams } } : {}),

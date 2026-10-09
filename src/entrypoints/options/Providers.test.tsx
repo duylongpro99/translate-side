@@ -206,7 +206,8 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     expect(f.log.at(-1)).toBe('request https://openrouter.ai/*');
     await waitFor(() => $('[data-testid=test-result]') !== null);
     const result = $('[data-testid=test-result]').textContent ?? '';
-    expect(result).toContain('Anthropic-compatible and OpenAI-compatible detected; using Anthropic-compatible');
+    expect(result).toContain('Anthropic-compatible and OpenAI-compatible detected; anthropic/claude-haiku-4.5 uses Anthropic-compatible');
+    expect($<HTMLInputElement>('[data-testid=protocol-switch] input[type=radio]').checked).toBe(true);
     expect($('[data-testid=url-fixes]').textContent).toContain('https://openrouter.ai/api/v1');
     expect($('[data-testid=protocol-switch]').textContent).toContain('little');
     submit();
@@ -298,7 +299,7 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     expect(f.sync.has('conn:c9') || f.sync.has('profile:p9')).toBe(false);
     expect(f.log).toContain('revoke https://gw.example.com/*');
     expect(f.perms.has('https://gw.example.com/*')).toBe(false);
-    expect($('[data-testid=providers-note]').textContent).toBe('Removed Work gateway, its key and access to gw.example.com.');
+    expect($('[data-testid=providers-note]').textContent).toBe('Removed Work gateway, its models, its key and access to gw.example.com.');
   });
 
   it('removing a built-in with a key: its key goes, and it stays listed as built in without one when routed', async () => {

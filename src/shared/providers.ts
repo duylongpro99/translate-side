@@ -126,6 +126,10 @@ export function cleanConnection(raw: unknown): ProviderConnection | null {
   if (!nonEmpty(id) || !oneOf(protocol, PROTOCOLS) || typeof baseUrl !== 'string' || !isRecord(auth) || !oneOf(auth.style, AUTH_STYLES)) return null;
   const extraHeaders = stringRecord(raw.extraHeaders);
   const queryParams = stringRecord(raw.queryParams);
+  const authOf = (a: unknown): ProviderConnection['auth'] | undefined => (isRecord(a) && oneOf(a.style, AUTH_STYLES) ? (nonEmpty(a.headerName) ? { style: a.style, headerName: a.headerName } : { style: a.style }) : undefined);
+  const byProtocol = isRecord(raw.authByProtocol)
+    ? Object.fromEntries(Object.entries(raw.authByProtocol).flatMap(([p, a]) => (p !== 'auto' && oneOf(p, PROTOCOLS) && authOf(a) ? [[p, authOf(a)]] : [])))
+    : {};
   const detected = Array.isArray(raw.detectedProtocols) ? raw.detectedProtocols.filter((p): p is Protocol => p !== 'auto' && oneOf(p, PROTOCOLS)) : [];
   return {
     id,
@@ -133,7 +137,8 @@ export function cleanConnection(raw: unknown): ProviderConnection | null {
     presetId: nonEmpty(presetId) ? presetId : 'custom',
     protocol,
     baseUrl,
-    auth: nonEmpty(auth.headerName) ? { style: auth.style, headerName: auth.headerName } : { style: auth.style },
+    auth: authOf(auth) as ProviderConnection['auth'],
+    ...(Object.keys(byProtocol).length > 0 ? { authByProtocol: byProtocol } : {}),
     ...(extraHeaders ? { extraHeaders } : {}),
     ...(queryParams ? { queryParams } : {}),
     quirks: isRecord(raw.quirks) ? (raw.quirks as Quirks) : {},
@@ -369,7 +374,7 @@ async function checkQuota(api: Browser, items: Record<string, unknown>, removed:
   }
 }
 
-const CONNECTION_FIELDS = new Set(['id', 'label', 'presetId', 'protocol', 'baseUrl', 'auth', 'extraHeaders', 'queryParams', 'quirks', 'detectedProtocols', 'status', 'lastError', 'lastErrorKind']);
+const CONNECTION_FIELDS = new Set(['id', 'label', 'presetId', 'protocol', 'baseUrl', 'auth', 'extraHeaders', 'queryParams', 'quirks', 'detectedProtocols', 'authByProtocol', 'status', 'lastError', 'lastErrorKind']);
 const PROFILE_FIELDS = new Set(['id', 'connectionId', 'model', 'protocolOverride', 'temperature', 'maxConcurrency', 'chunkTokens', 'contextWindow', 'pricing', 'quirks']);
 
 /**

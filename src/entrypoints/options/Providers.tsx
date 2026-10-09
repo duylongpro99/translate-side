@@ -36,11 +36,16 @@ const safeOrigin = (url: string) => {
   }
 };
 /** The host a permission covers: match patterns have no port (settings.ts originPattern). */
-const hostnameOf = (url: string) => {
+/**
+ * What the Test click asks Chrome for: the origin pattern, which has no port, so every port on
+ * that host (tester C1 #3).
+ */
+export const accessHint = (url: string) => {
   try {
-    return new URL(url).hostname;
+    const u = new URL(url);
+    return `Chrome asks for access to ${u.protocol}//${u.hostname} only${u.port ? ' (all its ports, not just ' + u.port + ')' : ''}.`;
   } catch {
-    return '';
+    return 'Chrome asks for access to this server only.';
   }
 };
 const newId = () => (globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -171,10 +176,14 @@ function Connections({ api, loaded, onAdd, onEdit, onNote }: { api: Browser; loa
   const remove = (c: ProviderConnection) => {
     setConfirm(undefined);
     const builtIn = isImplicit(loaded.settings, c.id) || BUILTIN_IDS.has(c.id);
+    const keyed = loaded.keyed.has(c.id);
+    const hasModels = loaded.settings.profiles.some((p) => p.connectionId === c.id);
     removeConnection(api, c.id).then(
       async ({ revoked }) => {
         const access = revoked ? ` and access to ${hostOf(c.baseUrl)}` : '';
-        if (!builtIn) return onNote(`Removed ${c.label}, its key${access}.`);
+        // Name only what there was (a keyless local server has no key, tester C1 #4).
+        const parts = [hasModels ? 'its models' : '', keyed ? 'its key' : '', revoked ? `access to ${hostOf(c.baseUrl)}` : ''].filter(Boolean);
+        if (!builtIn) return onNote(`Removed ${c.label}${parts.length ? `, ${parts.slice(0, -1).join(', ')}${parts.length > 1 ? ' and ' : ''}${parts.at(-1)}` : ''}.`);
         // Say what the list will show: a built-in stays listed (keyless) only while a route uses it.
         const listed = visibleConnections(await load(api)).some((x) => x.id === c.id);
         onNote(
@@ -732,24 +741,26 @@ function ConnectionForm({
         <button type="button" onClick={onTest} disabled={test.kind === 'running'} data-testid="test-connection">
           {test.kind === 'running' ? 'Testing…' : 'Test connection'}
         </button>
-        <span class="opt__hint">Chrome asks for access to {hostnameOf(fixBaseUrl(draft.baseUrl).url) || 'the server'} only.</span>
+        <span class="opt__hint" data-testid="access-hint">{accessHint(fixBaseUrl(draft.baseUrl).url)}</span>
       </div>
-      {test.kind === 'done' ? <TestOutcome draft={draft} test={test} onFixKey={() => keyInput.current?.focus()} onRetry={onTest} onUseUrl={(url) => set({ baseUrl: url })} onGuide={() => setGuide(true)} /> : null}
+      {test.kind === 'done' ? <TestOutcome draft={draft} protocol={protocol} test={test} onFixKey={() => keyInput.current?.focus()} onRetry={onTest} onUseUrl={(url) => set({ baseUrl: url })} onGuide={() => setGuide(true)} /> : null}
       {guide ? <CorsGuide local={preset.local ?? 'generic'} onClose={() => setGuide(false)} /> : null}
       <ModelPicker id="c-model" model={draft.model} models={models} onModel={(m) => set({ model: m })} />
       {dual ? (
-        <div class="opt__row" data-testid="protocol-switch">
-          <span>API for this model</span>
-          {(['anthropic-messages', 'openai-chat'] as const).map((p) => (
-            <label key={p} class="opt__check">
-              <input type="radio" name="c-protocol" checked={protocol === p} onChange={() => setProtocolChoice(p)} /> {PROTOCOL_LABELS[p]}
-            </label>
-          ))}
+        <fieldset class="prov__protocol" data-testid="protocol-switch">
+          <legend>API for this model</legend>
+          <div class="prov__radios">
+            {(['anthropic-messages', 'openai-chat'] as const).map((p) => (
+              <label key={p}>
+                <input type="radio" name="c-protocol" checked={protocol === p} onChange={() => setProtocolChoice(p)} /> {PROTOCOL_LABELS[p]}
+              </label>
+            ))}
+          </div>
           <p class="opt__hint">
             Both work here. Claude models default to Anthropic-compatible, so prompt caching works fully; others to OpenAI-compatible.
             {isClaudeModel(draft.model) && /haiku/i.test(draft.model) ? ' On Haiku caching brings little: its minimum cacheable prompt is longer than a typical translation prefix.' : ''}
           </p>
-        </div>
+        </fieldset>
       ) : null}
       {error ? <p class="opt__status opt__status--warn">{error}</p> : null}
       <div class="opt__row">
@@ -805,7 +816,7 @@ function PresetPicker({ onPick, onCancel }: { onPick: (id: PresetId) => void; on
   );
 }
 
-function TestOutcome({ draft, test, onFixKey, onRetry, onUseUrl, onGuide }: { draft: ConnectionDraft; test: Extract<TestState, { kind: 'done' }>; onFixKey: () => void; onRetry: () => void; onUseUrl: (url: string) => void; onGuide: () => void }) {
+function TestOutcome({ draft, protocol, test, onFixKey, onRetry, onUseUrl, onGuide }: { draft: ConnectionDraft; protocol: Protocol; test: Extract<TestState, { kind: 'done' }>; onFixKey: () => void; onRetry: () => void; onUseUrl: (url: string) => void; onGuide: () => void }) {
   const { result, message } = test;
   const fixes = result.fixes.length ? (
     <ul class="prov__fixes" data-testid="url-fixes">
@@ -821,9 +832,14 @@ function TestOutcome({ draft, test, onFixKey, onRetry, onUseUrl, onGuide }: { dr
       <div class="prov__outcome prov__outcome--ok" role="status" data-testid="test-result">
         <p>
           <strong>✓ Connected</strong> · {result.models.length ? `${result.models.length} models` : 'no model list'} · {result.detected.map((p) => PROTOCOL_LABELS[p]).join(' and ')}
-          {draft.protocol === 'auto' ? ` detected${result.detected.length > 1 ? `; using ${PROTOCOL_LABELS[result.protocol]}` : ''}` : ''}
+          {/* The API named is the switch's below, so the two agree (tester C1 #2). */}
+          {draft.protocol === 'auto' ? ` detected${result.detected.length > 1 && draft.model.trim() ? `; ${draft.model.trim()} uses ${PROTOCOL_LABELS[protocol]}` : ''}` : ''}
         </p>
-        {result.keyUnchecked ? <p class="opt__hint">Pick a model and test again to check the key: this provider lists its models without one.</p> : null}
+        {result.modelUnchecked ? (
+          <p class="opt__hint" data-testid="pick-model">
+            No model was tried yet: pick one below and test again{result.keyUnchecked ? ' to check the key (this provider lists its models without one)' : ' to check it'}.
+          </p>
+        ) : null}
         {fixes}
       </div>
     );
