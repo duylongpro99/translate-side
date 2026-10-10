@@ -5,6 +5,8 @@ import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import type { Segment } from '@/engine/index';
 import { translatorClient } from '@/engine/testing';
+import { bindClient, createAdapter } from '@/llm/client';
+import { connection, mockFetch } from '@/llm/testing';
 import type { LLMClient, LLMError } from '@/llm/types';
 import { keyScope, openTranslationCache, scopeHash, segmentKey, type TranslationCache } from '@/shared/cache';
 import type { ModelProfile } from '@/shared/settings';
@@ -123,6 +125,32 @@ describe('Jobs with a fallback chain (§3 #3: stop Ollama mid-page → blocks co
     expect(view?.connection).toMatchObject({ id: 'anthropic' });
     expect(marked).toEqual([['anthropic', refused]]);
     expect(primaryRequests).toBe(1);
+    expect(backup.requests).toHaveLength(0);
+  });
+
+  it('M3 dogfood B1: Gemini\'s 400 for a bad key, through the real adapter, stops with "Fix key" and sends nothing to the fallback', async () => {
+    const badKey = { status: 400, body: '[{"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com"}]}}]' };
+    const f = mockFetch([badKey, badKey, badKey]);
+    const gemini: ModelProfile = { id: 'gemini-flash-lite', connectionId: 'gemini', model: 'gemini-3.5-flash-lite', maxConcurrency: 2, chunkTokens: 1200 };
+    const primary = bindClient(createAdapter('openai-chat', { fetch: f.fetch }), connection({ baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai' }), gemini.model);
+    const backup = translatorClient(undefined, { model: LOCAL.model });
+    const marked: [string, LLMError][] = [];
+    const jobs = new Jobs({
+      strategy: 'single-pass',
+      translateClient: () => Promise.resolve({ ok: true, client: primary, profile: gemini, connection: { id: 'gemini', label: 'Gemini' }, fallback: [{ client: backup, profile: LOCAL, connection: { id: 'ollama', label: 'Home Ollama' } }] }),
+      sleep: instant,
+      onAuthError: (id, e) => marked.push([id, e]),
+    });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(6));
+    const view = jobs.get(1);
+    expect(view).toMatchObject({ status: 'stopped', stopError: { kind: 'auth', status: 400 }, connection: { id: 'gemini' } });
+    // Each chunk in flight that was refused marks the same connection; never the fallback's.
+    expect(marked.length).toBeGreaterThanOrEqual(1);
+    expect(new Set(marked.map(([id, e]) => `${id}:${e.kind}`))).toEqual(new Set(['gemini:auth']));
+    // At most the chunks already in flight were sent (no retry of an auth error), and nothing went to the fallback.
+    expect(f.requests.length).toBeGreaterThanOrEqual(1);
+    expect(f.requests.length).toBeLessThanOrEqual(gemini.maxConcurrency);
     expect(backup.requests).toHaveLength(0);
   });
 
