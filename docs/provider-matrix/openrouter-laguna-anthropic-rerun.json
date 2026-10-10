@@ -1,0 +1,10 @@
+{
+  "provider": "openrouter",
+  "model": "poolside/laguna-s-2.1:free",
+  "status": "stopped",
+  "jobText": "Lost the connection · 0 of 69 translated, the rest is waiting Retry",
+  "cost": null,
+  "costTitle": null,
+  "failedBlocks": 1,
+  "wallSeconds": 278.8
+}

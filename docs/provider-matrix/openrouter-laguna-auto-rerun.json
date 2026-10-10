@@ -1,0 +1,10 @@
+{
+  "provider": "openrouter",
+  "model": "poolside/laguna-s-2.1:free",
+  "status": "running",
+  "jobText": "Translating into Vietnamese… 0 of 69",
+  "cost": null,
+  "costTitle": null,
+  "failedBlocks": 1,
+  "wallSeconds": 1217.8
+}
