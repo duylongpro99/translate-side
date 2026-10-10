@@ -260,6 +260,61 @@ describe('contextual: viewport first (plan M3-E1, §8 risk)', () => {
   });
 });
 
+describe('a screen of more than one chunk (M3 dogfood B4)', () => {
+  /** An analyze client that answers only once `release` is called. */
+  function heldBrief() {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const inner = fakeClient([success(JSON.stringify(BRIEF))], { model: 'brief-model' });
+    const client: LLMClient = {
+      model: inner.model,
+      reasoningReserveTokens: inner.reasoningReserveTokens,
+      async *stream(req) {
+        await gate;
+        yield* inner.stream(req);
+      },
+    };
+    return { client, release };
+  }
+
+  it('contextual: every chunk holding the screen starts at once, before the brief, and each is revised once it lands', async () => {
+    const translate: FakeClient = translatorClient();
+    const brief = heldBrief();
+    const done = collect(engineFor(translate, brief.client).translate(job('contextual', { priority: ['p2', 'p3'] }, 2), new AbortController().signal));
+    await new Promise((r) => setTimeout(r, 20));
+    // Both screen chunks went out while the brief is still pending; nothing else did.
+    expect(translate.requests.map(paragraphOf).sort()).toEqual(['p2', 'p3']);
+    brief.release();
+    const events = await done;
+    const revised = events.flatMap((e) => (e.type === 'segment.final' && e.revision === 2 ? [e.id] : [])).sort();
+    expect(revised).toEqual(['p2', 'p3']);
+    // Reading on from the screen after the brief: p4, p5, then back to p0, p1.
+    expect(translate.requests.map(paragraphOf).filter((p) => !['p2', 'p3'].includes(p))).toEqual(['p4', 'p5', 'p0', 'p1']);
+    expect(events.filter((e) => e.type === 'segment.failed')).toEqual([]);
+  });
+
+  it('contextual: at most MAX_SCREEN_CHUNKS screen chunks skip the brief', async () => {
+    const translate: FakeClient = translatorClient();
+    const brief = heldBrief();
+    const done = collect(engineFor(translate, brief.client).translate(job('contextual', { priority: ['p0', 'p1', 'p2', 'p3', 'p4'] }, 6), new AbortController().signal));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(translate.requests.map(paragraphOf).sort()).toEqual(['p0', 'p1', 'p2']);
+    brief.release();
+    await done;
+  });
+
+  it('chunkJob: the screen\'s chunk ends where the screen does, so it holds the screen and nothing after it', () => {
+    const short = Array.from({ length: 12 }, (_, i) => seg(`q${i}`, `Q${i} ${'word '.repeat(75).trim()}`));
+    const j = job('single-pass', { doc: { ...job('single-pass').doc, segments: short } });
+    const chunks = chunkJob(j, ['q5', 'q6']).map((c) => c.segments.map((x) => x.id));
+    expect(chunks).toContainEqual(['q5', 'q6']);
+    // A table row that the screen ends in stays whole in the screen's chunk.
+    const row = short.map((x, i) => (i === 6 || i === 7 ? { ...x, groupId: 'r' } : x));
+    const rowChunks = chunkJob({ ...j, doc: { ...j.doc, segments: row } }, ['q5', 'q6']).map((c) => c.segments.map((x) => x.id));
+    expect(rowChunks).toContainEqual(['q5', 'q6', 'q7']);
+  });
+});
+
 describe('the screen starts a chunk, and the first chunk started gets the first chunk\'s thinking (plan M3-E1, M2-D16)', () => {
   /** Twelve ~110-token paragraphs: four or so to a chunk at chunkTokens 500. */
   const short = Array.from({ length: 12 }, (_, i) => seg(`q${i}`, `Q${i} ${'word '.repeat(75).trim()}`));

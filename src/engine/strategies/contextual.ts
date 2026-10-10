@@ -177,17 +177,18 @@ export function contextualStages(brief: BriefWait, translatePrompt: string = CON
       }
     },
     pick(items, pending, ctx) {
-      // A revise item starts right after the chunk it revises (M2-D17): it holds its slot while
-      // it waits, so a revision 2 never races its revision 1.
-      const ready = pending.find((i) => {
-        const item = items[i];
-        return item !== undefined && 'revise' in item && item.revise < claimed.length;
-      });
-      if (ready !== undefined) return ready;
       const chunks = pending.filter((i) => {
         const item = items[i];
         return item !== undefined && !('revise' in item);
       });
+      // A revise item starts right after the chunk it revises (M2-D17): it holds its slot while
+      // it waits, so a revision 2 never races its revision 1. But not before every brief-free
+      // chunk has started: the screen's other chunks must not wait behind it (M3 dogfood B4).
+      const ready = pending.find((i) => {
+        const item = items[i];
+        return item !== undefined && 'revise' in item && item.revise < claimed.length && (claimed.length >= freeChunks || chunks.length === 0);
+      });
+      if (ready !== undefined) return ready;
       if (chunks.length === 0) return pending[0] as number;
       const ids = items.map((item) => ('revise' in item ? [] : item.chunk.segments.map((s) => s.id)));
       const next = pickByPriority(ids, chunks, ctx.priority?.() ?? []);
