@@ -3,10 +3,12 @@
 // Testing, a fixture page served from 127.0.0.1, one provider seeded into storage, the panel driven to
 // translate the page, a screenshot of the result. Needs playwright-core (not a dependency of this repo):
 //   PLAYWRIGHT_CORE=/path/to/node_modules/playwright-core  CHROME=<Chrome for Testing binary>
-//   node scripts/eval/ext-run.mjs <provider> [--fixture goblog-pipelines] [--out dir] [--model id] [--reasoning low --reserve 6000] [--protocol auto|anthropic-messages] [--scroll 0.4 [--screen-only]]
+//   node scripts/eval/ext-run.mjs <provider> [--fixture goblog-pipelines] [--out dir] [--model id] [--reasoning low --reserve 6000] [--protocol auto|anthropic-messages] [--scroll 0.4 [--screen-only]] [--url https://… | --throttle]
 // `--scroll F` opens the page scrolled to F of its height before the gesture and measures visible first (M3 §3 #1,
 // dogfood B4): when the paragraphs fully on screen become final (`visibleFirstMs`, `visibleAllMs`, from the gesture)
 // and the job's own stamp (`screenDoneMs`). `--screen-only` cancels the job once they are, to keep the spend small.
+// `--url` runs on a live page instead of a fixture; `--throttle` keeps Chrome's timer throttling of the background
+// panel tab (the default turns it off; a real side panel is not a background tab).
 // Providers: gemini | ollama-cloud | apibox | anthropic | openrouter | openrouter-anthropic (keys from .env, never printed).
 // The build is copied to a temp dir with host_permissions for the page and the provider origin added, because a
 // headless run cannot answer Chrome's permission prompt (the permission request itself is covered by unit tests).
@@ -37,17 +39,18 @@ if (!P) throw new Error('provider?');
 const key = process.env[P.key];
 if (!key) { console.log(`not run — no key (${P.key})`); process.exit(2); }
 
-// The page.
+// The page: a fixture served from 127.0.0.1, or `--url`.
+const liveUrl = opt('url', '');
 const html = fs.readFileSync(path.join(ROOT, 'fixtures/sites', `${fixture}.html`));
 const srv = http.createServer((_, res) => (res.setHeader('content-type', 'text/html; charset=utf-8'), res.end(html)));
 await new Promise((r) => srv.listen(0, '127.0.0.1', r));
-const pageUrl = `http://127.0.0.1:${srv.address().port}/`;
+const pageUrl = liveUrl || `http://127.0.0.1:${srv.address().port}/`;
 
 // The extension, with host permissions.
 const ext = fs.mkdtempSync(path.join(os.tmpdir(), 'ext-'));
 fs.cpSync(path.join(ROOT, '.output/chrome-mv3'), ext, { recursive: true });
 const mf = JSON.parse(fs.readFileSync(path.join(ext, 'manifest.json'), 'utf8'));
-mf.host_permissions = ['http://127.0.0.1/*', P.origin];
+mf.host_permissions = ['http://127.0.0.1/*', P.origin, ...(liveUrl ? [`${new URL(liveUrl).origin}/*`] : [])];
 fs.writeFileSync(path.join(ext, 'manifest.json'), JSON.stringify(mf));
 
 const udd = fs.mkdtempSync(path.join(os.tmpdir(), 'udd-'));
@@ -55,7 +58,7 @@ const ctx = await chromium.launchPersistentContext(udd, {
   executablePath: process.env.CHROME,
   headless: false,
   // The panel runs as a background tab next to the page: without these flags Chrome throttles its timers.
-  args: ['--headless=new', `--disable-extensions-except=${ext}`, `--load-extension=${ext}`, '--no-first-run', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'],
+  args: ['--headless=new', `--disable-extensions-except=${ext}`, `--load-extension=${ext}`, '--no-first-run', ...(args.includes('--throttle') ? [] : ['--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'])],
   viewport: { width: 1100, height: 800 },
 });
 const netLog = [];
@@ -90,7 +93,9 @@ try {
   await sw.evaluate(async ([s, l]) => { await chrome.storage.sync.set(s); await chrome.storage.local.set(l); }, [sync, local]);
 
   const page = await ctx.newPage();
-  await page.goto(pageUrl);
+  await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  // A live page may redirect: the tab is found by the URL it ended on.
+  const tabUrl = page.url().replace(/#.*/, '');
   // Visible first (--scroll): the paragraphs fully on screen, by their opening text.
   const scroll = opt('scroll', '');
   let onScreen = [];
@@ -115,7 +120,7 @@ try {
     await chrome.storage.session.set({ [`access:${t.id}`]: { status: 'injecting', at: Date.now() } });
     await chrome.scripting.executeScript({ target: { tabId: t.id, frameIds: [0] }, files: ['content-scripts/content.js'] });
     await chrome.storage.session.set({ [`access:${t.id}`]: { status: 'ready', at: Date.now() } });
-  }, pageUrl);
+  }, tabUrl);
   const job = panel.locator('[data-testid=job]');
   const t0 = Date.now();
   let visible;
