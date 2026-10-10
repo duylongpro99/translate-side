@@ -12,6 +12,9 @@
 //   as final and never sent; a cached brief seeds the run. What the run produces is stored as it
 //   arrives (highest revision only; a failure removes the entry), so a retry, a reload or a revisit
 //   re-runs only what is missing. `fresh` (retranslate) skips the lookup, never the store.
+// - Retranslate page (M3 dogfood B2): each block keeps its earlier translation on screen until its
+//   new final arrives; a block that fails, or one the run never reached (stop, cancel), keeps it,
+//   and its cache entry is not dropped.
 // - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
@@ -385,7 +388,7 @@ export interface JobDeps {
   /** Every usage report, priced (the running total in settings, M3-E9), with the profile that spent it (M4-E10). */
   onSpend?: (delta: SpendDelta) => void;
   /**
-   * A request was refused for its key (401, 403: `auth`) on this connection: settings mark it
+   * A request was refused for its key (401, 403, or Google's 400 `API_KEY_INVALID`: `auth`) on this connection: settings mark it
    * `error` (§4.3.5). Not called for a missing key (nothing was sent).
    */
   onAuthError?: (connectionId: string, error: LLMError) => void;
@@ -448,6 +451,13 @@ interface Job {
   flush?: boolean;
   /** A retranslate run: its stored finals replace whatever the cache has. */
   fresh?: boolean;
+  /**
+   * A retranslate run's earlier finals, by segment, until a new final replaces them (M3 dogfood
+   * B2): shown meanwhile, put back when the block fails or the run ends without it, and their
+   * cache entries are never dropped. What is left when the run ends is still owed: a resume
+   * retranslates it again.
+   */
+  earlier: Map<string, SegState>;
   /** Cache keys whose next write replaces the stored entry (a retranslated block, M3-E5). */
   replaceKeys: Set<string>;
   /** The brief cache key of this document; undefined without a cache. */
@@ -559,9 +569,20 @@ export class Jobs {
     const segments = doc.keep?.size ? doc.segments.map((s) => (s.translate && doc.keep?.has(s.id) ? { ...s, translate: false } : s)) : doc.segments;
     const translatable = segments.filter((s) => s.translate);
     const segs = new Map<string, SegState>();
+    const earlier = new Map<string, SegState>();
+    // A retranslate keeps the page's translation on screen until each block's new one arrives;
+    // so does a resume of a retranslate that stopped, for the blocks it still owes.
+    const before = fresh && prev?.docId === docId ? prev : undefined;
     for (const s of translatable) {
-      const old = keep?.segs.get(s.id);
-      segs.set(s.id, old?.status === 'final' ? old : { status: 'pending' });
+      const old = keep?.segs.get(s.id) ?? before?.segs.get(s.id);
+      const owed = before !== undefined && (keep === undefined || keep.earlier.has(s.id));
+      if (old?.status === 'final' && owed && old.text !== undefined) {
+        const shown = { ...old };
+        delete shown.redoError;
+        delete shown.error;
+        earlier.set(s.id, shown);
+        segs.set(s.id, { status: 'pending', text: old.text });
+      } else segs.set(s.id, old?.status === 'final' && keep ? old : { status: 'pending' });
     }
     const todo = new Set(translatable.filter((s) => segs.get(s.id)?.status !== 'final').map((s) => s.id));
     const screen = new Set(this.screenOf(tabId, docId).filter((id) => todo.has(id)));
@@ -587,6 +608,7 @@ export class Jobs {
       retrying: new Map(),
       retrySeq: 0,
       replaceKeys: new Set(),
+      earlier,
       apart: costFrom ? { usage: { ...costFrom.apart.usage }, usd: costFrom.apart.usd } : { usage: { input: 0, cachedInput: 0, output: 0 }, usd: undefined },
       fresh,
       view: {
@@ -722,6 +744,7 @@ export class Jobs {
       retrying: new Map(),
       retrySeq: 0,
       replaceKeys: new Set(),
+      earlier: new Map(),
       apart: keepCost ? { usage: { ...keepCost.apart.usage }, usd: keepCost.apart.usd } : { usage: { input: 0, cachedInput: 0, output: 0 }, usd: undefined },
       view: {
         status: 'skipped',
@@ -772,7 +795,8 @@ export class Jobs {
   resume(tabId: number): Promise<void> {
     const job = this.jobs.get(tabId);
     if (!job || job.view.status === 'running') return Promise.resolve();
-    return this.start(tabId, job.docId, job.doc, { resume: true });
+    // A retranslate that stopped goes on retranslating what it still owes, not from the cache.
+    return this.start(tabId, job.docId, job.doc, { resume: true, ...(job.earlier.size ? { fresh: true, keepCost: true } : {}) });
   }
 
   /** Resolves when every cache write the jobs have queued so far has finished (tests, harness). */
@@ -883,6 +907,7 @@ export class Jobs {
       else {
         const key = this.keyFor(job, id, outcome.model);
         if (mode === 'retranslate' && key !== undefined) job.replaceKeys.add(key);
+        if (outcome.status === 'final') job.earlier.delete(id);
         settle(outcome);
       }
       if (outcome.status === 'failed' && outcome.error && stopsJob(outcome.error) && job.view.status !== 'running') this.finish(tabId, job, 'stopped', outcome.error);
@@ -999,10 +1024,15 @@ export class Jobs {
         // counts below: it was spent.
         if (job.view.status !== 'running' || !job.segs.has(event.id)) return;
         const cur = job.segs.get(event.id);
-        const next = applySegmentEvent(cur, event);
+        let next = applySegmentEvent(cur, event);
         if (next === cur || next === undefined) return;
+        // A retranslated block that fails keeps its earlier translation, and its cache entry (B2).
+        const earlier = job.earlier.get(event.id);
+        const restored = next.status === 'failed' && earlier !== undefined;
+        if (restored) next = { ...earlier, redoError: next.error ?? { kind: 'unknown', message: 'no translation came back' } };
+        else if (next.status === 'final') job.earlier.delete(event.id);
         job.segs.set(event.id, next);
-        this.remember(job, event.id, next);
+        if (!restored) this.remember(job, event.id, next);
         const patch: Partial<JobView> = { counts: count(job.segs) };
         if (job.view.firstVisibleAt === undefined && next.text) patch.firstVisibleAt = this.now();
         if ((next.status === 'final' || next.status === 'failed') && job.screen.delete(event.id) && job.screen.size === 0) patch.screenDoneAt = this.now();
@@ -1153,6 +1183,8 @@ export class Jobs {
   private finish(tabId: number, job: Job, status: Exclude<JobStatus, 'running'>, stopError?: LLMError): void {
     // Previews of a request that did not finish can't be trusted: back to the original.
     for (const [id, s] of job.segs) if (s.status === 'streaming' && !job.retrying.has(id)) job.segs.set(id, { status: 'pending' });
+    // A retranslate that ends early puts back the earlier translation of every block it did not redo (B2).
+    for (const [id, s] of job.earlier) if (job.segs.get(id)?.status === 'pending' && !job.retrying.has(id)) job.segs.set(id, s);
     job.backoff.clear();
     this.patch(tabId, job, { backoff: [], status, paused: false, counts: count(job.segs), endedAt: this.now(), ...(stopError ? { stopError } : {}) });
   }

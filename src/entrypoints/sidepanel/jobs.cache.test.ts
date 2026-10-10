@@ -151,6 +151,118 @@ describe('Jobs with the translation cache: a revisit makes no API call (§3 #3)'
     expect(j3.get(1)?.segs.get('s0')?.text).toMatch(/^NEW:/);
   });
 
+  describe('a failed "Retranslate page" never loses the page (M3 dogfood B2)', () => {
+    const refusing = () => {
+      const c: LLMClient & { requests: number } = {
+        model: GEMINI_PROFILE.model,
+        requests: 0,
+        reasoningReserveTokens: () => 0,
+        async *stream() {
+          c.requests++;
+          await Promise.resolve();
+          yield { type: 'error', error: { kind: 'auth', status: 400, message: 'Key invalid or missing' } };
+        },
+      };
+      return c;
+    };
+    /** One Jobs whose client can be swapped between runs, like a key replaced in the settings. */
+    const swappable = (cache: TranslationCache, first: LLMClient) => {
+      const box = { client: first };
+      const jobs = track(new Jobs({ translateClient: () => ok(box.client)(), cache, sleep: () => Promise.resolve() }));
+      jobs.setActive(1);
+      return { jobs, box };
+    };
+    const texts = (v: JobView | undefined) => [...(v?.segs ?? new Map())].map(([id, st]) => [id, st.status, st.text]);
+
+    it('a bad key: every block keeps its translation, the job stops on the key, and the cache keeps every entry', async () => {
+      const cache = newCache();
+      const { jobs, box } = swappable(cache, both());
+      await jobs.start(1, 'd', doc(8));
+      await idle();
+      const before = texts(jobs.get(1));
+      expect(before.every(([, st]) => st === 'final')).toBe(true);
+      box.client = refusing();
+      await jobs.start(1, 'd', doc(8), { fresh: true, keepCost: true });
+      await idle();
+      const v = jobs.get(1);
+      expect(v).toMatchObject({ status: 'stopped', stopError: { kind: 'auth' }, counts: { final: 8, failed: 0 } });
+      expect(texts(v)).toEqual(before);
+      // A revisit with a good key is free: nothing was dropped from the cache.
+      const after = both();
+      const j3 = session(after, cache);
+      await j3.start(1, 'e', doc(8));
+      expect(after.requests).toHaveLength(0);
+      expect(texts(j3.get(1))).toEqual(before);
+    });
+
+    it('while it runs the earlier text stays on screen; a block that fails keeps it and says so; the others take the new text', async () => {
+      const cache = newCache();
+      const { jobs, box } = swappable(cache, both());
+      await jobs.start(1, 'd', doc(4));
+      await idle();
+      const old = jobs.get(1)?.segs.get('s2')?.text;
+      // The new run: s2 fails its check, the rest come back new.
+      let release!: () => void;
+      const gate = new Promise<void>((r) => (release = r));
+      const engine = () => ({
+        async *translate() {
+          await gate;
+          for (const id of ['s0', 's1', 's3']) yield { type: 'segment.final', id, text: `NEW:${id}`, revision: 1, producedBy: { strategy: 'single-pass', stage: 'translate', model: GEMINI_PROFILE.model } } as EngineEvent;
+          yield { type: 'segment.failed', id: 's2', error: { kind: 'unknown', message: 'check failed' } } as EngineEvent;
+          yield { type: 'done' } as EngineEvent;
+        },
+      });
+      const j2 = track(new Jobs({ translateClient: () => ok(box.client)(), cache, engine: engine as never }));
+      j2.setActive(1);
+      // Same document, so carry the first run over: start it on j2 first from the cache.
+      await j2.start(1, 'd', doc(4));
+      expect(j2.get(1)?.cached).toBe(4);
+      const run = j2.start(1, 'd', doc(4), { fresh: true });
+      await until(() => j2.get(1)?.status === 'running' && j2.get(1)?.segs.get('s2')?.status === 'pending');
+      expect(j2.get(1)?.segs.get('s2')).toEqual({ status: 'pending', text: old });
+      release();
+      await run;
+      await idle();
+      const v = j2.get(1) as JobView;
+      expect(v.status).toBe('done');
+      expect(v.segs.get('s0')).toMatchObject({ status: 'final', text: 'NEW:s0' });
+      expect(v.segs.get('s2')).toMatchObject({ status: 'final', text: old, redoError: { message: 'check failed' } });
+      expect(v.counts).toMatchObject({ final: 4, failed: 0 });
+      // The cache has the new texts, and s2's earlier entry is still there.
+      const after = both();
+      const j3 = session(after, cache);
+      await j3.start(1, 'e', doc(4));
+      expect(after.requests).toHaveLength(0);
+      expect(j3.get(1)?.segs.get('s0')?.text).toBe('NEW:s0');
+      expect(j3.get(1)?.segs.get('s2')?.text).toBe(old);
+    });
+
+    it('cancelling a retranslate puts the earlier text back; Retry after a stop retranslates only what it still owes, skipping the cache', async () => {
+      const cache = newCache();
+      const { jobs, box } = swappable(cache, both());
+      await jobs.start(1, 'd', doc(3));
+      await idle();
+      const before = texts(jobs.get(1));
+      const hanging = { model: GEMINI_PROFILE.model, reasoningReserveTokens: () => 0, stream: (req: NormalizedRequest) => hang(req.signal) } as LLMClient;
+      box.client = hanging;
+      const run = jobs.start(1, 'd', doc(3), { fresh: true });
+      await until(() => jobs.get(1)?.status === 'running' && jobs.get(1)?.model !== '');
+      jobs.cancel(1);
+      await run;
+      expect(texts(jobs.get(1))).toEqual(before);
+      expect(jobs.get(1)?.counts.final).toBe(3);
+      // A stopped retranslate (bad key), then the key is fixed and the bar's Retry is used.
+      box.client = refusing();
+      await jobs.start(1, 'd', doc(3), { fresh: true });
+      expect(jobs.get(1)?.status).toBe('stopped');
+      const fixed = translatorClient((lines) => renderLines(lines, (x) => `NEW:${x}`), { model: GEMINI_PROFILE.model });
+      box.client = fixed;
+      await jobs.resume(1);
+      expect(fixed.requests.length).toBeGreaterThan(0);
+      expect([...(jobs.get(1)?.segs.values() ?? [])].every((st) => st.status === 'final' && st.text?.startsWith('NEW:'))).toBe(true);
+    });
+  });
+
   it('a retry after an interruption re-runs only the missing segments (M3-D4)', async () => {
     const cache = newCache();
     // The first session dies after the first chunk answered: only some segments are stored.
