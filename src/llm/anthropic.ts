@@ -7,7 +7,7 @@
 import Anthropic, { APIError } from '@anthropic-ai/sdk';
 import type { MessageCreateParamsStreaming, RawMessageStreamEvent, StopReason as AnthropicStopReason, TextBlockParam } from '@anthropic-ai/sdk/resources/messages';
 import { reasoningFor } from './reasoning.ts';
-import { classifySdkError, headerOverrides, preflight, streamAttempts, type AdapterOptions, type IdleGuard, type QuirkFlip, type SdkApiError, FLIP_TEMPERATURE } from './sdk.ts';
+import { classifySdkError, headerOverrides, preflight, streamAttempts, watchedFetch, type AdapterOptions, type GuardHolder, type IdleGuard, type QuirkFlip, type SdkApiError, FLIP_TEMPERATURE } from './sdk.ts';
 import type { ModelInfo, NormalizedEvent, NormalizedRequest, ProbeResult, ProtocolAdapter, Quirks, ResolvedConnection, StopReason } from './types.ts';
 
 const isApiError = (e: unknown): e is SdkApiError => e instanceof APIError;
@@ -28,7 +28,7 @@ const FLIPS: readonly QuirkFlip[] = [
   },
 ];
 
-function clientFor(conn: ResolvedConnection, options: AdapterOptions): Anthropic {
+function clientFor(conn: ResolvedConnection, options: AdapterOptions, holder?: GuardHolder): Anthropic {
   const { style } = conn.auth;
   return new Anthropic({
     baseURL: conn.baseUrl,
@@ -38,7 +38,7 @@ function clientFor(conn: ResolvedConnection, options: AdapterOptions): Anthropic
     ...(conn.queryParams === undefined ? {} : { defaultQuery: conn.queryParams }),
     maxRetries: 0,
     dangerouslyAllowBrowser: true,
-    ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
+    ...(holder === undefined ? (options.fetch === undefined ? {} : { fetch: options.fetch }) : { fetch: watchedFetch(options.fetch ?? globalThis.fetch.bind(globalThis), holder) }),
   });
 }
 
@@ -85,7 +85,6 @@ export function toAnthropicParams(req: NormalizedRequest, quirks: Quirks): Messa
 
 async function* attempt(client: Anthropic, req: NormalizedRequest, quirks: Quirks, guard: IdleGuard): AsyncGenerator<NormalizedEvent> {
   const stream = await client.messages.create(toAnthropicParams(req, quirks), { signal: guard.signal });
-  guard.touch();
   let input = 0;
   let cachedInput = 0;
   let output = 0;
@@ -99,7 +98,6 @@ async function* attempt(client: Anthropic, req: NormalizedRequest, quirks: Quirk
     sawUsage = true;
   };
   for await (const event of stream as AsyncIterable<RawMessageStreamEvent>) {
-    guard.touch();
     switch (event.type) {
       case 'message_start':
         readInput(event.message.usage);
@@ -148,8 +146,9 @@ export function createAnthropicAdapter(options: AdapterOptions = {}): ProtocolAd
   return {
     protocol: 'anthropic-messages',
     stream(conn, req) {
-      const client = clientFor(conn, options);
-      return streamAttempts(conn, req, (quirks, guard) => attempt(client, req, quirks, guard), { isApiError, flips: FLIPS, ...(options.idleMs === undefined ? {} : { idleMs: options.idleMs }), ...(options.onQuirkLearned === undefined ? {} : { onQuirkLearned: options.onQuirkLearned }) });
+      const holder: GuardHolder = {};
+      const client = clientFor(conn, options, holder);
+      return streamAttempts(conn, req, (quirks, guard) => attempt(client, req, quirks, (holder.guard = guard)), { isApiError, flips: FLIPS, ...(options.idleMs === undefined ? {} : { idleMs: options.idleMs }), ...(options.onQuirkLearned === undefined ? {} : { onQuirkLearned: options.onQuirkLearned }) });
     },
     listModels,
     /** `GET /v1/models` needs the key here, so a 401 shows a bad key; success is the status (S4). */

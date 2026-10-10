@@ -160,10 +160,42 @@ describe.each(harnesses)('$name adapter (shared contract)', (h) => {
       await expect(pending).rejects.toBe(reason);
     });
 
-    it('a stream that keeps sending events is not cut, however long it takes in total', async () => {
-      const f = mockFetch([h.ok(['a', 'b', 'c'])]);
+    /** The body of a normal answer as SSE events, one per `gapMs`. */
+    const spaced = (r: ScriptedResponse, gapMs: number): ScriptedResponse => {
+      if (!('body' in r)) throw new Error('needs a body');
+      return { slow: r.body.split('\n\n').filter((e) => e !== '').map((e) => `${e}\n\n`), gapMs };
+    };
+
+    it('a stream that keeps sending events, each sooner than the limit, is not cut however long it takes in total', async () => {
+      const f = mockFetch([spaced(h.ok(['a', 'b', 'c']), 20)]);
+      const started = Date.now();
       const events = await collect(h.adapter(f.fetch, IDLE).stream(h.conn(), request(h.model)));
       expect(text(events)).toBe('abc');
+      expect(Date.now() - started).toBeGreaterThan(IDLE);
+    });
+
+    it('a stream of keepalives only (SSE comments the SDK drops) is alive: not cut, and the answer after it arrives', async () => {
+      const keepalives = Array.from({ length: 6 }, () => ': ping\n\n');
+      const answer = h.ok(['late']);
+      if (!('body' in answer)) throw new Error('needs a body');
+      const f = mockFetch([{ slow: [...keepalives, answer.body], gapMs: 20 }]);
+      const started = Date.now();
+      const events = await collect(h.adapter(f.fetch, IDLE).stream(h.conn(), request(h.model)));
+      expect(Date.now() - started).toBeGreaterThan(IDLE);
+      expect(text(events)).toBe('late');
+      expect(events.at(-1)).toMatchObject({ type: 'done' });
+    });
+
+    it('a silent stream after some keepalives is still cut', async () => {
+      const f = mockFetch([{ hangAfter: ': ping\n\n: ping\n\n' }]);
+      const events = await collect(h.adapter(f.fetch, IDLE).stream(h.conn(), request(h.model)));
+      expect(events).toEqual([{ type: 'error', error: expect.objectContaining({ kind: 'network' }) }]);
+    });
+
+    it('an SDK that swallows the idle abort and ends the stream quietly is still a network error, not a cut answer', async () => {
+      const f = mockFetch([{ hangAfter: ': ping\n\n', swallowAbort: true }]);
+      const events = await collect(h.adapter(f.fetch, IDLE).stream(h.conn(), request(h.model)));
+      expect(events).toEqual([{ type: 'error', error: expect.objectContaining({ kind: 'network', message: expect.stringContaining('No response from') }) }]);
     });
   });
 

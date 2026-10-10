@@ -10,7 +10,7 @@ export interface RecordedRequest {
   body: unknown;
 }
 
-export type ScriptedResponse = { status: number; body: string; headers?: Record<string, string> } | { throw: unknown } | { hang: true } | { hangHeaders: true } | { hangAfter: string };
+export type ScriptedResponse = { status: number; body: string; headers?: Record<string, string> } | { throw: unknown } | { hang: true } | { hangHeaders: true } | { hangAfter: string; swallowAbort?: boolean } | { slow: string[]; gapMs: number };
 
 export interface MockFetch {
   fetch: typeof globalThis.fetch;
@@ -58,9 +58,25 @@ export function mockFetch(responses: readonly ScriptedResponse[]): MockFetch {
       const stream = new ReadableStream<Uint8Array>({
         start(controller) {
           controller.enqueue(new TextEncoder().encode(script.hangAfter));
-          const abort = (): void => controller.error(signal?.reason ?? new DOMException('aborted', 'AbortError'));
+          // `swallowAbort`: an abort ends the body quietly (a client that swallows it) instead of erroring.
+          const abort = (): void => (script.swallowAbort === true ? controller.close() : controller.error(signal?.reason ?? new DOMException('aborted', 'AbortError')));
           if (signal?.aborted === true) abort();
           else signal?.addEventListener('abort', abort, { once: true });
+        },
+      });
+      return new Response(stream, { status: 200, headers: SSE_HEADERS });
+    }
+    if ('slow' in script) {
+      // The chunks of a body, one every `gapMs`: a stream that is slow but alive.
+      const signal = init?.signal;
+      let i = 0;
+      const stream = new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          await new Promise((r) => setTimeout(r, script.gapMs));
+          if (signal?.aborted === true) return controller.error(signal.reason ?? new DOMException('aborted', 'AbortError'));
+          const chunk = script.slow[i++];
+          if (chunk === undefined) controller.close();
+          else controller.enqueue(new TextEncoder().encode(chunk));
         },
       });
       return new Response(stream, { status: 200, headers: SSE_HEADERS });

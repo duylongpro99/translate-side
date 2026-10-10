@@ -11,7 +11,7 @@ import OpenAI, { APIError } from 'openai';
 import type { ChatCompletionChunk, ChatCompletionCreateParamsStreaming, ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import type { ReasoningEffort } from 'openai/resources/shared';
 import { reasoningFor } from './reasoning.ts';
-import { classifySdkError, headerOverrides, preflight, streamAttempts, type AdapterOptions, type IdleGuard, type QuirkFlip, type SdkApiError, FLIP_TEMPERATURE } from './sdk.ts';
+import { classifySdkError, headerOverrides, preflight, streamAttempts, watchedFetch, type AdapterOptions, type GuardHolder, type IdleGuard, type QuirkFlip, type SdkApiError, FLIP_TEMPERATURE } from './sdk.ts';
 import type { ModelInfo, NormalizedEvent, NormalizedRequest, ProbeResult, ProtocolAdapter, Quirks, ResolvedConnection, StopReason } from './types.ts';
 
 const isApiError = (e: unknown): e is SdkApiError => e instanceof APIError;
@@ -52,7 +52,7 @@ const FLIPS: readonly QuirkFlip[] = [
   },
 ];
 
-function clientFor(conn: ResolvedConnection, options: AdapterOptions): OpenAI {
+function clientFor(conn: ResolvedConnection, options: AdapterOptions, holder?: GuardHolder): OpenAI {
   const headers = headerOverrides(conn, 'authorization');
   // The SDK has no x-api-key auth: send it as a custom header and drop the Bearer one.
   if (conn.auth.style === 'x-api-key' && conn.apiKey !== undefined) {
@@ -67,7 +67,7 @@ function clientFor(conn: ResolvedConnection, options: AdapterOptions): OpenAI {
     ...(conn.queryParams === undefined ? {} : { defaultQuery: conn.queryParams }),
     maxRetries: 0,
     dangerouslyAllowBrowser: true,
-    ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
+    ...(holder === undefined ? (options.fetch === undefined ? {} : { fetch: options.fetch }) : { fetch: watchedFetch(options.fetch ?? globalThis.fetch.bind(globalThis), holder) }),
   });
 }
 
@@ -107,11 +107,9 @@ export function toOpenAIParams(req: NormalizedRequest, quirks: Quirks): ChatComp
 
 async function* attempt(client: OpenAI, req: NormalizedRequest, quirks: Quirks, guard: IdleGuard): AsyncGenerator<NormalizedEvent> {
   const stream = await client.chat.completions.create(toOpenAIParams(req, quirks), { signal: guard.signal });
-  guard.touch();
   let usage: Extract<NormalizedEvent, { type: 'usage' }> | undefined;
   let stop: StopReason | undefined;
   for await (const chunk of stream) {
-    guard.touch();
     // Always one choice (n = 1); some gateways send the usage chunk with no `choices` at all.
     const choice = (chunk.choices as ChatCompletionChunk.Choice[] | undefined)?.[0];
     if (choice !== undefined) {
@@ -152,8 +150,9 @@ export function createOpenAIAdapter(options: AdapterOptions = {}): ProtocolAdapt
   return {
     protocol: 'openai-chat',
     stream(conn, req) {
-      const client = clientFor(conn, options);
-      return streamAttempts(conn, req, (quirks, guard) => attempt(client, req, quirks, guard), { isApiError, flips: FLIPS, ...(options.idleMs === undefined ? {} : { idleMs: options.idleMs }), ...(options.onQuirkLearned === undefined ? {} : { onQuirkLearned: options.onQuirkLearned }) });
+      const holder: GuardHolder = {};
+      const client = clientFor(conn, options, holder);
+      return streamAttempts(conn, req, (quirks, guard) => attempt(client, req, quirks, (holder.guard = guard)), { isApiError, flips: FLIPS, ...(options.idleMs === undefined ? {} : { idleMs: options.idleMs }), ...(options.onQuirkLearned === undefined ? {} : { onQuirkLearned: options.onQuirkLearned }) });
     },
     listModels,
     /**

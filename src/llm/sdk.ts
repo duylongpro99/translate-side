@@ -98,17 +98,19 @@ export function flipQuirk(error: LLMError, quirks: Quirks, req: NormalizedReques
 type Usage = Extract<NormalizedEvent, { type: 'usage' }>;
 
 /**
- * How long one request may be silent, in ms: no response headers, or no stream event (any event
- * the SDK parses, thinking deltas and pings included), before it is aborted and reported as a
- * `network` error (§4.3.5: retry with backoff, then the fallback profile). Without it a provider
- * that hangs, rather than refuses, holds its chunk, and the job, for as long as the connection lives.
+ * How long one request may be silent, in ms: no response headers, or no bytes of the response
+ * body, before it is aborted and reported as a `network` error (§4.3.5: retry with backoff, then
+ * the fallback profile). Without it a provider that hangs, rather than refuses, holds its chunk,
+ * and the job, for as long as the connection lives. Watched on raw bytes (`watchedFetch`), because
+ * the SDKs drop SSE comments and `ping` events before an adapter sees them, so a thinking model
+ * that sends only keepalives for a minute is alive, not hung.
  */
 export const IDLE_TIMEOUT_MS = 60_000;
 
 /** One attempt's idle watch: `signal` aborts when `touch()` was not called for `ms`, or when the request's own signal aborts (a cancel). */
 export interface IdleGuard {
   signal: AbortSignal;
-  /** Call when the response arrives and on every stream event. */
+  /** Call when the response arrives and on every chunk of its body (`watchedFetch`). */
   touch(): void;
   /** True once the guard, not the request's signal, aborted. */
   timedOut(): boolean;
@@ -138,6 +140,39 @@ export function idleGuard(parent: AbortSignal, ms: number = IDLE_TIMEOUT_MS): Id
       if (timer !== undefined) clearTimeout(timer);
       parent.removeEventListener('abort', onParent);
     },
+  };
+}
+
+/** The guard of the attempt now running, for the `fetch` the SDK client was built with. */
+export interface GuardHolder {
+  guard?: IdleGuard;
+}
+
+/**
+ * `base` with its response body read through the holder's guard: every chunk read resets the idle
+ * timer. A reader is pulled only when the consumer asks for more, so a consumer that stops
+ * reading for longer than the limit (a stalled UI thread) is indistinguishable from a silent
+ * provider and aborts a healthy stream (accepted; the pipeline retries it).
+ */
+export function watchedFetch(base: typeof globalThis.fetch, holder: GuardHolder): typeof globalThis.fetch {
+  return async (input, init) => {
+    const res = await base(input, init);
+    const guard = holder.guard;
+    if (guard === undefined || res.body === null) return res;
+    guard.touch();
+    const reader = res.body.getReader();
+    const body = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        const { done, value } = await reader.read();
+        if (done) controller.close();
+        else {
+          guard.touch();
+          controller.enqueue(value);
+        }
+      },
+      cancel: (reason) => reader.cancel(reason),
+    });
+    return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
   };
 }
 
