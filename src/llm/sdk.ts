@@ -154,6 +154,7 @@ export interface GuardHolder {
  * reading for longer than the limit (a stalled UI thread) is indistinguishable from a silent
  * provider and aborts a healthy stream (accepted; the pipeline retries it).
  */
+// The returned Response loses `url` and `redirected`; the SDKs' streaming path does not use them.
 export function watchedFetch(base: typeof globalThis.fetch, holder: GuardHolder): typeof globalThis.fetch {
   return async (input, init) => {
     const res = await base(input, init);
