@@ -1,0 +1,10 @@
+{
+  "provider": "openrouter",
+  "model": "mock/primary-model",
+  "status": "done",
+  "jobText": "Vietnamese · 69 of 69 · 245.6 s mock/primary-model is unreachable; continued with mock/fallback-model. Blocks it translated are marked.",
+  "cost": null,
+  "costTitle": null,
+  "failedBlocks": 0,
+  "wallSeconds": 305.7
+}

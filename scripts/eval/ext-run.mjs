@@ -57,7 +57,7 @@ const ctx = await chromium.launchPersistentContext(udd, {
 const netLog = [];
 if (opt('net', '')) {
   const t00 = Date.now();
-  ctx.on('request', (r) => { if (/openrouter|ollama|generativelanguage|ai-box|anthropic\.com|127\.0\.0\.1:18099/.test(r.url())) r.__t = Date.now(); });
+  ctx.on('request', (r) => { if (/openrouter|ollama|generativelanguage|ai-box|anthropic\.com|127\.0\.0\.1:1809[89]/.test(r.url())) r.__t = Date.now(); });
   ctx.on('response', (r) => netLog.push({ t: Date.now() - t00, url: r.url().replace(/\?.*/, ''), method: r.request().method(), status: r.status(), ms: Date.now() - (r.request().__t ?? Date.now()), from: r.request().serviceWorker() ? 'worker' : 'page' }));
   ctx.on('requestfailed', (r) => netLog.push({ t: Date.now() - t00, url: r.url().replace(/\?.*/, ''), method: r.method(), failed: r.failure()?.errorText }));
 }
@@ -74,6 +74,14 @@ try {
     sync[`conn:${P.conn}`] = { id: P.conn, label: P.conn, presetId: P.presetId, protocol: auto ? 'auto' : P.protocol, baseUrl: P.baseUrl, auth: { style: P.auth }, quirks: {}, status: 'ok', ...(auto ? { detectedProtocols: ['openai-chat', 'anthropic-messages'], authByProtocol: { 'anthropic-messages': { style: 'x-api-key' }, 'openai-chat': { style: 'bearer' } } } : {}) };
     sync[`profile:${pid}`] = { id: pid, connectionId: P.conn, model: P.model, maxConcurrency: P.max, chunkTokens: P.chunk, ...(opt('protocol', '') === 'anthropic-messages' ? { protocolOverride: 'anthropic-messages' } : {}), ...(opt('reasoning', '') ? { quirks: { reasoning: { control: 'effort', lowest: opt('reasoning', ''), reserveTokens: Number(opt('reserve', '6000')) } } } : {}) };
     sync.routing = { translate: pid };
+    // `--fallback-base URL` adds a second connection and profile (an OpenAI-compatible endpoint, e.g. a mock) as the routing fallback.
+    if (opt('fallback-base', '')) {
+      const fb = { conn: 'fallback-conn', pid: 'fallback-profile', model: opt('fallback-model', 'mock/fallback-model') };
+      sync[`conn:${fb.conn}`] = { id: fb.conn, label: 'fallback', presetId: 'custom-openai', protocol: 'openai-chat', baseUrl: opt('fallback-base', ''), auth: { style: 'bearer' }, quirks: {}, status: 'ok' };
+      sync[`profile:${fb.pid}`] = { id: fb.pid, connectionId: fb.conn, model: fb.model, maxConcurrency: 2, chunkTokens: P.chunk };
+      sync.routing = { translate: pid, fallback: [fb.pid] };
+      local[`secret:${fb.conn}`] = key;
+    }
   } else sync.routing = { translate: P.profile };
   await sw.evaluate(async ([s, l]) => { await chrome.storage.sync.set(s); await chrome.storage.local.set(l); }, [sync, local]);
 
@@ -106,7 +114,7 @@ try {
   const result = { provider, model: P.model ?? null, status, jobText: text, cost, costTitle, failedBlocks, wallSeconds: Math.round((Date.now() - t0) / 100) / 10 };
   fs.writeFileSync(path.join(outDir, `${provider}.json`), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result));
-  if (opt('net', '')) console.log('NET ' + JSON.stringify(netLog.filter((e) => /openrouter|127\.0\.0\.1:18099/.test(e.url))));
+  if (opt('net', '')) console.log('NET ' + JSON.stringify(netLog.filter((e) => /openrouter|127\.0\.0\.1:1809[89]/.test(e.url))));
   console.log(JSON.stringify({ extId, pageUrl }));
   await new Promise((r) => setTimeout(r, Number(opt('wait', '0')) * 1000));
 } finally {
