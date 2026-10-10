@@ -27,6 +27,8 @@ export interface AdapterOptions {
    * adapter has already updated `conn.quirks` in memory. A throwing callback is ignored.
    */
   onQuirkLearned?: (conn: ResolvedConnection, learned: keyof Quirks, quirks: Quirks) => void;
+  /** The idle limit in ms (IDLE_TIMEOUT_MS by default); tests shorten it. */
+  idleMs?: number;
 }
 
 /**
@@ -95,10 +97,66 @@ export function flipQuirk(error: LLMError, quirks: Quirks, req: NormalizedReques
 
 type Usage = Extract<NormalizedEvent, { type: 'usage' }>;
 
+/**
+ * How long one request may be silent, in ms: no response headers, or no stream event (any event
+ * the SDK parses, thinking deltas and pings included), before it is aborted and reported as a
+ * `network` error (§4.3.5: retry with backoff, then the fallback profile). Without it a provider
+ * that hangs, rather than refuses, holds its chunk, and the job, for as long as the connection lives.
+ */
+export const IDLE_TIMEOUT_MS = 60_000;
+
+/** One attempt's idle watch: `signal` aborts when `touch()` was not called for `ms`, or when the request's own signal aborts (a cancel). */
+export interface IdleGuard {
+  signal: AbortSignal;
+  /** Call when the response arrives and on every stream event. */
+  touch(): void;
+  /** True once the guard, not the request's signal, aborted. */
+  timedOut(): boolean;
+  dispose(): void;
+}
+
+export function idleGuard(parent: AbortSignal, ms: number = IDLE_TIMEOUT_MS): IdleGuard {
+  const controller = new AbortController();
+  let fired = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const onParent = (): void => controller.abort(parent.reason);
+  if (parent.aborted) onParent();
+  else parent.addEventListener('abort', onParent, { once: true });
+  const touch = (): void => {
+    if (timer !== undefined) clearTimeout(timer);
+    timer = setTimeout(() => {
+      fired = !parent.aborted;
+      if (fired) controller.abort(new DOMException('no response', 'TimeoutError'));
+    }, ms);
+  };
+  touch();
+  return {
+    signal: controller.signal,
+    touch,
+    timedOut: () => fired,
+    dispose() {
+      if (timer !== undefined) clearTimeout(timer);
+      parent.removeEventListener('abort', onParent);
+    },
+  };
+}
+
+function idleError(conn: ResolvedConnection, cause?: unknown): LLMError {
+  let host = conn.baseUrl;
+  try {
+    host = new URL(conn.baseUrl).host;
+  } catch {
+    // Keep the base URL as written.
+  }
+  return { kind: 'network', message: `No response from ${host} for ${IDLE_TIMEOUT_MS / 1000} s`, raw: cause };
+}
+
 export interface AttemptOptions {
   isApiError: (e: unknown) => e is SdkApiError;
   flips: readonly QuirkFlip[];
   onQuirkLearned?: AdapterOptions['onQuirkLearned'];
+  /** The idle limit in ms; IDLE_TIMEOUT_MS when left out (tests shorten it). */
+  idleMs?: number;
 }
 
 /**
@@ -110,7 +168,7 @@ export interface AttemptOptions {
 export async function* streamAttempts(
   conn: ResolvedConnection,
   req: NormalizedRequest,
-  attempt: (quirks: Quirks) => AsyncIterable<NormalizedEvent>,
+  attempt: (quirks: Quirks, guard: IdleGuard) => AsyncIterable<NormalizedEvent>,
   options: AttemptOptions,
 ): AsyncGenerator<NormalizedEvent> {
   // An attempt may yield `usage` more than once (a provisional one as soon as the input count is
@@ -136,8 +194,9 @@ export async function* streamAttempts(
     req.signal.throwIfAborted();
     let sawText = false;
     let usage: Usage | undefined;
+    const guard = idleGuard(req.signal, options.idleMs);
     try {
-      for await (const event of attempt(conn.quirks)) {
+      for await (const event of attempt(conn.quirks, guard)) {
         if (event.type === 'usage') {
           usage = event;
           continue;
@@ -155,13 +214,15 @@ export async function* streamAttempts(
         yield event;
       }
       req.signal.throwIfAborted();
+      // An SDK that swallowed the idle abort ends the stream quietly: still a network error, not a cut.
+      if (guard.timedOut()) throw guard.signal.reason;
       confirm();
       if (usage !== undefined) yield usage;
       yield { type: 'done', stopReason: 'other' };
       return;
     } catch (err) {
       if (req.signal.aborted) throw req.signal.reason;
-      const error = await classifySdkError(err, conn, options.isApiError);
+      const error = guard.timedOut() ? idleError(conn, err) : await classifySdkError(err, conn, options.isApiError);
       // §4.2.4: flip the named quirk and resend once. Never after text (it can't be taken back),
       // never twice, and only on a status-400 bad_request (never a 429, 5xx or network error).
       if (!sawText && flipped === null && !flippedOnce) {
@@ -175,6 +236,8 @@ export async function* streamAttempts(
       if (usage !== undefined) yield usage;
       yield { type: 'error', error };
       return;
+    } finally {
+      guard.dispose();
     }
   }
 }

@@ -7,7 +7,7 @@
 import Anthropic, { APIError } from '@anthropic-ai/sdk';
 import type { MessageCreateParamsStreaming, RawMessageStreamEvent, StopReason as AnthropicStopReason, TextBlockParam } from '@anthropic-ai/sdk/resources/messages';
 import { reasoningFor } from './reasoning.ts';
-import { classifySdkError, headerOverrides, preflight, streamAttempts, type AdapterOptions, type QuirkFlip, type SdkApiError, FLIP_TEMPERATURE } from './sdk.ts';
+import { classifySdkError, headerOverrides, preflight, streamAttempts, type AdapterOptions, type IdleGuard, type QuirkFlip, type SdkApiError, FLIP_TEMPERATURE } from './sdk.ts';
 import type { ModelInfo, NormalizedEvent, NormalizedRequest, ProbeResult, ProtocolAdapter, Quirks, ResolvedConnection, StopReason } from './types.ts';
 
 const isApiError = (e: unknown): e is SdkApiError => e instanceof APIError;
@@ -83,8 +83,9 @@ export function toAnthropicParams(req: NormalizedRequest, quirks: Quirks): Messa
   return params;
 }
 
-async function* attempt(client: Anthropic, req: NormalizedRequest, quirks: Quirks): AsyncGenerator<NormalizedEvent> {
-  const stream = await client.messages.create(toAnthropicParams(req, quirks), { signal: req.signal });
+async function* attempt(client: Anthropic, req: NormalizedRequest, quirks: Quirks, guard: IdleGuard): AsyncGenerator<NormalizedEvent> {
+  const stream = await client.messages.create(toAnthropicParams(req, quirks), { signal: guard.signal });
+  guard.touch();
   let input = 0;
   let cachedInput = 0;
   let output = 0;
@@ -98,6 +99,7 @@ async function* attempt(client: Anthropic, req: NormalizedRequest, quirks: Quirk
     sawUsage = true;
   };
   for await (const event of stream as AsyncIterable<RawMessageStreamEvent>) {
+    guard.touch();
     switch (event.type) {
       case 'message_start':
         readInput(event.message.usage);
@@ -147,7 +149,7 @@ export function createAnthropicAdapter(options: AdapterOptions = {}): ProtocolAd
     protocol: 'anthropic-messages',
     stream(conn, req) {
       const client = clientFor(conn, options);
-      return streamAttempts(conn, req, (quirks) => attempt(client, req, quirks), { isApiError, flips: FLIPS, ...(options.onQuirkLearned === undefined ? {} : { onQuirkLearned: options.onQuirkLearned }) });
+      return streamAttempts(conn, req, (quirks, guard) => attempt(client, req, quirks, guard), { isApiError, flips: FLIPS, ...(options.idleMs === undefined ? {} : { idleMs: options.idleMs }), ...(options.onQuirkLearned === undefined ? {} : { onQuirkLearned: options.onQuirkLearned }) });
     },
     listModels,
     /** `GET /v1/models` needs the key here, so a 401 shows a bad key; success is the status (S4). */

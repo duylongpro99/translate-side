@@ -10,7 +10,7 @@ export interface RecordedRequest {
   body: unknown;
 }
 
-export type ScriptedResponse = { status: number; body: string; headers?: Record<string, string> } | { throw: unknown } | { hang: true };
+export type ScriptedResponse = { status: number; body: string; headers?: Record<string, string> } | { throw: unknown } | { hang: true } | { hangHeaders: true } | { hangAfter: string };
 
 export interface MockFetch {
   fetch: typeof globalThis.fetch;
@@ -26,7 +26,7 @@ function headersOf(init: RequestInit | undefined, input: RequestInfo | URL): Rec
   return out;
 }
 
-/** Plays `responses` in order (the last one repeats). `hang` streams nothing until the request's signal aborts. */
+/** Plays `responses` in order (the last one repeats). `hang` streams nothing (headers, no body), `hangHeaders` sends no headers, `hangAfter` sends that SSE prefix and then stalls, each until the request's signal aborts. */
 export function mockFetch(responses: readonly ScriptedResponse[]): MockFetch {
   const requests: RecordedRequest[] = [];
   const fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -43,6 +43,28 @@ export function mockFetch(responses: readonly ScriptedResponse[]): MockFetch {
     requests.push({ url: input instanceof Request ? input.url : String(input), method: init?.method ?? 'GET', headers: headersOf(init, input), body });
     if (script === undefined) throw new Error('mockFetch: no scripted response');
     if ('throw' in script) throw script.throw;
+    if ('hangHeaders' in script) {
+      // No response headers: the promise settles only when the request's signal aborts.
+      return new Promise<Response>((_, reject) => {
+        const signal = init?.signal;
+        const abort = (): void => reject(signal?.reason ?? new DOMException('aborted', 'AbortError'));
+        if (signal?.aborted === true) abort();
+        else signal?.addEventListener('abort', abort, { once: true });
+      });
+    }
+    if ('hangAfter' in script) {
+      // Headers and `hangAfter` (an SSE prefix), then nothing until the request's signal aborts.
+      const signal = init?.signal;
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(script.hangAfter));
+          const abort = (): void => controller.error(signal?.reason ?? new DOMException('aborted', 'AbortError'));
+          if (signal?.aborted === true) abort();
+          else signal?.addEventListener('abort', abort, { once: true });
+        },
+      });
+      return new Response(stream, { status: 200, headers: SSE_HEADERS });
+    }
     if ('hang' in script) {
       const signal = init?.signal;
       const stream = new ReadableStream<Uint8Array>({

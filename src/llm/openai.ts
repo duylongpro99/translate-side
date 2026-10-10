@@ -11,7 +11,7 @@ import OpenAI, { APIError } from 'openai';
 import type { ChatCompletionChunk, ChatCompletionCreateParamsStreaming, ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import type { ReasoningEffort } from 'openai/resources/shared';
 import { reasoningFor } from './reasoning.ts';
-import { classifySdkError, headerOverrides, preflight, streamAttempts, type AdapterOptions, type QuirkFlip, type SdkApiError, FLIP_TEMPERATURE } from './sdk.ts';
+import { classifySdkError, headerOverrides, preflight, streamAttempts, type AdapterOptions, type IdleGuard, type QuirkFlip, type SdkApiError, FLIP_TEMPERATURE } from './sdk.ts';
 import type { ModelInfo, NormalizedEvent, NormalizedRequest, ProbeResult, ProtocolAdapter, Quirks, ResolvedConnection, StopReason } from './types.ts';
 
 const isApiError = (e: unknown): e is SdkApiError => e instanceof APIError;
@@ -105,11 +105,13 @@ export function toOpenAIParams(req: NormalizedRequest, quirks: Quirks): ChatComp
   return params;
 }
 
-async function* attempt(client: OpenAI, req: NormalizedRequest, quirks: Quirks): AsyncGenerator<NormalizedEvent> {
-  const stream = await client.chat.completions.create(toOpenAIParams(req, quirks), { signal: req.signal });
+async function* attempt(client: OpenAI, req: NormalizedRequest, quirks: Quirks, guard: IdleGuard): AsyncGenerator<NormalizedEvent> {
+  const stream = await client.chat.completions.create(toOpenAIParams(req, quirks), { signal: guard.signal });
+  guard.touch();
   let usage: Extract<NormalizedEvent, { type: 'usage' }> | undefined;
   let stop: StopReason | undefined;
   for await (const chunk of stream) {
+    guard.touch();
     // Always one choice (n = 1); some gateways send the usage chunk with no `choices` at all.
     const choice = (chunk.choices as ChatCompletionChunk.Choice[] | undefined)?.[0];
     if (choice !== undefined) {
@@ -151,7 +153,7 @@ export function createOpenAIAdapter(options: AdapterOptions = {}): ProtocolAdapt
     protocol: 'openai-chat',
     stream(conn, req) {
       const client = clientFor(conn, options);
-      return streamAttempts(conn, req, (quirks) => attempt(client, req, quirks), { isApiError, flips: FLIPS, ...(options.onQuirkLearned === undefined ? {} : { onQuirkLearned: options.onQuirkLearned }) });
+      return streamAttempts(conn, req, (quirks, guard) => attempt(client, req, quirks, guard), { isApiError, flips: FLIPS, ...(options.idleMs === undefined ? {} : { idleMs: options.idleMs }), ...(options.onQuirkLearned === undefined ? {} : { onQuirkLearned: options.onQuirkLearned }) });
     },
     listModels,
     /**

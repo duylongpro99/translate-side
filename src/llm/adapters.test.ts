@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_RETRY_POLICY, withRetry } from '../engine/retry.ts';
+import { withFallback } from '../engine/fallback.ts';
 import { fakeSleep } from '../engine/testing.ts';
 import { createAnthropicAdapter } from './anthropic.ts';
 import { bindClient, createAdapter, createClient } from './client.ts';
@@ -37,7 +38,7 @@ const types = (events: NormalizedEvent[]): string[] => events.map((e) => e.type)
 
 interface Harness {
   name: string;
-  adapter: (fetch: typeof globalThis.fetch) => ProtocolAdapter;
+  adapter: (fetch: typeof globalThis.fetch, idleMs?: number) => ProtocolAdapter;
   conn: (over?: Overrides<ResolvedConnection>) => ResolvedConnection;
   ok: (text: string[]) => ScriptedResponse;
   model: string;
@@ -46,14 +47,14 @@ interface Harness {
 const harnesses: Harness[] = [
   {
     name: 'anthropic-messages',
-    adapter: (fetch) => createAnthropicAdapter({ fetch }),
+    adapter: (fetch, idleMs) => createAnthropicAdapter({ fetch, ...(idleMs === undefined ? {} : { idleMs }) }),
     conn: (over) => connection({ protocol: 'anthropic-messages', baseUrl: ANTHROPIC, auth: { style: 'x-api-key' }, ...over }),
     ok: (t) => ({ status: 200, body: anthropicStream({ text: t }) }),
     model: 'claude-haiku-4-5',
   },
   {
     name: 'openai-chat',
-    adapter: (fetch) => createOpenAIAdapter({ fetch }),
+    adapter: (fetch, idleMs) => createOpenAIAdapter({ fetch, ...(idleMs === undefined ? {} : { idleMs }) }),
     conn: (over) => connection({ protocol: 'openai-chat', baseUrl: OPENAI, auth: { style: 'bearer' }, ...over }),
     ok: (t) => ({ status: 200, body: openaiStream({ text: t }) }),
     model: 'gemini-2.5-flash-lite',
@@ -110,6 +111,60 @@ describe.each(harnesses)('$name adapter (shared contract)', (h) => {
     await new Promise((r) => setTimeout(r, 20));
     controller.abort(reason);
     await expect(pending).rejects.toBe(reason);
+  });
+
+  describe('idle guard (§4.3.5: a provider that hangs is a network error, not a wait)', () => {
+    const IDLE = 30;
+    const stalls: [string, ScriptedResponse][] = [
+      ['no response headers', { hangHeaders: true }],
+      ['headers, then a stalled stream', { hangAfter: ': ping\n\n' }],
+    ];
+
+    it.each(stalls)('%s: the request is aborted and reported as a network error', async (_name, stall) => {
+      const f = mockFetch([stall]);
+      const events = await collect(h.adapter(f.fetch, IDLE).stream(h.conn(), request(h.model)));
+      expect(events).toEqual([{ type: 'error', error: expect.objectContaining({ kind: 'network', message: expect.stringContaining('No response from') }) }]);
+      expect(f.requests).toHaveLength(1);
+    });
+
+    it.each(stalls)('%s: the pipeline backs off and the retry gets the text', async (_name, stall) => {
+      const f = mockFetch([stall, h.ok(['ok'])]);
+      const sleep = fakeSleep();
+      const client = withRetry(bindClient(h.adapter(f.fetch, IDLE), h.conn(), h.model), { sleep, random: () => 0 });
+      expect(text(await collect(client.stream(request(h.model))))).toBe('ok');
+      expect(f.requests).toHaveLength(2);
+      expect(sleep.delays).toHaveLength(1);
+    });
+
+    it.each(stalls)('%s: after the retries the next profile answers', async (_name, stall) => {
+      const primary = mockFetch([stall]);
+      const backup = mockFetch([h.ok(['from backup'])]);
+      const sleep = fakeSleep();
+      const link = (f: typeof primary, model: string) => withRetry(bindClient(h.adapter(f.fetch, IDLE), h.conn(), model), { sleep, random: () => 0 });
+      const chain = withFallback([link(primary, h.model), link(backup, 'backup-model')]);
+      const events = await collect(chain.stream(request(h.model)));
+      expect(text(events)).toBe('from backup');
+      expect(events.at(-1)).toMatchObject({ type: 'done' });
+      expect(primary.requests).toHaveLength(DEFAULT_RETRY_POLICY.maxRetries + 1);
+      expect(backup.requests).toHaveLength(1);
+    });
+
+    it.each(stalls)('%s: a cancel during the stall throws signal.reason, not a network error', async (_name, stall) => {
+      const f = mockFetch([stall]);
+      const controller = new AbortController();
+      const reason = new Error('user cancelled');
+      const it = h.adapter(f.fetch, 10_000).stream(h.conn(), request(h.model, { signal: controller.signal }))[Symbol.asyncIterator]();
+      const pending = it.next();
+      await new Promise((r) => setTimeout(r, 20));
+      controller.abort(reason);
+      await expect(pending).rejects.toBe(reason);
+    });
+
+    it('a stream that keeps sending events is not cut, however long it takes in total', async () => {
+      const f = mockFetch([h.ok(['a', 'b', 'c'])]);
+      const events = await collect(h.adapter(f.fetch, IDLE).stream(h.conn(), request(h.model)));
+      expect(text(events)).toBe('abc');
+    });
   });
 
   it('an aborted signal before the call throws at once, with no request', async () => {
