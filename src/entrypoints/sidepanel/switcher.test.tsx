@@ -281,7 +281,8 @@ describe('quick switcher (M4-E11)', () => {
     expect(note).toBeTruthy();
     expect(q('model-switcher')?.getAttribute('aria-describedby')).toBe(note);
     expect(q('make-default')?.getAttribute('aria-describedby')).toBe(note);
-    expect(q('switcher-live')?.textContent).toContain(`${GEMINI_PROFILE.model}, this tab only`);
+    // The live region updates in its own render after the note: wait for it, not a fixed tick.
+    await until(() => q('switcher-live')?.textContent?.includes(`${GEMINI_PROFILE.model}, this tab only`) === true);
   });
 
   it('offers the setup guide while no route can run and the guide was never finished; not after it was', async () => {
