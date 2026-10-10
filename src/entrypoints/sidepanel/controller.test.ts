@@ -259,6 +259,20 @@ describe('PanelController', () => {
     expect(w.connects).toEqual([10]);
   });
 
+  it('a new gesture on the shown document is passed on as asked, without reading the page again (M3 dogfood B5)', async () => {
+    const w = fakeWorld();
+    const asked: string[] = [];
+    w.pages[10] = { docId: 'd1', result: ok(1) };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    await started(w, { hooks: { asked: (tabId: number, docId: string) => asked.push(`${tabId} ${docId}`) } });
+    await wait();
+    expect(asked).toEqual([]);
+    w.setAccess(10, { status: 'ready', detail: 'already injected' });
+    await wait();
+    expect(asked).toEqual(['10 d1']);
+    expect(w.connects).toEqual([10]);
+  });
+
   it('shows "lost" when the page went away and no re-injection follows', async () => {
     const w = fakeWorld();
     w.pages[10] = { docId: 'd1', result: ok(1) };

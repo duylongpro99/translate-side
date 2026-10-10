@@ -138,5 +138,6 @@ function createStageContext(deps: EngineDeps, job: TranslationJob, signal: Abort
     budget: createBudget(job.options.budget ?? {}, deps.now),
     signal,
     priority: job.livePriority ?? (() => job.priority),
+    ...(job.focus === undefined ? {} : { focus: job.focus }),
   };
 }

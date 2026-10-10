@@ -99,6 +99,12 @@ export interface TranslationJob {
    * chrome.* and the DOM (§5.1).
    */
   livePriority?: () => readonly string[];
+  /**
+   * Bumped when the reader asks again from another screen (M3 dogfood B5, Alt+T on a running job):
+   * the chunks not started yet are cut again around the screen then (Stage.recut). Chunks in flight
+   * are never touched. Absent: the chunks stay as first cut.
+   */
+  focus?: () => number;
   strategy: StrategyId;
   options: JobOptions;
 }
@@ -188,6 +194,12 @@ export interface Stage<I, O> {
    * flight are never touched.
    */
   pick?(items: readonly I[], pending: readonly number[], ctx: StageContext): number;
+  /**
+   * `chunk` stages: when `ctx.focus` changed, the elements to run instead of the pending ones
+   * (`pending`, indices into `items`), e.g. their segments cut again around the screen now.
+   * `undefined` keeps them. Elements in flight are never touched.
+   */
+  recut?(items: readonly I[], pending: readonly number[], ctx: StageContext): I[] | undefined;
 }
 
 export interface StageContext {
@@ -203,6 +215,8 @@ export interface StageContext {
   signal: AbortSignal;
   /** Segment ids to do first, as of now (the job's `livePriority`, else its `priority`). Absent: none. */
   priority?: () => readonly string[];
+  /** The job's `focus` counter (TranslationJob.focus). Absent: never re-cut. */
+  focus?: () => number;
 }
 
 export interface Strategy {

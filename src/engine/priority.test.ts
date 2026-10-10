@@ -360,3 +360,115 @@ describe('the screen starts a chunk, and the first chunk started gets the first 
     expect(events.filter((e) => e.type === 'segment.failed')).toEqual([]);
   });
 });
+
+describe('asked again from another screen: the chunks not started are cut again around it (M3 dogfood B5)', () => {
+  /** Twelve short paragraphs: several to a chunk at chunkTokens 500. */
+  const short = Array.from({ length: 12 }, (_, i) => seg(`p${i}`, `P${i} ${'word '.repeat(60).trim()}`));
+  const shortJob = (strategy: string, over: Partial<TranslationJob>, maxConcurrency: number): TranslationJob => {
+    const base = job(strategy, over, maxConcurrency);
+    return { ...base, doc: { ...base.doc, segments: short } };
+  };
+  /** Every paragraph a translate request carries. */
+  const paragraphsOf = (req: NormalizedRequest): string[] => wireLines(req.messages.find((m) => m.role === 'user')?.content ?? '').map((l) => `p${/^P(\d+)/.exec(l.source)?.[1] ?? '?'}`);
+
+  it('multiplex: refresh replaces the pending items; the one in flight runs on and its output stays', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    const items = ['a', 'b', 'c'];
+    const started: string[] = [];
+    let swap = false;
+    const values: unknown[] = [];
+    const gen = multiplex(
+      items,
+      1,
+      async function* (item) {
+        started.push(item);
+        if (item === 'a') await held;
+        yield item;
+      },
+      new AbortController().signal,
+      undefined,
+      (pending) => {
+        if (!swap) return undefined;
+        swap = false;
+        expect(pending).toEqual([1, 2]);
+        return ['x', 'y'];
+      },
+    );
+    const consume = (async () => {
+      for await (const { index, value } of gen) values.push([index, value]);
+    })();
+    await new Promise((r) => setTimeout(r, 0));
+    swap = true;
+    release();
+    await consume;
+    expect(started).toEqual(['a', 'x', 'y']);
+    expect(values).toEqual([[0, 'a'], [3, 'x'], [4, 'y']]);
+    expect(items).toEqual(['a', 'b', 'c', 'x', 'y']);
+  });
+
+  it('single-pass: the next request is the screen now, alone; the request in flight is not aborted', async () => {
+    const { client, release } = heldTranslator(1);
+    let screen: readonly string[] = ['p1'];
+    let focus = 0;
+    const done = collect(engineFor(client).translate(shortJob('single-pass', { priority: ['p1'], livePriority: () => screen, focus: () => focus }, 1), new AbortController().signal));
+    await new Promise((r) => setTimeout(r, 0));
+    // The reader scrolls to p8 and presses Alt+T while the first chunk is in flight.
+    screen = ['p8'];
+    focus = 1;
+    release();
+    const events = await done;
+    const sent = client.requests.map(paragraphsOf);
+    expect(sent[0]?.[0]).toBe('p1');
+    expect(sent[1]).toEqual(['p8']);
+    // The chunk in flight finished: its finals came, nothing failed, every paragraph once.
+    expect(sent[0]?.every((p) => finalIds(events).includes(p))).toBe(true);
+    expect(events.filter((e) => e.type === 'segment.failed')).toEqual([]);
+    expect(sent.flat().sort()).toEqual(short.map((s) => s.id).sort());
+    expect(finalIds(events).sort()).toEqual(short.map((s) => s.id).sort());
+  });
+
+  it('single-pass: without it, a scroll only reorders the chunks as first cut (the screen may sit mid-chunk)', async () => {
+    const { client, release } = heldTranslator(1);
+    let screen: readonly string[] = ['p1'];
+    const done = collect(engineFor(client).translate(shortJob('single-pass', { priority: ['p1'], livePriority: () => screen }, 1), new AbortController().signal));
+    await new Promise((r) => setTimeout(r, 0));
+    screen = ['p8'];
+    release();
+    await done;
+    const second = client.requests.map(paragraphsOf)[1] ?? [];
+    expect(second).toContain('p8');
+    expect(second).not.toEqual(['p8']);
+  });
+
+  it('contextual: the new screen goes out before the brief, and is revised once it lands', async () => {
+    let releaseBrief!: () => void;
+    const briefGate = new Promise<void>((r) => (releaseBrief = r));
+    const inner = fakeClient([success(JSON.stringify(BRIEF))], { model: 'brief-model' });
+    const analyze: LLMClient = {
+      model: inner.model,
+      reasoningReserveTokens: inner.reasoningReserveTokens,
+      async *stream(req) {
+        await briefGate;
+        yield* inner.stream(req);
+      },
+    };
+    const { client, release } = heldTranslator(1);
+    let screen: readonly string[] = ['p1'];
+    let focus = 0;
+    const done = collect(engineFor(client, analyze).translate(shortJob('contextual', { priority: ['p1'], livePriority: () => screen, focus: () => focus }, 2), new AbortController().signal));
+    await new Promise((r) => setTimeout(r, 10));
+    screen = ['p8'];
+    focus = 1;
+    release();
+    await new Promise((r) => setTimeout(r, 10));
+    // The brief has not landed: the screen's chunk went out anyway, alone.
+    expect(client.requests.map(paragraphsOf)[1]).toEqual(['p8']);
+    releaseBrief();
+    const events = await done;
+    const revised = events.flatMap((e) => (e.type === 'segment.final' && e.revision === 2 ? [e.id] : []));
+    expect(revised).toContain('p8');
+    expect(events.filter((e) => e.type === 'segment.failed')).toEqual([]);
+    expect(new Set(finalIds(events))).toEqual(new Set(short.map((s) => s.id)));
+  });
+});

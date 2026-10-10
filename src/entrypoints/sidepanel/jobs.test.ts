@@ -772,6 +772,66 @@ describe('Jobs: viewport first (plan M3-E1)', () => {
     expect(jobs.get(1)?.screenDoneAt).toBe(1200);
   });
 
+  describe('refocus: asked again from another screen (M3 dogfood B5)', () => {
+    /** A job held open until `release()`, whose engine job is kept to read `focus`. */
+    const heldJob = () => {
+      let release!: () => void;
+      const held = new Promise<void>((r) => (release = r));
+      const seen: { job?: { focus?: () => number } } = {};
+      const engine = () => ({
+        async *translate(job: { focus?: () => number }) {
+          seen.job = job;
+          await held;
+          yield final('s0', 'vi:P0');
+        },
+      });
+      const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(translatorClient()), engine: engine as never });
+      jobs.setActive(1);
+      return { jobs, release, seen };
+    };
+
+    it('the same screen: nothing changes', async () => {
+      const { jobs, release, seen } = heldJob();
+      jobs.setViewport(1, 'd', ['s1', 's2']);
+      const running = jobs.start(1, 'd', doc(3));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(jobs.refocus(1, 'd')).toBe(false);
+      expect(seen.job?.focus?.()).toBe(0);
+      release();
+      await running;
+    });
+
+    it('another screen: the engine is told to cut the chunks not started again, the job runs on', async () => {
+      const { jobs, release, seen } = heldJob();
+      jobs.setViewport(1, 'd', ['s0']);
+      const running = jobs.start(1, 'd', doc(3));
+      await new Promise((r) => setTimeout(r, 0));
+      jobs.setViewport(1, 'd', ['s2']);
+      expect(jobs.refocus(1, 'd')).toBe(true);
+      expect(seen.job?.focus?.()).toBe(1);
+      expect(jobs.get(1)?.status).toBe('running');
+      // Asked again from the same (new) screen: nothing more.
+      expect(jobs.refocus(1, 'd')).toBe(false);
+      expect(seen.job?.focus?.()).toBe(1);
+      release();
+      await running;
+    });
+
+    it('no running job for the document: nothing', async () => {
+      const { jobs, release } = heldJob();
+      jobs.setViewport(1, 'd', ['s0']);
+      expect(jobs.refocus(1, 'd')).toBe(false);
+      const running = jobs.start(1, 'd', doc(3));
+      await new Promise((r) => setTimeout(r, 0));
+      jobs.setViewport(1, 'other', ['s2']);
+      expect(jobs.refocus(1, 'other')).toBe(false);
+      release();
+      await running;
+      jobs.setViewport(1, 'd', ['s2']);
+      expect(jobs.refocus(1, 'd')).toBe(false);
+    });
+  });
+
   it('no screen, no screenDoneAt', async () => {
     const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(translatorClient()) });
     jobs.setActive(1);

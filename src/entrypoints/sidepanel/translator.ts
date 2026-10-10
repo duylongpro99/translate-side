@@ -322,6 +322,8 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       jobs.setViewport(tabId, docId, viewport.visible);
       viewports.set(tabId, docId, viewport);
     },
+    // Asked again on a running page from another screen (M3 dogfood B5): that screen goes next.
+    asked: (tabId, docId) => void jobs.refocus(tabId, docId),
   };
 
   /**

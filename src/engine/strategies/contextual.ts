@@ -38,7 +38,7 @@ import { analyzeStage } from '../stages/analyze.ts';
 import type { EngineEvent, StageContext, Strategy, TranslationJob } from '../types.ts';
 import { checkSegment } from '../check/checks.ts';
 import { pickByPriority } from '../priority.ts';
-import { chunkJob, createStrategyCheckStage, createTranslateRun, untilSettledOrAborted, type BriefWait, type ChunkOutcome, type ChunkWork, type TranslateRun } from './single-pass.ts';
+import { chunkJob, createStrategyCheckStage, createTranslateRun, recutChunks, untilSettledOrAborted, type BriefWait, type ChunkOutcome, type ChunkWork, type TranslateRun } from './single-pass.ts';
 
 export const CONTEXTUAL_ID = 'contextual';
 /** 2: translate@2 with the context providers (M2-E3). 1 was Phase B's translate@1 with the brief unused. */
@@ -121,6 +121,8 @@ export function contextualStages(brief: BriefWait, translatePrompt: string = CON
   // Every chunk holding the screen goes without the brief (M3 dogfood B4: a dense screen is more
   // than one chunk, and the part in the second one waited for the brief call), up to a few.
   let freeChunks = brief.freeChunks;
+  let briefSettled = false;
+  void brief.settled.then(() => (briefSettled = true));
   const wait: BriefWait = {
     settled: brief.settled,
     get freeChunks() {
@@ -195,6 +197,25 @@ export function contextualStages(brief: BriefWait, translatePrompt: string = CON
       const work = items[next];
       if (claimed.length < freeChunks && work !== undefined && !('revise' in work)) claimed.push(work);
       return next;
+    },
+    // Asked again from another screen (M3 dogfood B5): the chunks not started are cut again around
+    // it. Before the brief has settled, the new screen's chunks go without it too (each gets its
+    // revise item), so the screen the reader asked from does not wait for the analyze call.
+    recut(items, pending, ctx) {
+      const chunkWorks = items.map((item) => ('revise' in item ? undefined : item));
+      const chunks = pending.filter((i) => chunkWorks[i] !== undefined);
+      const works = recutChunks(chunkWorks, chunks, ctx);
+      if (works === undefined) return undefined;
+      const revisesLeft = pending.map((i) => items[i]).filter((item): item is ReviseWork => item !== undefined && 'revise' in item);
+      const extra: ReviseWork[] = [];
+      if (!briefSettled) {
+        const onScreen = new Set(ctx.priority?.() ?? []);
+        const screenChunks = works.filter((w) => w.chunk.segments.some((s) => onScreen.has(s.id))).length;
+        const wanted = Math.max(freeChunks, claimed.length + Math.min(screenChunks, MAX_SCREEN_CHUNKS));
+        if (revises !== undefined) for (let k = freeChunks; k < wanted; k++) extra.push({ revise: k });
+        freeChunks = wanted;
+      }
+      return [...works, ...revisesLeft, ...extra];
     },
   });
   return [chunk, translate, check];

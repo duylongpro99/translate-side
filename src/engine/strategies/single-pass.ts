@@ -171,6 +171,23 @@ export function chunkJob(job: TranslationJob, priority: readonly string[] = []):
 }
 
 /**
+ * The chunks not started yet, cut again around the screen now (M3 dogfood B5: the reader asked
+ * again from another screen): their segments, in page order, go through chunkJob with the current
+ * priority. The new chunks take indices after every chunk so far, so none is mistaken for one
+ * already started. Chunks in flight keep theirs.
+ */
+export function recutChunks(items: readonly (ChunkWork | undefined)[], pending: readonly number[], ctx: StageContext): ChunkWork[] | undefined {
+  const works = pending.map((i) => items[i]).filter((w): w is ChunkWork => w !== undefined);
+  const base = works[0];
+  if (base === undefined) return undefined;
+  const order = new Map(base.doc.segments.map((s, i) => [s.id, i]));
+  const segments = works.flatMap((w) => w.chunk.segments).sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  const next = Math.max(...items.map((w) => w?.chunk.index ?? -1)) + 1;
+  const job = { doc: { ...base.doc, segments }, options: base.options } as TranslationJob;
+  return chunkJob(job, ctx.priority?.() ?? []).map((chunk, k) => ({ chunk: { ...chunk, index: next + k }, doc: base.doc, options: base.options }));
+}
+
+/**
  * The order the job's chunks started in (from 0), by chunk index. A request's `chunkIndex` is this
  * order, not the chunk's place in the page: the profile's per-chunk thinking (M2-D16, thinking off
  * for the first) goes to the chunk that starts first, the one on screen (plan M3-E1). In page
@@ -252,6 +269,8 @@ export function createTranslateStage(strategyId: string, brief?: BriefWait, prom
     },
     // Viewport first (plan M3-E1).
     pick: (works, pending, ctx) => pickByPriority(chunkIds(works), pending, ctx.priority?.() ?? []),
+    // Asked again from another screen (M3 dogfood B5).
+    recut: (works, pending, ctx) => recutChunks(works, pending, ctx),
   });
 }
 

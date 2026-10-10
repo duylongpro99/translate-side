@@ -447,6 +447,12 @@ interface Job {
   run: number;
   /** Segments this run had to translate at its start (view.screenDoneAt counts a screen with one). */
   owed: ReadonlySet<string>;
+  /**
+   * Bumped by refocus (M3 dogfood B5): the engine cuts the chunks not started yet again around the
+   * screen (TranslationJob.focus). `cutAround` is the screen they were last cut around.
+   */
+  focus: number;
+  cutAround: readonly string[];
   /** Cache key per translatable segment id; empty without a cache. */
   keys: Map<string, string>;
   /** Cache writes waiting for the end of this tick (coalesced), and the keys to drop. */
@@ -544,6 +550,24 @@ export class Jobs {
   }
 
   /**
+   * The reader asked again (Alt+T, the toolbar icon) on a page whose job is running (M3 dogfood B5):
+   * from another screen than the one the job's chunks were cut around, the chunks not started yet
+   * are cut again around the screen now, so it goes next as a chunk of its own. Requests in flight
+   * are never aborted (M3-D3). The same screen, or no job running for this document: nothing.
+   * Returns whether it re-cut.
+   */
+  refocus(tabId: number, docId: string): boolean {
+    const job = this.jobs.get(tabId);
+    if (job?.docId !== docId || job.view.status !== 'running') return false;
+    const screen = this.screenOf(tabId, docId);
+    const before = new Set(job.cutAround);
+    if (screen.length === 0 || (screen.length === before.size && screen.every((id) => before.has(id)))) return false;
+    job.cutAround = screen;
+    job.focus++;
+    return true;
+  }
+
+  /**
    * Stamps `screenDoneAt` into `patch` the first time every translatable block on screen now is
    * final (not failed, not a retranslate that failed back to its earlier text) and the run owed one
    * of them (M3 dogfood B4: the screen at the start, or failures, made the stamp too early).
@@ -628,6 +652,8 @@ export class Jobs {
       inflight: 0,
       run: (prev?.run ?? 0) + 1,
       owed: new Set(todo),
+      focus: 0,
+      cutAround: this.screenOf(tabId, docId),
       keys: new Map(),
       writes: new Map(),
       drops: new Set(),
@@ -719,6 +745,7 @@ export class Jobs {
       // Viewport first (M3-E1): what is on screen now, read again each time a chunk starts.
       priority: [...this.screenOf(tabId, docId)],
       livePriority: () => this.screenOf(tabId, docId),
+      focus: () => job.focus,
       strategy: this.deps.strategy ?? PANEL_STRATEGY,
       options: {
         style: doc.style ?? 'natural',
@@ -764,6 +791,8 @@ export class Jobs {
       inflight: 0,
       run: (prev?.run ?? 0) + 1,
       owed: new Set(),
+      focus: 0,
+      cutAround: [],
       keys: new Map(),
       writes: new Map(),
       drops: new Set(),

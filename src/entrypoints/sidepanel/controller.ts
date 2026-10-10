@@ -85,6 +85,11 @@ export interface SessionHooks {
   active?(tabId: number | undefined): void;
   /** What is on screen in the document changed (plan M3-E1 priority, M3-E7 scroll follow). */
   viewport?(tabId: number, docId: string, viewport: Viewport): void;
+  /**
+   * A new gesture (Alt+T, the toolbar icon) on a page whose document is live and shown (M3 dogfood
+   * B5): the page is not read again, but a running job may re-cut around the screen now.
+   */
+  asked?(tabId: number, docId: string): void;
 }
 
 export class PanelController {
@@ -190,10 +195,10 @@ export class PanelController {
     }
     const changed = access.at !== s.accessAt;
     s.accessAt = access.at;
-    this.apply(tabId, s, access, force || changed);
+    this.apply(tabId, s, access, force || changed, changed);
   }
 
-  private apply(tabId: number, s: TabSession, access: TabAccess, changed: boolean): void {
+  private apply(tabId: number, s: TabSession, access: TabAccess, changed: boolean, gesture = false): void {
     switch (access.status) {
       case 'injecting':
         if (!s.client || s.client.closed) this.setView(tabId, { kind: 'loading' });
@@ -211,6 +216,7 @@ export class PanelController {
         // repeat clicks re-inject as "already injected"). SPA re-extraction is M5. A new gesture
         // on a page that came out empty or failed reads it again on the same connection.
         if (s.client && !s.client.closed) {
+          if (gesture && s.docId !== undefined && s.view.kind === 'ready') this.opts.hooks?.asked?.(tabId, s.docId);
           if (!changed || (s.view.kind !== 'empty' && s.view.kind !== 'error' && !(s.view.kind === 'blocked' && s.view.reason === 'password'))) return;
           if (s.docId === undefined) void this.connect(tabId);
           else void this.extract(tabId, s, s.client, s.generation);

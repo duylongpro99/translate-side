@@ -10,6 +10,8 @@
 //   (not completion order), so chunk ordering is the engine's and stays stable. Which element
 //   starts next is the stage's `pick` (viewport first, plan M3-E1), else element order; it is
 //   asked each time a slot frees, so a new priority reorders only the elements not started yet.
+//   A stage with `recut` replaces its pending elements when the job's `focus` changed (M3 dogfood
+//   B5: the reader asked again from another screen); the new ones run after the old, in `pick` order.
 // Events from concurrent runs are passed on as they arrive, each stage framed by
 // `stage` start/done events.
 //
@@ -92,11 +94,24 @@ async function* runWhole(stage: AnyStage, input: unknown, ctx: StageContext): As
 
 async function* runEach(stage: AnyStage, input: unknown, ctx: StageContext, concurrency: number): AsyncGenerator<EngineEvent, unknown[]> {
   if (!Array.isArray(input)) throw new Error(`stage ${stage.id}: a ${stage.scope} stage needs an array input`);
-  const items: readonly unknown[] = input;
+  const items: unknown[] = [...input];
   const outputs: unknown[][] = items.map(() => []);
-  const { pick } = stage;
+  const { pick, recut } = stage;
   const order = pick === undefined ? undefined : (pending: readonly number[]) => pick.call(stage, items as never[], pending, ctx);
-  for await (const { index, value } of multiplex(items, Math.max(1, Math.floor(concurrency)), (item) => run(stage, item, ctx), ctx.signal, order)) {
+  const focus = ctx.focus;
+  let seen = focus?.();
+  const refresh =
+    recut === undefined || focus === undefined
+      ? undefined
+      : (pending: readonly number[]) => {
+          const now = focus();
+          if (now === seen) return undefined;
+          seen = now;
+          const next = recut.call(stage, items as never[], pending, ctx) as unknown[] | undefined;
+          outputs.push(...(next ?? []).map(() => []));
+          return next;
+        };
+  for await (const { index, value } of multiplex(items, Math.max(1, Math.floor(concurrency)), (item) => run(stage, item, ctx), ctx.signal, order, refresh)) {
     if (isEngineEvent(value)) yield value;
     else outputs[index]?.push(value);
   }
@@ -119,7 +134,9 @@ type Settled = { index: number; result: IteratorResult<unknown> } | { index: num
  * Runs `start(item)` for every item, at most `limit` at a time, and yields each value with the
  * index of the item that produced it, in arrival order. Items start in order, or in the order
  * `pick` gives: called with the indices not started yet each time a slot frees, it returns one
- * of them (an index outside them falls back to the first).
+ * of them (an index outside them falls back to the first). `refresh`, asked before each start,
+ * may return items to run instead of the pending ones: they are appended to `items` (which must
+ * then be mutable) and the pending ones are dropped. Items in flight are never touched.
  */
 export async function* multiplex<T>(
   items: readonly T[],
@@ -127,6 +144,7 @@ export async function* multiplex<T>(
   start: (item: T, index: number) => AsyncIterable<unknown>,
   signal: AbortSignal,
   pick?: (pending: readonly number[]) => number,
+  refresh?: (pending: readonly number[]) => readonly T[] | undefined,
 ): AsyncGenerator<{ index: number; value: unknown }> {
   const active = new Map<number, Active>();
   const pull = (index: number, iterator: AsyncIterator<unknown>): Promise<Settled> =>
@@ -136,23 +154,31 @@ export async function* multiplex<T>(
     );
   const pending = items.map((_, i) => i);
   let failure: { error: unknown } | undefined;
-  const take = (): number => {
+  const take = (): number | undefined => {
+    const next = refresh?.(pending);
+    if (next !== undefined) {
+      pending.length = 0;
+      for (const item of next) pending.push((items as T[]).push(item) - 1);
+    }
+    if (pending.length === 0) return undefined;
     let at = 0;
     if (pick !== undefined) {
       at = pending.indexOf(pick(pending));
       if (at < 0) at = 0;
     }
-    return pending.splice(at, 1)[0] as number;
+    return pending.splice(at, 1)[0];
   };
   const fill = (): void => {
     while (failure === undefined && !signal.aborted && active.size < limit && pending.length > 0) {
-      let index: number;
+      let index: number | undefined;
       try {
         index = take();
       } catch (error) {
         failure = { error };
         return;
       }
+      // A refresh may have left nothing to start.
+      if (index === undefined) return;
       try {
         const iterator = start(items[index] as T, index)[Symbol.asyncIterator]();
         active.set(index, { iterator, next: pull(index, iterator) });
