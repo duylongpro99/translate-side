@@ -340,6 +340,23 @@ reverse: Readability first, walk as the fallback.
   - jsdom tests must flatten `<template shadowrootmode>` first.
   - `noise.json` is the reference list for criterion #1.
   - jsdom and `@mozilla/readability` go into the root `devDependencies` properly (N8).
+- **Layout tables (M3 dogfood B3, 2026-10-10).** Pages laid out with tables (a paulgraham.com essay in one cell, a
+  news.ycombinator.com thread of nested one-row tables) came out as table cells: one row of 290 cells, unreadable in
+  the panel. The segmenter now tells a layout table from a data table by **Readability's own rule**
+  (`_markDataTables`, @mozilla/readability 0.6), applied to the table's own rows and cells only:
+  - role `presentation`/`none` or `datatable="0"` → layout;
+  - a `summary`, a non-empty `caption`, or any `th`/`thead`/`tfoot`/`col`/`colgroup` → data;
+  - a nested table → layout;
+  - one row or one column → layout;
+  - 10 or more rows, or more than 4 columns → data;
+  - otherwise data only when rows × columns > 10.
+
+  A layout table's cells, and cells whose table Readability unwrapped into a `div`, are plain containers: their
+  blocks keep their own kinds (`p`, `li`, …) and get no row `groupId`. **Consequence:** a small data table with no
+  `th`, `caption` or `thead` (one row, one column, or up to 10 cells) now reads as paragraphs, not as a grid. Docs
+  tables from Markdown always have a header row, so the ten S3 fixtures' snapshots did not change. Fixtures:
+  `layout-table-essay` and `layout-table-thread` (structural replicas with filler text, see `ATTRIBUTION.md`).
+  Open: on the HN thread Readability drops the author line (link density) and the reply nesting is lost.
 - **Rebase step (N8).** `spikes/s3` has its own `package.json`/`package-lock.json`. When `spikes/` is added to the
   eslint ignores, check that the root pnpm workspace globs don't include `spikes/*` and that `pnpm check` doesn't
   traverse `spikes/s3/node_modules`.
