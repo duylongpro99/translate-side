@@ -1,7 +1,8 @@
 // Latency harness (plan M3 §3 #1, #2, §8 risk): runs the panel's own Jobs (src/entrypoints/sidepanel/
 // jobs.ts) over a ~3,000-word page made of fixtures, against the live default profile, with one
 // screen of segments reported as on screen, the way the content script does (M3-E1). It reports:
-// - screen: when every segment on screen at the start was final (JobView.screenDoneAt), §3 #1;
+// - screen: when every segment on screen at the start was final (failed ones are counted apart, as
+//   `screenFailed`, and keep the screen from being done), §3 #1;
 // - whole: when the whole page was done (endedAt), §3 #2;
 // - brief: the analyze call's start and end, and when the first translate call started and gave its
 //   first text, so the §8 risk (the brief delaying the first viewport chunk) is measured, not guessed.
@@ -116,10 +117,13 @@ async function runOnce(scenario: string, segments: Segment[], cache?: Translatio
   const todo = new Set(screen.filter((id) => segments.find((s) => s.id === id)?.translate));
   let screenDone: number | undefined;
   let firstScreenText: number | undefined;
+  let screenFailed = 0;
   jobs.subscribe((_, v) => {
     if (!v) return;
     if (firstScreenText === undefined && [...todo].some((id) => v.segs.get(id)?.text)) firstScreenText = t0();
-    if (screenDone === undefined && [...todo].every((id) => ['final', 'failed'].includes(v.segs.get(id)?.status ?? ''))) screenDone = t0();
+    // A failed block is not done (round 6): it is counted apart, and a screen with one has no screenDoneMs.
+    if (screenDone === undefined && [...todo].every((id) => v.segs.get(id)?.status === 'final')) screenDone = t0();
+    screenFailed = [...todo].filter((id) => v.segs.get(id)?.status === 'failed').length;
   });
   const doc: JobDoc = { url: 'https://example.com/latency', title: 'Latency', sourceLang: 'en', targetLang: 'vi', segments };
   started = Date.now();
@@ -135,6 +139,7 @@ async function runOnce(scenario: string, segments: Segment[], cache?: Translatio
     firstVisibleMs: v.firstVisibleAt === undefined ? null : v.firstVisibleAt - v.startedAt,
     firstScreenTextMs: firstScreenText ?? null,
     screenDoneMs: screenDone ?? null,
+    screenFailed,
     wholeMs: v.endedAt === undefined ? null : v.endedAt - v.startedAt,
     brief: brief ? { startMs: brief.start, endMs: brief.end ?? null } : null,
     firstTranslate: firstTranslate ? { startMs: firstTranslate.start, firstTextMs: firstTranslate.firstText ?? null, endMs: firstTranslate.end ?? null, chunkIndex: firstTranslate.chunkIndex ?? null } : null,
@@ -163,7 +168,7 @@ for (let r = 0; r < Number(opt.runs); r++) {
     results.push(res);
     const s = (ms: number | null | undefined) => (ms === null || ms === undefined ? '—' : `${(ms / 1000).toFixed(1)}s`);
     console.log(
-      `${scenario.padEnd(10)} run ${r + 1}: screen ${s(res.screenDoneMs)} (first text ${s(res.firstScreenTextMs)}, ${res.screenSegments} segs) · whole ${s(res.wholeMs)} · ` +
+      `${scenario.padEnd(10)} run ${r + 1}: screen ${s(res.screenDoneMs)} (first text ${s(res.firstScreenTextMs)}, ${res.screenSegments} segs${res.screenFailed ? `, ${res.screenFailed} failed` : ''}) · whole ${s(res.wholeMs)} · ` +
         `brief ${s(res.brief?.startMs)}→${s(res.brief?.endMs)} · first translate call chunk ${res.firstTranslate?.chunkIndex ?? '?'} at ${s(res.firstTranslate?.startMs)}, first text ${s(res.firstTranslate?.firstTextMs)}, end ${s(res.firstTranslate?.endMs)} · ${res.status} ${res.counts.final}/${res.counts.total}`,
     );
   }

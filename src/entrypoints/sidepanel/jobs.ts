@@ -132,8 +132,9 @@ export interface JobView {
   startedAt: number;
   firstVisibleAt?: number;
   /**
-   * Epoch ms: when every segment this run had to translate that was on screen at its start was
-   * final or failed (plan M3 §3 #1). Absent while some are pending, and when none was on screen.
+   * Epoch ms: when every block on screen (the latest viewport report) was final, with at least one
+   * of them translated by this run (plan M3 §3 #1). A failed block is not done: a screen with one
+   * never gets the stamp. Absent while some are pending, and when the run owed nothing on screen.
    */
   screenDoneAt?: number;
   endedAt?: number;
@@ -444,8 +445,8 @@ interface Job {
   inflight: number;
   /** Bumped per run, so a finished run can't overwrite a newer one. */
   run: number;
-  /** Segments on screen at the run's start still to settle (view.screenDoneAt). */
-  screen: Set<string>;
+  /** Segments this run had to translate at its start (view.screenDoneAt counts a screen with one). */
+  owed: ReadonlySet<string>;
   /** Cache key per translatable segment id; empty without a cache. */
   keys: Map<string, string>;
   /** Cache writes waiting for the end of this tick (coalesced), and the keys to drop. */
@@ -533,6 +534,29 @@ export class Jobs {
   setViewport(tabId: number, docId: string, ids: readonly string[]): void {
     if (ids.length === 0 && this.viewports.get(tabId)?.docId === docId) return;
     this.viewports.set(tabId, { docId, ids: [...ids] });
+    // Scrolled onto blocks already done: the screen the reader sees is translated now.
+    const job = this.jobs.get(tabId);
+    if (job?.docId === docId && job.view.status === 'running') {
+      const patch: Partial<JobView> = {};
+      this.screenDone(tabId, job, patch);
+      if (patch.screenDoneAt !== undefined) this.patch(tabId, job, patch);
+    }
+  }
+
+  /**
+   * Stamps `screenDoneAt` into `patch` the first time every translatable block on screen now is
+   * final (not failed, not a retranslate that failed back to its earlier text) and the run owed one
+   * of them (M3 dogfood B4: the screen at the start, or failures, made the stamp too early).
+   */
+  private screenDone(tabId: number, job: Job, patch: Partial<JobView>): void {
+    if (job.view.screenDoneAt !== undefined || patch.screenDoneAt !== undefined) return;
+    const ids = this.screenOf(tabId, job.docId).filter((id) => job.segs.has(id));
+    if (!ids.some((id) => job.owed.has(id))) return;
+    const done = ids.every((id) => {
+      const s = job.segs.get(id);
+      return s?.status === 'final' && s.redoError === undefined;
+    });
+    if (done) patch.screenDoneAt = this.now();
   }
 
   /** The segment ids on screen in the tab's document, as last reported. */
@@ -593,7 +617,6 @@ export class Jobs {
       } else segs.set(s.id, old?.status === 'final' && keep ? old : { status: 'pending' });
     }
     const todo = new Set(translatable.filter((s) => segs.get(s.id)?.status !== 'final').map((s) => s.id));
-    const screen = new Set(this.screenOf(tabId, docId).filter((id) => todo.has(id)));
     const gate = new Gate();
     gate.set(tabId === this.activeTabId);
     const job: Job = {
@@ -604,7 +627,7 @@ export class Jobs {
       gate,
       inflight: 0,
       run: (prev?.run ?? 0) + 1,
-      screen,
+      owed: new Set(todo),
       keys: new Map(),
       writes: new Map(),
       drops: new Set(),
@@ -740,7 +763,7 @@ export class Jobs {
       gate: new Gate(),
       inflight: 0,
       run: (prev?.run ?? 0) + 1,
-      screen: new Set(),
+      owed: new Set(),
       keys: new Map(),
       writes: new Map(),
       drops: new Set(),
@@ -1049,7 +1072,7 @@ export class Jobs {
         if (!restored) this.remember(job, event.id, next);
         const patch: Partial<JobView> = { counts: count(job.segs) };
         if (job.view.firstVisibleAt === undefined && next.text) patch.firstVisibleAt = this.now();
-        if ((next.status === 'final' || next.status === 'failed') && job.screen.delete(event.id) && job.screen.size === 0) patch.screenDoneAt = this.now();
+        this.screenDone(tabId, job, patch);
         this.patch(tabId, job, patch);
         if (event.type === 'segment.failed' && STOP_KINDS.has(event.error.kind)) {
           job.controller.abort(new DOMException('stopped', 'AbortError'));
@@ -1118,14 +1141,13 @@ export class Jobs {
         if (!hit) continue;
         job.segs.set(s.id, { status: 'final', text: hit.text, revision: hit.revision, attempt: hit.attempt });
         run.todo.delete(s.id);
-        job.screen.delete(s.id);
         shown++;
       }
       if (shown > 0) {
         patch.cached = shown;
         patch.counts = count(job.segs);
         patch.firstVisibleAt = this.now();
-        if (job.screen.size === 0 && this.screenOf(tabId, job.docId).some((id) => job.segs.get(id)?.status === 'final')) patch.screenDoneAt = this.now();
+        this.screenDone(tabId, job, patch);
       }
       if (brief && !job.view.brief) {
         patch.brief = brief;

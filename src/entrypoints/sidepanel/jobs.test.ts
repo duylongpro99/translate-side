@@ -701,28 +701,75 @@ describe('Jobs: viewport first (plan M3-E1)', () => {
     await running;
   });
 
-  it('records when the segments on screen at the start are all settled (§3 #1), not before', async () => {
-    let t = 1000;
-    const steps: (() => EngineEvent)[] = [() => final('s2', 'vi:P2'), () => failedEv('s1'), () => final('s0', 'vi:P0')];
+  // Engine yielding `steps` 100 ms apart; a step may also scroll (setViewport) before its event.
+  const timedRun = (steps: ((jobs: Jobs) => EngineEvent)[]) => {
+    const clock = { t: 1000 };
+    const views: JobView[] = [];
+    const ref: { jobs?: Jobs } = {};
     const engine = () => ({
       async *translate() {
         for (const step of steps) {
-          t += 100;
-          yield step();
+          clock.t += 100;
+          yield step(ref.jobs as Jobs);
         }
       },
     });
-    const views: JobView[] = [];
-    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(translatorClient()), engine: engine as never, now: () => t });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(translatorClient()), engine: engine as never, now: () => clock.t });
+    ref.jobs = jobs;
     jobs.subscribe((_, v) => v && views.push(v));
     jobs.setActive(1);
+    return { jobs, views };
+  };
+
+  it('records when the segments on screen are all final (§3 #1), not before', async () => {
+    const { jobs, views } = timedRun([() => final('s2', 'vi:P2'), () => final('s1', 'vi:P1'), () => final('s0', 'vi:P0')]);
     jobs.setViewport(1, 'd', ['s1', 's2', 'code']);
     await jobs.start(1, 'd', doc(3));
     const v = jobs.get(1) as JobView;
     expect(v.firstVisibleAt).toBe(1100);
-    // s2 final at 1100, s1 failed at 1200: the screen is settled at 1200, before s0.
+    // s2 final at 1100, s1 at 1200: the screen is done at 1200, before s0.
     expect(v.screenDoneAt).toBe(1200);
     expect(views.some((x) => x.counts.final === 1 && x.screenDoneAt === undefined)).toBe(true);
+  });
+
+  it('a failed block on screen is not done: no screenDoneAt (round 6)', async () => {
+    const { jobs } = timedRun([() => final('s2', 'vi:P2'), () => failedEv('s1'), () => final('s0', 'vi:P0')]);
+    jobs.setViewport(1, 'd', ['s1', 's2']);
+    await jobs.start(1, 'd', doc(3));
+    const v = jobs.get(1) as JobView;
+    expect(v.counts.failed).toBe(1);
+    expect(v.screenDoneAt).toBeUndefined();
+  });
+
+  it('follows the screen the reader scrolled to, not the one at the start (round 6)', async () => {
+    const { jobs } = timedRun([
+      (j) => {
+        // The reader scrolls down before the first block comes back.
+        j.setViewport(1, 'd', ['s2']);
+        return final('s0', 'vi:P0');
+      },
+      () => final('s1', 'vi:P1'),
+      () => final('s2', 'vi:P2'),
+    ]);
+    jobs.setViewport(1, 'd', ['s0', 's1']);
+    await jobs.start(1, 'd', doc(3));
+    // The start screen (s0, s1) was final at 1200; the screen on view (s2) only at 1300.
+    expect(jobs.get(1)?.screenDoneAt).toBe(1300);
+  });
+
+  it('scrolling onto blocks already final stamps the screen at the scroll (round 6)', async () => {
+    const { jobs } = timedRun([
+      () => final('s0', 'vi:P0'),
+      (j) => {
+        j.setViewport(1, 'd', ['s0']);
+        return final('s1', 'vi:P1');
+      },
+      () => final('s2', 'vi:P2'),
+    ]);
+    jobs.setViewport(1, 'd', ['s2']);
+    await jobs.start(1, 'd', doc(3));
+    // At 1200 the reader is on s0, final since 1100; s2 (the start screen) only ends at 1300.
+    expect(jobs.get(1)?.screenDoneAt).toBe(1200);
   });
 
   it('no screen, no screenDoneAt', async () => {
