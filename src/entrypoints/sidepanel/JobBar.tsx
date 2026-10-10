@@ -74,6 +74,12 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
       {job.fallback.from} {fallbackWhy(job.fallback.error)}; {job.status === 'running' ? 'continuing' : 'continued'} with {job.fallback.to}. Blocks it translated are marked.
     </span>
   ) : null;
+  // A Retranslate page that ended early (M3 dogfood B2): some blocks show their earlier translation.
+  const keptNote = job.kept ? (
+    <span class="job__kept" data-testid="job-kept" role="note">
+      {job.kept === 1 ? '1 block kept its' : `${job.kept} blocks kept their`} earlier translation
+    </span>
+  ) : null;
   const attrs = {
     class: `job job--${job.status}`,
     'data-testid': 'job',
@@ -134,9 +140,10 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
             {job.endedAt === undefined ? '' : ` · ${seconds(job.endedAt - job.startedAt)}`}
           </span>
           {cost}
-          {failed ? (
-            <button type="button" class="job__button" onClick={actions.resume}>
-              Retry failed
+          {keptNote}
+          {failed || job.kept ? (
+            <button type="button" class="job__button" data-testid="retry-failed" onClick={actions.resume}>
+              {failed ? 'Retry failed' : 'Retry'}
             </button>
           ) : null}
           {fallbackNote}
@@ -149,6 +156,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
             Cancelled · {final} of {total} translated
           </span>
           {cost}
+          {keptNote}
           <button type="button" class="job__button" onClick={actions.resume}>
             Translate the rest
           </button>
@@ -207,6 +215,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
         <div {...attrs} role="alert">
           <span class="job__text">{text}</span>
           {cost}
+          {keptNote}
           {fix}
         </div>
       );

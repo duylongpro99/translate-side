@@ -263,6 +263,85 @@ describe('Jobs with the translation cache: a revisit makes no API call (§3 #3)'
     });
   });
 
+  describe('a failed "Retranslate page" never loses the page: more cases (B2 review)', () => {
+    const fin = (id: string, text: string): EngineEvent => ({ type: 'segment.final', id, text, revision: 1, producedBy: { strategy: 'single-pass', stage: 'translate', model: GEMINI_PROFILE.model } });
+
+    it('a second Retranslate while the first runs keeps the blocks the first had not redone; one that then fails keeps its text and its cache entry', async () => {
+      const cache = newCache();
+      // Run 1 translates; run 2 (retranslate) redoes s0 then hangs; run 3 (retranslate again) fails s1 and redoes the rest.
+      let run = 0;
+      const engine = () => ({
+        async *translate(_job: unknown, signal: AbortSignal) {
+          run++;
+          if (run === 1) {
+            for (const id of ['s0', 's1', 's2', 's3']) yield fin(id, `OLD:${id}`);
+          } else if (run === 2) {
+            yield fin('s0', 'R2:s0');
+            await new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+          } else {
+            yield { type: 'segment.failed', id: 's1', error: { kind: 'unknown', message: 'check failed' } } as EngineEvent;
+            for (const id of ['s0', 's2', 's3']) yield fin(id, `R3:${id}`);
+          }
+          yield { type: 'done' } as EngineEvent;
+        },
+      });
+      const j = track(new Jobs({ translateClient: ok(both()), cache, engine: engine as never }));
+      j.setActive(1);
+      await j.start(1, 'd', doc(4));
+      await idle();
+      const second = j.start(1, 'd', doc(4), { fresh: true });
+      await until(() => j.get(1)?.segs.get('s0')?.text === 'R2:s0');
+      expect(j.get(1)?.segs.get('s1')).toEqual({ status: 'pending', text: 'OLD:s1' });
+      await j.start(1, 'd', doc(4), { fresh: true });
+      await second;
+      await idle();
+      const v = j.get(1) as JobView;
+      expect(v.segs.get('s1')).toMatchObject({ status: 'final', text: 'OLD:s1', redoError: { message: 'check failed' } });
+      expect(v.segs.get('s0')).toMatchObject({ status: 'final', text: 'R3:s0' });
+      expect(v.kept).toBe(1);
+      const after = both();
+      const j3 = session(after, cache);
+      await j3.start(1, 'e', doc(4));
+      expect(after.requests).toHaveLength(0);
+      expect(j3.get(1)?.segs.get('s1')?.text).toBe('OLD:s1');
+    });
+
+    it('Retry after a partly done retranslate sends only the blocks still owed', async () => {
+      const cache = newCache();
+      let run = 0;
+      const sent: string[][] = [];
+      const engine = () => ({
+        async *translate(job: { doc: { segments: Segment[] } }) {
+          run++;
+          const ids = job.doc.segments.filter((s) => s.translate).map((s) => s.id);
+          if (run > 1) sent.push(ids);
+          if (run === 2) {
+            // The retranslate redoes s0 and s1, then the key is refused.
+            yield fin('s0', 'R2:s0');
+            yield fin('s1', 'R2:s1');
+            yield { type: 'segment.failed', id: 's2', error: { kind: 'auth', status: 400, message: 'Key invalid or missing' } } as EngineEvent;
+            return;
+          }
+          for (const id of ids) yield fin(id, `R${run}:${id}`);
+          yield { type: 'done' } as EngineEvent;
+        },
+      });
+      const j = track(new Jobs({ translateClient: ok(both()), cache, engine: engine as never }));
+      j.setActive(1);
+      await j.start(1, 'd', doc(5));
+      await j.start(1, 'd', doc(5), { fresh: true });
+      expect(j.get(1)).toMatchObject({ status: 'stopped', kept: 3 });
+      expect(j.get(1)?.segs.get('s3')).toMatchObject({ status: 'final', text: 'R1:s3' });
+      await j.resume(1);
+      expect(sent[1]?.sort()).toEqual(['s2', 's3', 's4']);
+      const v = j.get(1) as JobView;
+      expect(v.status).toBe('done');
+      expect(v.kept).toBeUndefined();
+      expect(v.segs.get('s0')?.text).toBe('R2:s0');
+      expect(v.segs.get('s4')?.text).toBe('R3:s4');
+    });
+  });
+
   it('a retry after an interruption re-runs only the missing segments (M3-D4)', async () => {
     const cache = newCache();
     // The first session dies after the first chunk answered: only some segments are stored.

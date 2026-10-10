@@ -114,6 +114,33 @@ describe('"Fix key" (M3-E8)', () => {
   });
 });
 
+describe('a Retranslate page that ended early (M3 dogfood B2)', () => {
+  it('a bad key: the bar says Fix key and how many blocks kept their earlier translation; a later done run with a kept block offers Retry', async () => {
+    const good = translatorClient();
+    const box: { client: LLMClient } = { client: good };
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: () => ok(box.client)() });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(3));
+    expect(jobs.get(1)?.status).toBe('done');
+    const refused = flaky(translatorClient(), () => ({ type: 'error', error: { kind: 'auth', status: 400, message: 'Key invalid or missing' } }));
+    refused.state.online = false;
+    box.client = refused.client;
+    await jobs.start(1, 'd', doc(3), { fresh: true });
+    const calls: string[] = [];
+    act(() => render(<JobBar job={jobs.get(1) as JobView} actions={actions(calls)} />, root));
+    expect(root.querySelector('[data-testid="fix-key"]')).not.toBeNull();
+    expect(root.querySelector('[data-testid="job-kept"]')?.textContent).toBe('3 blocks kept their earlier translation');
+    // Done with one kept block (it failed its check): the bar names it and offers Retry.
+    const view = { ...(jobs.get(1) as JobView), status: 'done' as const, kept: 1, counts: { total: 3, final: 3, failed: 0 } };
+    act(() => render(<JobBar job={view} actions={actions(calls)} />, root));
+    expect(root.querySelector('[data-testid="job-kept"]')?.textContent).toBe('1 block kept its earlier translation');
+    const retry = root.querySelector<HTMLButtonElement>('[data-testid="retry-failed"]');
+    expect(retry?.textContent).toBe('Retry');
+    act(() => retry?.click());
+    expect(calls).toEqual(['resume']);
+  });
+});
+
 describe('a rate limit (M3-E8)', () => {
   it('shows a backoff entry per chunk while the engine waits, and clears it when the attempt starts', async () => {
     const limited = [true, true]; // the first request of each of the two chunks

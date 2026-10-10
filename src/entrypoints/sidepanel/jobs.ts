@@ -98,6 +98,11 @@ export interface JobView {
   usage: UsageTotals;
   /** Segments of this run shown from the translation cache instead of being sent (M3-E2). */
   cached?: number;
+  /**
+   * A Retranslate page that ended (done, stopped, cancelled) left this many blocks on their
+   * earlier translation (M3 dogfood B2): they failed or were never reached. Retry redoes them.
+   */
+  kept?: number;
   /** USD for this page so far, across runs (cancel + resume, a language change); undefined without pricing or usage. */
   cost: number | undefined;
   /**
@@ -576,12 +581,15 @@ export class Jobs {
     for (const s of translatable) {
       const old = keep?.segs.get(s.id) ?? before?.segs.get(s.id);
       const owed = before !== undefined && (keep === undefined || keep.earlier.has(s.id));
-      if (old?.status === 'final' && owed && old.text !== undefined) {
-        const shown = { ...old };
+      // Started while another retranslate runs: a block it had not redone yet (pending or
+      // streaming) still owes its earlier translation, which that run holds.
+      const prior = old?.status === 'final' ? old : before?.earlier.get(s.id);
+      if (owed && prior?.text !== undefined) {
+        const shown = { ...prior };
         delete shown.redoError;
         delete shown.error;
         earlier.set(s.id, shown);
-        segs.set(s.id, { status: 'pending', text: old.text });
+        segs.set(s.id, { status: 'pending', text: prior.text });
       } else segs.set(s.id, old?.status === 'final' && keep ? old : { status: 'pending' });
     }
     const todo = new Set(translatable.filter((s) => segs.get(s.id)?.status !== 'final').map((s) => s.id));
@@ -795,7 +803,9 @@ export class Jobs {
   resume(tabId: number): Promise<void> {
     const job = this.jobs.get(tabId);
     if (!job || job.view.status === 'running') return Promise.resolve();
-    // A retranslate that stopped goes on retranslating what it still owes, not from the cache.
+    // A retranslate that ended early goes on retranslating what it still owes, not from the
+    // cache: the blocks that kept their earlier translation (failed or never reached) are redone,
+    // on purpose, since the user asked for them to be retranslated (the bar's note says so).
     return this.start(tabId, job.docId, job.doc, { resume: true, ...(job.earlier.size ? { fresh: true, keepCost: true } : {}) });
   }
 
@@ -907,7 +917,11 @@ export class Jobs {
       else {
         const key = this.keyFor(job, id, outcome.model);
         if (mode === 'retranslate' && key !== undefined) job.replaceKeys.add(key);
-        if (outcome.status === 'final') job.earlier.delete(id);
+        if (outcome.status === 'final' && job.earlier.delete(id) && job.view.kept !== undefined) {
+          const view = { ...job.view, kept: job.earlier.size };
+          if (view.kept === 0) delete (view as Partial<JobView>).kept;
+          job.view = view;
+        }
         settle(outcome);
       }
       if (outcome.status === 'failed' && outcome.error && stopsJob(outcome.error) && job.view.status !== 'running') this.finish(tabId, job, 'stopped', outcome.error);
@@ -1185,8 +1199,9 @@ export class Jobs {
     for (const [id, s] of job.segs) if (s.status === 'streaming' && !job.retrying.has(id)) job.segs.set(id, { status: 'pending' });
     // A retranslate that ends early puts back the earlier translation of every block it did not redo (B2).
     for (const [id, s] of job.earlier) if (job.segs.get(id)?.status === 'pending' && !job.retrying.has(id)) job.segs.set(id, s);
+    const kept = job.earlier.size > 0 ? { kept: job.earlier.size } : {};
     job.backoff.clear();
-    this.patch(tabId, job, { backoff: [], status, paused: false, counts: count(job.segs), endedAt: this.now(), ...(stopError ? { stopError } : {}) });
+    this.patch(tabId, job, { backoff: [], status, paused: false, counts: count(job.segs), endedAt: this.now(), ...kept, ...(stopError ? { stopError } : {}) });
   }
 
   private patch(tabId: number, job: Job, patch: Partial<JobView>): void {

@@ -352,7 +352,8 @@ body {
   vertical-align: middle;
   white-space: nowrap;
 }
-.job__fallback {
+.job__fallback,
+.job__kept {
   flex-basis: 100%;
   font-size: 0.8rem;
   color: var(--muted);
