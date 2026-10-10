@@ -137,8 +137,8 @@ try {
       if (ids !== undefined && ids.length > 0 && doneAt.size === ids.length) break;
       const st = await job.getAttribute('data-status', { timeout: 100 }).catch(() => null);
       if (st !== null && st !== 'running') break;
-      // The panel could not read the page (no job will come).
-      if (await panel.locator('.state').count().catch(() => 0)) break;
+      // The panel could not read the page (no job will come); loading and idle also render .state, so match only the final ones.
+      if (await panel.locator('.state:is([data-state=blocked], [data-state=lost], [data-state=empty], [data-state=error])').count().catch(() => 0)) break;
       await panel.waitForTimeout(100);
     }
     const stamp = async (a) => { const v = await job.getAttribute(a).catch(() => null); const s0 = await job.getAttribute('data-started').catch(() => null); return v && s0 ? Number(v) - Number(s0) : null; };
