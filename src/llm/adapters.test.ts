@@ -166,22 +166,28 @@ describe.each(harnesses)('$name adapter (shared contract)', (h) => {
       return { slow: r.body.split('\n\n').filter((e) => e !== '').map((e) => `${e}\n\n`), gapMs };
     };
 
+    // Spaced streams run against a wider limit: a gap of a third of it leaves room for a loaded
+    // machine (20 ms gaps against 30 ms flaked under the full suite), and the whole stream still
+    // takes longer than the limit, so without the per-chunk reset it would be cut.
+    const WIDE_IDLE = 300;
+    const GAP = 100;
+
     it('a stream that keeps sending events, each sooner than the limit, is not cut however long it takes in total', async () => {
-      const f = mockFetch([spaced(h.ok(['a', 'b', 'c']), 20)]);
+      const f = mockFetch([spaced(h.ok(['a', 'b', 'c']), GAP)]);
       const started = Date.now();
-      const events = await collect(h.adapter(f.fetch, IDLE).stream(h.conn(), request(h.model)));
+      const events = await collect(h.adapter(f.fetch, WIDE_IDLE).stream(h.conn(), request(h.model)));
       expect(text(events)).toBe('abc');
-      expect(Date.now() - started).toBeGreaterThan(IDLE);
+      expect(Date.now() - started).toBeGreaterThan(WIDE_IDLE);
     });
 
     it('a stream of keepalives only (SSE comments the SDK drops) is alive: not cut, and the answer after it arrives', async () => {
       const keepalives = Array.from({ length: 6 }, () => ': ping\n\n');
       const answer = h.ok(['late']);
       if (!('body' in answer)) throw new Error('needs a body');
-      const f = mockFetch([{ slow: [...keepalives, answer.body], gapMs: 20 }]);
+      const f = mockFetch([{ slow: [...keepalives, answer.body], gapMs: GAP }]);
       const started = Date.now();
-      const events = await collect(h.adapter(f.fetch, IDLE).stream(h.conn(), request(h.model)));
-      expect(Date.now() - started).toBeGreaterThan(IDLE);
+      const events = await collect(h.adapter(f.fetch, WIDE_IDLE).stream(h.conn(), request(h.model)));
+      expect(Date.now() - started).toBeGreaterThan(WIDE_IDLE);
       expect(text(events)).toBe('late');
       expect(events.at(-1)).toMatchObject({ type: 'done' });
     });
