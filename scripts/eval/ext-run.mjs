@@ -27,7 +27,7 @@ const P = {
   gemini: { key: 'GEMINI_API_KEY', conn: 'gemini', profile: 'gemini-flash-lite', origin: 'https://generativelanguage.googleapis.com/*' },
   apibox: { key: 'AIBOX_API_KEY', conn: 'apibox', profile: 'apibox-qwen3.8-flash', origin: 'https://api.ai-box.vn/*' },
   'ollama-cloud': { key: 'OLLAMA_API_KEY', conn: 'ollama-cloud', origin: 'https://ollama.com/*', model: opt('model', 'gemma4:31b'), baseUrl: 'https://ollama.com/v1', presetId: 'ollama-cloud', protocol: 'openai-chat', auth: 'bearer', max: 4, chunk: 1200 },
-  openrouter: { key: 'OPENROUTER_API_KEY', conn: 'openrouter', origin: 'https://openrouter.ai/*', model: opt('model', 'anthropic/claude-haiku-4.5'), baseUrl: 'https://openrouter.ai/api/v1', presetId: 'openrouter', protocol: 'openai-chat', auth: 'bearer', max: Number(opt('max', '2')), chunk: Number(opt('chunk', '1200')) },
+  openrouter: { key: 'OPENROUTER_API_KEY', conn: 'openrouter', origin: 'https://openrouter.ai/*', model: opt('model', 'anthropic/claude-haiku-4.5'), baseUrl: opt('base', 'https://openrouter.ai/api/v1'), presetId: 'openrouter', protocol: 'openai-chat', auth: 'bearer', max: Number(opt('max', '2')), chunk: Number(opt('chunk', '1200')) },
   anthropic: { key: 'ANTHROPIC_API_KEY', conn: 'anthropic', profile: 'anthropic-haiku-4-5', origin: 'https://api.anthropic.com/*' },
 }[provider];
 if (!P) throw new Error('provider?');
@@ -57,7 +57,7 @@ const ctx = await chromium.launchPersistentContext(udd, {
 const netLog = [];
 if (opt('net', '')) {
   const t00 = Date.now();
-  ctx.on('request', (r) => { if (/openrouter|ollama|generativelanguage|ai-box|anthropic\.com/.test(r.url())) r.__t = Date.now(); });
+  ctx.on('request', (r) => { if (/openrouter|ollama|generativelanguage|ai-box|anthropic\.com|127\.0\.0\.1:18099/.test(r.url())) r.__t = Date.now(); });
   ctx.on('response', (r) => netLog.push({ t: Date.now() - t00, url: r.url().replace(/\?.*/, ''), method: r.request().method(), status: r.status(), ms: Date.now() - (r.request().__t ?? Date.now()), from: r.request().serviceWorker() ? 'worker' : 'page' }));
   ctx.on('requestfailed', (r) => netLog.push({ t: Date.now() - t00, url: r.url().replace(/\?.*/, ''), method: r.method(), failed: r.failure()?.errorText }));
 }
@@ -106,7 +106,7 @@ try {
   const result = { provider, model: P.model ?? null, status, jobText: text, cost, costTitle, failedBlocks, wallSeconds: Math.round((Date.now() - t0) / 100) / 10 };
   fs.writeFileSync(path.join(outDir, `${provider}.json`), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result));
-  if (opt('net', '')) console.log('NET ' + JSON.stringify(netLog.filter((e) => /openrouter/.test(e.url))));
+  if (opt('net', '')) console.log('NET ' + JSON.stringify(netLog.filter((e) => /openrouter|127\.0\.0\.1:18099/.test(e.url))));
   console.log(JSON.stringify({ extId, pageUrl }));
   await new Promise((r) => setTimeout(r, Number(opt('wait', '0')) * 1000));
 } finally {
