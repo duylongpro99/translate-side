@@ -60,6 +60,8 @@ const ctx = await chromium.launchPersistentContext(udd, {
   // The panel runs as a background tab next to the page: without these flags Chrome throttles its timers.
   args: ['--headless=new', `--disable-extensions-except=${ext}`, `--load-extension=${ext}`, '--no-first-run', ...(args.includes('--throttle') ? [] : ['--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'])],
   viewport: { width: 1100, height: 800 },
+  // Some live sites (Wikipedia) answer the HeadlessChrome user agent with a robot-policy 403.
+  ...(liveUrl ? { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' } : {}),
 });
 const netLog = [];
 if (opt('net', '')) {
@@ -135,6 +137,8 @@ try {
       if (ids !== undefined && ids.length > 0 && doneAt.size === ids.length) break;
       const st = await job.getAttribute('data-status', { timeout: 100 }).catch(() => null);
       if (st !== null && st !== 'running') break;
+      // The panel could not read the page (no job will come).
+      if (await panel.locator('.state').count().catch(() => 0)) break;
       await panel.waitForTimeout(100);
     }
     const stamp = async (a) => { const v = await job.getAttribute(a).catch(() => null); const s0 = await job.getAttribute('data-started').catch(() => null); return v && s0 ? Number(v) - Number(s0) : null; };
@@ -142,22 +146,27 @@ try {
     visible = { scroll: Number(scroll), onScreen: onScreen.length, matched: ids?.length ?? 0, visibleFirstMs: times[0] ?? null, visibleAllMs: ids && times.length === ids.length ? times.at(-1) : null, screenDoneMs: await stamp('data-screen-done') };
     await panel.screenshot({ path: path.join(outDir, `${provider}-screen.png`) });
     await page.screenshot({ path: path.join(outDir, `${provider}-screen-page.png`) });
-    if (args.includes('--screen-only')) await panel.locator('[data-testid=job] .job__button').first().click().catch(() => {});
+    if (args.includes('--screen-only')) await panel.getByRole('button', { name: /^Cancel/ }).first().click().catch(() => {}); // the header's Cancel on the page view (M3-E6)
   }
-  await job.waitFor({ timeout: 30000 });
-  await panel.waitForFunction(() => { const j = document.querySelector('[data-testid=job]'); return j && j.getAttribute('data-status') !== 'running'; }, null, { timeout: Number(opt('timeout', '300')) * 1000 }).catch(() => {});
-  const status = await job.getAttribute('data-status');
-  const text = (await job.innerText()).replace(/\s+/g, ' ');
-  const cost = (await panel.locator('[data-testid=job-cost]').first().innerText().catch(() => '')) || null;
-  const costTitle = await panel.locator('[data-testid=job-cost]').first().getAttribute('title').catch(() => null);
-  const failedBlocks = await panel.locator('[data-status=failed]').count();
-  await panel.screenshot({ path: path.join(outDir, `${provider}.png`) });
-  const result = { provider, model: P.model ?? null, status, jobText: text, cost, costTitle, failedBlocks, wallSeconds: Math.round((Date.now() - t0) / 100) / 10, ...(visible ? { visible } : {}) };
-  fs.writeFileSync(path.join(outDir, `${provider}.json`), JSON.stringify(result, null, 2));
-  console.log(JSON.stringify(result));
-  if (opt('net', '')) console.log('NET ' + JSON.stringify(netLog.filter((e) => /openrouter|127\.0\.0\.1:1809[89]/.test(e.url))));
-  console.log(JSON.stringify({ extId, pageUrl }));
-  await new Promise((r) => setTimeout(r, Number(opt('wait', '0')) * 1000));
+  const noJob = await job.waitFor({ timeout: 30000 }).then(() => null, async () => (await panel.locator('.state').first().innerText().catch(() => 'no job')).replace(/\s+/g, ' '));
+  if (noJob !== null) {
+    console.log(JSON.stringify({ provider, status: 'no-job', panel: noJob, ...(visible ? { visible } : {}) }));
+    process.exitCode = 1;
+  } else {
+    await panel.waitForFunction(() => { const j = document.querySelector('[data-testid=job]'); return j && j.getAttribute('data-status') !== 'running'; }, null, { timeout: Number(opt('timeout', '300')) * 1000 }).catch(() => {});
+    const status = await job.getAttribute('data-status');
+    const text = (await job.innerText()).replace(/\s+/g, ' ');
+    const cost = (await panel.locator('[data-testid=job-cost]').first().innerText().catch(() => '')) || null;
+    const costTitle = await panel.locator('[data-testid=job-cost]').first().getAttribute('title').catch(() => null);
+    const failedBlocks = await panel.locator('[data-status=failed]').count();
+    await panel.screenshot({ path: path.join(outDir, `${provider}.png`) });
+    const result = { provider, model: P.model ?? null, status, jobText: text, cost, costTitle, failedBlocks, wallSeconds: Math.round((Date.now() - t0) / 100) / 10, ...(visible ? { visible } : {}) };
+    fs.writeFileSync(path.join(outDir, `${provider}.json`), JSON.stringify(result, null, 2));
+    console.log(JSON.stringify(result));
+    if (opt('net', '')) console.log('NET ' + JSON.stringify(netLog.filter((e) => /openrouter|127\.0\.0\.1:1809[89]/.test(e.url))));
+    console.log(JSON.stringify({ extId, pageUrl }));
+    await new Promise((r) => setTimeout(r, Number(opt('wait', '0')) * 1000));
+  }
 } finally {
   await ctx.close();
   srv.close();
