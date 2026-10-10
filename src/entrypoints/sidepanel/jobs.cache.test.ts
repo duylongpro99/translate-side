@@ -237,6 +237,30 @@ describe('Jobs with the translation cache: a revisit makes no API call (§3 #3)'
       expect(j3.get(1)?.segs.get('s2')?.text).toBe(old);
     });
 
+    it('a block\'s own Retranslate that succeeds after a stopped one lowers the bar\'s kept count, and Retry no longer owes it', async () => {
+      const cache = newCache();
+      const { jobs, box } = swappable(cache, both());
+      await jobs.start(1, 'd', doc(3));
+      box.client = refusing();
+      await jobs.start(1, 'd', doc(3), { fresh: true });
+      expect(jobs.get(1)).toMatchObject({ status: 'stopped', kept: 3 });
+      const fixed = translatorClient((lines) => renderLines(lines, (x) => `NEW:${x}`), { model: GEMINI_PROFILE.model });
+      box.client = fixed;
+      await jobs.retranslateSegment(1, 's1');
+      expect(jobs.get(1)?.segs.get('s1')?.text).toMatch(/^NEW:/);
+      expect(jobs.get(1)?.kept).toBe(2);
+      // A failing block redo leaves the count alone.
+      box.client = refusing();
+      await jobs.retranslateSegment(1, 's0');
+      expect(jobs.get(1)?.kept).toBe(2);
+      box.client = fixed;
+      const before = fixed.requests.length;
+      await jobs.resume(1);
+      const sent = fixed.requests.slice(before).flatMap((r) => wireLines(r.messages.find((m) => m.role === 'user')?.content ?? '').map((l) => l.source.split(' ')[0]));
+      expect(sent.sort()).toEqual(['P0', 'P2']);
+      expect(jobs.get(1)?.kept).toBeUndefined();
+    });
+
     it('cancelling a retranslate puts the earlier text back; Retry after a stop retranslates only what it still owes, skipping the cache', async () => {
       const cache = newCache();
       const { jobs, box } = swappable(cache, both());
