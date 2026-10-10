@@ -3,7 +3,10 @@
 // Testing, a fixture page served from 127.0.0.1, one provider seeded into storage, the panel driven to
 // translate the page, a screenshot of the result. Needs playwright-core (not a dependency of this repo):
 //   PLAYWRIGHT_CORE=/path/to/node_modules/playwright-core  CHROME=<Chrome for Testing binary>
-//   node scripts/eval/ext-run.mjs <provider> [--fixture goblog-pipelines] [--out dir] [--model id] [--reasoning low --reserve 6000] [--protocol auto|anthropic-messages]
+//   node scripts/eval/ext-run.mjs <provider> [--fixture goblog-pipelines] [--out dir] [--model id] [--reasoning low --reserve 6000] [--protocol auto|anthropic-messages] [--scroll 0.4 [--screen-only]]
+// `--scroll F` opens the page scrolled to F of its height before the gesture and measures visible first (M3 §3 #1,
+// dogfood B4): when the paragraphs fully on screen become final (`visibleFirstMs`, `visibleAllMs`, from the gesture)
+// and the job's own stamp (`screenDoneMs`). `--screen-only` cancels the job once they are, to keep the spend small.
 // Providers: gemini | ollama-cloud | apibox | anthropic | openrouter | openrouter-anthropic (keys from .env, never printed).
 // The build is copied to a temp dir with host_permissions for the page and the provider origin added, because a
 // headless run cannot answer Chrome's permission prompt (the permission request itself is covered by unit tests).
@@ -51,7 +54,8 @@ const udd = fs.mkdtempSync(path.join(os.tmpdir(), 'udd-'));
 const ctx = await chromium.launchPersistentContext(udd, {
   executablePath: process.env.CHROME,
   headless: false,
-  args: ['--headless=new', `--disable-extensions-except=${ext}`, `--load-extension=${ext}`, '--no-first-run'],
+  // The panel runs as a background tab next to the page: without these flags Chrome throttles its timers.
+  args: ['--headless=new', `--disable-extensions-except=${ext}`, `--load-extension=${ext}`, '--no-first-run', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'],
   viewport: { width: 1100, height: 800 },
 });
 const netLog = [];
@@ -87,6 +91,17 @@ try {
 
   const page = await ctx.newPage();
   await page.goto(pageUrl);
+  // Visible first (--scroll): the paragraphs fully on screen, by their opening text.
+  const scroll = opt('scroll', '');
+  let onScreen = [];
+  if (scroll) {
+    await page.evaluate((f) => window.scrollTo(0, document.documentElement.scrollHeight * f), Number(scroll));
+    await page.waitForTimeout(1000);
+    onScreen = await page.evaluate(() => [...document.querySelectorAll('p, li, h2, h3, h4, blockquote, dd')]
+      .filter((e) => !e.closest('nav, aside, header, footer, [role=navigation]') && !e.querySelector('p, li'))
+      .filter((e) => { const r = e.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && e.innerText.trim().length >= 30; })
+      .map((e) => e.innerText.replace(/\s+/g, ' ').trim().slice(0, 30)));
+  }
   const panel = await ctx.newPage();
   await panel.goto(`chrome-extension://${extId}/sidepanel.html`);
   await page.bringToFront();
@@ -103,6 +118,27 @@ try {
   }, pageUrl);
   const job = panel.locator('[data-testid=job]');
   const t0 = Date.now();
+  let visible;
+  if (scroll) {
+    // Poll the panel: the blocks whose original opens like a paragraph on screen, and when each turns final.
+    const doneAt = new Map();
+    let ids;
+    while (Date.now() - t0 < Number(opt('timeout', '300')) * 1000) {
+      const snap = await panel.evaluate(() => [...document.querySelectorAll('.seg[data-id]')].map((e) => [e.dataset.id, e.dataset.status, (e.querySelector('[data-testid=seg-original-text]')?.innerText ?? e.innerText).replace(/\s+/g, ' ').trim().slice(0, 30)]));
+      if (ids === undefined && snap.length > 0) ids = snap.filter(([, , t]) => onScreen.includes(t)).map(([id]) => id);
+      for (const [id, st] of snap) if (ids?.includes(id) && st === 'final' && !doneAt.has(id)) doneAt.set(id, Date.now() - t0);
+      if (ids !== undefined && ids.length > 0 && doneAt.size === ids.length) break;
+      const st = await job.getAttribute('data-status', { timeout: 100 }).catch(() => null);
+      if (st !== null && st !== 'running') break;
+      await panel.waitForTimeout(100);
+    }
+    const stamp = async (a) => { const v = await job.getAttribute(a).catch(() => null); const s0 = await job.getAttribute('data-started').catch(() => null); return v && s0 ? Number(v) - Number(s0) : null; };
+    const times = [...doneAt.values()].sort((a, b) => a - b);
+    visible = { scroll: Number(scroll), onScreen: onScreen.length, matched: ids?.length ?? 0, visibleFirstMs: times[0] ?? null, visibleAllMs: ids && times.length === ids.length ? times.at(-1) : null, screenDoneMs: await stamp('data-screen-done') };
+    await panel.screenshot({ path: path.join(outDir, `${provider}-screen.png`) });
+    await page.screenshot({ path: path.join(outDir, `${provider}-screen-page.png`) });
+    if (args.includes('--screen-only')) await panel.locator('[data-testid=job] .job__button').first().click().catch(() => {});
+  }
   await job.waitFor({ timeout: 30000 });
   await panel.waitForFunction(() => { const j = document.querySelector('[data-testid=job]'); return j && j.getAttribute('data-status') !== 'running'; }, null, { timeout: Number(opt('timeout', '300')) * 1000 }).catch(() => {});
   const status = await job.getAttribute('data-status');
@@ -111,7 +147,7 @@ try {
   const costTitle = await panel.locator('[data-testid=job-cost]').first().getAttribute('title').catch(() => null);
   const failedBlocks = await panel.locator('[data-status=failed]').count();
   await panel.screenshot({ path: path.join(outDir, `${provider}.png`) });
-  const result = { provider, model: P.model ?? null, status, jobText: text, cost, costTitle, failedBlocks, wallSeconds: Math.round((Date.now() - t0) / 100) / 10 };
+  const result = { provider, model: P.model ?? null, status, jobText: text, cost, costTitle, failedBlocks, wallSeconds: Math.round((Date.now() - t0) / 100) / 10, ...(visible ? { visible } : {}) };
   fs.writeFileSync(path.join(outDir, `${provider}.json`), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result));
   if (opt('net', '')) console.log('NET ' + JSON.stringify(netLog.filter((e) => /openrouter|127\.0\.0\.1:1809[89]/.test(e.url))));
