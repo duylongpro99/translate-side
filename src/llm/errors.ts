@@ -77,6 +77,11 @@ const MODEL_NOT_FOUND =
   /^model:\s*\S|\bmodel(?:\s*[:=]\s*|\s+)[`"']?[\w.\-:/]+[`"']?\s+(?:is\s+)?(?:not\s+found|does\s+not\s+exist|no\s+longer\s+available)|\bmodels\/[\w.\-:]+\s+(?:is\s+|was\s+)?(?:not\s+found|no\s+longer\s+available)/i;
 const CONTEXT_LENGTH = /context[ _-]?(length|window)|prompt is too long|too many (input )?tokens|maximum context|reduce the length/i;
 const CREDIT_BALANCE = /credit balance/i;
+// Google answers a bad key with 400 INVALID_ARGUMENT, not 401/403 (M3 dogfood B1):
+// `{"error":{"code":400,"message":"API key not valid. Please pass a valid API key.",
+// "status":"INVALID_ARGUMENT","details":[{"reason":"API_KEY_INVALID",…}]}}`. Matched by that
+// signal only, so other 400s stay `bad_request`.
+const GOOGLE_KEY_INVALID = /\bAPI[ _]key not valid\b|\bpass a valid API key\b|\bAPI_KEY_INVALID\b/i;
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 
 export function classifyHttpError(input: HttpErrorInput): LLMError {
@@ -114,6 +119,7 @@ export function classifyHttpError(input: HttpErrorInput): LLMError {
   }
   if (status >= 500) return withRetryAfter({ ...base, kind: 'overloaded', message: msg('The provider is overloaded') }, input);
   if (status === 400 || status === 422) {
+    if (isGoogleKeyInvalid(body, serverMessage)) return { ...base, kind: 'auth', message: 'Key invalid or missing' };
     if (type === 'billing_error' || (serverMessage !== undefined && CREDIT_BALANCE.test(serverMessage))) {
       return { ...base, kind: 'quota', message: msg('No allowance left') };
     }
@@ -240,6 +246,15 @@ function parseBody(body: unknown): unknown {
   // Gemini's OpenAI-compatible endpoint wraps an error in a one-element array:
   // `[{"error":{"code":404,"message":"…","status":"NOT_FOUND"}}]` (seen live, Phase C).
   return Array.isArray(parsed) && parsed.length === 1 && isRecord(parsed[0]) ? parsed[0] : parsed;
+}
+
+/** Google's invalid-key 400: `reason: API_KEY_INVALID` in `error.details`, or its message. */
+function isGoogleKeyInvalid(body: unknown, serverMessage: string | undefined): boolean {
+  if (serverMessage !== undefined && GOOGLE_KEY_INVALID.test(serverMessage)) return true;
+  if (!isRecord(body)) return false;
+  const inner = isRecord(body.error) ? body.error : body;
+  const details = Array.isArray(inner.details) ? inner.details : [];
+  return details.some((d) => isRecord(d) && d.reason === 'API_KEY_INVALID');
 }
 
 function errorTypeAndCode(body: unknown): { type?: string; code?: string } {

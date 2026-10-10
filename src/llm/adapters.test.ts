@@ -591,6 +591,18 @@ describe('openai-chat adapter (wire details)', () => {
     expect(f.requests).toHaveLength(2);
   });
 
+  it('M3 dogfood B1: Gemini\'s 400 for a bad key (array body, API_KEY_INVALID) is auth, one request, no flip; the probe says so too', async () => {
+    const badKey: ScriptedResponse = { status: 400, body: '[{"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com"}]}}]' };
+    const f = mockFetch([badKey]);
+    const c = conn();
+    const events = await collect(createOpenAIAdapter({ fetch: f.fetch }).stream(c, request('m', { jsonMode: true })));
+    expect(f.requests).toHaveLength(1);
+    expect(events).toMatchObject([{ type: 'error', error: { kind: 'auth', status: 400 } }]);
+    expect(c.quirks).toEqual({});
+    const p = await createOpenAIAdapter({ fetch: mockFetch([badKey]).fetch }).probe(conn());
+    expect(p).toMatchObject({ ok: false, error: { kind: 'auth' } });
+  });
+
   it('N2: Gemini\'s generic 400 "Invalid JSON payload … Unknown name" without jsonMode neither flips nor resends', async () => {
     const gemini: ScriptedResponse = { status: 400, body: '[{"error":{"code":400,"message":"Invalid JSON payload received. Unknown name \\"foo\\" at \'generation_config\': Cannot find field.","status":"INVALID_ARGUMENT"}}]' };
     const f = mockFetch([gemini]);

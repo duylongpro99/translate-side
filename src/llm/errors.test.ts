@@ -138,6 +138,31 @@ describe('§4.3.5 rows outside the S4 table', () => {
     }
   });
 
+  it('Google invalid key: 400 INVALID_ARGUMENT with API_KEY_INVALID → auth, not a quirk flip (M3 dogfood B1)', () => {
+    const message = 'API key not valid. Please pass a valid API key.';
+    const error = {
+      code: 400,
+      message,
+      status: 'INVALID_ARGUMENT',
+      details: [{ '@type': 'type.googleapis.com/google.rpc.ErrorInfo', reason: 'API_KEY_INVALID', domain: 'googleapis.com' }],
+    };
+    for (const body of [{ error }, [{ error }], JSON.stringify([{ error }]), { error: { ...error, message: 'Invalid argument' } }, { error: { message } }, message]) {
+      const e = http(400, body);
+      expect(e, JSON.stringify(body)).toMatchObject({ kind: 'auth', message: 'Key invalid or missing', status: 400 });
+      expect(isQuirkFlipCandidate(e)).toBe(false);
+    }
+    // Other INVALID_ARGUMENT 400s stay bad_request (and quirk-flip candidates).
+    for (const body of [
+      { error: { code: 400, message: 'Invalid JSON payload received. Unknown name "foo"', status: 'INVALID_ARGUMENT' } },
+      { error: { code: 400, message: 'Request contains an invalid argument.', status: 'INVALID_ARGUMENT', details: [{ reason: 'OTHER' }] } },
+      { error: { message: 'Unsupported parameter: api key header' } },
+    ]) {
+      const e = http(400, body);
+      expect(e.kind, JSON.stringify(body)).toBe('bad_request');
+      expect(isQuirkFlipCandidate(e)).toBe(true);
+    }
+  });
+
   it('other "no allowance" forms → quota (S4 deviation e)', () => {
     expect(http(429, { error: { message: 'You exceeded your current quota', type: 'insufficient_quota', code: 'insufficient_quota' } }).kind).toBe('quota');
     expect(http(400, { type: 'error', error: { type: 'invalid_request_error', message: 'Your credit balance is too low to access the Anthropic API.' } }).kind).toBe('quota');
