@@ -49,6 +49,9 @@ export const CONTEXTUAL_TRANSLATE_PROMPT_ID = TRANSLATE_V2_PROMPT_ID;
 /** Chunks translated without waiting for the brief: the first one (M2-D6). */
 export const BRIEF_FREE_CHUNKS = 1;
 
+/** At most this many chunks holding the screen go without the brief (each is revised with it later). */
+export const MAX_SCREEN_CHUNKS = 3;
+
 /** The revision chunk 0's second pass marks its finals with (M2-D17). */
 export const REVISED_REVISION = 2;
 
@@ -115,7 +118,16 @@ export function contextualStages(brief: BriefWait, translatePrompt: string = CON
   const check = createStrategyCheckStage(CONTEXTUAL_ID, translatePrompt);
   // The brief-free chunks, in the order they were picked (claimed by `pick` below).
   const claimed: ChunkWork[] = [];
-  const wait: BriefWait = { settled: brief.settled, freeChunks: brief.freeChunks, free: (index) => claimed.some((w) => w.chunk.index === index) };
+  // Every chunk holding the screen goes without the brief (M3 dogfood B4: a dense screen is more
+  // than one chunk, and the part in the second one waited for the brief call), up to a few.
+  let freeChunks = brief.freeChunks;
+  const wait: BriefWait = {
+    settled: brief.settled,
+    get freeChunks() {
+      return freeChunks;
+    },
+    free: (index) => claimed.some((w) => w.chunk.index === index),
+  };
   const first = createTranslateRun(CONTEXTUAL_ID, wait, translatePrompt);
   const again = createTranslateRun(CONTEXTUAL_ID, undefined, translatePrompt, REVISED_REVISION);
   // Settles when a brief-free chunk's first call is over (by index).
@@ -134,8 +146,12 @@ export function contextualStages(brief: BriefWait, translatePrompt: string = CON
     id: 'chunk',
     scope: 'document',
     async *run(job, ctx) {
-      const works: ChunkWork[] = chunkJob(job, ctx.priority?.() ?? []).map((c) => ({ chunk: c, doc: job.doc, options: job.options }));
-      const reviseItems: ReviseWork[] = revises === undefined ? [] : Array.from({ length: Math.min(brief.freeChunks, works.length) }, (_, k) => ({ revise: k }));
+      const priority = ctx.priority?.() ?? [];
+      const works: ChunkWork[] = chunkJob(job, priority).map((c) => ({ chunk: c, doc: job.doc, options: job.options }));
+      const onScreen = new Set(priority);
+      const screenChunks = works.filter((w) => w.chunk.segments.some((s) => onScreen.has(s.id))).length;
+      freeChunks = Math.max(brief.freeChunks, Math.min(screenChunks, MAX_SCREEN_CHUNKS));
+      const reviseItems: ReviseWork[] = revises === undefined ? [] : Array.from({ length: Math.min(freeChunks, works.length) }, (_, k) => ({ revise: k }));
       yield [...works, ...reviseItems];
     },
   });
@@ -176,7 +192,7 @@ export function contextualStages(brief: BriefWait, translatePrompt: string = CON
       const ids = items.map((item) => ('revise' in item ? [] : item.chunk.segments.map((s) => s.id)));
       const next = pickByPriority(ids, chunks, ctx.priority?.() ?? []);
       const work = items[next];
-      if (claimed.length < brief.freeChunks && work !== undefined && !('revise' in work)) claimed.push(work);
+      if (claimed.length < freeChunks && work !== undefined && !('revise' in work)) claimed.push(work);
       return next;
     },
   });

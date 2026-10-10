@@ -149,15 +149,25 @@ export function translateRequest(client: Pick<LLMClient, 'model' | 'reasoningRes
 /**
  * The job's chunks. With segments on screen (plan M3-E1) and a document of more than one chunk, a
  * chunk starts at the first of them, so the screen is not the tail of a chunk that streams the
- * paragraphs above it first; a one-chunk document stays one chunk (M2-D9). Nothing on screen: as in M2.
+ * paragraphs above it first, and the next chunk starts after the last of them, so the screen's
+ * chunk holds the screen and nothing more: it is short, so it streams in about the time of the
+ * screen alone, not of a full chunk (M3 dogfood B4). A screen larger than a chunk is cut as usual.
+ * A one-chunk document stays one chunk (M2-D9). Nothing on screen: as in M2.
  */
 export function chunkJob(job: TranslationJob, priority: readonly string[] = []): Chunk[] {
   const limits = chunkLimits(job.options.chunkTokens);
   const plain = chunkSegments(job.doc.segments, limits);
   if (plain.length <= 1 || priority.length === 0) return plain;
   const onScreen = new Set(priority);
-  const first = job.doc.segments.find((s) => s.translate && onScreen.has(s.id));
-  return first === undefined ? plain : chunkSegments(job.doc.segments, limits, first.id);
+  const sent = job.doc.segments.filter((s) => s.translate);
+  const first = sent.findIndex((s) => onScreen.has(s.id));
+  if (first < 0) return plain;
+  let last = first;
+  for (let i = first; i < sent.length; i++) if (onScreen.has(sent[i]?.id ?? '')) last = i;
+  // The first segment after the screen that is not in the same table row as its last one.
+  const row = sent[last]?.groupId;
+  const after = sent.slice(last + 1).find((s) => row === undefined || s.groupId !== row);
+  return chunkSegments(job.doc.segments, limits, after === undefined ? [sent[first]?.id ?? ''] : [sent[first]?.id ?? '', after.id]);
 }
 
 /**

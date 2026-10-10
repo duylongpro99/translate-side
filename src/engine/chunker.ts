@@ -6,8 +6,10 @@
 // - a heading starts a new chunk once the current one has reached the minimum size, and a chunk
 //   never ends with a heading when the next unit could carry it;
 // - a single unit larger than the maximum becomes a chunk of its own;
-// - with `breakBefore` (plan M3-E1), a chunk starts at that segment's unit, so the chunk of the
-//   screen begins where the screen does (headings just before it go along, as above).
+// - with `breakBefore` (plan M3-E1), a chunk starts at each of those segments' units, so the chunk
+//   of the screen begins where the screen does (headings just before it go along, as above) and,
+//   given the segment after the screen too, ends where it does (M3 dogfood B4: a screen inside a
+//   full-size chunk waited for the paragraphs around it).
 //
 // Sizes come from the job's `chunkTokens` (the profile's, plan M1 §5): it is the maximum, and the
 // minimum keeps DESIGN's 800 : 1,500 proportion. Tokens are estimated on `inlineMarkup`, the text
@@ -64,7 +66,8 @@ function units(segments: readonly Segment[]): Unit[] {
   return out;
 }
 
-export function chunkSegments(segments: readonly Segment[], limits: ChunkLimits = chunkLimits(DEFAULT_CHUNK_TOKENS), breakBefore?: string): Chunk[] {
+export function chunkSegments(segments: readonly Segment[], limits: ChunkLimits = chunkLimits(DEFAULT_CHUNK_TOKENS), breakBefore?: string | readonly string[]): Chunk[] {
+  const breaks = new Set(typeof breakBefore === 'string' ? [breakBefore] : (breakBefore ?? []));
   const groups: Unit[][] = [];
   let current: Unit[] = [];
   let size = 0;
@@ -80,7 +83,7 @@ export function chunkSegments(segments: readonly Segment[], limits: ChunkLimits 
       while (k > 0 && current[k - 1]?.heading === true) k--;
       const carry = k > 0 ? current.slice(k) : [];
       const carried = carry.reduce((n, u) => n + u.tokens, 0);
-      if (breakBefore !== undefined && unit.segments.some((s) => s.id === breakBefore)) {
+      if (breaks.size > 0 && unit.segments.some((s) => breaks.has(s.id))) {
         current = current.slice(0, k);
         cut(carry);
       } else if (unit.heading && k > 0 && size - carried >= limits.minTokens) {
