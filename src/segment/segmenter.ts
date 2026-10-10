@@ -1,7 +1,9 @@
 // Segmenter (plan M0-E6, DESIGN.md §4.1): turns the cleaned working copy into Segment[] in
 // reading order. Block kinds come from the element (and its context: a paragraph inside a list
 // item is part of the item); inline formatting becomes light markers; code blocks are kept
-// verbatim and never translated; table cells of a row share a groupId.
+// verbatim and never translated; table cells of a row share a groupId. A layout table (an old
+// page laid out with tables: an essay in one cell, a comment thread as nested one-row tables) is
+// not a table to the reader: its cells are plain containers (M3 dogfood B3).
 import type { Segment, SegmentKind } from '@/engine/types';
 import { BOX_ATTR } from '@/extract/compose';
 import { CODE_BLOCK } from './code-block.ts';
@@ -14,6 +16,8 @@ export interface SegmentOptions {
   pathOf(el: Element): string;
   /** Whether the block is kept but hidden (inactive tab panel, closed details). */
   isHidden?(el: Element): boolean;
+  /** Each segment as it is made, with what it was read from: its block, or the loose nodes of a run. */
+  onSegment?(seg: Segment, from: Element | readonly Node[]): void;
 }
 
 const BLOCK_TAGS = new Set([
@@ -38,6 +42,7 @@ const BR = ''; // private-use placeholder for <br>, not matched by \s
 export function segment(root: Element, opts: SegmentOptions): Segment[] {
   const out: Segment[] = [];
   const blockCache = new WeakMap<Element, boolean>();
+  const layoutCache = new WeakMap<Element, boolean>();
   const isBlock = (el: Element): boolean => {
     let b = blockCache.get(el);
     if (b === undefined) {
@@ -47,7 +52,7 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
     return b;
   };
 
-  const emit = (el: Element, kind: SegmentKind, text: string, inlineMarkup: string, domPath: string, extra: Partial<Segment> = {}) => {
+  const emit = (el: Element, kind: SegmentKind, text: string, inlineMarkup: string, domPath: string, extra: Partial<Segment> = {}, run?: readonly Node[]) => {
     const wordy = /[\p{L}\p{N}]/u.test(text);
     // A block with no letters or digits (¶, —, a lone zero-width space) is dropped, except code
     // and table cells: a cell like `{/* … */}` keeps its row aligned, and isn't translated.
@@ -57,6 +62,7 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
     const seg: Segment = { id: hashId(`${domPath}\n${text}`), kind, text, inlineMarkup, domPath, translate, ...extra };
     if (opts.isHidden?.(el)) seg.hidden = true;
     out.push(seg);
+    opts.onSegment?.(seg, run ?? el);
   };
 
   const emitCode = (el: Element) => {
@@ -86,6 +92,10 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
         break;
       case 'td':
       case 'th': {
+        // A cell outside any table (Readability turns a layout table it unwraps into a div, and
+        // leaves its rows) is no table cell either.
+        const table = el.closest('table');
+        if (!table || isLayoutTable(table, layoutCache)) break;
         const row = el.closest('tr');
         next = { kind: 'table-cell', ...(row ? { groupId: `row-${hashId(opts.pathOf(row))}` } : {}) };
         break;
@@ -123,7 +133,7 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
       if (!text) continue;
       k++;
       const path = onlyRun ? opts.pathOf(el) : `${opts.pathOf(el)}#run[${k}]`;
-      emit(el, ctx.kind ?? 'p', text, markup, path, ctx.groupId ? { groupId: ctx.groupId } : {});
+      emit(el, ctx.kind ?? 'p', text, markup, path, ctx.groupId ? { groupId: ctx.groupId } : {}, onlyRun ? undefined : part);
     }
   };
 
@@ -136,6 +146,40 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
     if (n > 1) s.id = `${s.id}~${n}`;
   }
   return out;
+}
+
+/**
+ * A table used for page layout rather than data, by Readability's own test (`_markDataTables`,
+ * @mozilla/readability 0.6): role=presentation or datatable=0 → layout; a summary, a caption,
+ * or th/thead/tfoot/col/colgroup → data; a nested table → layout; one row or one column →
+ * layout; 10+ rows or 5+ columns → data; else data when rows × columns > 10. Only the table's
+ * own rows and cells count, not those of tables nested in it.
+ */
+export function isLayoutTable(table: Element, cache?: WeakMap<Element, boolean>): boolean {
+  const known = cache?.get(table);
+  if (known !== undefined) return known;
+  const layout = layoutTest(table);
+  cache?.set(table, layout);
+  return layout;
+}
+
+function layoutTest(table: Element): boolean {
+  if (table.getAttribute('role') === 'presentation' || table.getAttribute('role') === 'none' || table.getAttribute('datatable') === '0') return true;
+  if (table.getAttribute('summary')) return false;
+  const own = (selector: string) => [...table.querySelectorAll(selector)].filter((e) => e.closest('table') === table);
+  if (own('caption').some((c) => c.childNodes.length > 0)) return false;
+  if (own('col, colgroup, tfoot, thead, th').length > 0) return false;
+  if (table.querySelector('table')) return true;
+  const rows = own('tr');
+  let columns = 0;
+  for (const row of rows) {
+    let n = 0;
+    for (const cell of row.children) if (cell.localName === 'td' || cell.localName === 'th') n += Number(cell.getAttribute('colspan')) || 1;
+    columns = Math.max(columns, n);
+  }
+  if (rows.length <= 1 || columns <= 1) return true;
+  if (rows.length >= 10 || columns > 4) return false;
+  return rows.length * columns <= 10;
 }
 
 /**

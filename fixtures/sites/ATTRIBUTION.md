@@ -86,3 +86,16 @@ The page chrome around the content (site header, navigation, theme markup) belon
 - License: CC-BY-3.0 (text; third-party images not covered — no image files are stored, only their URLs) (https://globalvoices.org/about/global-voices-attribution-policy/)
 - Changes: as above.
 
+
+## layout-table-essay, layout-table-thread (structural replicas)
+
+These two are not copies. They keep the element structure of a page whose text is not under a permissive license, and
+replace all of its text with generated filler. They were added for M3 dogfood bug B3 (layout tables).
+
+- Structure of: https://paulgraham.com/greatwork.html (essay laid out in nested tables, paragraphs separated by
+  `<br><br>`) and https://news.ycombinator.com/item?id=50028275 (comment thread of nested one-row tables).
+  Fetched as served HTML on 2026-10-10.
+- Changes: scripts and HTML comments removed; every text node, and every alt, title and meta content, replaced by
+  deterministic generated English filler; usernames, external links and image URLs replaced. No sentence of the
+  original page remains. Tags, attributes and nesting are as served.
+- License: MIT, like this project. The page structure is a layout, not the authors' text.

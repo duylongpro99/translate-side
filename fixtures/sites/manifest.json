@@ -204,5 +204,45 @@
       "licenseSource": "https://globalvoices.org/about/global-voices-attribution-policy/",
       "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
     }
+  },
+  "layout-table-essay": {
+    "slug": "layout-table-essay",
+    "generator": "Long-form essay laid out in tables (paulgraham.com structure)",
+    "url": "https://paulgraham.com/greatwork.html",
+    "contentSelector": "table table td",
+    "codeBlocks": 0,
+    "finalUrl": "https://paulgraham.com/greatwork.html",
+    "title": "(replaced by filler)",
+    "capturedAt": "2026-10-10T00:00:00.000Z",
+    "bytes": 76735,
+    "openShadowRoots": 0,
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "MIT (structural replica; no text of the original page)",
+    "attribution": {
+      "authors": "Translate Peer contributors (markup structure from the original page; all text generated)",
+      "licenseSource": "LICENSE",
+      "changes": "Server HTML fetched 2026-10-10 (no JavaScript rendering needed); scripts and comments removed; every text node and alt/title/meta text replaced by deterministic generated English filler; usernames, external links and image URLs replaced. Element structure, attributes and nesting kept as served."
+    }
+  },
+  "layout-table-thread": {
+    "slug": "layout-table-thread",
+    "generator": "Comment thread of nested one-row tables (news.ycombinator.com structure)",
+    "url": "https://news.ycombinator.com/item?id=50028275",
+    "contentSelector": "table.comment-tree",
+    "codeBlocks": 2,
+    "finalUrl": "https://news.ycombinator.com/item?id=50028275",
+    "title": "(replaced by filler)",
+    "capturedAt": "2026-10-10T00:00:00.000Z",
+    "bytes": 266318,
+    "openShadowRoots": 0,
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "MIT (structural replica; no text of the original page)",
+    "attribution": {
+      "authors": "Translate Peer contributors (markup structure from the original page; all text generated)",
+      "licenseSource": "LICENSE",
+      "changes": "Server HTML fetched 2026-10-10 (no JavaScript rendering needed); scripts and comments removed; every text node and alt/title/meta text replaced by deterministic generated English filler; usernames, external links and image URLs replaced. Element structure, attributes and nesting kept as served."
+    }
   }
 }

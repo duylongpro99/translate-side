@@ -159,18 +159,59 @@ describe('tables', () => {
   });
 
   it('keeps the row groupId on lists and quotes inside a cell', () => {
-    const s = seg('<table><tr><td>Option</td><td><ul><li>one</li><li>two</li></ul><blockquote>q</blockquote></td></tr></table>');
+    const s = seg('<table><tr><th>Name</th></tr><tr><td>Option</td><td><ul><li>one</li><li>two</li></ul><blockquote>q</blockquote></td></tr></table>').slice(1);
     expect(s.map((x) => x.kind)).toEqual(['table-cell', 'li', 'li', 'quote']);
     expect(new Set(s.map((x) => x.groupId)).size).toBe(1);
     expect(s[0]?.groupId).toBeDefined();
   });
 
   it('keeps symbol-only cells so rows stay aligned, without translating them', () => {
-    const s = seg('<table><tr><td>JSX-style</td><td><code>{/* ... */}</code></td></tr></table>');
+    const s = seg('<table><thead><tr><th>Style</th><th>Example</th></tr></thead><tr><td>JSX-style</td><td><code>{/* ... */}</code></td></tr></table>').slice(2);
     expect(s.map((x) => [x.text, x.translate])).toEqual([
       ['JSX-style', true],
       ['{/* ... */}', false],
     ]);
+  });
+});
+
+describe('layout tables (M3 dogfood B3; Readability\'s data-table test)', () => {
+  const kinds = (html: string) => seg(html).map((x) => [x.kind, x.text, x.groupId === undefined ? '' : 'g']);
+  const para = (n: number) => Array.from({ length: n }, (_, i) => `<p>Paragraph ${i} of the essay, long enough to read.</p>`).join('');
+
+  it('an essay in one cell of a one-row table (paulgraham.com) reads as paragraphs, not cells', () => {
+    const s = seg(`<table><tr><td><img src="nav.gif"></td><td><table width="435"><tr><td><font>July 2023${para(3)}</font></td></tr></table></td></tr></table>`);
+    expect(s.map((x) => x.kind)).toEqual(['p', 'p', 'p', 'p']);
+    expect(s.every((x) => x.groupId === undefined)).toBe(true);
+    expect(s[0]?.text).toBe('July 2023');
+  });
+
+  it('a comment thread of nested one-row tables (news.ycombinator.com) reads as paragraphs', () => {
+    const comment = (who: string, text: string) => `<tr><td><table><tr><td class="ind"><img width="40"></td><td class="votelinks"><a href="#">up</a></td><td class="default"><div><span class="comhead"><a class="hnuser">${who}</a> 2 hours ago</span></div><div class="comment"><div class="commtext">${text}</div></div></td></tr></table></td></tr>`;
+    const s = seg(`<table id="hnmain"><tr><td><table class="comment-tree">${comment('alice', 'First comment.<p>Second paragraph.</p>')}${comment('bob', 'A reply.')}</table></td></tr></table>`);
+    expect(s.filter((x) => x.kind === 'table-cell')).toEqual([]);
+    expect(s.map((x) => x.text)).toEqual(['up', 'alice 2 hours ago', 'First comment.', 'Second paragraph.', 'up', 'bob 2 hours ago', 'A reply.']);
+  });
+
+  it('data tables stay tables: header cells, a caption, or enough rows and columns', () => {
+    expect(kinds('<table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table>').map((k) => k[0])).toEqual(['table-cell', 'table-cell', 'table-cell', 'table-cell']);
+    expect(kinds('<table><caption>Sizes</caption><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></table>').slice(1).every((k) => k[0] === 'table-cell' && k[2] === 'g')).toBe(true);
+    const grid = (r: number, c: number) => `<table>${Array.from({ length: r }, (_, i) => `<tr>${Array.from({ length: c }, (_, j) => `<td>r${i}c${j}</td>`).join('')}</tr>`).join('')}</table>`;
+    // 3 × 4 = 12 cells: data; 10 rows: data; 5 columns: data.
+    for (const [r, c] of [[3, 4], [10, 2], [2, 5]] as const) expect(kinds(grid(r, c)).every((k) => k[0] === 'table-cell'), `${r}x${c}`).toBe(true);
+    // 2 × 2, one row, one column, role=presentation: layout.
+    for (const html of [grid(2, 2), grid(1, 3), grid(4, 1), grid(3, 4).replace('<table>', '<table role="presentation">')]) expect(kinds(html).every((k) => k[0] === 'p' && k[2] === ''), html).toBe(true);
+  });
+
+  it('rows left without their table (Readability unwrapped it into a div) are not table cells', () => {
+    const div = document.createElement('div');
+    const tr = div.appendChild(document.createElement('tr'));
+    tr.appendChild(document.createElement('td')).textContent = 'Cell text';
+    expect(segment(div, { pathOf: domPathOf }).map((x) => x.kind)).toEqual(['p']);
+  });
+
+  it('a data table inside a layout table is still a table; the layout around it is not', () => {
+    const s = seg(`<table><tr><td>${para(1)}<table><tr><th>K</th><th>V</th></tr><tr><td>a</td><td>1</td></tr></table></td></tr></table>`);
+    expect(s.map((x) => x.kind)).toEqual(['p', 'table-cell', 'table-cell', 'table-cell', 'table-cell']);
   });
 });
 

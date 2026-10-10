@@ -6,6 +6,7 @@ import { Readability } from '@mozilla/readability';
 import { segment } from '@/segment/segmenter';
 import { domPathOf } from '@/segment/dom-path';
 import { classifyUrl } from '@/shared/denylist';
+import type { Segment } from '@/engine/types';
 import type { ExtractResult, ExtractVia } from '@/shared/protocol';
 import { detectGenerator, stripInContent, stripLandmarks } from './clean.ts';
 import { composeDocument, HIDDEN_ATTR, INDEX_ATTR, type Composed } from './compose.ts';
@@ -68,11 +69,12 @@ function runReadability(doc: Document, body: Element): Element | null {
 }
 
 /**
- * Reads the page. With `targets`, also fills it with each segment's element in the live page
- * (for the viewport observer, plan M3-E1): the block itself, the container of a `#run[k]` block,
- * or, for an element Readability made, its nearest ancestor that came from the page.
+ * Reads the page. With `targets`, also fills it with where each segment is in the live page (for
+ * the viewport observer, plan M3-E1): the block itself; for a `#run[k]` block or an element
+ * Readability made (which share their live container with others), a Range over its own live
+ * text (M3 dogfood B3: an essay of `<br><br>` paragraphs), else that container.
  */
-export function extractPage(doc: Document, targets?: Map<string, Element>): ExtractResult {
+export function extractPage(doc: Document, targets?: Map<string, Element | Range>): ExtractResult {
   const url = doc.URL;
   if (!classifyUrl(url).ok) return { ok: false, reason: 'denylisted', url };
   // M3-D5: someone is typing a password here (a sign-in or payment page): skip the page.
@@ -95,15 +97,75 @@ export function extractPage(doc: Document, targets?: Map<string, Element>): Extr
     }
     return p;
   };
-  const segments = segment(main.root, { pathOf, isHidden: (el) => el.closest(`[${HIDDEN_ATTR}]`) !== null });
+  const sources = new Map<Segment, Element | readonly Node[]>();
+  const texts = liveTexts(composed);
+  const segments = segment(main.root, {
+    pathOf,
+    isHidden: (el) => el.closest(`[${HIDDEN_ATTR}]`) !== null,
+    ...(targets ? { onSegment: (seg: Segment, from: Element | readonly Node[]) => void sources.set(seg, from) } : {}),
+  });
   if (targets) {
     for (const s of segments) {
-      const live = liveByPath.get(s.domPath.replace(/#run\[\d+\]$/, ''));
+      const from = sources.get(s);
+      const shared = from !== undefined && (Array.isArray(from) || !(from as Element).hasAttribute(INDEX_ATTR));
+      const live = (shared ? liveRange(doc, from, texts) : undefined) ?? liveByPath.get(s.domPath.replace(/#run\[\d+\]$/, ''));
       if (live) targets.set(s.id, live);
     }
   }
   const lang = doc.documentElement.getAttribute('lang') ?? undefined;
   return { ok: true, via: main.via, url, title: doc.title, ...(lang ? { lang } : {}), segments };
+}
+
+/** Node.DOCUMENT_POSITION_FOLLOWING (no `Node` global outside a window). */
+const FOLLOWING = 4;
+
+/**
+ * Finds the page text node a copy text node shows. Text nodes carry no attribute, and Readability
+ * may rebuild the copy from its HTML, so this goes by the nearest indexed ancestor (`data-ts-i`)
+ * and the same text, among that page element's text nodes in order: each match moves a cursor on,
+ * so repeated text maps to its own occurrence.
+ */
+function liveTexts(composed: Composed): (copy: Text) => Text | undefined {
+  const lists = new Map<Element, { nodes: Text[]; next: number }>();
+  return (copy) => {
+    const own = copy.parentElement?.closest(`[${INDEX_ATTR}]`)?.getAttribute(INDEX_ATTR);
+    const live = own === null || own === undefined ? undefined : composed.live[Number(own)];
+    if (!live) return undefined;
+    let list = lists.get(live);
+    if (!list) {
+      const nodes: Text[] = [];
+      const walk = (n: Node) => (n.nodeType === 3 ? void nodes.push(n as Text) : n.childNodes.forEach(walk));
+      walk(live);
+      list = { nodes, next: 0 };
+      lists.set(live, list);
+    }
+    const at = (from: number) => list.nodes.findIndex((t, i) => i >= from && t.data === copy.data);
+    let i = at(list.next);
+    if (i < 0) i = at(0);
+    if (i < 0) return undefined;
+    list.next = i + 1;
+    return list.nodes[i];
+  };
+}
+
+/** A Range over the live text of `from` (a copy block or run), or undefined when it can't be mapped. */
+function liveRange(doc: Document, from: Element | readonly Node[], liveOf: (copy: Text) => Text | undefined): Range | undefined {
+  const texts: Text[] = [];
+  const collect = (node: Node) => {
+    if (node.nodeType !== 3) return node.childNodes.forEach(collect);
+    if ((node as Text).data.trim() === '') return;
+    const live = liveOf(node as Text);
+    if (live?.isConnected) texts.push(live);
+  };
+  for (const n of Array.isArray(from) ? from : [from as Element]) collect(n);
+  const first = texts[0];
+  const last = texts[texts.length - 1];
+  if (!first || !last || first.ownerDocument !== doc) return undefined;
+  if (first !== last && !(first.compareDocumentPosition(last) & FOLLOWING)) return undefined;
+  const range = doc.createRange();
+  range.setStart(first, 0);
+  range.setEnd(last, last.data.length);
+  return range;
 }
 
 /**

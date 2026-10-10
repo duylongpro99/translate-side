@@ -43,7 +43,7 @@ export default defineContentScript({
         extract: () => {
           watch?.stop();
           watch = undefined;
-          const targets = new Map<string, Element>();
+          const targets = new Map<string, Element | Range>();
           const result = extractPage(document, targets);
           if (!result.ok) return result;
           watch = watchViewport(window, targets, result.segments.map((s) => s.id), (v) => emit(port, 'viewport', v));

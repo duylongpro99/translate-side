@@ -18,16 +18,20 @@ export interface ViewportOptions {
 
 export const VIEWPORT_THROTTLE_MS = 50;
 
+/** Where a segment is on the page: its element, or a Range over its own text (extractPage). */
+export type ViewportTarget = Element | Range;
+
 /**
- * Watches the elements of `targets` (segment id → live element). `order` is the segments' page
+ * Watches the elements of `targets` (segment id → live element or text Range). A Range has no
+ * IntersectionObserver: it is measured on each read (scroll-throttled). `order` is the segments' page
  * order. `onChange` gets each new viewport, starting from the first change after `now()`. An
  * element shared by several segments and taller than the window does not count (see `coarse`).
  */
-export function watchViewport(win: Window, targets: ReadonlyMap<string, Element>, order: readonly string[], onChange: (v: Viewport) => void, opts: ViewportOptions = {}): ViewportWatch {
+export function watchViewport(win: Window, targets: ReadonlyMap<string, ViewportTarget>, order: readonly string[], onChange: (v: Viewport) => void, opts: ViewportOptions = {}): ViewportWatch {
   const throttleMs = opts.throttleMs ?? VIEWPORT_THROTTLE_MS;
   const doc = win.document;
   // An element may hold several segments (the `#run[k]` blocks of one container): page order.
-  const idsOf = new Map<Element, string[]>();
+  const idsOf = new Map<ViewportTarget, string[]>();
   for (const id of order) {
     const el = targets.get(id);
     if (!el) continue;
@@ -36,7 +40,9 @@ export function watchViewport(win: Window, targets: ReadonlyMap<string, Element>
     else idsOf.set(el, [id]);
   }
 
-  const onScreen = (el: Element): boolean => {
+  const onScreen = (el: ViewportTarget): boolean => {
+    // Engines without Range layout (jsdom) can't place a Range: never on screen.
+    if (typeof el.getBoundingClientRect !== 'function') return false;
     const r = el.getBoundingClientRect();
     return r.width + r.height > 0 && r.bottom > 0 && r.top < win.innerHeight && r.right > 0 && r.left < win.innerWidth;
   };
@@ -44,19 +50,20 @@ export function watchViewport(win: Window, targets: ReadonlyMap<string, Element>
   // An element holding several segments that is taller than the window (on the Readability path,
   // the ancestor several made-up blocks share, up to the whole article) says nothing about which of
   // them is on screen: it is neither visible nor an anchor, or it would always be both.
-  const coarse = (el: Element, rect: DOMRect): boolean => (idsOf.get(el)?.length ?? 0) > 1 && rect.height > win.innerHeight;
+  const coarse = (el: ViewportTarget, rect: DOMRect): boolean => (idsOf.get(el)?.length ?? 0) > 1 && rect.height > win.innerHeight;
 
   // With an observer, the set it reports; without one (old engines, tests), the layout each time.
   const Observer = (win as Window & { IntersectionObserver?: typeof IntersectionObserver }).IntersectionObserver;
-  const shown = new Set<Element>();
+  const shown = new Set<ViewportTarget>();
   for (const el of idsOf.keys()) if (onScreen(el)) shown.add(el);
+  const ranges = [...idsOf.keys()].filter((t) => !isElement(t));
 
   const read = (): Viewport => {
-    if (!Observer) {
-      shown.clear();
-      for (const el of idsOf.keys()) if (onScreen(el)) shown.add(el);
+    for (const t of Observer ? ranges : idsOf.keys()) {
+      if (onScreen(t)) shown.add(t);
+      else shown.delete(t);
     }
-    const rects = new Map<Element, DOMRect>();
+    const rects = new Map<ViewportTarget, DOMRect>();
     for (const el of shown) {
       const rect = el.getBoundingClientRect();
       if (!coarse(el, rect)) rects.set(el, rect);
@@ -65,7 +72,7 @@ export function watchViewport(win: Window, targets: ReadonlyMap<string, Element>
       const el = targets.get(id);
       return el !== undefined && rects.has(el);
     });
-    let top: { el: Element; rect: DOMRect } | undefined;
+    let top: { el: ViewportTarget; rect: DOMRect } | undefined;
     for (const [el, rect] of rects) {
       if (rect.bottom <= 0 || rect.height <= 0) continue;
       if (!top || rect.top < top.rect.top) top = { el, rect };
@@ -104,7 +111,7 @@ export function watchViewport(win: Window, targets: ReadonlyMap<string, Element>
         schedule();
       })
     : undefined;
-  for (const el of idsOf.keys()) observer?.observe(el);
+  for (const el of idsOf.keys()) if (isElement(el)) observer?.observe(el);
   const onScroll = () => schedule();
   doc.addEventListener('scroll', onScroll, { capture: true, passive: true });
   win.addEventListener('resize', onScroll, { passive: true });
@@ -123,4 +130,8 @@ export function watchViewport(win: Window, targets: ReadonlyMap<string, Element>
       win.removeEventListener('resize', onScroll);
     },
   };
+}
+
+function isElement(t: ViewportTarget): t is Element {
+  return (t as Node).nodeType === 1;
 }

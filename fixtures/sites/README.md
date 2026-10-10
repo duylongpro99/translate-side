@@ -1,6 +1,6 @@
 # Site fixtures (from spike S3)
 
-Ten rendered-DOM snapshots of real docs and article pages, for M0-E8 extraction and segmentation snapshot tests. All
+Ten rendered-DOM snapshots of real docs and article pages (plus two structural replicas, see the end of the table), for M0-E8 extraction and segmentation snapshot tests. All
 are under permissive or CC licenses: see `ATTRIBUTION.md` (authors, history links, license, changes) and the
 `license` field per fixture in `manifest.json`. Each file also starts with a one-line attribution comment.
 
@@ -16,6 +16,8 @@ are under permissive or CC licenses: see `ATTRIBUTION.md` (authors, history link
 | `goblog-pipelines` | Long-form blog essay (go.dev blog) | CC-BY-4.0 (text), BSD-3-Clause (code) |
 | `twir-671` | Newsletter issue (This Week in Rust) | CC-BY-SA-4.0 |
 | `globalvoices-bangladesh-protests` | News article (Global Voices, WordPress) | CC-BY-3.0 (text) |
+| `layout-table-essay` | Essay laid out in tables (paulgraham.com structure; replica, filler text) | MIT |
+| `layout-table-thread` | Comment thread of nested tables (news.ycombinator.com structure; replica, filler text) | MIT |
 
 `manifest.json` also holds per fixture: the source URL, the final URL, the capture time, the file size in bytes, the generator, and
 `contentSelector`, a hand-picked CSS selector for the real content root used as ground truth by `spikes/s3/`.

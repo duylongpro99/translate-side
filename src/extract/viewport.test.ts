@@ -18,20 +18,24 @@ function layout(els: Element[], top: () => number) {
 }
 
 describe('extractPage targets (plan M3-E1)', () => {
-  it('maps every segment to its live element, a #run block to its container', () => {
+  it('maps every segment to its live element, a #run block to a Range over its own text', () => {
     const doc = loadHtml(`<!doctype html><html><head><title>T</title></head><body><main><h1>Title</h1><p>${LONG}</p><div>Loose text <b>here</b>.<p>${LONG} two</p></div></main></body></html>`, 'https://example.com/a');
-    const targets = new Map<string, Element>();
+    const targets = new Map<string, Element | Range>();
     const result = extractPage(doc, targets);
     if (!result.ok) throw new Error('no content');
     expect(targets.size).toBe(result.segments.length);
-    for (const s of result.segments) {
-      const el = targets.get(s.id);
-      expect(el?.ownerDocument).toBe(doc);
-      expect(el?.isConnected).toBe(true);
-    }
     const run = result.segments.find((s) => s.domPath.includes('#run'));
-    expect(run && targets.get(run.id)?.localName).toBe('div');
-    expect(targets.get(result.segments[0]?.id ?? '')?.localName).toBe('h1');
+    for (const s of result.segments) {
+      const t = targets.get(s.id);
+      if (s === run) continue;
+      expect(t instanceof (doc.defaultView as Window & typeof globalThis).Element).toBe(true);
+      expect((t as Element).ownerDocument).toBe(doc);
+      expect((t as Element).isConnected).toBe(true);
+    }
+    const range = run && (targets.get(run.id) as Range);
+    expect(range?.toString()).toBe('Loose text here.');
+    expect((range?.commonAncestorContainer as Element).localName).toBe('div');
+    expect((targets.get(result.segments[0]?.id ?? '') as Element).localName).toBe('h1');
   });
 
   it('extractPage without targets is unchanged', () => {
@@ -115,6 +119,48 @@ describe('watchViewport', () => {
     const one = watchViewport(window, new Map([['c0', block]]), ['c0'], () => undefined);
     expect(one.now()).toEqual({ visible: ['c0'], anchor: { id: 'c0', offset: 0.1 } });
     one.stop();
+  });
+
+  it('Range targets (made-up paragraphs of one container, M3 dogfood B3) are measured on each read, with or without an observer', () => {
+    vi.useFakeTimers();
+    document.body.innerHTML = '<font>One. Two. Three. Four. Five.</font>';
+    const text = document.querySelector('font')?.firstChild as Text;
+    let scrollTop = 0;
+    const ranges = [0, 5, 10, 17, 23].map((start, i) => {
+      const r = document.createRange();
+      r.setStart(text, start);
+      r.setEnd(text, start + 4);
+      r.getBoundingClientRect = () => {
+        const y = i * 100 - scrollTop;
+        return { top: y, bottom: y + 100, left: 0, right: 500, width: 500, height: 100, x: 0, y, toJSON: () => ({}) } as DOMRect;
+      };
+      return r;
+    });
+    const targets = new Map(ranges.map((r, i) => [`p${i}`, r]));
+    const order = [...targets.keys()];
+    const observed: unknown[] = [];
+    class FakeObserver {
+      observe(t: unknown) {
+        observed.push(t);
+      }
+      disconnect() {}
+    }
+    const win = { IntersectionObserver: FakeObserver, document, innerHeight: 300, innerWidth: 800, addEventListener: () => undefined, removeEventListener: () => undefined } as unknown as Window;
+    const seen: Viewport[] = [];
+    const w = watchViewport(win, targets, order, (v) => seen.push(v), { throttleMs: 0 });
+    expect(observed).toHaveLength(0);
+    expect(w.now()).toEqual({ visible: ['p0', 'p1', 'p2'], anchor: { id: 'p0', offset: 0 } });
+    scrollTop = 250;
+    document.dispatchEvent(new Event('scroll'));
+    vi.advanceTimersByTime(1);
+    expect(seen.at(-1)).toEqual({ visible: ['p2', 'p3', 'p4'], anchor: { id: 'p2', offset: 0.5 } });
+    w.stop();
+    // Without an observer too.
+    scrollTop = 0;
+    const plain = watchViewport(window, targets, order, () => undefined);
+    Object.defineProperty(window, 'innerHeight', { value: 300, configurable: true });
+    expect(plain.now().visible).toEqual(['p0', 'p1', 'p2']);
+    plain.stop();
   });
 
   it('uses an IntersectionObserver when there is one, and disconnects it on stop', () => {
