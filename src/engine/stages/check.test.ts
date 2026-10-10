@@ -233,6 +233,27 @@ describe('check stage: re-request once, then segment.failed (M2-E4)', () => {
     expect(failures(events)).toEqual([]);
   });
 
+  it('reads a re-cut job in page order (M3 dogfood B5): the later copy of a neighbour is the one re-requested', async () => {
+    const words = ['alpha', 'bravo', 'charlie'];
+    const segments = words.map((w, i) => seg(`p${i}`, `${w} `.repeat(300).trim()));
+    // One rendering for p0 and p1 (different sources): a neighbour copy, long enough for the length check.
+    const same = 'quyền sở hữu bộ nhớ '.repeat(100).trim();
+    let focus = 0;
+    const calls: string[] = [];
+    const client = translatorClient((lines) => {
+      const p = `p${words.indexOf(lines[0]?.source.split(' ')[0] ?? '')}`;
+      calls.push(p);
+      // The reader asks again while p1 (on screen) is in flight: p0 and p2 are cut again and run after it.
+      if (calls.length === 1) focus = 1;
+      return renderLines(lines, (src) => (calls.length <= 3 && (p === 'p0' || p === 'p1') ? same : `vi:${src}`));
+    });
+    const j: TranslationJob = { ...job(segments, { chunkTokens: 500, maxConcurrency: 1 }), priority: ['p1'], focus: () => focus };
+    const events = await collect(createEngine(deps(client)).translate(j, new AbortController().signal));
+    // Run order p1, p0, p2; in page order p1 copies p0, so p1 is re-requested, not p0.
+    expect(calls).toEqual(['p1', 'p0', 'p2', 'p1']);
+    expect(failures(events)).toEqual([]);
+  });
+
   it('checks contextual\'s revision 2 of chunk 0 where it stands, and repairs it as revision 2', async () => {
     const long = (i: number) => seg(`p${i}`, `P${i} see https://a.example/${i} ${'word '.repeat(300).trim()}`);
     const segments = Array.from({ length: 3 }, (_, i) => long(i));

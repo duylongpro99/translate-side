@@ -71,7 +71,12 @@ export function createCheckStage(strategyId: string, prepare: PrepareCall): AnyS
   return defineStage<ChunkOutcome[], CheckSummary>({
     id: 'check',
     scope: 'document',
-    async *run(outcomes, ctx) {
+    async *run(unordered, ctx) {
+      // Page order: a re-cut (M3 dogfood B5) appends its chunks after the ones first cut, so the
+      // outcomes come in run order; the rows and checkDuplicates below read them in page order.
+      const page = new Map(unordered.find((o) => o.work !== undefined)?.work?.doc.segments.map((s, i) => [s.id, i]) ?? []);
+      const at = (o: ChunkOutcome) => page.get(o.ids[0] ?? '') ?? Number.MAX_SAFE_INTEGER;
+      const outcomes = [...unordered].sort((a, b) => at(a) - at(b));
       const summary: CheckSummary = { segments: 0, final: 0, failed: 0, unaccounted: [], rerequested: {}, repaired: 0, checkFailed: [] };
       // 1. Count: every segment sent is final or failed.
       for (const o of outcomes) {
