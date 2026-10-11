@@ -23,6 +23,24 @@ export const BASIC_MISSING_MESSAGE = 'There is no built-in translator here, so t
 export const basicUnavailableMessage = (model: string, from: string, to: string): string =>
   `${model} can't translate ${from || 'this language'} → ${to} on this device, so there is no basic translation either.`;
 
+/**
+ * `LLMError.raw` of a block the switch could not help (no translator, pair unavailable): the
+ * provider's error keeps its kind (the panel handles it as before), and `basic` says why there is
+ * no basic translation either, for the panel to show next to its own text for that kind.
+ */
+export interface NoBasicRaw {
+  reason: 'no-basic';
+  basic: string;
+  /** The provider error's own `raw`. */
+  cause?: unknown;
+}
+
+/** Why basic could not help with the block that failed on `error`; undefined when it did not try. */
+export function noBasicReason(error: LLMError): string | undefined {
+  const raw = error.raw as Partial<NoBasicRaw> | undefined;
+  return raw?.reason === 'no-basic' && typeof raw.basic === 'string' ? raw.basic : undefined;
+}
+
 /** Two messages as sentences: the provider's (which may lack a full stop), then basic's. */
 const joined = (first: string, then: string): string => `${first}${/[.!?…]$/.test(first.trim()) ? '' : '.'} ${then}`;
 
@@ -46,7 +64,8 @@ export async function* basicTranslate(segments: readonly Segment[], job: Transla
   // Basic can't help at all: after a switch the provider's error stays the reason (its kind, so the
   // panel handles it as before), and the message adds why there is no basic translation either.
   const failAll = function* (message: string): Generator<EngineEvent> {
-    const error: LLMError = cause ? { ...cause, message: joined(cause.message, message) } : { kind: 'unknown', message };
+    const raw: NoBasicRaw = { reason: 'no-basic', basic: message, ...(cause?.raw === undefined ? {} : { cause: cause.raw }) };
+    const error: LLMError = cause ? { ...cause, message: joined(cause.message, message), raw } : { kind: 'unknown', message };
     for (const s of todo) yield { type: 'segment.failed', id: s.id, error };
   };
   const mt = ctx.mt;

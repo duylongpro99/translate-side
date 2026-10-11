@@ -1,9 +1,15 @@
 // What the panel says about a failure: basic status per error class (DESIGN.md §4.3.5; the full
 // error UX is M3).
-import { BUDGET_MESSAGE, DEGRADED_MESSAGE, UNCHECKED_MESSAGE } from '@/engine/index';
+import { BUDGET_MESSAGE, DEGRADED_MESSAGE, UNCHECKED_MESSAGE, noBasicReason } from '@/engine/index';
 import type { LLMError } from '@/llm/types';
 
 export function failureText(error: LLMError): string {
+  // Every provider was down and Chrome's Translator could not help either (M5-E7): say both.
+  const basic = noBasicReason(error);
+  if (basic !== undefined) {
+    const plain: LLMError = { kind: error.kind, message: error.message, ...(error.cause === undefined ? {} : { cause: error.cause }) };
+    return `${failureText(plain)}. ${basic.replace(/\.$/, '')}`;
+  }
   // The engine's own failures arrive as kind `unknown` with a fixed message (review C-N8).
   switch (error.message) {
     case BUDGET_MESSAGE:

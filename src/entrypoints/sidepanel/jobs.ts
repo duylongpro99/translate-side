@@ -809,6 +809,10 @@ export class Jobs {
         sourceLang: doc.sourceLang || (brief?.language ?? ''),
         ...(doc.detection ? { detection: doc.detection } : {}),
         ...(brief ? { brief } : {}),
+        // Chrome's Translator took over in the run this one resumes (a lazy round, Retry): its note
+        // stays, so the reader learns when a model translates again, and what the “basic
+        // translation” blocks still on the page are once it did (M5-D tester F2).
+        ...(keep?.view.fallback?.basic ? { fallback: keep.view.fallback } : {}),
         segments,
         segs,
         counts: count(segs),
@@ -1315,6 +1319,10 @@ export class Jobs {
         if (!restored) this.remember(job, event.id, next);
         const patch: Partial<JobView> = { counts: count(job.segs) };
         if (job.view.firstVisibleAt === undefined && next.text) patch.firstVisibleAt = this.now();
+        // A model translated a block again after Chrome's Translator took over (M5-E7): in this run,
+        // or in a later round of a lazy page (a run of its own, which carries the note over).
+        const fb = job.view.fallback;
+        if (event.type === 'segment.final' && next.status === 'final' && !next.basic && fb?.basic && !fb.recovered) patch.fallback = { ...fb, recovered: true };
         this.screenDone(tabId, job, patch);
         this.patch(tabId, job, patch);
         if (event.type === 'segment.failed' && STOP_KINDS.has(event.error.kind)) {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { languageLabel } from '@/engine/index';
+import { languageLabel, noBasicReason } from '@/engine/index';
 import { formatUsd } from '@/shared/cost';
 import type { Backoff, JobView } from './jobs.ts';
 import { failureText } from './status.ts';
@@ -84,7 +84,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
             {[...job.segs.values()].some((s) => s.basic)
               ? `${job.fallback.to} translated the blocks in between, marked “basic translation”, and`
               : `${job.fallback.to} could not translate the blocks in between, and`}{' '}
-            {job.fallback.from} {job.status === 'running' ? 'is translating again' : 'translated the rest'}.
+            {job.fallback.from} {job.status === 'running' ? 'is translating again' : 'translated the blocks after that'}.
           </>
         ) : (
           <>
@@ -230,7 +230,10 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
           </button>
         );
       // A dropped connection: what is translated stays, Retry does only the rest (M3-E8).
-      const text = error?.kind === 'network' ? `Lost the connection · ${final} of ${total} translated, the rest is waiting` : error ? capitalize(failureText(error)) : 'Stopped';
+      // Every provider down and Chrome's Translator could not help either (M5-E7): said after the stop.
+      const basic = error && noBasicReason(error);
+      const noBasic = basic === undefined ? '' : ` ${basic}`;
+      const text = error?.kind === 'network' ? `Lost the connection · ${final} of ${total} translated, the rest is waiting${basic === undefined ? '' : '.'}${noBasic}` : error ? `${capitalize(failureText(error))}${basic === undefined ? '' : '.'}` : 'Stopped';
       // Under a local-only site rule the job had no cloud fallback to go on with (M4-D tester O1).
       const local = job.localOnly !== undefined && error !== undefined && (error.kind === 'network' || error.kind === 'rate_limit' || error.kind === 'overloaded');
       if (local) {
@@ -239,7 +242,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
         return (
           <div {...attrs} role="alert" data-testid="job-local-only">
             <span class="job__text">
-              {what}. The local-only rule for {job.localOnly} keeps this page off cloud providers, so it did not fall back to one.
+              {what}. The local-only rule for {job.localOnly} keeps this page off cloud providers, so it did not fall back to one.{noBasic}
             </span>
             {cost}
             {fix}

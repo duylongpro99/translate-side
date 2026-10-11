@@ -11,6 +11,7 @@ import { GEMINI_PROFILE } from '@/shared/settings';
 import { JobBar, type JobActions } from './JobBar.tsx';
 import { Jobs, type ClientResult, type JobDoc, type JobView } from './jobs.ts';
 import { SegmentList } from './SegmentList.tsx';
+import { failureText } from './status.ts';
 
 const by = { strategy: 'single-pass', stage: 'translate', model: 'm' };
 const settle = (ms = 5) => new Promise((r) => setTimeout(r, ms));
@@ -471,6 +472,20 @@ describe('the fallback note (plan M4-E9)', () => {
     expect(root.querySelector('[data-testid="job-fallback"]')).toBeNull();
   });
 
+  it('every provider down and Chrome Translator could not help (M5-D tester F1): the stop and the block say why there is no basic translation', () => {
+    const basic = "Chrome Translator can't translate en → vi on this device, so there is no basic translation either.";
+    const error: LLMError = { kind: 'network', message: `Can't reach api.ai-box.vn. ${basic}`, raw: { reason: 'no-basic', basic } };
+    expect(failureText(error)).toBe("network error. Chrome Translator can't translate en → vi on this device, so there is no basic translation either");
+    expect(failureText({ kind: 'network', message: "Can't reach api.ai-box.vn" })).toBe('network error');
+    act(() => render(<JobBar job={{ ...base, status: 'stopped', stopError: error }} actions={actions([])} />, root));
+    expect(root.querySelector('[role=alert] .job__text')?.textContent).toBe(`Lost the connection · 1 of 3 translated, the rest is waiting. ${basic}`);
+    // Another stop kind (rate limit) and a local-only page say it too.
+    act(() => render(<JobBar job={{ ...base, status: 'stopped', stopError: { ...error, kind: 'rate_limit' } }} actions={actions([])} />, root));
+    expect(root.querySelector('[role=alert] .job__text')?.textContent).toBe(`The provider is busy; try again in a moment. ${basic}`);
+    act(() => render(<JobBar job={{ ...base, status: 'stopped', stopError: error, localOnly: 'intra.example.com' }} actions={actions([])} />, root));
+    expect(root.querySelector('[data-testid=job-local-only]')?.textContent).toContain(`so it did not fall back to one. ${basic}`);
+  });
+
   it('every provider down (M5-E7): says Chrome Translator took over and how its blocks are marked', () => {
     const fallback = { from: 'claude-haiku-4-5', to: 'Chrome Translator', basic: true as const, error: { kind: 'network' as const, message: "Can't reach api.anthropic.com" } };
     act(() => render(<JobBar job={{ ...base, status: 'running', fallback }} actions={actions([])} />, root));
@@ -485,10 +500,10 @@ describe('the fallback note (plan M4-E9)', () => {
     act(() => render(<JobBar job={{ ...base, status: 'running', fallback: { ...fallback, recovered: true }, segs }} actions={actions([])} />, root));
     expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('claude-haiku-4-5 was unreachable for a while; Chrome Translator translated the blocks in between, marked “basic translation”, and claude-haiku-4-5 is translating again.');
     act(() => render(<JobBar job={{ ...base, status: 'done', fallback: { ...fallback, recovered: true }, segs }} actions={actions([])} />, root));
-    expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('claude-haiku-4-5 was unreachable for a while; Chrome Translator translated the blocks in between, marked “basic translation”, and claude-haiku-4-5 translated the rest.');
+    expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('claude-haiku-4-5 was unreachable for a while; Chrome Translator translated the blocks in between, marked “basic translation”, and claude-haiku-4-5 translated the blocks after that.');
     // Basic translated none of them (no translator, pair unavailable: review D round 2 M2): not claimed.
     act(() => render(<JobBar job={{ ...base, status: 'done', fallback: { ...fallback, recovered: true } }} actions={actions([])} />, root));
-    expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('claude-haiku-4-5 was unreachable for a while; Chrome Translator could not translate the blocks in between, and claude-haiku-4-5 translated the rest.');
+    expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('claude-haiku-4-5 was unreachable for a while; Chrome Translator could not translate the blocks in between, and claude-haiku-4-5 translated the blocks after that.');
   });
 
   it('a local-only page that stops names the local provider and the rule that kept it off the cloud (M4-D tester O1)', () => {

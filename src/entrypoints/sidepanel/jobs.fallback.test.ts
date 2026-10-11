@@ -56,6 +56,14 @@ const chain = (primary: LLMClient, fallback: LLMClient, primaryProfile = LOCAL):
 
 const instant = () => Promise.resolve();
 
+async function until(cond: () => boolean, ms = 2000) {
+  const t0 = Date.now();
+  while (!cond()) {
+    if (Date.now() - t0 > ms) throw new Error('timed out');
+    await new Promise((r) => setTimeout(r, 1));
+  }
+}
+
 describe('Jobs with a fallback chain (§3 #3: stop Ollama mid-page → blocks continue on the fallback with a badge)', () => {
   it('finishes the page on the fallback; blocks name the model that translated them; the bar says why', async () => {
     const local = stoppable(1);
@@ -323,6 +331,47 @@ describe('Jobs with the terminal basic entry (plan M5-E7, §3 #4: all providers 
     expect(segs[0]?.basic).toBe(true);
     expect(segs.slice(1).map((s) => [s.basic, s.model])).toEqual(Array.from({ length: 3 }, () => [undefined, CLOUD.model]));
     expect(view?.fallback).toMatchObject({ basic: true, recovered: true, to: 'Chrome Translator' });
+  });
+
+  it('a lazy page: a later round on the provider again marks the note recovered (M5-D tester F2: each round is a run of its own)', async () => {
+    const up = { on: false };
+    const inner = translatorClient(undefined, { model: LOCAL.model });
+    const client: LLMClient = {
+      model: LOCAL.model,
+      reasoningReserveTokens: () => 0,
+      async *stream(req) {
+        if (up.on) yield* inner.stream(req);
+        else yield { type: 'error', error: { kind: 'network', message: "Can't reach localhost:11434" } };
+      },
+    };
+    const translator = mt();
+    const jobs = new Jobs({
+      strategy: 'single-pass',
+      translateClient: () => Promise.resolve({ ok: true, client, profile: LOCAL, connection: { id: 'ollama', label: 'Home Ollama' }, basic: true }),
+      sleep: instant,
+      mt: translator,
+      lazyAbove: 50,
+    });
+    jobs.setActive(1);
+    jobs.setViewport(1, 'd', ['s0', 's1']);
+    await jobs.start(1, 'd', doc(120, 40));
+    const first = jobs.get(1);
+    expect(first?.status).toBe('done');
+    expect(first?.segs.get('s0')).toMatchObject({ status: 'final', basic: true });
+    expect(first?.fallback).toMatchObject({ basic: true });
+    expect(first?.fallback?.recovered).toBeUndefined();
+    // The provider is back; the reader scrolls on: the next round (a new run) uses it.
+    up.on = true;
+    jobs.setViewport(1, 'd', ['s100', 's101']);
+    await until(() => jobs.get(1)?.segs.get('s100')?.status === 'final' && jobs.get(1)?.status === 'done');
+    const next = jobs.get(1);
+    expect(next?.segs.get('s100')?.basic).toBeUndefined();
+    expect(next?.segs.get('s0')).toMatchObject({ basic: true });
+    expect(next?.fallback).toMatchObject({ basic: true, recovered: true });
+    // The round after that keeps the note: the basic blocks are still on the page.
+    jobs.setViewport(1, 'd', ['s60', 's61']);
+    await until(() => jobs.get(1)?.segs.get('s60')?.status === 'final' && jobs.get(1)?.status === 'done');
+    expect(jobs.get(1)?.fallback).toMatchObject({ basic: true, recovered: true });
   });
 
   it('Retranslate on one block while every provider is down: basic answers it too', async () => {

@@ -5,7 +5,7 @@ import { createDefaultPromptRegistry } from '../prompts/index.ts';
 import { CHECK_MESSAGE, checkFailure } from '../stages/check.ts';
 import { failed, fakeClient, fakeSleep, translatorClient } from '../testing.ts';
 import type { EngineEvent, Segment, TranslationJob } from '../types.ts';
-import { BASIC_ID, BASIC_MISSING_MESSAGE, basic } from './basic.ts';
+import { BASIC_ID, BASIC_MISSING_MESSAGE, basic, noBasicReason } from './basic.ts';
 import { contextual } from './contextual.ts';
 import { singlePass } from './single-pass.ts';
 
@@ -303,6 +303,8 @@ describe('the terminal basic entry: every provider down switches the job to basi
       const fs = failures(events);
       expect(fs.map((f) => f.id)).toEqual(['a', 'b']);
       expect(fs[0]?.error.message).toMatch(/^Can't reach api\.example\.com\. .*no basic translation either\.$/);
+      // Marked, so the panel can say it next to its own words for the kind (M5-D tester F1).
+      expect(fs[0] && noBasicReason(fs[0].error)).toMatch(/no basic translation either\.$/);
       expect(switches(events)).toHaveLength(1);
       expect((switches(events)[0] as { info: BasicSwitchInfo }).info.to).toBe(mt?.model);
     }

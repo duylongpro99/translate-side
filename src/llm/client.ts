@@ -56,9 +56,12 @@ function lazyAdapter(protocol: Exclude<Protocol, 'chrome-builtin'>, options: Ada
  */
 export const CHROME_NANO = false;
 
+/** Why a `chrome-builtin` connection does not run while CHROME_NANO is off (what the panel shows). */
+export const NANO_OFF_MESSAGE = 'Chrome built-in (Gemini Nano) is experimental and off in this version. Choose another model in settings.';
+
 export function createAdapter(protocol: Protocol, options: AdapterOptions = {}, nano: boolean = CHROME_NANO): ProtocolAdapter {
   if (protocol === 'chrome-builtin') {
-    if (!nano) throw new Error('Gemini Nano (chrome-builtin) is experimental and off in this version');
+    if (!nano) throw new Error(NANO_OFF_MESSAGE);
     return createChromeBuiltinAdapter();
   }
   return lazyAdapter(protocol, options);

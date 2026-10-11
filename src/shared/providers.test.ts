@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, openaiStream, type ScriptedResponse } from '@/llm/testing';
 import type { NormalizedEvent } from '@/llm/types';
 import { routedSummary, translateClient } from '@/entrypoints/sidepanel/route';
+import { NANO_OFF_MESSAGE } from '@/llm/client';
 import {
   BASIC_FALLBACK,
   cleanConnection,
@@ -471,6 +472,16 @@ describe('the panel route (src/entrypoints/sidepanel/route.ts)', () => {
     expect(site.ok && site.client.model).toBe(APIBOX_PRO_PROFILE.model);
     const plain = await translateClient(f.api, { tabId: 1, url: 'https://y.com/' });
     expect(plain.ok && plain.client.model).toBe(DEFAULT_PROFILE.model);
+  });
+
+  it('a stored Gemini Nano route (chrome-builtin, flag off) is a clear error, not a job left waiting; as a fallback it is left out (M5-D tester F3)', async () => {
+    const nano = { id: 'nano', label: 'Chrome built-in', presetId: 'chrome-builtin', protocol: 'chrome-builtin', baseUrl: '', auth: { style: 'none' }, quirks: {} };
+    const f = fakeApi({ sync: { schemaVersion: 1, 'conn:nano': nano, 'profile:nano-p': { id: 'nano-p', connectionId: 'nano', model: 'gemini-nano', maxConcurrency: 1, chunkTokens: 600 }, routing: { translate: 'nano-p', basicMigrated: true } }, local: M3_LOCAL, granted: [ORIGIN] });
+    expect(await translateClient(f.api)).toMatchObject({ ok: false, error: { kind: 'bad_request', message: NANO_OFF_MESSAGE }, connection: { id: 'nano' } });
+    await saveRouting(f.api, { translate: DEFAULT_PROFILE.id, fallback: ['nano-p'] });
+    const r = await translateClient(f.api);
+    expect(r.ok && r.client.model).toBe(DEFAULT_PROFILE.model);
+    expect(r).not.toHaveProperty('fallback');
   });
 
   it('resolves the analyze role through routing: its own client when routed elsewhere, none when it is translate', async () => {

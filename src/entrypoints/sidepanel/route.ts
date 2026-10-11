@@ -4,7 +4,7 @@
 // role's own client when routing sends it elsewhere, resolved only when a brief is asked for. A quirk the adapter learns is saved on the
 // stored connection (§4.2.4).
 import type { browser } from 'wxt/browser';
-import { createClient } from '@/llm/client';
+import { CHROME_NANO, NANO_OFF_MESSAGE, createClient } from '@/llm/client';
 import { DEFAULT_CONNECTION, hasHostPermission, originPattern, protocolOf, resolveConnection, withProfileQuirks, type ProviderConnection } from '@/shared/settings';
 import { fallbackRoutesIn, hasBasicFallback, readProviderSettings, resolveFallback, resolveRoute, saveLearnedQuirk, type Route } from '@/shared/providers';
 import { pricingFor } from '@/shared/pricing';
@@ -36,6 +36,16 @@ type Failed = Extract<ClientResult, { ok: false }>;
 
 /** A client for one resolved route: its key, host permission and pricing; or why there is none. */
 async function clientFor(api: Browser, route: Route): Promise<Omit<Resolved, 'analyze'> | Failed> {
+  try {
+    return await clientOf(api, route);
+  } catch (error) {
+    // Never a job left waiting on a route that threw (M5-D tester F3): the reader sees why.
+    const c = route.connection;
+    return { ok: false, error: { kind: 'bad_request', message: error instanceof Error ? error.message : String(error) }, ...(c ? { connection: jobConnection(c) } : {}) };
+  }
+}
+
+async function clientOf(api: Browser, route: Route): Promise<Omit<Resolved, 'analyze'> | Failed> {
   if (!route.ok) {
     const c = route.connection;
     return { ok: false, error: { kind: 'bad_request', message: route.message }, ...(c ? { connection: jobConnection(c) } : {}) };
@@ -45,6 +55,8 @@ async function clientFor(api: Browser, route: Route): Promise<Omit<Resolved, 'an
   if (protocolOf(connection, profile) === undefined) {
     return { ok: false, error: { kind: 'bad_request', message: `${connection.label} has no protocol yet. Test the connection in settings.` }, connection: label };
   }
+  // A stored or synced Gemini Nano profile (no UI makes one while the flag is off, M5-E7).
+  if (protocolOf(connection, profile) === 'chrome-builtin' && !CHROME_NANO) return { ok: false, error: { kind: 'bad_request', message: NANO_OFF_MESSAGE }, connection: label };
   const conn = await resolveConnection(api, connection, profile);
   if (conn === null) return { ok: false, error: { kind: 'auth', message: noKeyMessage(connection.label) }, connection: label };
   // Checked up front: without it the request fails as `cors` / `permission` anyway (S4 row 1), but
