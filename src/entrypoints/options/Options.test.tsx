@@ -486,4 +486,14 @@ describe('options: site rules (plan M5-E6)', () => {
     await waitFor(() => root.querySelector('[aria-label="Grant access to docs.example.org"]') === null);
     expect(f.granted.has('https://docs.example.org/*')).toBe(true);
   });
+
+  it('access to one scheme counts as access (an http-only intranet site)', async () => {
+    const f = fakeApi();
+    f.sync.set('siteAllowlist', ['wiki.intranet']);
+    f.granted.add('http://wiki.intranet/*');
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => sites('allow').length === 1);
+    await flush();
+    expect(root.querySelector('[aria-label="Grant access to wiki.intranet"]')).toBeNull();
+  });
 });

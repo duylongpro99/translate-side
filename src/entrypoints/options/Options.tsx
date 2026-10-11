@@ -339,7 +339,9 @@ function SitesSection({ api }: { api: Browser }) {
     readSiteLists(api).then(
       async (l) => {
         setLists(l);
-        const missing = await Promise.all(l.allow.map(async (p) => ((await api.permissions.contains({ origins: siteOrigins(p).slice(0, 1) }).catch(() => false)) ? null : p)));
+        // Either scheme will do: a page is checked against its own (sites.ts hasSitePermission).
+        const held = (origin: string) => api.permissions.contains({ origins: [origin] }).catch(() => false);
+        const missing = await Promise.all(l.allow.map(async (p) => ((await Promise.all(siteOrigins(p).map(held))).some(Boolean) ? null : p)));
         setNoAccess(missing.filter((p): p is string => p !== null));
       },
       () => setLists({ allow: [], never: [] }),
