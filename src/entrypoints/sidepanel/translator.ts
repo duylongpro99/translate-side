@@ -324,7 +324,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     pending.delete(tabId);
     privacy.forget(pageKey(tabId));
     if (jobs.docOf(tabId) === docId) jobs.drop(tabId);
-    jobs.setViewport(tabId, docId, result.visible ?? []);
+    jobs.setViewport(tabId, docId, result.visible ?? [], result.fixed);
     offers.set(tabId, { docId, url: result.url, reason, site: siteOf(result.url) });
   };
 
@@ -409,7 +409,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       live.set(tabId, docId);
       latest.set(tabId, { docId, result });
       // Viewport first (plan M3-E1): what was on screen when the page was read.
-      jobs.setViewport(tabId, docId, result.visible ?? []);
+      jobs.setViewport(tabId, docId, result.visible ?? [], result.fixed);
       // And where it was, so scroll follow (M3-E7) lines the panel up before the first scroll.
       viewports.set(tabId, docId, { visible: result.visible ?? [], ...(result.anchor ? { anchor: result.anchor } : {}) });
       void onRead(tabId, docId, result, read);
@@ -443,7 +443,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     },
     hover: (tabId, docId, id) => hovers.set(tabId, docId, id),
     viewport: (tabId, docId, viewport) => {
-      jobs.setViewport(tabId, docId, viewport.visible);
+      jobs.setViewport(tabId, docId, viewport.visible, viewport.fixed);
       viewports.set(tabId, docId, viewport);
     },
     // Asked again on a running page from another screen (M3 dogfood B5): that screen goes next.

@@ -450,9 +450,10 @@ export const LAZY_LOW_WATER = { screens: 1, minAhead: 8, minTokens: 0 } as const
  * The ids a lazy round covers: the segments on screen and `LAZY_AHEAD_SCREENS` screens after them
  * (a screen's size is the number of blocks on it). With no screen reported yet, from the top.
  */
-export function lazyWindow(translatable: readonly Segment[], screen: readonly string[], reach: { screens?: number; minAhead?: number; minTokens?: number } = {}): Set<string> {
+export function lazyWindow(translatable: readonly Segment[], screen: readonly string[], reach: { screens?: number; minAhead?: number; minTokens?: number } = {}, pinned: readonly string[] = []): Set<string> {
   const { screens = LAZY_AHEAD_SCREENS, minAhead = LAZY_MIN_AHEAD, minTokens = LAZY_MIN_TOKENS } = reach;
-  const onScreen = new Set(screen);
+  const fixed = new Set(pinned);
+  const onScreen = new Set(screen.filter((id) => !fixed.has(id)));
   // A fixed or sticky element (header, TOC, cookie bar) is on screen from anywhere on the page: the
   // on-screen blocks form clusters in page order, and the reader's is the biggest one (the last of
   // equals). The window reaches ahead of that cluster only; the others count for what is on screen.
@@ -469,7 +470,7 @@ export function lazyWindow(translatable: readonly Segment[], screen: readonly st
   for (const c of clusters) if (main === undefined || c.n >= main.n) main = c;
   let lo = main?.lo ?? 0;
   const hi = main?.hi ?? -1;
-  const others = translatable.filter((s, i) => onScreen.has(s.id) && main !== undefined && (i < main.lo || i > main.hi)).map((s) => s.id);
+  const others = translatable.filter((s, i) => fixed.has(s.id) || (onScreen.has(s.id) && main !== undefined && (i < main.lo || i > main.hi))).map((s) => s.id);
   const size = hi < lo ? 0 : hi - lo + 1;
   let end = Math.min(translatable.length - 1, Math.max(hi, lo) + Math.max(minAhead, Math.ceil(size * screens)));
   // Enough text for every request slot to get a chunk (two chunks of the profile's size): short blocks on a long page.
@@ -561,6 +562,11 @@ interface Job {
   /** A retranslate run: its stored finals replace whatever the cache has. */
   fresh?: boolean;
   /**
+   * A Retranslate page on a lazy page, carried through its later rounds: a window the reader reaches
+   * later holds no earlier finals, yet must be retranslated too, not served from the cache.
+   */
+  redo?: boolean;
+  /**
    * A retranslate run's earlier finals, by segment, until a new final replaces them (M3 dogfood
    * B2): shown meanwhile, put back when the block fails or the run ends without it, and their
    * cache entries are never dropped. What is left when the run ends is still owed: a resume
@@ -607,7 +613,7 @@ const abortableSleep = (ms: number, signal: AbortSignal) =>
 export class Jobs {
   private readonly jobs = new Map<number, Job>();
   /** What is on screen per tab, for the document it was reported for. */
-  private readonly viewports = new Map<number, { docId: string; ids: readonly string[] }>();
+  private readonly viewports = new Map<number, { docId: string; ids: readonly string[]; fixed: readonly string[] }>();
   private readonly listeners = new Set<JobsListener>();
   private activeTabId: number | undefined;
   private readonly now: () => number;
@@ -634,9 +640,9 @@ export class Jobs {
    * What is on screen in the tab's document (plan M3-E1), in page order. An empty list (scrolled
    * past the article) keeps the last one, so the job reads on from where the reader was.
    */
-  setViewport(tabId: number, docId: string, ids: readonly string[]): void {
+  setViewport(tabId: number, docId: string, ids: readonly string[], fixed: readonly string[] = []): void {
     if (ids.length === 0 && this.viewports.get(tabId)?.docId === docId) return;
-    this.viewports.set(tabId, { docId, ids: [...ids] });
+    this.viewports.set(tabId, { docId, ids: [...ids], fixed: [...fixed] });
     // Scrolled onto blocks already done: the screen the reader sees is translated now.
     const job = this.jobs.get(tabId);
     if (job?.docId === docId && job.view.status === 'running') {
@@ -686,7 +692,13 @@ export class Jobs {
   /** The segment ids on screen in the tab's document, as last reported. */
   private screenOf(tabId: number, docId: string): readonly string[] {
     const v = this.viewports.get(tabId);
-    return v?.docId === docId ? v.ids : [];
+    return v?.docId === docId ? [...v.ids, ...v.fixed] : [];
+  }
+
+  /** The ones of them in a fixed or sticky box (the content script flags them by computed position). */
+  private pinnedOf(tabId: number, docId: string): readonly string[] {
+    const v = this.viewports.get(tabId);
+    return v?.docId === docId ? v.fixed : [];
   }
 
   /** D14: only the active tab's job sends new requests. */
@@ -731,7 +743,7 @@ export class Jobs {
     // Lazy mode (M5-E4): a Retranslate page redoes the window; the blocks outside it go back to waiting,
     // not left on the old translation as if current.
     const lazy = !all && translatable.length > (this.deps.lazyAbove ?? LAZY_SEGMENTS);
-    const around = lazy && before !== undefined ? lazyWindow(translatable, this.screenOf(tabId, docId)) : undefined;
+    const around = lazy && before !== undefined ? lazyWindow(translatable, this.screenOf(tabId, docId), {}, this.pinnedOf(tabId, docId)) : undefined;
     for (const s of translatable) {
       const old = keep?.segs.get(s.id) ?? before?.segs.get(s.id);
       const owed = before !== undefined && (keep === undefined || keep.earlier.has(s.id)) && (around === undefined || around.has(s.id));
@@ -776,6 +788,7 @@ export class Jobs {
       earlier,
       apart: costFrom ? { usage: { ...costFrom.apart.usage }, usd: costFrom.apart.usd } : { usage: { input: 0, cachedInput: 0, output: 0 }, usd: undefined },
       fresh,
+      ...(lazy && (before !== undefined || (resume && prev?.docId === docId && prev.redo)) ? { redo: true } : {}),
       view: {
         ...(lazy && todo.size > 0 ? { lazy: { rest: todo.size } } : {}),
         status: 'running',
@@ -815,7 +828,7 @@ export class Jobs {
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
     // Lazy mode: this round covers the screen and what follows it, the rest waits (M5-E4).
     if (job.lazy) {
-      const window = lazyWindow(translatable, this.screenOf(tabId, docId));
+      const window = lazyWindow(translatable, this.screenOf(tabId, docId), {}, this.pinnedOf(tabId, docId));
       for (const id of [...todo]) if (!window.has(id)) todo.delete(id);
       job.round = window;
     }
@@ -978,7 +991,7 @@ export class Jobs {
     // A retranslate that ended early goes on retranslating what it still owes, not from the
     // cache: the blocks that kept their earlier translation (failed or never reached) are redone,
     // on purpose, since the user asked for them to be retranslated (the bar's note says so).
-    return this.start(tabId, job.docId, job.doc, { resume: true, ...(job.earlier.size ? { fresh: true, keepCost: true } : {}) });
+    return this.start(tabId, job.docId, job.doc, { resume: true, ...(job.earlier.size || job.redo ? { fresh: true, keepCost: true } : {}) });
   }
 
   /** Resolves when every cache write the jobs have queued so far has finished (tests, harness). */
@@ -1454,10 +1467,12 @@ export class Jobs {
    */
   private leave(tabId: number, job: Job): void {
     const translatable = (job.translatable ??= job.view.segments.filter((s) => s.translate));
+    const pinned = this.pinnedOf(tabId, job.docId);
     const screen = this.screenOf(tabId, job.docId);
     const current = job.within ?? job.round;
-    if (!current || screen.some((id) => current.has(id))) return;
-    job.within = lazyWindow(translatable, screen);
+    // The reader's own blocks: a fixed header is in every window.
+    if (!current || screen.filter((id) => !pinned.includes(id)).some((id) => current.has(id))) return;
+    job.within = lazyWindow(translatable, screen, {}, this.pinnedOf(tabId, job.docId));
     job.focus++;
   }
 
@@ -1469,7 +1484,7 @@ export class Jobs {
   private reach(tabId: number, job: Job): void {
     if (!job.lazy || job.stalled || this.jobs.get(tabId) !== job || job.view.status !== 'done' || job.view.limit) return;
     const translatable = (job.translatable ??= job.view.segments.filter((s) => s.translate));
-    const near = lazyWindow(translatable, this.screenOf(tabId, job.docId), LAZY_LOW_WATER);
+    const near = lazyWindow(translatable, this.screenOf(tabId, job.docId), LAZY_LOW_WATER, this.pinnedOf(tabId, job.docId));
     if (![...near].some((id) => job.segs.get(id)?.status === 'pending')) return;
     void this.resume(tabId);
   }
@@ -1483,7 +1498,7 @@ export class Jobs {
       job.wantRest = true;
       return Promise.resolve();
     }
-    return this.start(tabId, job.docId, job.doc, { resume: true, all: true, ...(job.earlier.size ? { fresh: true, keepCost: true } : {}) });
+    return this.start(tabId, job.docId, job.doc, { resume: true, all: true, ...(job.earlier.size || job.redo ? { fresh: true, keepCost: true } : {}) });
   }
 
   private patch(tabId: number, job: Job, patch: Partial<JobView>): void {

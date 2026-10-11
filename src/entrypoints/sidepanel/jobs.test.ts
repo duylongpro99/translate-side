@@ -874,6 +874,32 @@ describe('Jobs: lazy mode for long pages (plan M5-E4)', () => {
     expect(Math.max(...w)).toBe(308 + LAZY_MIN_AHEAD);
   });
 
+  it('lazyWindow: a flagged fixed sidebar bigger than the reader\'s cluster does not take the look-ahead', () => {
+    const ids = (w: Set<string>) => [...w].map((id) => Number(id.slice(1)));
+    const long = tr(500).map((x) => ({ ...x, inlineMarkup: words(200) }));
+    const toc = Array.from({ length: 30 }, (_, i) => `s${i}`);
+    const reader = Array.from({ length: 8 }, (_, i) => `s${300 + i}`);
+    const w = ids(lazyWindow(long, [...toc, ...reader], {}, toc));
+    expect(Math.max(...w)).toBe(307 + LAZY_MIN_AHEAD);
+    expect(w).toEqual(expect.arrayContaining([0, 29, 300]));
+    expect(w.filter((n) => n >= 30 && n < 300)).toEqual([]);
+  });
+
+  it('a fixed block on screen does not keep a round from following the reader away, and the first round starts at the reader', async () => {
+    const t = instrumented(translatorClient(undefined, { model: GEMINI_PROFILE.model }), {});
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(t.client), lazyAbove: 50 });
+    jobs.setActive(1);
+    jobs.setViewport(1, 'd', ['s250', 's251', 's252'], ['s0', 's1', 's2', 's3', 's4']);
+    await jobs.start(1, 'd', doc(300, 200));
+    const v = jobs.get(1) as JobView;
+    expect(v.segs.get('s250')?.status).toBe('final');
+    expect(v.segs.get('s2')?.status).toBe('final');
+    expect(v.segs.get('s10')?.status).toBe('pending');
+    // Scrolling on: the next round is over the reader, not stuck on the header.
+    jobs.setViewport(1, 'd', ['s290', 's291'], ['s0', 's1', 's2', 's3', 's4']);
+    await until(() => jobs.get(1)?.segs.get('s290')?.status === 'final');
+  });
+
   it('a page over the threshold is translated around the screen only; the rest waits and is counted', async () => {
     const client = translatorClient();
     const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client), lazyAbove: 50 });

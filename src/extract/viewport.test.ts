@@ -69,6 +69,17 @@ describe('watchViewport', () => {
     w.stop();
   });
 
+  it('a fixed or sticky block is reported apart: not in visible, never the anchor', () => {
+    const { targets, order, scrollTo } = page();
+    document.getElementById('e0')?.setAttribute('style', 'position: fixed');
+    // The fixed one stays at the top of the window whatever the scroll.
+    (targets.get('s0') as Element).getBoundingClientRect = () => ({ top: 0, bottom: 100, left: 0, right: 500, width: 500, height: 100, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+    scrollTo(500);
+    const w = watchViewport(window, targets, order, () => undefined);
+    expect(w.now()).toEqual({ visible: ['s5', 's6', 's7'], fixed: ['s0'], anchor: { id: 's5', offset: 0 } });
+    w.stop();
+  });
+
   it('pushes a change after a scroll, throttled, and only when it differs', () => {
     vi.useFakeTimers();
     const { targets, order, scrollTo } = page();

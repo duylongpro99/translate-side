@@ -572,4 +572,24 @@ describe('Jobs with the translation cache: a revisit makes no API call (§3 #3)'
     const bumped = scopeHash({ ...keyScope({ targetLang: 'vi', model: 'm', strategy: 'contextual' }), strategy: { strategy: 'contextual', version: 99, promptIds: ['translate@2', 'analyze@1'] } });
     expect(bumped).not.toBe(keyBefore);
   });
+
+  it('Retranslate page on a lazy page: a window the reader reaches later is retranslated too, not served from the cache', async () => {
+    const cache = newCache();
+    let tag = 'old';
+    const client = translatorClient((lines, _n, req) => (isAnalyze(req) ? JSON.stringify(BRIEF) : renderLines(lines, (src) => `${tag}:${src}`)), { model: GEMINI_PROFILE.model });
+    const jobs = track(new Jobs({ translateClient: ok(client), cache, lazyAbove: 50 }));
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(120, 200));
+    await jobs.translateRest(1);
+    await idle();
+    expect(jobs.get(1)?.segs.get('s100')?.text).toMatch(/^old:/);
+    tag = 'new';
+    await jobs.start(1, 'd', doc(120, 200), { fresh: true, keepCost: true });
+    await idle();
+    expect(jobs.get(1)?.segs.get('s100')?.status).toBe('pending');
+    // The reader gets there: that window holds no earlier final, and still goes to the model.
+    jobs.setViewport(1, 'd', ['s100', 's101', 's102']);
+    await until(() => jobs.get(1)?.segs.get('s100')?.status === 'final' && jobs.get(1)?.segs.get('s100')?.text?.startsWith('new:') === true);
+    expect(jobs.get(1)?.segs.get('s101')?.text).toMatch(/^new:/);
+  });
 });

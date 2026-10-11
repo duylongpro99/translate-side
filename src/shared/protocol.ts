@@ -30,6 +30,8 @@ export type ExtractResult =
       segments: Segment[];
       /** Ids of the segments on screen when the page was read, in page order (set by the content script). */
       visible?: string[];
+      /** On screen but fixed or sticky (a header, a sidebar TOC): in no scroll of the reader's, so not in `visible` (Viewport.fixed). */
+      fixed?: string[];
       /** The topmost of them and how far the page is scrolled into it (Viewport.anchor), so the panel follows at once. */
       anchor?: Viewport['anchor'];
     }
@@ -56,6 +58,12 @@ export type ContentApi = {
 export interface Viewport {
   /** Ids of the segments on screen, in page order. Empty when none is (e.g. scrolled past the article). */
   visible: string[];
+  /**
+   * Segments on screen whose element sits in a fixed or sticky box (computed position): they stay on
+   * screen wherever the reader is, so they say nothing about where the reader is. Not in `visible`,
+   * never the anchor. Absent when there are none.
+   */
+  fixed?: string[];
   /**
    * The topmost segment on screen and how far the page has scrolled into it (0 = its top is at the
    * top of the window, 1 = its bottom is), for the panel's scroll follow. Absent when none is on screen.

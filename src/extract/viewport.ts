@@ -69,20 +69,26 @@ export function watchViewport(win: Window, targets: ReadonlyMap<string, Viewport
       const rect = el.getBoundingClientRect();
       if (!coarse(el, rect)) rects.set(el, rect);
     }
-    const visible = order.filter((id) => {
+    // A fixed or sticky box is on screen wherever the reader is: apart from `visible`, and never the anchor.
+    const pinned = new Set<ViewportTarget>();
+    for (const el of rects.keys()) if (isPinned(win, el)) pinned.add(el);
+    const shownIds = order.filter((id) => {
       const el = targets.get(id);
       return el !== undefined && rects.has(el);
     });
+    const visible = shownIds.filter((id) => !pinned.has(targets.get(id) as ViewportTarget));
+    const fixed = shownIds.filter((id) => pinned.has(targets.get(id) as ViewportTarget));
+    const pin = fixed.length > 0 ? { fixed } : {};
     let top: { el: ViewportTarget; rect: DOMRect } | undefined;
     for (const [el, rect] of rects) {
       // Under the scroller's edge counts as scrolled out, the edge the offset is measured from.
-      if (rect.bottom <= edgeOf(win, el) || rect.height <= 0) continue;
+      if (pinned.has(el) || rect.bottom <= edgeOf(win, el) || rect.height <= 0) continue;
       if (!top || rect.top < top.rect.top) top = { el, rect };
     }
     const id = top && idsOf.get(top.el)?.[0];
-    if (!top || id === undefined) return { visible };
+    if (!top || id === undefined) return { visible, ...pin };
     const offset = Math.min(1, Math.max(0, (edgeOf(win, top.el) - top.rect.top) / top.rect.height));
-    return { visible, anchor: { id, offset: Math.round(offset * 1000) / 1000 } };
+    return { visible, ...pin, anchor: { id, offset: Math.round(offset * 1000) / 1000 } };
   };
 
   let last = JSON.stringify(read());
@@ -132,6 +138,17 @@ export function watchViewport(win: Window, targets: ReadonlyMap<string, Viewport
       win.removeEventListener('resize', onScroll);
     },
   };
+}
+
+/** Whether the target sits in a box that is `position: fixed` or `sticky` (its own or an ancestor's). */
+function isPinned(win: Window, t: ViewportTarget): boolean {
+  if (typeof win.getComputedStyle !== 'function') return false;
+  let el: Element | null = isElement(t) ? t : t.startContainer.nodeType === 1 ? (t.startContainer as Element) : t.startContainer.parentElement;
+  for (; el !== null && el !== win.document.documentElement; el = el.parentElement) {
+    const position = win.getComputedStyle(el).position;
+    if (position === 'fixed' || position === 'sticky') return true;
+  }
+  return false;
 }
 
 function isElement(t: ViewportTarget): t is Element {

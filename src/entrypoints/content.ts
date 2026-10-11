@@ -110,8 +110,8 @@ export default defineContentScript({
           emit(port, 'changed', result);
           return;
         }
-        const { visible, anchor } = look(targets, result.segments);
-        emit(port, 'changed', { ...result, visible, ...(anchor ? { anchor } : {}) });
+        const { visible, fixed, anchor } = look(targets, result.segments);
+        emit(port, 'changed', { ...result, visible, ...(fixed ? { fixed } : {}), ...(anchor ? { anchor } : {}) });
       };
       serve<ContentApi>(port, {
         hello: ({ v }) => {
@@ -129,8 +129,8 @@ export default defineContentScript({
           const targets = new Map<string, Element | Range>();
           const { result } = read(targets);
           if (!result.ok) return result;
-          const { visible, anchor } = look(targets, result.segments);
-          return { ...result, visible, ...(anchor ? { anchor } : {}) };
+          const { visible, fixed, anchor } = look(targets, result.segments);
+          return { ...result, visible, ...(fixed ? { fixed } : {}), ...(anchor ? { anchor } : {}) };
         },
       });
     });
