@@ -12,6 +12,8 @@ const manifest = fs.existsSync(`${OUT}/manifest.json`) ? JSON.parse(fs.readFileS
 for (const site of sites) {
   if (only && site.slug !== only) continue;
   const p = await openPage(cdp, site.url);
+  // Optional taller viewport, for sites that render only the posts near the viewport (Discourse).
+  if (site.viewportHeight) await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: site.viewportHeight, deviceScaleFactor: 1, mobile: false }, p.s);
   await new Promise((r) => setTimeout(r, 3000));
   await p.ev(`(async () => { for (let y = 0; y < document.body.scrollHeight; y += 800) { scrollTo(0, y); await new Promise(r => setTimeout(r, 150)); } scrollTo(0, 0); })()`);
   await new Promise((r) => setTimeout(r, 2000));

@@ -86,6 +86,31 @@ The page chrome around the content (site header, navigation, theme markup) belon
 - License: CC-BY-3.0 (text; third-party images not covered — no image files are stored, only their URLs) (https://globalvoices.org/about/global-voices-attribution-policy/)
 - Changes: as above.
 
+## sphinx-quickstart
+
+- Title: Getting started — Sphinx documentation
+- Source: https://www.sphinx-doc.org/en/master/usage/quickstart.html (captured 2026-10-11T13:09:16.890Z)
+- Authors: the Sphinx developers (Sphinx team and contributors, see AUTHORS)
+- License: BSD-2-Clause (https://github.com/sphinx-doc/sphinx (LICENSE.rst; page source doc/usage/quickstart.rst))
+- Changes: as above.
+
+## jekyll-4-0-0-released
+
+- Title: Jekyll 4.0.0 Released | Jekyll • Simple, blog-aware, static sites
+- Source: https://jekyllrb.com/news/2019/08/20/jekyll-4-0-0-released/ (captured 2026-10-11T13:09:51.617Z)
+- Authors: Matt Rogers (mattr-) and Jekyll contributors
+- License: MIT (https://github.com/jekyll/jekyll (LICENSE; post source docs/_posts/2019-08-19-jekyll-4-0-0-released.markdown))
+- Changes: as above.
+
+## julia-discourse-sin-loop
+
+- Title: Julia significantly slower than Matlab for simple sin(x) loop – am I doing something wrong? - New to Julia - Julia Programming Language
+- Source: https://discourse.julialang.org/t/julia-significantly-slower-than-matlab-for-simple-sin-x-loop-am-i-doing-something-wrong/133317 (captured 2026-10-11T13:16:29.322Z)
+- Authors: GateOfShadows (question), Matt Bauman (mbauman), John F. Gibson (John_Gibson), DNF, Vasily Pisarev (Vasily_Pisarev), Steven G. Johnson (stevengj), Mason Protter (Mason), Chris Elrod (Elrod)
+- History / contributors: https://discourse.julialang.org/t/133317 (each post links its author profile; posts dated 2025-10-20 to 2025-10-28)
+- License: CC-BY-SA-4.0 (posts made after 2020-03-06); source code in posts additionally MIT (https://discourse.julialang.org/tos (section 3, User Content License))
+- Changes: as above. Captured with a 10000 px tall viewport (`viewportHeight` in `spikes/s3/sites.json`) so that Discourse renders every post, not only those near the viewport. The link previews quote the Julia manual (MIT, https://github.com/JuliaLang/julia LICENSE.md).
+
 
 ## layout-table-essay, layout-table-thread (structural replicas)
 

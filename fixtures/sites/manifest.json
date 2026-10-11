@@ -244,5 +244,71 @@
       "licenseSource": "LICENSE",
       "changes": "Server HTML fetched 2026-10-10 (no JavaScript rendering needed); scripts and comments removed; every text node and alt/title/meta text replaced by deterministic generated English filler; usernames, external links and image URLs replaced. Element structure, attributes and nesting kept as served."
     }
+  },
+  "sphinx-quickstart": {
+    "slug": "sphinx-quickstart",
+    "generator": "Sphinx docs",
+    "url": "https://www.sphinx-doc.org/en/master/usage/quickstart.html",
+    "contentSelector": "div.body",
+    "codeBlocks": 10,
+    "finalUrl": "https://www.sphinx-doc.org/en/master/usage/quickstart.html",
+    "title": "Getting started — Sphinx documentation",
+    "capturedAt": "2026-10-11T13:09:16.890Z",
+    "bytes": 88118,
+    "openShadowRoots": 4,
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "BSD-2-Clause",
+    "attribution": {
+      "authors": "the Sphinx developers (Sphinx team and contributors, see AUTHORS)",
+      "licenseSource": "https://github.com/sphinx-doc/sphinx (LICENSE.rst; page source doc/usage/quickstart.rst)",
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
+    }
+  },
+  "jekyll-4-0-0-released": {
+    "slug": "jekyll-4-0-0-released",
+    "generator": "Blog post (jekyllrb.com, Jekyll)",
+    "url": "https://jekyllrb.com/news/2019/08/20/jekyll-4-0-0-released/",
+    "contentSelector": "article",
+    "codeBlocks": 1,
+    "finalUrl": "https://jekyllrb.com/news/2019/08/20/jekyll-4-0-0-released/",
+    "title": "Jekyll 4.0.0 Released | Jekyll • Simple, blog-aware, static sites",
+    "capturedAt": "2026-10-11T13:09:51.617Z",
+    "bytes": 29637,
+    "openShadowRoots": 0,
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "MIT",
+    "attribution": {
+      "authors": "Matt Rogers (mattr-) and Jekyll contributors",
+      "licenseSource": "https://github.com/jekyll/jekyll (LICENSE; post source docs/_posts/2019-08-19-jekyll-4-0-0-released.markdown)",
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged."
+    }
+  },
+  "julia-discourse-sin-loop": {
+    "slug": "julia-discourse-sin-loop",
+    "generator": "Forum thread (Discourse, discourse.julialang.org)",
+    "url": "https://discourse.julialang.org/t/julia-significantly-slower-than-matlab-for-simple-sin-x-loop-am-i-doing-something-wrong/133317",
+    "contentSelector": ".post-stream",
+    "viewportHeight": 10000,
+    "codeBlocks": 8,
+    "codeExcluded": {
+      "selector": "aside pre",
+      "why": "Copies of code shown in full elsewhere in the thread: the accepted answer's two blocks repeated in the 'Solved' box under the question, and one of them again in a reply's quote of that answer. Each original is counted in its own post. Discourse renders both repeats in <aside>, which extraction drops as page chrome."
+    },
+    "finalUrl": "https://discourse.julialang.org/t/julia-significantly-slower-than-matlab-for-simple-sin-x-loop-am-i-doing-something-wrong/133317",
+    "title": "Julia significantly slower than Matlab for simple sin(x) loop – am I doing something wrong? - New to Julia - Julia Programming Language",
+    "capturedAt": "2026-10-11T13:16:29.322Z",
+    "bytes": 402091,
+    "openShadowRoots": 0,
+    "contentFound": true,
+    "scrubbed": true,
+    "license": "CC-BY-SA-4.0 (posts made after 2020-03-06); source code in posts additionally MIT",
+    "attribution": {
+      "authors": "GateOfShadows (question), Matt Bauman (mbauman), John F. Gibson (John_Gibson), DNF, Vasily Pisarev (Vasily_Pisarev), Steven G. Johnson (stevengj), Mason Protter (Mason), Chris Elrod (Elrod)",
+      "history": "https://discourse.julialang.org/t/133317 (each post links its author profile; posts dated 2025-10-20 to 2025-10-28)",
+      "licenseSource": "https://discourse.julialang.org/tos (section 3, User Content License)",
+      "changes": "Rendered DOM captured by headless Chrome 154 on the capture date; scripts, iframes, network hints and tracking metadata removed; open shadow roots serialized as declarative shadow DOM; <base href> added. Text otherwise unchanged. Captured with a 10000 px tall viewport (`viewportHeight` in `spikes/s3/sites.json`) so that Discourse renders every post, not only those near the viewport. The link previews quote the Julia manual (MIT, https://github.com/JuliaLang/julia LICENSE.md)."
+    }
   }
 }

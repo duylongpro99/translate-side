@@ -1,0 +1,208 @@
+# via walk · 60 segments
+1to6cx7ekfi heading [h1] /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[2]/div[1]/h1[1]
+  [link]Julia significantly slower than Matlab for simple sin(x) loop – am I doing something wrong?[/link]
+0cbqa7lkxhp p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[2]/div[1]/div[1]#run[1]
+  [link]New to Julia[/link]
+1y1k5ckmx8k li /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[2]/div[1]/div[1]/div[1]/div[1]/ul[1]/li[1]
+  [link]question[/link],
+1ro7gjxqmsr li /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[2]/div[1]/div[1]/div[1]/div[1]/ul[1]/li[2]
+  [link]performance[/link]
+05xwugvdpmk p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[1]/div[1]/p[1]
+  You have selected *0* posts.
+2g5cu56p102 p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[1]/div[1]/p[2]
+  [link]select all[/link]
+0gpvpcyu61q p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[1]/div[1]/p[3]
+  [link]cancel selecting[/link]
+0g6h83hvztg p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[2]/section[1]/div[1]/div[1]/div[1]
+  [link]2[/link]
+19zzqr8m94x p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[3]/div[3]/div[1]/div[1]/div[1]
+  [link]Oct 2025[/link]
+1ama1ci4y1n p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[3]/div[3]/div[1]/div[1]/div[2]/div[2]/div[2]/div[1]
+  1 / 9
+1vc10hitxjt p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[3]/div[3]/div[1]/div[1]/div[2]/div[2]/div[2]/div[2]
+  Oct 2025
+1c0pvtssqi5 p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[3]/div[3]/div[1]/div[1]/div[3]
+  [link]Oct 2025[/link]
+2cutq8y3aki p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[1]/div[1]
+  [link]GateOfShadows[/link]
+1gtjao75a0d p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/p[1]
+  Hi everyone,
+2fnzz4m0wc1 p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/p[2]
+  I recently did some benchmark testing between Julia and Matlab, focusing on basic for-loops and vectorized numerical operations. To my surprise, Julia performed significantly worse than Matlab in some very simple scenarios. I’m trying to determine:
+1ueh08uegz3 li /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/ul[1]/li[1]
+  Is this due to my code implementation (missing flags, wrong usage, etc)?
+0yurrdguzbz li /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/ul[1]/li[2]
+  Or is this an actual limitation of Julia’s current handling of such math-heavy element-wise loops?
+1w27smbi5bl p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/p[3]
+  *Here’s the test I ran in Julia:*
+23dw5zx17qd code [no-translate lang=julia] /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/pre[1]
+  using BenchmarkTools
+  
+  arr = randn(Int(1e7))
+  vals = similar(arr)
+  
+  # for loop
+  @btime @inbounds @simd for i in eachindex(arr)
+      vals[i] = sin(arr[i])
+  end
+  
+  # for loop with multi-threading (JULIA_NUM_THREADS = 8)
+  println("threads: $(Threads.nthreads())")
+  @btime Threads.@threads for i in eachindex(arr)
+      vals[i] = sin(arr[i])
+  end
+  
+  # vectorized
+  @btime vals2 = sin.(arr);
+1blpppayqcz p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/p[4]
+  The outputs are:
+291wrrdteox li /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/ul[2]/li[1]
+  for loop: `922.618 ms (39998981 allocations: 610.34 MiB)`
+02o19ygkbjr li /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/ul[2]/li[2]
+  for loop with multi-threading: `204.304 ms (39999023 allocations: 610.34 MiB)`
+16fk14808vy li /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/ul[2]/li[3]
+  vectorized: `87.596 ms (4 allocations: 76.29 MiB)`
+0x1ijupi61z p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/p[5]
+  *Matlab version:*
+20xqgkzqtil code [no-translate lang=matlab] /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/pre[2]
+  clear;
+  clc;
+  
+  arr = randn(1e7,1);
+  vals = zeros(size(arr));
+  
+  tic;
+  for ii = 1:length(arr)
+      vals(ii) = sin(arr(ii));
+  end
+  t1 = toc;
+  
+  tic;
+  vals2 = sin(arr);
+  t2 = toc;
+2bg7mx9akvs p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/p[6]
+  The outputs are
+1sl4e0000vs li /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/ul[3]/li[1]
+  for loop: `t1 = 0.1735 s`
+0j6fbpjnct8 li /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/ul[3]/li[2]
+  vectorized: `t2 = 0.0285 s`
+08z8demoaea p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/p[7]
+  I expected Julia’s loop to be competitive, especially with `@inbounds`, `@simd`, and `@threads`. But in my test, even Matlab’s *loop* beat Julia’s multi-threaded version — and *Matlab’s broadcast* was *3x faster* than Julia’s.
+0ictr296xkn p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/p[8]
+  I’m evaluating Julia for scientific computing (currently using Matlab heavily), and would appreciate any insights or correction of my assumptions!
+0a4zgjda94l p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[1]/div[2]/div[2]/div[1]/p[9]
+  Thanks in advance!
+0yo21sg47lt p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[1]/article[1]/div[2]/section[1]/div[1]/div[1]/div[1]
+  [link]2[/link]
+1ujdqn3uy9n p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[2]/article[1]/div[1]/div[2]/div[1]/div[1]
+  [link]mbauman[/link]
+2dfwrddvu2v p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[2]/article[1]/div[1]/div[2]/div[2]/div[1]/p[1]
+  Welcome! Yes, this is an artifact of how you’re benchmarking. Julia — unlike Matlab — is very function-centric. You get significantly better performance by putting your code inside functions and passing the data as function arguments. And the way you’re using `@btime` there is treating `arr` and `vals` like non-constant globals — as though you wrote that loop outside a function.
+24lm9pux6yf p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[2]/article[1]/div[1]/div[2]/div[2]/div[1]/p[2]
+  You can tell `@btime` to treat these like function arguments with a special `$` flag. This is just a special thing for BenchmarkTools.
+1nct4ntv3ae code [no-translate lang=julia-auto] /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[2]/article[1]/div[1]/div[2]/div[2]/div[1]/pre[1]
+  julia> @btime @inbounds @simd for i in eachindex(arr)
+             vals[i] = sin(arr[i])
+         end
+    918.916 ms (39998981 allocations: 610.34 MiB)
+  
+  julia> @btime for i in eachindex($arr)
+             $vals[i] = sin($arr[i])
+         end
+    90.637 ms (0 allocations: 0 bytes)
+0asl7odc5dr p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[2]/article[1]/div[1]/div[2]/div[2]/div[1]/p[3]
+  No need for `@inbounds` and `@simd` here.
+151ky1mgtbh p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[2]/article[1]/div[1]/div[2]/div[2]/div[1]/p[4]
+  I’m not sure what Matlab is doing in its vectorized version, but I’d suspect threads. Broadcast doesn’t use threads by default, but it does provide a speedup:
+29ic432al4w code [no-translate lang=julia-auto] /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[2]/article[1]/div[1]/div[2]/div[2]/div[1]/pre[2]
+  julia> Threads.nthreads()
+  6
+  
+  julia> @btime Threads.@threads for i in eachindex($arr)
+             $vals[i] = sin($arr[i])
+         end
+    16.317 ms (32 allocations: 3.20 KiB)
+0vf3u0lhwhy p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[3]/article[1]/div[1]/div[2]/div[1]/div[1]
+  [link]GateOfShadows[/link]
+0ko5le4hed5 p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[3]/article[1]/div[1]/div[2]/div[2]/div[1]/p[1]
+  Thank you so much! Julia is indeed faster than Matlab now with the “$” flag.
+0za5frmum6n p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[4]/article[1]/div[1]/div[2]/div[1]/div[1]
+  [link]John_Gibson[/link]
+0tdpun6i54p p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[4]/article[1]/div[1]/div[2]/div[2]/div[1]/p[1]
+  Worthwhile readings on this topic:
+097625abv6r p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[5]/article[1]/div[1]/div[2]/div[1]/div[1]
+  [link]DNF[/link]
+09ovjsgmbw3 p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[5]/article[1]/div[1]/div[2]/div[2]/div[1]/p[1]
+  Also keep in mind that when you call code like this in Matlab, it is directly running a highly optimized C or Fortran implementation, possibly multithreaded. So it’s not Julia vs Matlab, but Julia vs C/Fortran. You should not normally expect Julia to outperform Matlab in those cases.
+03aaqa8w5wi p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[6]/article[1]/div[1]/div[2]/div[1]/div[1]
+  [link]Vasily_Pisarev[/link]
+04hjo02thdp p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[6]/article[1]/div[1]/div[2]/div[2]/div[1]/p[1]
+  Keep in mind that adding `$` is not a performance tip. It is only a trick to substitute something into the `@btime` macro by value instead of by name. If anything, I would suggest writing as follows if you don’t want to write a separate function:
+1la7sdadxvk code [no-translate lang=julia-auto] /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[6]/article[1]/div[1]/div[2]/div[2]/div[1]/pre[1]
+  @btime (@inbounds for i in eachindex(arr)
+      vals[i] = sin(arr[i])
+  end) setup=(arr=$arr, vals=$vals)
+0s9xh7oxus0 p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[6]/article[1]/div[1]/div[2]/div[2]/div[1]/p[2]
+  Typically, you want to benchmark function calls:
+1kao4dlgdi4 code [no-translate lang=julia-auto] /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[6]/article[1]/div[1]/div[2]/div[2]/div[1]/pre[2]
+  function set_sin!(target, args)
+      @inbounds for i in eachindex(target, args)
+          target[i] = sin(args[i])
+      end
+  end
+  
+  @btime set_sin!(vals, arr)
+08tcw43ep23 p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[6]/article[1]/div[1]/div[2]/div[2]/div[1]/p[3]
+  As for why Matlab is still faster than single-threaded Julia, there are *two* possible explanation which may actually come to play together.
+  First, as already said. Matlab may use multiple threads by default.
+  Second, the algorithm to compute element-wise sine may be tailored for handling array inputs: there might be a faster rearrangement of arithmetic operations if you want to compute multiple sines than just computing each one sequentially.
+14n6kfolytw p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[7]/article[1]/div[1]/div[2]/div[1]/div[1]
+  [link]stevengj[/link] [link]Steward[/link]
+299zt92t0zp p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[7]/article[1]/div[1]/div[2]/div[2]/div[1]/p[1]
+  As I wrote in another thread, comparing to optimized library routines (like a vectorized `sin(array)` call) is not particularly interesting except to verify that Julia can produce good compiled code. Where you hope to get significant performance improvements is in cases where you have to write *new* performance-critical code, not simply call one or two library functions.
+2bt961k142m p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[8]/article[1]/div[1]/div[2]/div[1]/div[1]
+  [link]Mason[/link]
+10toacf6q7h p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[8]/article[1]/div[1]/div[2]/div[2]/div[1]/p[1]
+  Just to tack onto this answer, one might wonder why there is a massive speedup here when you interpolate, but not with the broadcast example:
+1abcw3m3b5p code [no-translate lang=julia-auto] /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[8]/article[1]/div[1]/div[2]/div[2]/div[1]/pre[1]
+  julia> @btime vals .= sin.(arr);
+    85.849 ms (1 allocation: 16 bytes)
+  
+  julia> @btime $vals .= sin.($arr);
+    86.514 ms (0 allocations: 0 bytes)
+0y5fljrzu4y p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[8]/article[1]/div[1]/div[2]/div[2]/div[1]/p[2]
+  The reason is that in the loop example, julia needed to access an untyped global variable at each iteration of the loop, so every time it loops it has no idea what `vals` or `arr` could possibly be, whereas in the broadcast example, it doesn’t know what `vals` and `arr` are only at the very start before they get passed into the broadcast machinery, at which point it is able to loop knowing what they are.
+067ksa1w7vt p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[9]/article[1]/div[1]/div[2]/div[1]/div[1]
+  [link]Elrod[/link]
+00126jrv7vh p /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[9]/article[1]/div[1]/div[2]/div[2]/div[1]/p[1]
+  If you’re bottlenecked by these kinds of streaming workloads (you probably aren’t), you could try
+123qxzxbhvg code [no-translate lang=julia] /html[1]/body[1]/section[1]/div[1]/div[4]/div[2]/div[2]/div[3]/div[4]/section[1]/div[1]/div[2]/div[9]/article[1]/div[1]/div[2]/div[2]/div[1]/pre[1]
+  julia> @btime $vals .= sin.($arr);
+    82.147 ms (0 allocations: 0 bytes)
+  
+  julia> using LoopVectorization
+  
+  julia> @btime @turbo $vals .= sin.($arr);
+    13.840 ms (0 allocations: 0 bytes)
+  
+  julia> @btime @tturbo $vals .= sin.($arr);
+    3.332 ms (0 allocations: 0 bytes)
+  
+  julia> @btime vmapnt!(sin, $vals, $arr);
+    11.214 ms (0 allocations: 0 bytes)
+  
+  julia> @btime vmapntt!(sin, $vals, $arr);
+    2.244 ms (0 allocations: 0 bytes)
+  
+  julia> versioninfo()
+  Julia Version 1.12.1
+  Commit ba1e628ee49 (2025-10-17 13:02 UTC)
+  Build Info:
+    Official https://julialang.org release
+  Platform Info:
+    OS: Linux (x86_64-linux-gnu)
+    CPU: 36 × Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz
+    WORD_SIZE: 64
+    LLVM: libLLVM-18.1.7 (ORCJIT, cascadelake)
+    GC: Built with stock GC
+  Threads: 36 default, 1 interactive, 36 GC (on 36 virtual cores)

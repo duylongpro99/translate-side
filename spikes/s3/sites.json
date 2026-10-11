@@ -8,5 +8,8 @@
   { "slug": "wikipedia-futures-promises", "generator": "Wikipedia (MediaWiki)", "url": "https://en.wikipedia.org/wiki/Futures_and_promises", "contentSelector": "#mw-content-text .mw-parser-output" },
   { "slug": "goblog-pipelines", "generator": "Blog essay (go.dev blog)", "url": "https://go.dev/blog/pipelines", "contentSelector": ".Article[data-slug]" },
   { "slug": "twir-671", "generator": "Newsletter (This Week in Rust)", "url": "https://this-week-in-rust.org/blog/2026/09/30/this-week-in-rust-671/", "contentSelector": "article.post-content" },
-  { "slug": "globalvoices-bangladesh-protests", "generator": "News (Global Voices, WordPress)", "url": "https://globalvoices.org/2026/09/24/bangladesh-protests-can-change-governments-but-can-they-strengthen-democracy/", "contentSelector": ".entry" }
+  { "slug": "globalvoices-bangladesh-protests", "generator": "News (Global Voices, WordPress)", "url": "https://globalvoices.org/2026/09/24/bangladesh-protests-can-change-governments-but-can-they-strengthen-democracy/", "contentSelector": ".entry" },
+  { "slug": "sphinx-quickstart", "generator": "Sphinx docs", "url": "https://www.sphinx-doc.org/en/master/usage/quickstart.html", "contentSelector": "div.body" },
+  { "slug": "jekyll-4-0-0-released", "generator": "Blog post (jekyllrb.com, Jekyll)", "url": "https://jekyllrb.com/news/2019/08/20/jekyll-4-0-0-released/", "contentSelector": "article" },
+  { "slug": "julia-discourse-sin-loop", "generator": "Forum thread (Discourse, discourse.julialang.org)", "url": "https://discourse.julialang.org/t/julia-significantly-slower-than-matlab-for-simple-sin-x-loop-am-i-doing-something-wrong/133317", "contentSelector": ".post-stream", "viewportHeight": 10000 }
 ]

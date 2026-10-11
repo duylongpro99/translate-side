@@ -1,0 +1,87 @@
+# via walk · 43 segments
+05roblzdvm8 heading [h2] /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/h2[1]
+  Jekyll 4.0.0 Released
+23j3igr0zde p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]#run[1]
+  release
+28ut1bph3vw p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[1]
+  20 Aug 2019 [link]mattr-[/link]
+15p9d2cgbnt p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[1]
+  Hi! 👋 I bring some good news! Jekyll 4.0.0 is finally here! 🎉
+16aeya230v2 p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[2]
+  There’s quite a bit in this release to unpack, so let me hit the high points quickly:
+00r9drrem73 li /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/ul[1]/li[1]
+  Ruby 2.4.0 or greater is now required.
+27f523k5n27 li /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/ul[1]/li[2]
+  Rouge 3.0 or greater is now required for syntax highlighting.
+26mpsxq92xp li /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/ul[1]/li[3]
+  Jekyll builds should be much faster.
+0qk0qoiw2v5 li /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/ul[1]/li[4]
+  Kramdown 2.1 is now the default markdown engine.
+07qvmkrg495 li /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/ul[1]/li[5]
+  Sass processing should be faster.
+1ckr48g2k53 li /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/ul[1]/li[6]#run[1]
+  We dropped support for a lot of stuff, specifically:
+21855euxd1q li /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/ul[1]/li[6]/ul[1]/li[1]
+  Pygments
+23e7thqnzia li /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/ul[1]/li[6]/ul[1]/li[2]
+  RedCarpet
+1ifsoq59l0b li /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/ul[1]/li[6]/ul[1]/li[3]
+  RDiscount
+1ar5cb3n5ig p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[3]
+  Alright, so with the high points out of the way, let’s get into the details a little bit.
+0boyj16rrcu heading [h3] /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/h3[1]
+  Cache all the things! 💰
+1eyl8ok3ezn p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[4]
+  While some optimizations first made an appearance with Jekyll 3.8.0, Jekyll 4.0 takes it to another level altogether.
+16x7t5k011t p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[5]
+  Jekyll 4.0 caches the processing done by Liquid in memory. So every Liquid template is processed only as required. If you have 10 pages depending on a single layout, the layout is cached and that data is then rendered as per the 10 different contexts of the individual files.
+0u6kvs4uvo1 p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[6]
+  There’s also a disk cache! Jekyll can now cache data to disk to avoid repeated processing of content that doesn’t change between build sessions. Currently, this is limited to markdown. So while the very first build will take a certain amount of time, consequent builds for content that hasn’t changed will take much less time due to the disk-cache. Disk caching is disabled for `safe` mode, however.
+1zoxmj4tlzs heading [h3] /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/h3[2]
+  Super-powered content transformations 💪
+2d665chjw87 p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[7]
+  We’ve upgraded Sass support so it should be faster. There’s also support for sourcemaps now! Under the hood, our Sass support uses the `SassC` library now, which is supported directly by the Sass team, which should mean better support for everybody in the long run.
+25idnwxvynk p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[8]
+  Kramdown is updated to version 2.1. This also brings with it a bunch of changes to the Kramdown configuration, as the Kramdown team have extracted a fair number of features into separate gems. Support for GitHub Flavored Markdown is enabled by default, but if you’re using another Kramdown extension in your site, you’ll likely need to update your plugin configuration. See the [link]upgrade guide[/link] for more details.
+001ubjc3mld p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[9]
+  The `link` and `post_url` tags no longer need `site.baseurl` prepended every time they’re used. Those tags now use our `relative_url` filter to take care of this for you. Existing uses of the prepending pattern will break though! Sorry!
+1hae4robvla p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[10]
+  A few other smaller features when it comes to content:
+12jf9bxb4ko li /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/ul[2]/li[1]
+  The `link` tag understands Liquid variables in the same fashion our `include` tag does now.
+0stkmkgtukr li /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/ul[2]/li[2]
+  Disable Liquid processing for a particular page / document by adding `render_with_liquid: false` to its front matter.
+18aezuthu8z li /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/ul[2]/li[3]
+  Liquid’s binary `and` and `or` operations can be used in the `where_exp` filter for more powerful filtering
+0aq8dbroywp p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[11]
+  There’s some goodies for theme community as well. Developers may now bundle a `config.yml` into their theme-gem to provide some boilerplate configurations for the theme. Like other resources in the theme, these configuration values can also be customized at the user’s end.
+26l6b3a4gdr p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[12]
+  Check out the [link]full history[/link] and the various pull requests for more details on all the enhancements and bug-fixes.
+1617lxezrfk heading [h3] /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/h3[3]
+  Upgrading 📈
+13vfcn1baam p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[13]
+  First, read the [link]upgrade guide[/link]!
+10oobm2ab6f p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[14]
+  Next, Edit your project’s `Gemfile` to test Jekyll v4.x:
+0zmuxoyl2cm code [no-translate] /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/div[1]/div[1]/pre[1]
+  gem 'jekyll', '~> 4.0'
+133rit0kulv p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[15]
+  Then run `bundle update` to update all dependencies. Unless you’re using third-party plugins that haven’t yet added support for Jekyll 4.0, you should be good to go.
+1ff87puzpvw p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[16]
+  Plugins and themes authors must relax the jekyll dependency in their `gemspec` file to allow for Jekyll v4.0:
+09vcr8amoi5 p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[17]
+  `spec.add_runtime_dependency "jekyll", ">= 3.6", "< 5.0"`
+12c8doi6ims p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[18]
+  If your favorite plugin hasn’t relaxed that dependency yet, please gently encourage them to do so.
+1wydzqciwij heading [h3] /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/h3[4]
+  Have questions❓
+1v6qk5wa1c7 p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[19]
+  Please reach out on our [link]community forum[/link]
+15h5u8w7gep heading [h3] /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/h3[5]
+  Thank you!! 🙇
+213ez3nnhlz p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[20]
+  Jekyll would not be possible without the many people who have taken the time to write issues, submit pull requests, create themes, answer questions for other users, or make their own sites using our project. Thanks to all of you who contribute, no matter how small you think your contribution might have been.
+0a3nwu63612 p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[21]
+  In addition, special thanks to the 139 contributors who made this release possible via a pull request submission (in alphabetical order): Aidan Fitzgerald, Akshat Kedia, Ale Muñoz, Alex Wood, Alexey Kopytko, Alexey Pelykh, Ali Thompson, Ana María Martínez Gómez, Ananthakumar, Andreas Möller, Andrew Lyndem, Andrew Marcuse, Andy Alt, Anne Gentle, Anny, Anuj Bhatnagar, argv-minus-one, Arjun Thakur, Arthur Attwell, Ashwin Maroli, Behrang, Belhassen Chelbi, Ben Keith, Ben Otte, Bilawal Hameed, Bjorn Krols, Boris Schapira, Boris van Hoytema, Brett C, Chris Finazzo, Chris Oliver, chrisfinazzo, Christian Oliff, Christoph Päper, Damien Solodow, Dan Allen, Dan Friedman, Daniel Höpfl, David J. Malan, David Kennell, David Zhang, Denis McDonald, Derek Smart, Derpy, Dusty Candland, Edgar Tinajero, Elvio Vicosa, ExE Boss, Fons van der Plas, Frank Taillandier, Gareth Cooper, Grzegorz Kaczorek, Haris Bjelic, Hodong Kim, ikeji, Isaac Goodman, Jacob Byers, Jakob Krigovsky, James Rhea, Jan Pobořil, jess, jingze_lu, Joe Shannon, Jordan Morgan, Jörg Steinsträter, Jorie Tappa, Josue Caraballo, jpasholk, Justin Vallelonga, Karel Bílek, Keith Mifsud, Kelly-Ann Green, Ken Salomon, Kevin Plattret, krissy, Kyle Barbour, Lars Kanis, Leandro Facchinetti, Liam Rosenfeld, Luis Enrique Perez Alvarez, Luis Guillermo Yáñez, Ma HongJun, makmm, Manu Mathew, Mario, Martin Scharm, Matt Kraai, Matt Massicotte, Matt Rogers, Matthew Rathbone, Maxwell Gerber, Mertcan Yücel, Michael Bishop, Michael Hiiva, Michelle Greer, Mike Kasberg, Mike Neumegen, mo khan, Monica Powell, Nicolas Hoizey, Nikhil Benesch, Nikhil Swaminathan, Nikita Skalkin, Niklas Eicker, ninevra, Olivia Hugger, Parker Moore, Pat Hawks, Patrick Favre-Bulle, Paul Kim, penguinpet, Philip Belesky, Preston Lim, Ralph, Robert Riemann, Rosário Pereira Fernandes, Sadik Kuzu, Samuel Gruetter, Scott Killen, Sri Pravan Paturi, Stephan Fischer, Stephen Weiss, Steven Westmoreland, strangehill, Sundaram Kalyan Vedala, Thanos Kolovos, Timo Schuhmacher, Tobias, Tom Harvey, Tushar Prajapati, Victor Afanasev, Vinicius Flores, Vitor Oliveira, Wouter Schoot, XhmikosR, Yi Feng Xie, Zhang Xiangze, 김정환, 104fps.
+0702j1q4df2 p /html[1]/body[1]/section[1]/div[1]/div[2]/article[1]/div[2]/p[22]
+  Happy Jekylling everyone!
