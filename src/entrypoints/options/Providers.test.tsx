@@ -168,7 +168,7 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     expect(f.local.get(`secret:${conn.id}`)).toBe('sk-ant-api03-0123456789abcd');
     const profile = [...f.sync.values()].find((v) => (v as { model?: string }).model === 'claude-sonnet-4-6') as { id: string; maxConcurrency: number; contextWindow: number };
     expect(profile).toMatchObject({ maxConcurrency: 2, contextWindow: 200000 });
-    expect(f.sync.get('routing')).toEqual({ translate: profile.id, fallback: ['basic'] });
+    expect(f.sync.get('routing')).toEqual({ translate: profile.id, fallback: ['basic'], basicMigrated: true });
     expect(JSON.stringify([...f.sync.values()])).not.toContain('sk-ant');
     await waitFor(() => rowOf('Anthropic (Claude)') !== undefined);
     expect(rowOf('Anthropic (Claude)')?.querySelector('[data-testid=connection-status]')?.textContent).toBe('✓ Connected');
@@ -325,7 +325,7 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
       sel.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await waitFor(() => f.sync.has('routing'));
-    expect(f.sync.get('routing')).toEqual({ translate: 'apibox-qwen3.8-flash', analyze: 'q', fallback: ['basic'] });
+    expect(f.sync.get('routing')).toEqual({ translate: 'apibox-qwen3.8-flash', analyze: 'q', fallback: ['basic'], basicMigrated: true });
     expect($('[data-testid=providers-note]').textContent).toBe('Document brief route saved.');
   });
 
@@ -347,14 +347,14 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     click($('[data-testid=fallback-add]'));
     await waitFor(() => (f.sync.get('routing') as { fallback?: string[] }).fallback?.length === 2);
     // The model not routed yet is offered first, before the terminal basic entry; the keyless built-in is not listed.
-    expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['g', 'basic'] });
+    expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['g', 'basic'], basicMigrated: true });
     await waitFor(() => chain().querySelector('select') !== null);
     expect((chain().querySelector('select') as HTMLSelectElement).value).toBe('g');
     // The translate model itself is never offered as its own fallback (M4-D tester).
     expect([...(chain().querySelector('select') as HTMLSelectElement).options].map((o) => o.value)).toEqual(['g']);
     click(chain().querySelector('[aria-label^="Remove fallback 1"]'));
     await waitFor(() => (f.sync.get('routing') as { fallback?: string[] }).fallback?.length === 1);
-    expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['basic'] });
+    expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['basic'], basicMigrated: true });
     click(chain().querySelector('[aria-label^="Remove fallback 1"]'));
     await waitFor(() => (f.sync.get('routing') as { fallback?: string[] }).fallback === undefined);
     expect($('[data-testid=providers-note]').textContent).toBe('Fallback removed.');
@@ -364,7 +364,7 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     await waitFor(() => $('[data-testid=fallback-add-basic]') !== null);
     click($('[data-testid=fallback-add-basic]'));
     await waitFor(() => (f.sync.get('routing') as { fallback?: string[] }).fallback?.length === 2);
-    expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['g', 'basic'] });
+    expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['g', 'basic'], basicMigrated: true });
     expect($('[data-testid=fallback-add-basic]')).toBeNull();
   });
 
@@ -404,7 +404,8 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     act(() => void form().dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
     await waitFor(() => f.sync.has('siteRules'));
     expect(f.sync.get('siteRules')).toEqual([{ pattern: 'wiki.corp.example.com', translate: 'q', localOnly: true }]);
-    expect(f.sync.get('routing')).toEqual({ translate: 'w' });
+    // Stored before M5-E7: the one-time migration read `basic` in, and this save keeps it.
+    expect(f.sync.get('routing')).toEqual({ translate: 'w', fallback: ['basic'], basicMigrated: true });
     await waitFor(() => rule() !== null);
     expect($('[data-testid=site-rule-cloud]')).toBeNull();
 

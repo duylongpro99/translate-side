@@ -152,7 +152,7 @@ describe('schema (plan M4-E2)', () => {
     const s = settings({ routing: { translate: 'apibox-qwen3.8-flash', fallback: ['gemini-flash-lite'], siteOverrides: [{ pattern: 'x.com', translate: 'gemini-flash-lite', localOnly: true }] } });
     const items = toSyncItems(s);
     expect(Object.keys(items).sort()).toEqual(['conn:apibox', 'conn:gemini', 'profile:apibox-deepseek-v4-pro', 'profile:apibox-qwen3.8-flash', 'profile:gemini-flash-lite', 'routing', 'schemaVersion', 'siteRules']);
-    expect(items.routing).toEqual({ translate: 'apibox-qwen3.8-flash', fallback: ['gemini-flash-lite'] });
+    expect(items.routing).toEqual({ translate: 'apibox-qwen3.8-flash', fallback: ['gemini-flash-lite'], basicMigrated: true });
     // Built-ins not stored (Anthropic here) apply as built in.
     expect(parseStored({ ...items, prefs: {}, glossary: [] })).toEqual({
       ...s,
@@ -313,7 +313,9 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
     expect(s.profiles[0]).toEqual(other);
     // The other device's profile, then this device's seeded APIBOX profiles, then the other built-ins.
     expect(ids(s.profiles)).toEqual(['custom-pro', ...ids(BUILTIN_PROFILES)]);
-    expect(s.routing).toEqual({ translate: 'custom-pro' });
+    // Stored before M5-E7 (no `basicMigrated`): read with the terminal `basic` entry, nothing written.
+    expect(s.routing).toEqual({ translate: 'custom-pro', fallback: [BASIC_FALLBACK] });
+    expect(f.sync.data.get('routing')).toEqual({ translate: 'custom-pro' });
   });
 
   it('reads a newer schema as it is and never rewrites it', async () => {
@@ -407,7 +409,7 @@ describe('routing resolution (plan M4-E8, DESIGN §4.3.5)', () => {
     await saveConnection(f.api, GEMINI_CONNECTION);
     await saveProfile(f.api, GEMINI_PROFILE);
     await saveRouting(f.api, { translate: DEFAULT_PROFILE.id, fallback: [GEMINI_PROFILE.id, 'basic'], siteOverrides: [{ pattern: 'x.com', translate: APIBOX_PRO_PROFILE.id }] });
-    expect(f.sync.data.get('routing')).toEqual({ translate: DEFAULT_PROFILE.id, fallback: [GEMINI_PROFILE.id, 'basic'] });
+    expect(f.sync.data.get('routing')).toEqual({ translate: DEFAULT_PROFILE.id, fallback: [GEMINI_PROFILE.id, 'basic'], basicMigrated: true });
     expect(f.sync.data.get('siteRules')).toEqual([{ pattern: 'x.com', translate: APIBOX_PRO_PROFILE.id }]);
     await setTabOverride(f.api, 4, GEMINI_PROFILE.id);
     expect(await readTabOverride(f.api, 4)).toBe(GEMINI_PROFILE.id);
@@ -432,7 +434,7 @@ describe('routing resolution (plan M4-E8, DESIGN §4.3.5)', () => {
     await saveProfile(f.api, { ...DEFAULT_PROFILE, maxConcurrency: 1, secret: 'x' } as ModelProfile);
     expect(f.sync.data.get(`profile:${DEFAULT_PROFILE.id}`)).toEqual({ ...DEFAULT_PROFILE, maxConcurrency: 1, region: 'eu' });
     await saveRouting(f.api, { translate: DEFAULT_PROFILE.id, analyze: DEFAULT_PROFILE.id });
-    expect(f.sync.data.get('routing')).toEqual({ translate: DEFAULT_PROFILE.id, analyze: DEFAULT_PROFILE.id, onMeter: 'brief' });
+    expect(f.sync.data.get('routing')).toEqual({ translate: DEFAULT_PROFILE.id, analyze: DEFAULT_PROFILE.id, onMeter: 'brief', basicMigrated: true });
     await saveLearnedQuirk(f.api, { connectionId: 'apibox', profileId: APIBOX_PRO_PROFILE.id }, 'supportsTemperature', { supportsTemperature: false });
     expect(f.sync.data.get('conn:apibox')).toMatchObject({ rateLimit: { rpm: 60 }, quirks: { supportsTemperature: false } });
   });
@@ -600,12 +602,12 @@ describe('adding a connection (plan M4 §2, carry-over B4)', () => {
     const f = permApi({ sync: { schemaVersion: 1 } });
     expect(await saveSetup(f.api, { connection: MY_ANTHROPIC, apiKey: ' sk-ant-0123456789 ', profile: SONNET })).toEqual({ routed: true });
     expect(f.local.data.get('secret:mine')).toBe('sk-ant-0123456789');
-    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet', fallback: [BASIC_FALLBACK] });
+    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet', fallback: [BASIC_FALLBACK], basicMigrated: true });
     expect(f.sync.data.get('conn:mine')).toMatchObject({ label: 'My Anthropic' });
     expect(JSON.stringify([...f.sync.data.values()])).not.toContain('sk-ant');
     // The second one does not take over.
     expect(await saveSetup(f.api, { connection: OLLAMA, profile: QWEN })).toEqual({ routed: false });
-    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet', fallback: [BASIC_FALLBACK] });
+    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet', fallback: [BASIC_FALLBACK], basicMigrated: true });
   });
 
   it('a device already translating with a migrated keyed route keeps it until the user picks another', async () => {
@@ -618,7 +620,7 @@ describe('adding a connection (plan M4 §2, carry-over B4)', () => {
   it('a key added to the routed (keyless) built-in connection keeps its route and sets none', async () => {
     const f = permApi({ sync: { schemaVersion: 1 } });
     expect(await saveSetup(f.api, { connection: APIBOX_CONNECTION, apiKey: 'sk-apibox-0123456789', profile: APIBOX_QWEN_PROFILE })).toEqual({ routed: true });
-    expect(f.sync.data.get('routing')).toEqual({ translate: APIBOX_QWEN_PROFILE.id, fallback: [BASIC_FALLBACK] });
+    expect(f.sync.data.get('routing')).toEqual({ translate: APIBOX_QWEN_PROFILE.id, fallback: [BASIC_FALLBACK], basicMigrated: true });
   });
 
   it('marks the built-ins that apply only at read time, and whether routing is stored', async () => {
@@ -681,6 +683,40 @@ describe('removing a connection (plan M4 §3 #8, DESIGN §4.3.4)', () => {
     const s = await readProviderSettings(f.api);
     expect(s.connections.find((c) => c.id === GEMINI_CONNECTION.id)).toEqual(GEMINI_CONNECTION);
     expect(s.implicit?.connections).toContain(GEMINI_CONNECTION.id);
+  });
+});
+
+describe('the one-time `basic` migration (M5-E7: every provider down → Chrome Translator, existing users too)', () => {
+  const pre = (routing: Record<string, unknown>) => permApi({ sync: { schemaVersion: 1, 'conn:ollama-1': OLLAMA, 'profile:qwen-local': QWEN, 'conn:mine': MY_ANTHROPIC, 'profile:sonnet': SONNET, routing } });
+
+  it('a routing stored before `basic` existed ends in it, read in without writing; one that has it keeps its place', async () => {
+    const f = pre({ translate: 'sonnet', fallback: ['qwen-local'] });
+    expect((await readProviderSettings(f.api)).routing).toEqual({ translate: 'sonnet', fallback: ['qwen-local', BASIC_FALLBACK] });
+    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet', fallback: ['qwen-local'] });
+    const had = pre({ translate: 'sonnet', fallback: [BASIC_FALLBACK, 'qwen-local'] });
+    expect((await readProviderSettings(had.api)).routing).toEqual({ translate: 'sonnet', fallback: ['qwen-local', BASIC_FALLBACK] });
+  });
+
+  it('runs once: the next save records it, and `basic` the user removed stays removed', async () => {
+    const f = pre({ translate: 'sonnet' });
+    const read = await readProviderSettings(f.api);
+    expect(read.routing.fallback).toEqual([BASIC_FALLBACK]);
+    // The user removes it in Options (the chain editor saves the routing it read, without `basic`).
+    await saveRouting(f.api, { ...read.routing, fallback: [] });
+    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet', basicMigrated: true });
+    expect((await readProviderSettings(f.api)).routing).toEqual({ translate: 'sonnet' });
+    // Rewrites by a removal keep the record, so it is not read in again.
+    await saveRouting(f.api, { translate: 'sonnet', analyze: 'qwen-local' });
+    await removeProfile(f.api, 'qwen-local');
+    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet', basicMigrated: true });
+    expect((await readProviderSettings(f.api)).routing).toEqual({ translate: 'sonnet' });
+  });
+
+  it('a removal that rewrites a routing not migrated yet leaves it to the migration', async () => {
+    const f = pre({ translate: 'sonnet', analyze: 'qwen-local' });
+    await removeProfile(f.api, 'qwen-local');
+    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet' });
+    expect((await readProviderSettings(f.api)).routing).toEqual({ translate: 'sonnet', fallback: [BASIC_FALLBACK] });
   });
 });
 

@@ -7,7 +7,7 @@
 //   schemaVersion          1
 //   conn:<id>              ProviderConnection
 //   profile:<id>           ModelProfile
-//   routing                { translate, analyze?, review?, fallback? }
+//   routing                { translate, analyze?, review?, fallback?, basicMigrated? }
 //   siteRules              [{ pattern, translate, localOnly? }]  (Routing.siteOverrides; UI in M5-E6)
 // `routing` is only ever written by the user (saveRouting), never by the migration: a fresh device
 // migrates before sync has pulled the other devices' items, and a default it wrote could win
@@ -16,6 +16,10 @@
 // storage.local: it is derived from this device's keys, so another device's must not reach it.
 // Every built-in connection and its profiles apply at read time when not stored, so a route to a
 // built-in profile resolves on any device (it asks for a key instead).
+// The terminal `basic` fallback (M5-E7) reaches a `routing` stored before it existed the same way,
+// at read time: a stored routing without `basicMigrated` ends in `basic`. saveRouting always writes
+// `basicMigrated: true`, so the migration happens once (what the user saves next is kept as it is,
+// and `basic` they removed stays removed) and nothing is written behind the user's back.
 // Records are found by key prefix, not through an index item: chrome.storage.sync merges devices
 // item by item, and an index written on two devices at once would lose one side's records.
 // Tab overrides (the quick switcher, M4-E11) are per browser session: storage.session
@@ -221,6 +225,25 @@ export function cleanRouting(raw: unknown): Omit<Routing, 'siteOverrides'> | nul
   };
 }
 
+/** storage.sync `routing`: saved by a build that knows the `basic` fallback (see the header). */
+export const BASIC_MIGRATED_FIELD = 'basicMigrated';
+
+/**
+ * A stored routing, cleaned, with the one-time `basic` migration (M5-E7) applied at read time: one
+ * saved before `basic` existed (no `basicMigrated`) ends in it, so every provider down falls to
+ * Chrome's Translator for existing users too.
+ */
+function withBasicMigrated(raw: unknown): Omit<Routing, 'siteOverrides'> | null {
+  const clean = cleanRouting(raw);
+  if (!clean || (isRecord(raw) && raw[BASIC_MIGRATED_FIELD] === true) || clean.fallback?.includes(BASIC_FALLBACK)) return clean;
+  return { ...clean, fallback: [...(clean.fallback ?? []), BASIC_FALLBACK] };
+}
+
+/** `routing` rewritten from the stored item `raw` (a removal), with its `basicMigrated` kept, so a `basic` the user removed is not read in again. */
+function keepBasicMigrated(raw: unknown, routing: Routing): Routing & { basicMigrated?: true } {
+  return isRecord(raw) && raw[BASIC_MIGRATED_FIELD] === true ? { ...routing, [BASIC_MIGRATED_FIELD]: true } : routing;
+}
+
 /**
  * The provider settings in a sync snapshot, with this device's `migratedRoute` (storage.local);
  * null before the migration (no schema version).
@@ -256,7 +279,7 @@ export function parseStored(items: Record<string, unknown>, migratedRoute?: unkn
     }
   }
   const sites = cleanSiteRules(items[SITE_RULES_KEY]);
-  const stored = cleanRouting(items[ROUTING_KEY]);
+  const stored = withBasicMigrated(items[ROUTING_KEY]);
   // A route the user never chose ends in the terminal `basic` entry (plan M5-E7): with every
   // provider down, Chrome's Translator takes over. A stored route has it only if the user kept it.
   const routing = stored ?? { ...(cleanRouting(migratedRoute) ?? { translate: DEFAULT_PROFILE.id }), fallback: [BASIC_FALLBACK] };
@@ -270,7 +293,7 @@ export function toSyncItems(settings: ProviderSettings): Record<string, unknown>
     [SCHEMA_KEY]: settings.schemaVersion,
     ...Object.fromEntries(settings.connections.map((c) => [connectionKey(c.id), c])),
     ...Object.fromEntries(settings.profiles.map((p) => [profileKey(p.id), p])),
-    [ROUTING_KEY]: routing,
+    [ROUTING_KEY]: { ...routing, [BASIC_MIGRATED_FIELD]: true },
     ...(siteOverrides && siteOverrides.length > 0 ? { [SITE_RULES_KEY]: siteOverrides } : {}),
   };
 }
@@ -466,7 +489,7 @@ export function saveConnectionStatus(api: Browser, id: string, status: Connectio
   });
 }
 
-const ROUTING_FIELDS = new Set(['translate', 'analyze', 'review', 'fallback']);
+const ROUTING_FIELDS = new Set(['translate', 'analyze', 'review', 'fallback', BASIC_MIGRATED_FIELD]);
 
 /**
  * Routing and its site rules, in one write. Without site rules their item is set to an empty
@@ -477,7 +500,8 @@ export function saveRouting(api: Browser, routing: Routing): Promise<void> {
     await migrateProviders(api);
     const clean = cleanRouting(routing);
     if (!clean) throw new Error('routing needs a translate profile');
-    const items = { [ROUTING_KEY]: keepUnknown(await storedItem(api, ROUTING_KEY), ROUTING_FIELDS, clean), [SITE_RULES_KEY]: cleanSiteRules(routing.siteOverrides) };
+    // `basicMigrated`: the user saw `basic` in the chain (it is read in when missing), so what they save stays as it is.
+    const items = { [ROUTING_KEY]: { ...keepUnknown(await storedItem(api, ROUTING_KEY), ROUTING_FIELDS, clean), [BASIC_MIGRATED_FIELD]: true }, [SITE_RULES_KEY]: cleanSiteRules(routing.siteOverrides) };
     await checkQuota(api, items);
     await api.storage.sync.set(items);
   });
@@ -595,7 +619,7 @@ export async function removeConnection(api: Browser, id: string): Promise<{ revo
     }
     if (keys.length > 0) await api.storage.sync.remove(keys);
     if (routing === null) await api.storage.sync.remove(ROUTING_KEY);
-    else if (routing !== undefined) await api.storage.sync.set({ [ROUTING_KEY]: routing });
+    else if (routing !== undefined) await api.storage.sync.set({ [ROUTING_KEY]: keepBasicMigrated(items[ROUTING_KEY], routing) });
   });
   if (!connection) return { revoked: false };
   return { revoked: await revokeUnusedOrigin(api, connection.baseUrl, id) };
@@ -657,7 +681,7 @@ export async function removeProfile(api: Browser, id: string): Promise<void> {
     if (profileKey(id) in items) await api.storage.sync.remove(profileKey(id));
     const stored = cleanRouting(items[ROUTING_KEY]);
     const routing = stored && routingWithout(stored, new Set([id]), undefined);
-    if (stored && routing && JSON.stringify(routing) !== JSON.stringify(stored)) await api.storage.sync.set({ [ROUTING_KEY]: routing });
+    if (stored && routing && JSON.stringify(routing) !== JSON.stringify(stored)) await api.storage.sync.set({ [ROUTING_KEY]: keepBasicMigrated(items[ROUTING_KEY], routing) });
   });
 }
 
