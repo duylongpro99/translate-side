@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { accessKey } from './access.ts';
 import { CONTENT_SCRIPT_FILE } from './inject.ts';
 import {
+  CLOSE_PANEL_MESSAGE,
   CONTEXT_MENU_ID,
   createContextMenu,
   listenForActionClicks,
@@ -15,7 +16,7 @@ type Api = Parameters<typeof setupPanelBehavior>[0];
 type Listener = (...args: never[]) => void;
 
 /** A worker-side fake: sidePanel, scripting and storage.session, logging calls in order. */
-function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, unknown> } = {}) {
+function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, unknown>; panelAnswer?: () => Promise<unknown> } = {}) {
   const calls: string[] = [];
   const store: Record<string, unknown> = {};
   const sync = opts.sync ?? {};
@@ -38,6 +39,12 @@ function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, 
         remove: (k: string) => ((store[k] = undefined), Promise.resolve()),
       },
       sync: { get: (keys: string[]) => Promise.resolve(Object.fromEntries(keys.filter((k) => k in sync).map((k) => [k, sync[k]]))) },
+    },
+    runtime: {
+      sendMessage: (m: { type: string; windowId?: number }) => {
+        calls.push(`ask:${m.type}:${m.windowId}`);
+        return (opts.panelAnswer ?? (() => Promise.reject(new Error('Receiving end does not exist.'))))();
+      },
     },
     action: { onClicked: on('action') },
     contextMenus: { onClicked: on('menu') },
@@ -128,11 +135,35 @@ describe('openPanelAndInject', () => {
 });
 
 describe('action and context menu', () => {
-  it('the action click (toolbar or Alt+T) opens and injects', async () => {
+  it('the action click (toolbar or Alt+T) opens first, asks the panel to close in the same tick, and injects when none did', async () => {
     const f = fakeApi();
     listenForActionClicks(f.api);
-    f.fire('action', { id: 9, url: 'https://example.com/' });
+    f.fire('action', { id: 9, windowId: 4, url: 'https://example.com/' });
+    // Nothing is awaited between the click and the two calls: sidePanel.open keeps the user gesture (S5).
+    expect(f.calls).toEqual(['open:9', `ask:${CLOSE_PANEL_MESSAGE}:4`]);
     await flush();
+    expect(f.calls).toEqual(['open:9', `ask:${CLOSE_PANEL_MESSAGE}:4`, `inject:9:${CONTENT_SCRIPT_FILE}`]);
+  });
+
+  it('a click while the panel is open closes it: the panel answers, nothing is injected', async () => {
+    const f = fakeApi({ panelAnswer: () => Promise.resolve({ closed: true }) });
+    listenForActionClicks(f.api);
+    f.fire('action', { id: 9, windowId: 4, url: 'https://example.com/' });
+    await flush();
+    expect(f.calls.some((c) => c.startsWith('inject'))).toBe(false);
+  });
+
+  it('an answer that is not {closed: true} (another window, a panel still starting) opens as usual', async () => {
+    const f = fakeApi({ panelAnswer: () => Promise.resolve(undefined) });
+    listenForActionClicks(f.api);
+    f.fire('action', { id: 9, windowId: 4, url: 'https://example.com/' });
+    await flush();
+    expect(f.calls.some((c) => c.startsWith('inject'))).toBe(true);
+  });
+
+  it('the context menu stays open-only', async () => {
+    const f = fakeApi({ panelAnswer: () => Promise.resolve({ closed: true }) });
+    await openPanelAndInject(f.api, { id: 9, windowId: 4, url: 'https://example.com/' });
     expect(f.calls).toEqual(['open:9', `inject:9:${CONTENT_SCRIPT_FILE}`]);
   });
 

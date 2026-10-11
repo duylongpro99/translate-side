@@ -5,6 +5,7 @@ import { PanelController } from './controller.ts';
 import { createTranslator } from './translator.ts';
 import { injectInto } from '@/shared/inject';
 import { autoTranslates } from '@/shared/sites';
+import { closePanel, listenForCloseRequests } from './toggle.ts';
 import './style.css';
 
 const translator = createTranslator(browser);
@@ -19,6 +20,7 @@ const controller = new PanelController(browser, {
     return true;
   },
 });
+listenForCloseRequests(browser, () => void closePanel(browser));
 translator.watch(() => controller.tabId);
 controller.start().catch((err: unknown) => {
   console.error('[translate-side] panel start failed', err);

@@ -19,6 +19,7 @@ export type InjectTrigger = 'gesture' | 'navigation';
 export interface TabRef {
   id?: number | undefined;
   url?: string | undefined;
+  windowId?: number | undefined;
 }
 
 export async function injectInto(api: Browser, tab: TabRef, trigger: InjectTrigger): Promise<Omit<TabAccess, 'at'>> {

@@ -20,12 +20,12 @@ export default defineConfig({
       default_title: 'Open Translate Side',
     },
     commands: {
-      // Fires action.onClicked, which opens the side panel and injects (decision S5). Open-only:
-      // the panel closes with its own X (D11).
+      // Fires action.onClicked: it opens the side panel and injects (decision S5), or closes the panel
+      // when it is open in that window (M5-E10, replacing D11's open-only; src/shared/panel.ts).
       // Rebindable at chrome://extensions/shortcuts (ROADMAP §8 item 20).
       _execute_action: {
         suggested_key: { default: 'Alt+T' },
-        description: 'Open the Translate Side panel',
+        description: 'Open or close the Translate Side panel',
       },
     },
   },

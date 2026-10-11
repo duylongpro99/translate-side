@@ -32,7 +32,7 @@ export async function setupPanelBehavior(api: Browser): Promise<boolean> {
 
 /**
  * Open the panel for the tab, then inject. sidePanel.open needs the user gesture, so it is the
- * first call, with no await before it (S5). Open-only: a second click keeps the panel open (D11).
+ * first call, with no await before it (S5). Open-only: a second click keeps the panel open (the context menu; the action toggles, togglePanelAndInject).
  */
 export function openPanelAndInject(api: Browser, tab: TabRef | undefined): Promise<void> {
   const tabId = tab?.id;
@@ -42,10 +42,43 @@ export function openPanelAndInject(api: Browser, tab: TabRef | undefined): Promi
   return Promise.all([opened, injected]).then(() => undefined);
 }
 
+/** The worker's question to the panels: "is yours in this window? then close". */
+export const CLOSE_PANEL_MESSAGE = 'translate-side:close-panel';
+
+export interface ClosePanelRequest {
+  type: typeof CLOSE_PANEL_MESSAGE;
+  windowId: number | undefined;
+}
+
+export const isClosePanelRequest = (m: unknown): m is ClosePanelRequest => typeof m === 'object' && m !== null && (m as { type?: unknown }).type === CLOSE_PANEL_MESSAGE;
+
+/**
+ * Toolbar icon and Alt+T (M5-E10): opens the panel, or closes it when it is open in the tab's
+ * window. `sidePanel.open` needs the user gesture, so it is still the first call with no await
+ * before it (S5); the question "is a panel open here?" is sent in the same tick, ahead of the
+ * panel the open creates (which answers nothing for its first second, see sidepanel/toggle.ts).
+ * A panel that is open closes itself (sidePanel.close from Chrome 141, else window.close), so no
+ * Chrome version gate is needed. A panel that closed is not injected into.
+ */
+export function togglePanelAndInject(api: Browser, tab: TabRef | undefined): Promise<void> {
+  const tabId = tab?.id;
+  if (tabId === undefined) return Promise.resolve();
+  const opened = api.sidePanel?.open({ tabId }).catch(logError('sidePanel.open'));
+  const request: ClosePanelRequest = { type: CLOSE_PANEL_MESSAGE, windowId: tab?.windowId };
+  const closed = api.runtime.sendMessage(request).then(
+    (answer: unknown) => typeof answer === 'object' && answer !== null && (answer as { closed?: unknown }).closed === true,
+    () => false,
+  );
+  return Promise.all([opened, closed]).then(async ([, wasOpen]) => {
+    if (wasOpen) return;
+    await injectInto(api, tab ?? {}, 'gesture').then(() => undefined, logError('injection'));
+  });
+}
+
 /** Toolbar icon and Alt+T (_execute_action). Register synchronously at top level. */
 export function listenForActionClicks(api: Browser): void {
   api.action.onClicked.addListener((tab) => {
-    void openPanelAndInject(api, tab);
+    void togglePanelAndInject(api, tab);
   });
 }
 
