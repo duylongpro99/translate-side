@@ -1,0 +1,59 @@
+{
+ "genre": "technical documentation excerpt",
+ "audience": "programmers learning Rust, especially those new to memory management concepts",
+ "purpose": "explain the concept of ownership in Rust and introduce stack vs. heap memory basics",
+ "tone": "educational, encouraging, clear, uses 'we' implicitly via direct address ('your program')",
+ "glossary": [
+  {
+   "term": "Ownership",
+   "rendering": "Quyền sở hữu",
+   "note": "core Rust concept, standard translation"
+  },
+  {
+   "term": "Rust",
+   "rendering": "Rust",
+   "note": "programming language name, keep English"
+  },
+  {
+   "term": "garbage collection",
+   "rendering": "thu gom rác",
+   "note": "standard technical term in Vietnamese IT context"
+  },
+  {
+   "term": "allocate",
+   "rendering": "cấp phát",
+   "note": "memory allocation terminology"
+  },
+  {
+   "term": "free",
+   "rendering": "giải phóng",
+   "note": "memory freeing terminology"
+  },
+  {
+   "term": "compiler",
+   "rendering": "trình biên dịch",
+   "note": "standard term"
+  },
+  {
+   "term": "stack",
+   "rendering": "ngăn xếp",
+   "note": "data structure/memory region, standard translation"
+  },
+  {
+   "term": "heap",
+   "rendering": "bộ nhớ động",
+   "note": "often translated as 'bộ nhớ động' or kept as 'heap'; 'bộ nhớ động' is clearer for beginners"
+  },
+  {
+   "term": "last in, first out (LIFO)",
+   "rendering": "vào sau ra trước (LIFO)",
+   "note": "standard acronym expansion"
+  },
+  {
+   "term": "runtime",
+   "rendering": "thời gian chạy",
+   "note": "standard term"
+  }
+ ],
+ "language": "en"
+}

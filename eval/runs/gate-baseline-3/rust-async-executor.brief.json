@@ -1,0 +1,69 @@
+{
+ "genre": "technical tutorial",
+ "audience": "Rust developers learning asynchronous programming",
+ "purpose": "explain the concept of a Future executor and guide the reader to build one",
+ "tone": "educational, direct, uses 'we' for collaborative instruction",
+ "glossary": [
+  {
+   "term": "Executor",
+   "rendering": "Executor",
+   "note": "core concept, keep English"
+  },
+  {
+   "term": "Future",
+   "rendering": "Future",
+   "note": "core Rust type, keep English"
+  },
+  {
+   "term": "async function",
+   "rendering": "hàm async",
+   "note": "standard translation"
+  },
+  {
+   "term": ".await",
+   "rendering": ".await",
+   "note": "keyword/syntax, keep as is"
+  },
+  {
+   "term": "poll",
+   "rendering": "poll",
+   "note": "method name, keep English"
+  },
+  {
+   "term": "wake()",
+   "rendering": "wake()",
+   "note": "method name, keep English"
+  },
+  {
+   "term": "futures crate",
+   "rendering": "crate futures",
+   "note": "library name, keep English"
+  },
+  {
+   "term": "ArcWake trait",
+   "rendering": "trait ArcWake",
+   "note": "specific trait name, keep English"
+  },
+  {
+   "term": "Waker",
+   "rendering": "Waker",
+   "note": "struct name, keep English"
+  },
+  {
+   "term": "Cargo.toml",
+   "rendering": "Cargo.toml",
+   "note": "file name, keep as is"
+  },
+  {
+   "term": "channel",
+   "rendering": "kênh",
+   "note": "common term in concurrency"
+  },
+  {
+   "term": "task",
+   "rendering": "tác vụ",
+   "note": "standard translation for unit of work"
+  }
+ ],
+ "language": "en"
+}

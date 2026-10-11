@@ -1,0 +1,59 @@
+{
+ "genre": "technical Q&A / Stack Overflow answer",
+ "audience": "software developers and computer science students",
+ "purpose": "explain the concept of branch prediction and why sorted data improves performance in conditional loops",
+ "tone": "informal, educational, uses analogies and second-person perspective ('you')",
+ "glossary": [
+  {
+   "term": "Branch Prediction",
+   "rendering": "Dự đoán nhánh",
+   "note": "Core technical concept; standard translation"
+  },
+  {
+   "term": "branch instruction",
+   "rendering": "lệnh rẽ nhánh",
+   "note": "Technical term for assembly/CPU level operation"
+  },
+  {
+   "term": "if-statement",
+   "rendering": "câu lệnh if",
+   "note": "Keep 'if' as it is a code keyword; 'statement' translated"
+  },
+  {
+   "term": "processor",
+   "rendering": "bộ xử lý",
+   "note": "Standard hardware term"
+  },
+  {
+   "term": "execution",
+   "rendering": "thực thi",
+   "note": "Standard computing term"
+  },
+  {
+   "term": "inertia",
+   "rendering": "quán tính",
+   "note": "Physics analogy used in text"
+  },
+  {
+   "term": "sorted array",
+   "rendering": "mảng đã sắp xếp",
+   "note": "Key context from title"
+  },
+  {
+   "term": "unsorted array",
+   "rendering": "mảng chưa sắp xếp",
+   "note": "Key context from title"
+  },
+  {
+   "term": "iterations",
+   "rendering": "vòng lặp",
+   "note": "Refers to loop iterations in programming context"
+  },
+  {
+   "term": "data",
+   "rendering": "dữ liệu",
+   "note": "General term"
+  }
+ ],
+ "language": "en"
+}

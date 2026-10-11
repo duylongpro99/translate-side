@@ -1,0 +1,69 @@
+{
+ "genre": "technical blog post",
+ "audience": "Rust developers and programmers familiar with async concepts",
+ "purpose": "explain the syntax and zero-cost abstraction model of Rust's async-await feature",
+ "tone": "informative, conversational, uses 'we' to include the reader",
+ "glossary": [
+  {
+   "term": "async-await",
+   "rendering": "async-await",
+   "note": "core concept, keep English"
+  },
+  {
+   "term": "runtime",
+   "rendering": "runtime",
+   "note": "standard tech term in VN dev community"
+  },
+  {
+   "term": "I/O",
+   "rendering": "I/O",
+   "note": "abbreviation for Input/Output, keep English"
+  },
+  {
+   "term": "Future",
+   "rendering": "Future",
+   "note": "specific Rust type name, keep capitalized"
+  },
+  {
+   "term": ".await",
+   "rendering": ".await",
+   "note": "operator syntax, keep English"
+  },
+  {
+   "term": "? operator",
+   "rendering": "toán tử ?",
+   "note": "descriptive translation for clarity"
+  },
+  {
+   "term": "method chaining",
+   "rendering": "chuỗi phương thức",
+   "note": "common programming concept"
+  },
+  {
+   "term": "poll model",
+   "rendering": "mô hình poll",
+   "note": "keep 'poll' as it is a specific technical mechanism"
+  },
+  {
+   "term": "zero cost",
+   "rendering": "chi phí bằng không",
+   "note": "key selling point of Rust futures"
+  },
+  {
+   "term": "scheduling",
+   "rendering": "lập lịch",
+   "note": "contextual translation for task scheduling"
+  },
+  {
+   "term": "lazy",
+   "rendering": "lazy",
+   "note": "often kept in English or translated as 'lười', but 'lazy' is common in CS contexts; using 'lazy' here for consistency with 'zero cost' style or translate as 'lười' if preferred. Let's use 'lazy' as it refers to evaluation strategy."
+  },
+  {
+   "term": "JS",
+   "rendering": "JS",
+   "note": "abbreviation for JavaScript"
+  }
+ ],
+ "language": "en"
+}

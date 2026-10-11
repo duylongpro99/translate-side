@@ -1,0 +1,59 @@
+{
+ "genre": "technical documentation / programming guide",
+ "audience": "Rust developers learning error handling patterns",
+ "purpose": "explain when to use panic! versus returning Result in Rust code",
+ "tone": "educational, clear, direct, uses second person 'you'",
+ "glossary": [
+  {
+   "term": "panic!",
+   "rendering": "panic!",
+   "note": "Rust macro keyword, keep English"
+  },
+  {
+   "term": "Result",
+   "rendering": "Result",
+   "note": "Rust enum type, keep English"
+  },
+  {
+   "term": "Err",
+   "rendering": "Err",
+   "note": "Variant of Result enum, keep English"
+  },
+  {
+   "term": "unwrap",
+   "rendering": "unwrap",
+   "note": "Rust method name, keep English"
+  },
+  {
+   "term": "expect",
+   "rendering": "expect",
+   "note": "Rust method name, keep English"
+  },
+  {
+   "term": "calling code",
+   "rendering": "mã gọi hàm",
+   "note": "contextual translation for the caller"
+  },
+  {
+   "term": "recover",
+   "rendering": "phục hồi",
+   "note": "standard term for error recovery"
+  },
+  {
+   "term": "unrecoverable",
+   "rendering": "không thể phục hồi",
+   "note": "opposite of recoverable"
+  },
+  {
+   "term": "prototype code",
+   "rendering": "mã nguyên mẫu",
+   "note": "code used for prototyping"
+  },
+  {
+   "term": "tests",
+   "rendering": "kiểm thử",
+   "note": "software testing context"
+  }
+ ],
+ "language": "en"
+}

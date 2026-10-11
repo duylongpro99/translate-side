@@ -1,0 +1,59 @@
+{
+ "genre": "comic short story excerpt",
+ "audience": "general readers of classic British humor fiction",
+ "purpose": "to entertain through witty narration and character description",
+ "tone": "witty, informal, conversational, uses first-person narrator voice with slang",
+ "glossary": [
+  {
+   "term": "chappie",
+   "rendering": "anh chàng",
+   "note": "informal British slang for a man"
+  },
+  {
+   "term": "cove",
+   "rendering": "gã",
+   "note": "informal British slang for a man"
+  },
+  {
+   "term": "soft snap",
+   "rendering": "việc nhẹ lương cao",
+   "note": "idiom meaning an easy job or situation"
+  },
+  {
+   "term": "go to par",
+   "rendering": "sống lâu trăm tuổi",
+   "note": "idiomatic expression implying longevity/health"
+  },
+  {
+   "term": "kicked at",
+   "rendering": "phàn nàn về",
+   "note": "slang for complaining or objecting to something"
+  },
+  {
+   "term": "harry him",
+   "rendering": "làm phiền anh ấy",
+   "note": "verb meaning to pester or annoy"
+  },
+  {
+   "term": "jute business",
+   "rendering": "ngành đay",
+   "note": "specific industry term central to the plot"
+  },
+  {
+   "term": "captain of industry",
+   "rendering": "đại gia công nghiệp",
+   "note": "standard translation for this idiom"
+  },
+  {
+   "term": "ornithologist",
+   "rendering": "nhà điểu học",
+   "note": "technical term for bird scientist"
+  },
+  {
+   "term": "Mr. Worple",
+   "rendering": "Ông Worple",
+   "note": "character name, keep English surname"
+  }
+ ],
+ "language": "en"
+}

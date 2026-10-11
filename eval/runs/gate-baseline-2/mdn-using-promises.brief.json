@@ -1,0 +1,64 @@
+{
+ "genre": "technical documentation",
+ "audience": "JavaScript developers learning asynchronous programming",
+ "purpose": "explain the concept of Promises and how to use them for chaining asynchronous operations",
+ "tone": "educational, clear, uses 'we' and direct address",
+ "glossary": [
+  {
+   "term": "Promise",
+   "rendering": "Promise",
+   "note": "core JavaScript object type, usually kept in English"
+  },
+  {
+   "term": "asynchronous operation",
+   "rendering": "thao tác bất đồng bộ",
+   "note": "standard technical term"
+  },
+  {
+   "term": "callbacks",
+   "rendering": "callback",
+   "note": "commonly used as loanword in Vietnamese dev context"
+  },
+  {
+   "term": "createAudioFileAsync()",
+   "rendering": "createAudioFileAsync()",
+   "note": "function name, keep exact"
+  },
+  {
+   "term": "then()",
+   "rendering": "then()",
+   "note": "method name, keep exact"
+  },
+  {
+   "term": "chaining",
+   "rendering": "chuỗi (promise)",
+   "note": "concept of linking promises"
+  },
+  {
+   "term": "callback hell",
+   "rendering": "địa ngục callback",
+   "note": "widely recognized metaphorical term"
+  },
+  {
+   "term": "doSomething()",
+   "rendering": "doSomething()",
+   "note": "placeholder function name, keep exact"
+  },
+  {
+   "term": "audioSettings",
+   "rendering": "audioSettings",
+   "note": "variable name, keep exact"
+  },
+  {
+   "term": "successCallback",
+   "rendering": "successCallback",
+   "note": "variable/function name, keep exact"
+  },
+  {
+   "term": "failureCallback",
+   "rendering": "failureCallback",
+   "note": "variable/function name, keep exact"
+  }
+ ],
+ "language": "en"
+}

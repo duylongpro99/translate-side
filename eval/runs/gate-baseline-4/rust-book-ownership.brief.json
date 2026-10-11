@@ -1,0 +1,69 @@
+{
+ "genre": "technical documentation / programming tutorial",
+ "audience": "programmers learning Rust, likely with some prior experience in other languages",
+ "purpose": "explain the concept of ownership in Rust and how it differs from garbage collection or manual memory management",
+ "tone": "educational, encouraging, clear, uses 'we' and direct address ('you')",
+ "glossary": [
+  {
+   "term": "Ownership",
+   "rendering": "Quyền sở hữu",
+   "note": "core Rust concept, standard translation"
+  },
+  {
+   "term": "Rust",
+   "rendering": "Rust",
+   "note": "proper noun, keep English"
+  },
+  {
+   "term": "garbage collection",
+   "rendering": "thu gom rác",
+   "note": "standard technical term"
+  },
+  {
+   "term": "allocate",
+   "rendering": "cấp phát",
+   "note": "memory allocation context"
+  },
+  {
+   "term": "free",
+   "rendering": "giải phóng",
+   "note": "memory freeing context"
+  },
+  {
+   "term": "compiler",
+   "rendering": "trình biên dịch",
+   "note": "standard term"
+  },
+  {
+   "term": "stack",
+   "rendering": "ngăn xếp",
+   "note": "data structure/memory area"
+  },
+  {
+   "term": "heap",
+   "rendering": "bộ nhớ heap",
+   "note": "often kept as 'heap' or translated as 'đống', but 'bộ nhớ heap' is clearer for beginners"
+  },
+  {
+   "term": "last in, first out (LIFO)",
+   "rendering": "vào sau ra trước (LIFO)",
+   "note": "keep acronym LIFO"
+  },
+  {
+   "term": "runtime",
+   "rendering": "thời gian chạy",
+   "note": "execution time"
+  },
+  {
+   "term": "safe",
+   "rendering": "an toàn",
+   "note": "memory safety context"
+  },
+  {
+   "term": "efficient",
+   "rendering": "hiệu quả",
+   "note": "performance context"
+  }
+ ],
+ "language": "en"
+}

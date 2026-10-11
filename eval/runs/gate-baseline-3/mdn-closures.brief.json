@@ -1,0 +1,54 @@
+{
+ "genre": "technical documentation",
+ "audience": "JavaScript developers and learners",
+ "purpose": "explain the concept of closures and lexical scoping in JavaScript with examples",
+ "tone": "educational, clear, direct",
+ "glossary": [
+  {
+   "term": "Closures",
+   "rendering": "Closures",
+   "note": "core concept, keep English"
+  },
+  {
+   "term": "lexical environment",
+   "rendering": "môi trường từ vựng",
+   "note": "standard translation for this technical term"
+  },
+  {
+   "term": "outer scope",
+   "rendering": "phạm vi ngoài",
+   "note": "commonly translated as phạm vi ngoài or scope bên ngoài"
+  },
+  {
+   "term": "Lexical scoping",
+   "rendering": "Phạm vi từ vựng",
+   "note": "standard translation for lexical scoping"
+  },
+  {
+   "term": "inner function",
+   "rendering": "hàm lồng trong",
+   "note": "clearer than 'hàm nội bộ' in this context"
+  },
+  {
+   "term": "parent function",
+   "rendering": "hàm cha",
+   "note": "standard terminology"
+  },
+  {
+   "term": "local variable",
+   "rendering": "biến cục bộ",
+   "note": "standard terminology"
+  },
+  {
+   "term": "source code",
+   "rendering": "mã nguồn",
+   "note": "standard terminology"
+  },
+  {
+   "term": "parser",
+   "rendering": "trình phân tích cú pháp",
+   "note": "or just 'parser', but full term is clearer for beginners"
+  }
+ ],
+ "language": "en"
+}

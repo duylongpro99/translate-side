@@ -1,0 +1,64 @@
+{
+ "genre": "technical blog post / programming guide",
+ "audience": "Go programmers, especially beginners or those transitioning from other languages",
+ "purpose": "To explain that errors in Go are values and demonstrate how treating them as such leads to cleaner code flow compared to repetitive error checking.",
+ "tone": "Informative, persuasive, slightly corrective but respectful, uses 'we' for the Go team/community",
+ "glossary": [
+  {
+   "term": "Errors are values",
+   "rendering": "Lỗi là giá trị",
+   "note": "Core concept/title of the article; keep consistent"
+  },
+  {
+   "term": "if err != nil",
+   "rendering": "if err != nil",
+   "note": "Code snippet; keep English syntax"
+  },
+  {
+   "term": "try-catch",
+   "rendering": "try-catch",
+   "note": "Standard term in other languages; usually kept in English in Vietnamese tech writing"
+  },
+  {
+   "term": "bufio package",
+   "rendering": "gói bufio",
+   "note": "Specific Go standard library package name"
+  },
+  {
+   "term": "Scanner",
+   "rendering": "Scanner",
+   "note": "Type name in Go; keep English"
+  },
+  {
+   "term": "Scan method",
+   "rendering": "phương thức Scan",
+   "note": "Method name; keep English"
+  },
+  {
+   "term": "I/O",
+   "rendering": "I/O",
+   "note": "Input/Output; commonly used abbreviation"
+  },
+  {
+   "term": "boolean",
+   "rendering": "kiểu boolean",
+   "note": "Data type; often kept as boolean or translated as logic value, but boolean is common in VN dev context"
+  },
+  {
+   "term": "Client code",
+   "rendering": "mã phía client",
+   "note": "Refers to the calling code/user code"
+  },
+  {
+   "term": "nil check",
+   "rendering": "kiểm tra nil",
+   "note": "Common phrase in Go development"
+  },
+  {
+   "term": "flow of control",
+   "rendering": "luồng điều khiển",
+   "note": "Technical term for program execution order"
+  }
+ ],
+ "language": "en"
+}

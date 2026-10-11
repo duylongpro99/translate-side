@@ -1,0 +1,64 @@
+{
+ "genre": "technical blog post",
+ "audience": "Go programmers, especially those new to the language",
+ "purpose": "To explain that errors in Go are values and should be handled programmatically rather than just checked mechanically",
+ "tone": "informative, persuasive, uses 'we' for the Go team",
+ "glossary": [
+  {
+   "term": "Errors are values",
+   "rendering": "Lỗi là giá trị",
+   "note": "Core concept/title phrase"
+  },
+  {
+   "term": "Go",
+   "rendering": "Go",
+   "note": "Programming language name, keep English"
+  },
+  {
+   "term": "if err != nil",
+   "rendering": "if err != nil",
+   "note": "Code snippet, keep as is"
+  },
+  {
+   "term": "try-catch",
+   "rendering": "try-catch",
+   "note": "Common programming term, often kept in English"
+  },
+  {
+   "term": "bufio package",
+   "rendering": "gói bufio",
+   "note": "Standard library package name"
+  },
+  {
+   "term": "Scanner",
+   "rendering": "Scanner",
+   "note": "Type name, keep English"
+  },
+  {
+   "term": "Scan method",
+   "rendering": "phương thức Scan",
+   "note": "Method name, keep English"
+  },
+  {
+   "term": "I/O",
+   "rendering": "I/O",
+   "note": "Input/Output, standard abbreviation"
+  },
+  {
+   "term": "boolean",
+   "rendering": "boolean",
+   "note": "Data type, often kept or translated as kiểu boolean"
+  },
+  {
+   "term": "nil check",
+   "rendering": "kiểm tra nil",
+   "note": "Concept of checking against nil value"
+  },
+  {
+   "term": "flow of control",
+   "rendering": "luồng điều khiển",
+   "note": "Technical term for program execution order"
+  }
+ ],
+ "language": "en"
+}

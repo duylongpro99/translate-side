@@ -1,0 +1,59 @@
+{
+ "genre": "technical blog post / Stack Overflow answer",
+ "audience": "programmers and computer science students",
+ "purpose": "explain the concept of branch prediction using an analogy and show how sorted data improves performance by making branches predictable",
+ "tone": "conversational, educational, uses analogies and direct address ('You')",
+ "glossary": [
+  {
+   "term": "Branch Prediction",
+   "rendering": "Dự đoán nhánh",
+   "note": "Core technical concept; standard translation in Vietnamese CS literature"
+  },
+  {
+   "term": "branch instruction",
+   "rendering": "lệnh rẽ nhánh",
+   "note": "Technical term for assembly/CPU level branching"
+  },
+  {
+   "term": "if-statement",
+   "rendering": "câu lệnh if",
+   "note": "Keep 'if' as it is a code keyword; use 'câu lệnh' or 'cấu trúc điều kiện'"
+  },
+  {
+   "term": "processor",
+   "rendering": "bộ xử lý",
+   "note": "Standard term for CPU/Processor"
+  },
+  {
+   "term": "execution",
+   "rendering": "thực thi",
+   "note": "Standard term for running instructions"
+  },
+  {
+   "term": "inertia",
+   "rendering": "quán tính",
+   "note": "Physical concept used in the train analogy"
+  },
+  {
+   "term": "switch",
+   "rendering": "chuyển mạch đường ray",
+   "note": "Contextual meaning in railroad analogy, not electrical switch"
+  },
+  {
+   "term": "sorted array",
+   "rendering": "mảng đã sắp xếp",
+   "note": "Data structure state"
+  },
+  {
+   "term": "unsorted array",
+   "rendering": "mảng chưa sắp xếp",
+   "note": "Data structure state"
+  },
+  {
+   "term": "iterations",
+   "rendering": "vòng lặp",
+   "note": "Refers to loop iterations in the code example"
+  }
+ ],
+ "language": "en"
+}

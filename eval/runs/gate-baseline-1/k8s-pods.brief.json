@@ -1,0 +1,69 @@
+{
+ "genre": "technical documentation",
+ "audience": "software engineers and DevOps practitioners using Kubernetes",
+ "purpose": "define the concept of a Pod, explain its components, and describe common usage patterns in Kubernetes",
+ "tone": "formal, precise, instructional, uses 'you' for direct address",
+ "glossary": [
+  {
+   "term": "Pod",
+   "rendering": "Pod",
+   "note": "core Kubernetes concept, keep English"
+  },
+  {
+   "term": "Kubernetes",
+   "rendering": "Kubernetes",
+   "note": "proper noun, keep English"
+  },
+  {
+   "term": "container",
+   "rendering": "container",
+   "note": "standard tech term, often kept in English or translated as 'bộ chứa', but 'container' is widely accepted in VN dev context"
+  },
+  {
+   "term": "init container",
+   "rendering": "init container",
+   "note": "specific type of container, keep English"
+  },
+  {
+   "term": "ephemeral container",
+   "rendering": "ephemeral container",
+   "note": "specific type of container, keep English"
+  },
+  {
+   "term": "logical host",
+   "rendering": "máy chủ logic",
+   "note": "conceptual analogy"
+  },
+  {
+   "term": "Linux namespaces",
+   "rendering": "namespace Linux",
+   "note": "technical term, namespace often kept or transliterated"
+  },
+  {
+   "term": "cgroups",
+   "rendering": "cgroup",
+   "note": "control groups, keep acronym"
+  },
+  {
+   "term": "filesystem volumes",
+   "rendering": "volume hệ thống tệp",
+   "note": "storage abstraction"
+  },
+  {
+   "term": "co-located",
+   "rendering": "đồng vị trí",
+   "note": "running on same node/host"
+  },
+  {
+   "term": "co-scheduled",
+   "rendering": "đồng lịch trình",
+   "note": "scheduled together"
+  },
+  {
+   "term": "one-container-per-Pod",
+   "rendering": "một container trên mỗi Pod",
+   "note": "common pattern description"
+  }
+ ],
+ "language": "en"
+}

@@ -1,0 +1,97 @@
+{
+ "judge": {
+  "model": "ds/deepseek-v4-pro",
+  "prompt": "judge@1",
+  "effort": "medium"
+ },
+ "config": {
+  "provider": "apibox",
+  "model": "qwen3.8-flash",
+  "quirks": {
+   "reasoning": {
+    "control": "effort",
+    "lowest": "off",
+    "reserveTokens": 0,
+    "byChunk": [
+     {
+      "fromChunk": 1,
+      "lowest": "minimal",
+      "reserveTokens": 6000
+     }
+    ]
+   },
+   "maxTokensParam": "max_completion_tokens"
+  },
+  "strategy": "contextual",
+  "strategyVersion": 2,
+  "translatePrompt": "translate@2",
+  "chunkTokens": 400,
+  "concurrency": 2,
+  "set": "eval",
+  "target": "vi"
+ },
+ "marginRule": "max(2 × sample SD of the 5 run means, 0.1)",
+ "dimensions": {
+  "fidelity": {
+   "baseline": 4.226086956521739,
+   "sd": 0.13187609467915726,
+   "margin": 0.2637521893583145,
+   "m2c400": 4.043478260869565,
+   "runs": [
+    4.173913043478261,
+    4.217391304347826,
+    4.304347826086956,
+    4.391304347826087,
+    4.043478260869565
+   ]
+  },
+  "naturalness": {
+   "baseline": 3.904347826086956,
+   "sd": 0.09425862342903828,
+   "margin": 0.18851724685807655,
+   "m2c400": 3.9130434782608696,
+   "runs": [
+    3.8260869565217392,
+    3.869565217391304,
+    3.9565217391304346,
+    4.043478260869565,
+    3.8260869565217392
+   ]
+  },
+  "tone": {
+   "baseline": 4.6,
+   "sd": 0.13187609467915712,
+   "margin": 0.26375218935831424,
+   "m2c400": 4.6521739130434785,
+   "runs": [
+    4.478260869565218,
+    4.478260869565218,
+    4.739130434782608,
+    4.739130434782608,
+    4.565217391304348
+   ]
+  },
+  "terminology": {
+   "baseline": 4.478260869565217,
+   "sd": 0.06874516652539944,
+   "margin": 0.13749033305079889,
+   "m2c400": 4.434782608695652,
+   "runs": [
+    4.478260869565218,
+    4.434782608695652,
+    4.521739130434782,
+    4.565217391304348,
+    4.391304347826087
+   ]
+  }
+ },
+ "baselineRuns": [
+  "eval/runs/gate-baseline-1",
+  "eval/runs/gate-baseline-2",
+  "eval/runs/gate-baseline-3",
+  "eval/runs/gate-baseline-4",
+  "eval/runs/gate-baseline-5"
+ ],
+ "m2c400Run": "eval/runs/baseline-contextual-translate2-qwen3.8-flash-c400",
+ "createdAt": "2026-10-11T14:44:59.922Z"
+}

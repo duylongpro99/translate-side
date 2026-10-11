@@ -1,0 +1,59 @@
+{
+ "genre": "technical blog post",
+ "audience": "software developers and computer science students",
+ "purpose": "explain the concept of branch prediction and why sorted data improves performance in loops with conditionals",
+ "tone": "conversational, educational, uses analogies and direct address ('You')",
+ "glossary": [
+  {
+   "term": "Branch Prediction",
+   "rendering": "dự đoán nhánh",
+   "note": "core technical concept"
+  },
+  {
+   "term": "branch instruction",
+   "rendering": "lệnh rẽ nhánh",
+   "note": "low-level CPU term"
+  },
+  {
+   "term": "if-statement",
+   "rendering": "câu lệnh if",
+   "note": "common programming construct"
+  },
+  {
+   "term": "processor",
+   "rendering": "bộ xử lý",
+   "note": "standard hardware term"
+  },
+  {
+   "term": "halt execution",
+   "rendering": "dừng thực thi",
+   "note": "CPU state description"
+  },
+  {
+   "term": "inertia",
+   "rendering": "quán tính",
+   "note": "physics analogy used for trains"
+  },
+  {
+   "term": "sorted array",
+   "rendering": "mảng đã sắp xếp",
+   "note": "data structure context"
+  },
+  {
+   "term": "unsorted array",
+   "rendering": "mảng chưa sắp xếp",
+   "note": "data structure context"
+  },
+  {
+   "term": "iterations",
+   "rendering": "vòng lặp",
+   "note": "loop execution count"
+  },
+  {
+   "term": "evenly distributed",
+   "rendering": "phân bố đều",
+   "note": "statistical property of data"
+  }
+ ],
+ "language": "en"
+}

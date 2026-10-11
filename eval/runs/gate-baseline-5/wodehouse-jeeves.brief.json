@@ -1,0 +1,69 @@
+{
+ "genre": "comic short story excerpt",
+ "audience": "general readers of classic British humor fiction",
+ "purpose": "to entertain through witty narration and character description",
+ "tone": "conversational, humorous, uses informal British slang and first-person narrator voice",
+ "glossary": [
+  {
+   "term": "chappie",
+   "rendering": "anh chàng",
+   "note": "informal British term for a man; keep casual tone"
+  },
+  {
+   "term": "cove",
+   "rendering": "gã",
+   "note": "slang for a man; implies slightly dismissive or humorous view"
+  },
+  {
+   "term": "soft snap",
+   "rendering": "việc nhẹ lương cao",
+   "note": "idiom meaning an easy job with good pay"
+  },
+  {
+   "term": "go to par",
+   "rendering": "sống lâu trăm tuổi",
+   "note": "golf metaphor for living a long life; adapt to Vietnamese idiom"
+  },
+  {
+   "term": "kicked at",
+   "rendering": "phàn nàn về",
+   "note": "colloquial expression for complaining about something"
+  },
+  {
+   "term": "harry him",
+   "rendering": "làm phiền anh ấy",
+   "note": "to pester or annoy persistently"
+  },
+  {
+   "term": "jute business",
+   "rendering": "nghề buôn đay",
+   "note": "specific industry mentioned; translate literally"
+  },
+  {
+   "term": "captain of industry",
+   "rendering": "đại gia công nghiệp",
+   "note": "standard translation for this phrase"
+  },
+  {
+   "term": "put the cat out",
+   "rendering": "thả mèo ra ngoài",
+   "note": "British idiom for closing up shop/home for the night"
+  },
+  {
+   "term": "ornithologist",
+   "rendering": "nhà điểu học",
+   "note": "scientific term for bird expert"
+  },
+  {
+   "term": "American Birds",
+   "rendering": "Các loài chim Mỹ",
+   "note": "title of a book; translate descriptively"
+  },
+  {
+   "term": "More American Birds",
+   "rendering": "Thêm các loài chim Mỹ",
+   "note": "sequel title; maintain parallel structure"
+  }
+ ],
+ "language": "en"
+}

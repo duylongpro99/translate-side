@@ -1,0 +1,69 @@
+{
+ "genre": "technical programming guide (Rust)",
+ "audience": "software developers learning Rust error handling",
+ "purpose": "explain when to use panic! versus returning Result in Rust code",
+ "tone": "educational, direct, uses second-person 'you', slightly informal",
+ "glossary": [
+  {
+   "term": "panic!",
+   "rendering": "panic!",
+   "note": "Rust macro keyword, keep English"
+  },
+  {
+   "term": "Result",
+   "rendering": "Result",
+   "note": "Rust enum type, keep English"
+  },
+  {
+   "term": "Err",
+   "rendering": "Err",
+   "note": "Rust enum variant, keep English"
+  },
+  {
+   "term": "unwrap",
+   "rendering": "unwrap",
+   "note": "Rust method name, keep English"
+  },
+  {
+   "term": "expect",
+   "rendering": "expect",
+   "note": "Rust method name, keep English"
+  },
+  {
+   "term": "calling code",
+   "rendering": "mã gọi hàm",
+   "note": "contextual term for the caller"
+  },
+  {
+   "term": "recover",
+   "rendering": "phục hồi",
+   "note": "standard translation for error recovery"
+  },
+  {
+   "term": "unrecoverable",
+   "rendering": "không thể phục hồi",
+   "note": "adjective describing error state"
+  },
+  {
+   "term": "prototype code",
+   "rendering": "mã nguyên mẫu",
+   "note": "standard term for prototyping"
+  },
+  {
+   "term": "robust error-handling",
+   "rendering": "xử lý lỗi mạnh mẽ",
+   "note": "descriptive phrase"
+  },
+  {
+   "term": "placeholder",
+   "rendering": "chỗ giữ chỗ",
+   "note": "or 'giữ chỗ', standard UI/dev term"
+  },
+  {
+   "term": "functionality under test",
+   "rendering": "chức năng đang được kiểm thử",
+   "note": "testing context"
+  }
+ ],
+ "language": "en"
+}

@@ -1,0 +1,69 @@
+{
+ "genre": "comic short story excerpt",
+ "audience": "general readers of British humor literature",
+ "purpose": "entertain through witty narration and character quirks",
+ "tone": "witty, informal, first-person narrative with slang",
+ "glossary": [
+  {
+   "term": "chappie",
+   "rendering": "anh chàng",
+   "note": "British slang for man; keep informal"
+  },
+  {
+   "term": "cove",
+   "rendering": "gã",
+   "note": "slang for a man; slightly derogatory or casual"
+  },
+  {
+   "term": "soft snap",
+   "rendering": "việc nhẹ lương cao",
+   "note": "idiom meaning an easy job/life"
+  },
+  {
+   "term": "go to par",
+   "rendering": "sống lâu trăm tuổi",
+   "note": "idiom implying longevity; adapt to Vietnamese equivalent"
+  },
+  {
+   "term": "kicked at",
+   "rendering": "phàn nàn về",
+   "note": "slang for complaining about something"
+  },
+  {
+   "term": "harry",
+   "rendering": "làm phiền",
+   "note": "to pester or annoy"
+  },
+  {
+   "term": "jute business",
+   "rendering": "nghề buôn đay",
+   "note": "specific industry term"
+  },
+  {
+   "term": "captain of industry",
+   "rendering": "đại gia công nghiệp",
+   "note": "wealthy industrialist"
+  },
+  {
+   "term": "ornithologist",
+   "rendering": "nhà điểu học",
+   "note": "scientific term for bird expert"
+  },
+  {
+   "term": "American Birds",
+   "rendering": "Các loài chim Mỹ",
+   "note": "book title; translate descriptively"
+  },
+  {
+   "term": "More American Birds",
+   "rendering": "Thêm các loài chim Mỹ",
+   "note": "sequel book title"
+  },
+  {
+   "term": "portrait-painting",
+   "rendering": "vẽ chân dung",
+   "note": "core activity discussed"
+  }
+ ],
+ "language": "en"
+}

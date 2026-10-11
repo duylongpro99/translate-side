@@ -1,0 +1,179 @@
+{
+ "judgeModel": "ds/deepseek-v4-pro",
+ "prompt": "judge@1",
+ "at": "2026-10-11T14:18:06.992Z",
+ "scores": {
+  "bierce-devils-dictionary": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 3,
+   "comment": "Entry [1] mistranslates BORE as KẸT and reverses the definition (talks when you want him to listen), while CYNIC as THUẬT THẾ is not standard terminology; the other entries are mostly faithful and satirical."
+  },
+  "docker-multistage": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch trung thành và thuật ngữ nhất quán; điểm yếu chính là một vài cụm Anh hóa như 'image production', 'script build' và câu dài ở [7] còn hơi lủng củng."
+  },
+  "go-errors-are-values": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch trung thành và giữ tốt các thuật ngữ, nhưng có thêm các phần chú giải trong ngoặc không có trong nguồn và một vài cụm như 'lập trình hóa' còn hơi dịch theo kiểu word-for-word."
+  },
+  "go-gofmt": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The translation is faithful and readable, but a few idioms are simplified or calqued (e.g. 'hacking away' becomes 'khi đang code', and 'mechanical changes' is rendered as 'thay đổi cơ học')."
+  },
+  "go-share-memory": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "The translation is accurate and preserves the technical register well; the main weakness is some literal renderings of technical terms such as 'nguyên thủy đồng thời' and 'an toàn cho luồng', which are understandable but less idiomatic in Vietnamese technical writing."
+  },
+  "go2-here-we-come": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is accurate and fluent overall, with minor literal renderings like 'quá trình suy nghĩ' and 'một cú nổ lớn' that slightly reduce naturalness."
+  },
+  "k8s-pods": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The meaning is fully preserved and terms are consistent, but a few phrasings like 'Pod (nhóm chứa)' and the double 'có thể' in segment 2 read as slightly translated rather than fully native."
+  },
+  "mdn-closures": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Bản dịch tốt và mạch lạc; điểm yếu chính là chú thích 'đóng' cho 'Closure' không tự nhiên/không chuẩn và 'created' bị chuyển thành 'được khai báo', làm lệch nhẹ sắc thái kỹ thuật."
+  },
+  "mdn-using-promises": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The main weakness is unnatural translationese in words like 'người tiêu thụ'/'tiêu thụ' for consumers/consumption, plus a few added explanatory glosses; technical terms and code formatting are otherwise intact."
+  },
+  "pep20-zen": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The aphorisms are clear and mostly accurate, but some nuances are flattened, such as 'The Zen of Python' becoming 'Triết lý của Python' and 'succinctly channels' being simplified; a few phrases like 'từ chối cám dỗ' are slightly literal or awkward."
+  },
+  "rust-async-await-primer": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is faithful and consistent, but a few renderings such as the heading 'Futures zero-cost' and 'Bạn chỉ cần đơn giản viết' read like translationese."
+  },
+  "rust-async-ecosystem": {
+   "fidelity": 5,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "No notable weaknesses; the translation is faithful, fluent, and preserves the announcement tone and technical terms."
+  },
+  "rust-async-executor": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Bản dịch giữ đúng ý và cấu trúc, nhưng còn nhiều chỗ dịch sát hoặc chú thích thừa như 'Future (tương lai)', 'Waker (báo thức)', 'Executor của Future' khiến văn phong kém tự nhiên."
+  },
+  "rust-book-ownership": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is fluent and accurate overall, but fidelity is slightly lowered by an added explanatory parenthetical '(ngôn ngữ lập trình)' and by rendering 'regularly looks' as 'tự động tìm kiếm', which loses the nuance of frequency."
+  },
+  "rust-book-panic": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "The translation is accurate overall but adds inline parenthetical glosses not present in the source (for panic!, Result, Err), and it is slightly inconsistent in rendering 'test' as both 'test' and 'kiểm thử'."
+  },
+  "so-branch-prediction": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 5,
+   "terminology": 3,
+   "comment": "The untranslated English word 'appropriately' in [4] is the main flaw; 'lái xe' is used for a train driver, and 'instruction' is rendered inconsistently as both 'lệnh' and 'chỉ thị'."
+  },
+  "so-regex-html": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The main weakness is translationese in a few phrases, especially “làm tôi 'crack' (phá vỡ)”, which literalizes “crack” and weakens the emphatic, sarcastic voice; overall meaning and register are well preserved."
+  },
+  "swift-modest-proposal": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Main weakness is the final clause: 'there will ever be' is rendered as 'sẽ luôn có' (will always be), shifting the meaning; a few phrases like 'căn bệnh tốn kém' are slightly awkward."
+  },
+  "wodehouse-jeeves": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 3,
+   "terminology": 4,
+   "comment": "The main weakness is naturalness: mixed-language phrasing like “I’ve tìm hiểu” and “nghề Art” plus some translationese undermine an otherwise faithful, mostly idiomatic rendering; a few idioms are slightly shifted, such as “soft snap” becoming “việc nhẹ lương cao”."
+  },
+  "wp-beans": {
+   "fidelity": 5,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "No major weaknesses; the translation is faithful, fluent, and retains the playful yet cautionary tone of the source."
+  },
+  "wp-dont-bite-newcomers": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Very accurate and fluent overall; only slight shift: 'valuable contributors' is rendered as 'đóng góp giá trị' (valuable contributions) instead of 'người đóng góp giá trị'."
+  },
+  "wp-not-a-dictionary": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is accurate and uses standard Vietnamese Wikipedia terms, but a few phrases are slightly literal, especially 'Các bài hoàn chỉnh mà... phát triển thành rất khác biệt...' in segment 2."
+  },
+  "wp-template-regulars": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 3,
+   "comment": "The translation reads fluently and keeps the register, but 'template' is rendered non-standardly for Vietnamese Wikipedia (e.g., 'mẫu tin nhắn' instead of 'bản mẫu') and slightly inconsistently; 'vô tình' also adds a nuance not explicit in the source."
+  }
+ },
+ "failed": [],
+ "usage": {
+  "input": 37062,
+  "cachedInput": 16000,
+  "output": 102785
+ },
+ "costUsd": 0.14517708000000001,
+ "reasoning": {
+  "effort": "medium",
+  "reserveTokens": 16000
+ }
+}

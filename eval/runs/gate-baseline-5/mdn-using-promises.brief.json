@@ -1,0 +1,49 @@
+{
+ "genre": "technical documentation",
+ "audience": "JavaScript developers",
+ "purpose": "explain the concept of Promises and how to use them for asynchronous operations, contrasting with callback patterns",
+ "tone": "informative, clear, uses 'we' and direct address",
+ "glossary": [
+  {
+   "term": "Promise",
+   "rendering": "Promise",
+   "note": "core JavaScript object, keep English"
+  },
+  {
+   "term": "asynchronous operation",
+   "rendering": "thao tác bất đồng bộ",
+   "note": "standard technical term"
+  },
+  {
+   "term": "callback",
+   "rendering": "callback",
+   "note": "commonly kept in English in Vietnamese dev docs"
+  },
+  {
+   "term": "chaining",
+   "rendering": "chuỗi (promise)",
+   "note": "refers to chaining promises; 'chuỗi' is common context"
+  },
+  {
+   "term": "then",
+   "rendering": "then",
+   "note": "method name, keep English"
+  },
+  {
+   "term": "callback hell",
+   "rendering": "địa ngục callback",
+   "note": "widely used metaphorical term in VN dev community"
+  },
+  {
+   "term": "consumption",
+   "rendering": "sử dụng",
+   "note": "context: consuming/using a promise"
+  },
+  {
+   "term": "createAudioFileAsync",
+   "rendering": "createAudioFileAsync",
+   "note": "function name, keep as-is"
+  }
+ ],
+ "language": "en"
+}
