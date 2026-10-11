@@ -327,7 +327,16 @@ async function livePass(cfg: GateConfig, dir: string, deadline: number, budgetUs
   const summary = readJson<GateSummary>(summaryFile);
   if (summary?.total.costUsd !== undefined && summary.total.costUsd !== null) translateUsd = summary.total.costUsd;
   const judgeFile = path.join(abs, 'judge.json');
-  const judgeCost = (): number => readJson<{ costUsd: number | null }>(judgeFile)?.costUsd ?? 0;
+  // judge.ts rewrites judge.json after every passage: a read caught mid-write keeps the last cost seen.
+  let lastJudgeCost = 0;
+  const judgeCost = (): number => {
+    try {
+      lastJudgeCost = readJson<{ costUsd: number | null }>(judgeFile)?.costUsd ?? lastJudgeCost;
+    } catch {
+      // partial file
+    }
+    return lastJudgeCost;
+  };
   if (error === undefined && summary !== undefined) {
     const jr = await runScript('scripts/eval-judge.mjs', [abs], deadline, () => (translateUsd + judgeCost() > budgetUsd ? 'spend cap' : undefined));
     if (jr.killed) error = jr.killed === 'timeout' ? `timed out while judging (${((deadline - t0) / 60000).toFixed(0)} min)` : `stopped at the spend cap while judging ($${(translateUsd + judgeCost()).toFixed(4)} > $${budgetUsd.toFixed(4)})`;
