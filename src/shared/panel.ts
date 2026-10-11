@@ -48,6 +48,8 @@ export const CLOSE_PANEL_MESSAGE = 'translate-side:close-panel';
 export interface ClosePanelRequest {
   type: typeof CLOSE_PANEL_MESSAGE;
   windowId: number | undefined;
+  /** When the worker saw the press (ms since the epoch): the panel the same press opens was created after it. */
+  pressedAt: number;
 }
 
 export const isClosePanelRequest = (m: unknown): m is ClosePanelRequest => typeof m === 'object' && m !== null && (m as { type?: unknown }).type === CLOSE_PANEL_MESSAGE;
@@ -56,7 +58,7 @@ export const isClosePanelRequest = (m: unknown): m is ClosePanelRequest => typeo
  * Toolbar icon and Alt+T (M5-E10): opens the panel, or closes it when it is open in the tab's
  * window. `sidePanel.open` needs the user gesture, so it is still the first call with no await
  * before it (S5); the question "is a panel open here?" is sent in the same tick, ahead of the
- * panel the open creates (which answers nothing for its first second, see sidepanel/toggle.ts).
+ * panel the open creates (which ignores a question asked before it was created, see sidepanel/toggle.ts).
  * A panel that is open closes itself (sidePanel.close from Chrome 141, else window.close), so no
  * Chrome version gate is needed. A panel that closed is not injected into.
  */
@@ -64,7 +66,7 @@ export function togglePanelAndInject(api: Browser, tab: TabRef | undefined): Pro
   const tabId = tab?.id;
   if (tabId === undefined) return Promise.resolve();
   const opened = api.sidePanel?.open({ tabId }).catch(logError('sidePanel.open'));
-  const request: ClosePanelRequest = { type: CLOSE_PANEL_MESSAGE, windowId: tab?.windowId };
+  const request: ClosePanelRequest = { type: CLOSE_PANEL_MESSAGE, windowId: tab?.windowId, pressedAt: Date.now() };
   const closed = api.runtime.sendMessage(request).then(
     (answer: unknown) => typeof answer === 'object' && answer !== null && (answer as { closed?: unknown }).closed === true,
     () => false,

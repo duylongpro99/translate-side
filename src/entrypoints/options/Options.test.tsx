@@ -529,4 +529,22 @@ describe('options: keyboard shortcuts (plan M5-E10)', () => {
     expect(table?.textContent).toContain('Close the shortcut list');
     expect(table?.getAttribute('aria-labelledby')).toBe('shortcuts-h');
   });
+
+  it('shows the key Chrome assigned, and where to choose one when none is set', async () => {
+    const f = fakeApi();
+    (f.api as unknown as { commands: unknown }).commands = { getAll: () => Promise.resolve([{ name: '_execute_action', shortcut: 'Alt+Shift+T' }]) };
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    expect(root.querySelector('[data-testid="shortcuts-table"]')?.textContent).toContain('Alt+Shift+T');
+    expect(root.querySelector('[data-testid="shortcuts-table"]')?.textContent).not.toContain('Alt+T');
+    const g = fakeApi();
+    (g.api as unknown as { commands: unknown }).commands = { getAll: () => Promise.resolve([{ name: '_execute_action', shortcut: '' }]) };
+    act(() => render(<Options api={g.api} />, root));
+    await flush();
+    const text = root.querySelector('[data-testid="shortcuts-table"]')?.textContent ?? '';
+    expect(text).toContain('Not set');
+    expect(text).toContain('chrome://extensions/shortcuts');
+    act(() => root.querySelector<HTMLButtonElement>('[data-testid="shortcut-settings"]')?.click());
+    expect(g.log).toContain('tab chrome://extensions/shortcuts');
+  });
 });

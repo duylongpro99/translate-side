@@ -27,6 +27,7 @@ import { openOnboarding } from '@/shared/onboarding';
 import { ProvidersSection, type AdapterFor } from './Providers.tsx';
 import { TransferSection } from './Transfer.tsx';
 import { SCREEN_READER_NOTE, SHORTCUTS } from '@/shared/shortcuts';
+import { openShortcutSettings, toggleRow, useToggleShortcut } from '@/shared/toggle-shortcut';
 import { openTranslationCache, type CacheStats, type TranslationCache } from '@/shared/cache';
 import { formatUsd } from '@/shared/cost';
 import { pricingFor } from '@/shared/pricing';
@@ -492,7 +493,9 @@ const mb = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(0, Math.round(b
 
 /** The translation cache (plan M3-E2): what it holds, and a way to empty it. */
 /** The panel's keyboard shortcuts (plan M5-E10): the same list the panel's ? button and the README show. */
-function ShortcutsSection() {
+function ShortcutsSection({ api }: { api: Browser }) {
+  const shortcut = useToggleShortcut(api);
+  const rows = SHORTCUTS.map((s, i) => (i === 0 ? { ...s, ...toggleRow(shortcut) } : s));
   return (
     <section class="opt__section" id="shortcuts" aria-labelledby="shortcuts-h">
       <h2 id="shortcuts-h">Keyboard shortcuts</h2>
@@ -504,8 +507,8 @@ function ShortcutsSection() {
           </tr>
         </thead>
         <tbody>
-          {SHORTCUTS.map((s) => (
-            <tr key={s.keys}>
+          {rows.map((s, i) => (
+            <tr key={i}>
               <th scope="row">
                 <kbd>{s.keys}</kbd>
               </th>
@@ -516,6 +519,12 @@ function ShortcutsSection() {
       </table>
       <p class="opt__hint">The letters and arrows work while a block in the panel, or one of its buttons, has keyboard focus, so they do not clash with a page's or Chrome's shortcuts.</p>
       <p class="opt__hint">{SCREEN_READER_NOTE}</p>
+      <p class="opt__hint">
+        <button type="button" class="opt__link" data-testid="shortcut-settings" onClick={() => void openShortcutSettings(api)}>
+          Change the toggle key
+        </button>{' '}
+        Chrome keeps shortcuts on its own page, chrome://extensions/shortcuts. The button opens it; if it does not, paste that address into a new tab.
+      </p>
     </section>
   );
 }
@@ -725,7 +734,7 @@ export function Options({ api, cache = openTranslationCache(), adapterFor }: { a
       <StyleSection api={api} />
       <GlossarySection api={api} />
       <SitesSection api={api} />
-      <ShortcutsSection />
+      <ShortcutsSection api={api} />
       <SpendSection api={api} />
       <CacheSection cache={cache} />
       <TransferSection api={api} />

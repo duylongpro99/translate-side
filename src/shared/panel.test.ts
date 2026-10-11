@@ -18,6 +18,7 @@ type Listener = (...args: never[]) => void;
 /** A worker-side fake: sidePanel, scripting and storage.session, logging calls in order. */
 function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, unknown>; panelAnswer?: () => Promise<unknown> } = {}) {
   const calls: string[] = [];
+  const pressedAts: (number | undefined)[] = [];
   const store: Record<string, unknown> = {};
   const sync = opts.sync ?? {};
   const listeners: Record<string, Listener[]> = {};
@@ -41,8 +42,9 @@ function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, 
       sync: { get: (keys: string[]) => Promise.resolve(Object.fromEntries(keys.filter((k) => k in sync).map((k) => [k, sync[k]]))) },
     },
     runtime: {
-      sendMessage: (m: { type: string; windowId?: number }) => {
+      sendMessage: (m: { type: string; windowId?: number; pressedAt?: number }) => {
         calls.push(`ask:${m.type}:${m.windowId}`);
+        pressedAts.push(m.pressedAt);
         return (opts.panelAnswer ?? (() => Promise.reject(new Error('Receiving end does not exist.'))))();
       },
     },
@@ -51,7 +53,7 @@ function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, 
     tabs: { onUpdated: on('updated'), onRemoved: on('removed') },
   } as unknown as Api;
   const fire = (name: string, ...args: unknown[]) => listeners[name]?.forEach((fn) => (fn as (...a: unknown[]) => void)(...args));
-  return { api, calls, store, fire };
+  return { api, calls, pressedAts, store, fire };
 }
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -143,6 +145,15 @@ describe('action and context menu', () => {
     expect(f.calls).toEqual(['open:9', `ask:${CLOSE_PANEL_MESSAGE}:4`]);
     await flush();
     expect(f.calls).toEqual(['open:9', `ask:${CLOSE_PANEL_MESSAGE}:4`, `inject:9:${CONTENT_SCRIPT_FILE}`]);
+  });
+
+  it('stamps the question with the time of the press, so the panel can tell the press that opened it', () => {
+    const f = fakeApi();
+    listenForActionClicks(f.api);
+    const before = Date.now();
+    f.fire('action', { id: 9, windowId: 4, url: 'https://example.com/' });
+    expect(f.pressedAts[0]).toBeGreaterThanOrEqual(before);
+    expect(f.pressedAts[0]).toBeLessThanOrEqual(Date.now());
   });
 
   it('a click while the panel is open closes it: the panel answers, nothing is injected', async () => {
