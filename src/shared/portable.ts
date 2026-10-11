@@ -1,0 +1,531 @@
+// Settings export and import as JSON (DESIGN.md §4.3.7, plan M5-E9).
+//
+// The file holds what storage.sync holds for the user: connections, model profiles, routing with
+// its site rules, preferences, the personal glossary and the site lists. API keys (storage.local
+// `secret:<id>`, §4.3.4) are left out unless the user ticks "include keys" and confirms. Device-only
+// data (the spend log, the privacy acknowledgement, onboarding, the cache) never goes in.
+//
+// A file is untrusted input (§8): it is parsed, bounded and cleaned field by field, and nothing it
+// says is applied until the user has seen what it would change. An import merges: records the file
+// does not have stay as they are, and a key is written only when the file carries one for that
+// connection and the user asked for keys to be imported. Whatever is skipped or ignored is listed
+// in `notes`, never dropped silently.
+import type { browser } from 'wxt/browser';
+import type { GlossaryEntry } from '@/engine/types';
+import type { Quirks } from '@/llm/types';
+import {
+  BASIC_FALLBACK,
+  BASIC_MIGRATED_FIELD,
+  checkQuota,
+  cleanConnection,
+  cleanProfile,
+  cleanRouting,
+  cleanSiteRules,
+  connectionKey,
+  profileKey,
+  queued,
+  readProviderSettings,
+  ROUTING_KEY,
+  SCHEMA_VERSION,
+  SITE_RULES_KEY,
+  type Routing,
+  type SiteRule,
+} from './providers.ts';
+import {
+  cleanBudget,
+  cleanGlossary,
+  GLOSS_MODES,
+  GLOSSARY_KEY,
+  PREFS_KEY,
+  readGlossary,
+  readPreferences,
+  SECRET_PREFIX,
+  secretKey,
+  STYLES,
+  SYNC_QUOTA_BYTES_PER_ITEM,
+  syncItemBytes,
+  type ModelProfile,
+  type Preferences,
+  type ProviderConnection,
+} from './settings.ts';
+import { cleanSiteList, readSiteLists, SITE_ALLOWLIST_KEY, SITE_NEVER_KEY } from './sites.ts';
+
+type Browser = typeof browser;
+
+export const EXPORT_FORMAT = 'translate-side-settings';
+export const EXPORT_VERSION = 1;
+/** An import larger than this is refused unread: real settings are a few KB. */
+export const MAX_IMPORT_BYTES = 1_000_000;
+
+const MAX_CONNECTIONS = 100;
+const MAX_PROFILES = 400;
+const MAX_SITE_RULES = 200;
+const MAX_GLOSSARY = 500;
+const MAX_KEY_LENGTH = 4096;
+
+const ID_RE = /^[A-Za-z0-9._-]{1,100}$/;
+const LANG_RE = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
+const HEADER_NAME_RE = /^[A-Za-z0-9!#$%&'*+.^_`|~-]{1,100}$/;
+/** Names that carry a credential: a header or query parameter with one of these is a key in disguise. */
+const SENSITIVE_NAME = /auth|key|token|secret|passw|cookie|credential|signature|bearer|sig$/i;
+// eslint-disable-next-line no-control-regex
+const CONTROL_RE = /[\u0000-\u001f\u007f]/;
+
+export interface ExportFile {
+  format: typeof EXPORT_FORMAT;
+  formatVersion: number;
+  exportedAt: string;
+  /** True only when the user chose to include keys; `keys` is then present. */
+  keysIncluded: boolean;
+  settings: {
+    schemaVersion: number;
+    connections: ProviderConnection[];
+    profiles: ModelProfile[];
+    routing?: Omit<Routing, 'siteOverrides'>;
+    siteRules: SiteRule[];
+    prefs: Preferences;
+    glossary: GlossaryEntry[];
+    siteAllowlist: string[];
+    siteNever: string[];
+  };
+  keys?: Record<string, string>;
+}
+
+export interface ExportResult {
+  file: ExportFile;
+  json: string;
+  /** Header and query-parameter values (and URL credentials) left out because they look like keys. */
+  omitted: string[];
+  keyCount: number;
+}
+
+// ---- Export ---------------------------------------------------------------------------------
+
+/** A connection without its test outcome: that is device state, so it travels as unverified. */
+function portableConnection(c: ProviderConnection): ProviderConnection {
+  const out: ProviderConnection = { ...c, status: 'unverified' };
+  delete out.lastError;
+  delete out.lastErrorKind;
+  return out;
+}
+
+function redactConnection(c: ProviderConnection, omitted: string[]): ProviderConnection {
+  const out: ProviderConnection = { ...c };
+  const drop = (kind: string, record: Record<string, string> | undefined) => {
+    if (!record) return undefined;
+    const kept = Object.fromEntries(Object.entries(record).filter(([name]) => !SENSITIVE_NAME.test(name) || (omitted.push(`${c.label}: ${kind} ${name}`), false)));
+    return Object.keys(kept).length > 0 ? kept : undefined;
+  };
+  const headers = drop('header', c.extraHeaders);
+  const params = drop('query parameter', c.queryParams);
+  delete out.extraHeaders;
+  delete out.queryParams;
+  if (headers) out.extraHeaders = headers;
+  if (params) out.queryParams = params;
+  try {
+    const url = new URL(c.baseUrl);
+    let changed = false;
+    if (url.username !== '' || url.password !== '') {
+      url.username = '';
+      url.password = '';
+      changed = true;
+      omitted.push(`${c.label}: credentials in the base URL`);
+    }
+    for (const name of [...url.searchParams.keys()]) {
+      if (!SENSITIVE_NAME.test(name)) continue;
+      url.searchParams.delete(name);
+      changed = true;
+      omitted.push(`${c.label}: base URL parameter ${name}`);
+    }
+    if (changed) out.baseUrl = url.toString().replace(/\/$/, c.baseUrl.endsWith('/') ? '/' : '');
+  } catch {
+    // Not a URL (a built-in with no base): nothing to strip.
+  }
+  return out;
+}
+
+/**
+ * The settings file. Keys are read and included only with `includeKeys`; without it the file
+ * holds no secret: header and parameter values that look like one are left out too (`omitted`).
+ * A connection's test outcome is device state, so it is written as unverified.
+ */
+export async function buildExport(api: Browser, { includeKeys = false, now = () => new Date() }: { includeKeys?: boolean; now?: () => Date } = {}): Promise<ExportResult> {
+  const [settings, prefs, glossary, lists] = await Promise.all([readProviderSettings(api), readPreferences(api), readGlossary(api), readSiteLists(api)]);
+  const implicit = settings.implicit ?? { connections: [], profiles: [] };
+  const omitted: string[] = [];
+  const connections = settings.connections
+    .filter((c) => !implicit.connections.includes(c.id))
+    .map((c) => {
+      const portable = portableConnection(c);
+      return includeKeys ? portable : redactConnection(portable, omitted);
+    });
+  const profiles = settings.profiles.filter((p) => !implicit.profiles.includes(p.id));
+  const { siteOverrides, ...routing } = settings.routing;
+  let keys: Record<string, string> | undefined;
+  if (includeKeys) {
+    const got = await api.storage.local.get(settings.connections.map((c) => secretKey(c.id)));
+    keys = Object.fromEntries(
+      settings.connections.flatMap((c): [string, string][] => {
+        const v = got[secretKey(c.id)];
+        return typeof v === 'string' && v !== '' ? [[c.id, v]] : [];
+      }),
+    );
+  }
+  const file: ExportFile = {
+    format: EXPORT_FORMAT,
+    formatVersion: EXPORT_VERSION,
+    exportedAt: now().toISOString(),
+    keysIncluded: includeKeys,
+    settings: {
+      schemaVersion: SCHEMA_VERSION,
+      connections,
+      profiles,
+      ...(settings.routingStored ? { routing } : {}),
+      siteRules: siteOverrides ?? [],
+      prefs,
+      glossary,
+      siteAllowlist: lists.allow,
+      siteNever: lists.never,
+    },
+    ...(keys ? { keys } : {}),
+  };
+  return { file, json: `${JSON.stringify(file, null, 2)}\n`, omitted, keyCount: keys ? Object.keys(keys).length : 0 };
+}
+
+export const exportFileName = (now: Date = new Date()) => `translate-side-settings-${now.toISOString().slice(0, 10)}.json`;
+
+// ---- Import: parse and validate ---------------------------------------------------------------
+
+export interface ImportPlan {
+  connections: ProviderConnection[];
+  profiles: ModelProfile[];
+  routing?: Omit<Routing, 'siteOverrides'>;
+  siteRules: SiteRule[];
+  prefs?: Partial<Preferences>;
+  glossary?: GlossaryEntry[];
+  allow?: string[];
+  never?: string[];
+  /** connection id → key, as the file carries them (applied only when the user asks). */
+  keys: Record<string, string>;
+  /** What was skipped or ignored in the file, in words. */
+  notes: string[];
+}
+
+export type ParseResult = { ok: true; plan: ImportPlan } | { ok: false; error: string };
+
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const okString = (v: unknown, max: number): v is string => typeof v === 'string' && v.length <= max && !CONTROL_RE.test(v);
+
+function cleanQuirks(raw: unknown): Quirks | undefined {
+  if (!isRecord(raw)) return undefined;
+  const q: Quirks = {};
+  if (raw.maxTokensParam === 'max_tokens' || raw.maxTokensParam === 'max_completion_tokens') q.maxTokensParam = raw.maxTokensParam;
+  for (const f of ['supportsTemperature', 'supportsSystemRole', 'supportsStreamUsage', 'supportsJsonMode', 'supportsCacheControl'] as const) {
+    if (typeof raw[f] === 'boolean') q[f] = raw[f];
+  }
+  if (okString(raw.modelIdPrefix, 50)) q.modelIdPrefix = raw.modelIdPrefix;
+  const r = raw.reasoning;
+  const level = (v: unknown): v is string | number => (typeof v === 'string' && v.length <= 30) || (typeof v === 'number' && Number.isFinite(v));
+  if (isRecord(r) && (r.control === 'effort' || r.control === 'budget' || r.control === 'none') && level(r.lowest) && typeof r.reserveTokens === 'number' && Number.isFinite(r.reserveTokens)) {
+    const byChunk = Array.isArray(r.byChunk)
+      ? r.byChunk.flatMap((b): { fromChunk: number; lowest: string | number; reserveTokens: number }[] =>
+          isRecord(b) && typeof b.fromChunk === 'number' && Number.isFinite(b.fromChunk) && level(b.lowest) && typeof b.reserveTokens === 'number' && Number.isFinite(b.reserveTokens)
+            ? [{ fromChunk: b.fromChunk, lowest: b.lowest, reserveTokens: b.reserveTokens }]
+            : [],
+        )
+      : [];
+    q.reasoning = { control: r.control, lowest: r.lowest, reserveTokens: r.reserveTokens, ...(byChunk.length > 0 ? { byChunk } : {}) };
+  }
+  return q;
+}
+
+function httpUrlOrEmpty(v: string): boolean {
+  if (v === '') return true;
+  try {
+    const u = new URL(v);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function importConnection(raw: unknown, notes: string[]): ProviderConnection | null {
+  const c = cleanConnection(raw);
+  const name = isRecord(raw) && typeof raw.id === 'string' ? raw.id.slice(0, 40) : '?';
+  if (!c || !ID_RE.test(c.id)) {
+    notes.push(`Skipped a connection that is not valid (${name}).`);
+    return null;
+  }
+  if (!okString(c.label, 200) || !okString(c.presetId, 100) || c.baseUrl.length > 2000 || !httpUrlOrEmpty(c.baseUrl)) {
+    notes.push(`Skipped connection "${c.id}": its label or base URL is not valid (a base URL must be http or https).`);
+    return null;
+  }
+  const headerOk = (r: Record<string, string> | undefined, nameRe: RegExp) => !r || Object.entries(r).every(([k, v]) => nameRe.test(k) && v.length <= 2000 && !CONTROL_RE.test(v));
+  if (!headerOk(c.extraHeaders, HEADER_NAME_RE) || !headerOk(c.queryParams, /^.{1,100}$/)) {
+    notes.push(`Skipped connection "${c.id}": a header or query parameter in it is not valid.`);
+    return null;
+  }
+  if (c.auth.headerName !== undefined && !HEADER_NAME_RE.test(c.auth.headerName)) {
+    notes.push(`Skipped connection "${c.id}": its auth header name is not valid.`);
+    return null;
+  }
+  // Learned from this device's requests, not portable: re-detected on the first test.
+  return { ...portableConnection(c), quirks: cleanQuirks(c.quirks) ?? {} };
+}
+
+function importProfile(raw: unknown, notes: string[]): ModelProfile | null {
+  const p = cleanProfile(raw);
+  if (!p || !ID_RE.test(p.id) || !ID_RE.test(p.connectionId) || !okString(p.model, 200)) {
+    notes.push(`Skipped a model profile that is not valid (${isRecord(raw) && typeof raw.id === 'string' ? raw.id.slice(0, 40) : '?'}).`);
+    return null;
+  }
+  const quirks = cleanQuirks(p.quirks);
+  const out: ModelProfile = { ...p };
+  delete out.quirks;
+  return quirks ? { ...out, quirks } : out;
+}
+
+function importPrefs(raw: unknown, notes: string[]): Partial<Preferences> | undefined {
+  if (!isRecord(raw)) return undefined;
+  const out: Partial<Preferences> = {};
+  const bad = (name: string) => notes.push(`Ignored the preference "${name}": not a valid value.`);
+  const lang = (name: 'targetLang' | 'sourceLang') => {
+    const v = raw[name];
+    if (v === undefined) return;
+    if (typeof v === 'string' && (LANG_RE.test(v) || (name === 'sourceLang' && v === 'auto'))) out[name] = v;
+    else bad(name);
+  };
+  lang('targetLang');
+  lang('sourceLang');
+  if (raw.style !== undefined) {
+    if (STYLES.includes(raw.style as never)) out.style = raw.style as Preferences['style'];
+    else bad('style');
+  }
+  if (raw.gloss !== undefined) {
+    if (GLOSS_MODES.includes(raw.gloss as never)) out.gloss = raw.gloss as Preferences['gloss'];
+    else bad('gloss');
+  }
+  if (raw.budgetTokens !== undefined) {
+    if (typeof raw.budgetTokens === 'number' && Number.isFinite(raw.budgetTokens) && raw.budgetTokens >= 0) out.budgetTokens = cleanBudget(raw.budgetTokens);
+    else bad('budgetTokens');
+  }
+  for (const f of ['captions', 'altText'] as const) {
+    const v = raw[f];
+    if (v === undefined) continue;
+    if (typeof v === 'boolean') out[f] = v;
+    else bad(f);
+  }
+  return out;
+}
+
+function capped<T>(list: readonly T[], max: number, what: string, notes: string[]): T[] {
+  if (list.length > max) notes.push(`The file lists ${list.length} ${what}; only the first ${max} were read.`);
+  return list.slice(0, max);
+}
+
+/** Reads `text` as a settings file. Nothing is written; the result is what the file would bring. */
+export function parseImport(text: string): ParseResult {
+  if (text.length > MAX_IMPORT_BYTES) return { ok: false, error: 'This file is too large to be a settings file.' };
+  let root: unknown;
+  try {
+    root = JSON.parse(text);
+  } catch {
+    return { ok: false, error: 'This file is not valid JSON.' };
+  }
+  if (!isRecord(root) || root.format !== EXPORT_FORMAT) return { ok: false, error: 'This is not a Translate Side settings file.' };
+  if (typeof root.formatVersion !== 'number' || !Number.isInteger(root.formatVersion) || root.formatVersion < 1) return { ok: false, error: 'This settings file has no valid version.' };
+  if (root.formatVersion > EXPORT_VERSION) return { ok: false, error: 'This settings file was made by a newer version of Translate Side. Update the extension, then import it.' };
+  const s = root.settings;
+  if (!isRecord(s)) return { ok: false, error: 'This settings file has no settings in it.' };
+
+  const notes: string[] = [];
+  const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+  const seen = new Set<string>();
+  const unique = <T extends { id: string }>(items: (T | null)[], what: string): T[] =>
+    items.flatMap((i) => {
+      if (!i) return [];
+      if (seen.has(`${what}:${i.id}`)) return (notes.push(`Ignored a repeated ${what} id "${i.id}".`), []);
+      seen.add(`${what}:${i.id}`);
+      return [i];
+    });
+  const connections = unique(capped(list(s.connections), MAX_CONNECTIONS, 'connections', notes).map((c) => importConnection(c, notes)), 'connection');
+  const profiles = unique(capped(list(s.profiles), MAX_PROFILES, 'model profiles', notes).map((p) => importProfile(p, notes)), 'profile');
+
+  const routing = s.routing === undefined ? undefined : (cleanRouting(s.routing) ?? undefined);
+  if (s.routing !== undefined && !routing) notes.push('Skipped the routing: it names no model to translate with.');
+  const siteRules = cleanSiteRules(capped(list(s.siteRules), MAX_SITE_RULES, 'site rules', notes));
+  if (Array.isArray(s.siteRules) && siteRules.length < Math.min(s.siteRules.length, MAX_SITE_RULES)) notes.push('Skipped some site rules that are not valid.');
+  const glossary = Array.isArray(s.glossary) ? cleanGlossary(capped(s.glossary, MAX_GLOSSARY, 'glossary entries', notes)) : undefined;
+  const prefs = importPrefs(s.prefs, notes);
+
+  const keys: Record<string, string> = {};
+  if (root.keys !== undefined) {
+    if (!isRecord(root.keys)) notes.push('Ignored the keys: they are not in a valid form.');
+    else {
+      for (const [id, value] of Object.entries(root.keys).slice(0, MAX_CONNECTIONS)) {
+        const key = typeof value === 'string' ? value.trim() : '';
+        if (!ID_RE.test(id) || key === '' || key.length > MAX_KEY_LENGTH || CONTROL_RE.test(key)) notes.push(`Ignored a key that is not valid (for "${id.slice(0, 40)}").`);
+        else Object.defineProperty(keys, id, { value: key, enumerable: true, writable: true, configurable: true });
+      }
+    }
+  }
+  return {
+    ok: true,
+    plan: {
+      connections,
+      profiles,
+      ...(routing ? { routing } : {}),
+      siteRules,
+      ...(prefs && Object.keys(prefs).length > 0 ? { prefs } : {}),
+      ...(glossary ? { glossary } : {}),
+      ...(Array.isArray(s.siteAllowlist) ? { allow: cleanSiteList(s.siteAllowlist) } : {}),
+      ...(Array.isArray(s.siteNever) ? { never: cleanSiteList(s.siteNever) } : {}),
+      keys,
+      notes,
+    },
+  };
+}
+
+// ---- Import: what it would change, and the write ----------------------------------------------
+
+export interface ImportReport {
+  connections: { added: number; replaced: number };
+  profiles: { added: number; replaced: number };
+  routing: 'replaced' | 'kept' | 'none';
+  siteRules: number;
+  prefs: boolean;
+  glossary: number | null;
+  sites: { allow: number; never: number };
+  /** Keys the file carries / that would be written (new, or replacing a different one). */
+  keys: { inFile: number; written: number; replaced: number };
+  /** The endpoints the imported connections send page text to. */
+  endpoints: string[];
+  /** Things the user should know: skipped records, references that do not resolve. */
+  notes: string[];
+}
+
+interface Resolved {
+  items: Record<string, unknown>;
+  secrets: Record<string, string>;
+  report: ImportReport;
+}
+
+async function resolveImport(api: Browser, plan: ImportPlan, withKeys: boolean): Promise<Resolved> {
+  const [settings, prefs, glossary, lists, local] = await Promise.all([readProviderSettings(api), readPreferences(api), readGlossary(api), readSiteLists(api), api.storage.local.get(null)]);
+  const implicit = settings.implicit ?? { connections: [], profiles: [] };
+  const storedConn = new Set(settings.connections.filter((c) => !implicit.connections.includes(c.id)).map((c) => c.id));
+  const storedProf = new Set(settings.profiles.filter((p) => !implicit.profiles.includes(p.id)).map((p) => p.id));
+  const notes = [...plan.notes];
+  const items: Record<string, unknown> = {};
+
+  for (const c of plan.connections) items[connectionKey(c.id)] = c;
+  for (const p of plan.profiles) items[profileKey(p.id)] = p;
+  const connectionIds = new Set([...settings.connections.map((c) => c.id), ...plan.connections.map((c) => c.id)]);
+  const profileIds = new Set([...settings.profiles.map((p) => p.id), ...plan.profiles.map((p) => p.id)]);
+  for (const p of plan.profiles) if (!connectionIds.has(p.connectionId)) notes.push(`The model "${p.model}" belongs to a connection that is in neither the file nor this browser (${p.connectionId}).`);
+
+  let routing: ImportReport['routing'] = 'none';
+  if (plan.routing) {
+    const r = plan.routing;
+    if (!profileIds.has(r.translate)) {
+      routing = 'kept';
+      notes.push(`Kept your current routing: the file's routing translates with "${r.translate}", which is in neither the file nor this browser.`);
+    } else {
+      const known = (id: string | undefined) => id !== undefined && profileIds.has(id);
+      const next: Omit<Routing, 'siteOverrides'> = {
+        translate: r.translate,
+        ...(known(r.analyze) ? { analyze: r.analyze } : {}),
+        ...(known(r.review) ? { review: r.review } : {}),
+        ...(r.fallback ? { fallback: r.fallback.filter((id) => id === BASIC_FALLBACK || profileIds.has(id)) } : {}),
+      };
+      if (r.analyze && !known(r.analyze)) notes.push(`Dropped the routing's analyze model "${r.analyze}": it is not here.`);
+      if (r.review && !known(r.review)) notes.push(`Dropped the routing's review model "${r.review}": it is not here.`);
+      if (r.fallback && next.fallback?.length !== r.fallback.length) notes.push('Dropped fallback models that are not here.');
+      if (next.fallback?.length === 0) delete next.fallback;
+      items[ROUTING_KEY] = { ...next, [BASIC_MIGRATED_FIELD]: true };
+      routing = 'replaced';
+    }
+  }
+  if (plan.siteRules.length > 0) {
+    const kept = plan.siteRules.filter((r) => profileIds.has(r.translate));
+    if (kept.length < plan.siteRules.length) notes.push('Skipped site rules that use a model that is not here.');
+    const patterns = new Set(kept.map((r) => r.pattern));
+    const merged = [...(settings.routing.siteOverrides ?? []).filter((r) => !patterns.has(r.pattern)), ...kept];
+    if (kept.length > 0) items[SITE_RULES_KEY] = merged.slice(0, MAX_SITE_RULES);
+  }
+  if (plan.prefs) items[PREFS_KEY] = { ...prefs, ...plan.prefs };
+
+  let glossaryCount: number | null = null;
+  if (plan.glossary && plan.glossary.length > 0) {
+    const merged = cleanGlossary([...plan.glossary, ...glossary]);
+    const bytes = syncItemBytes(GLOSSARY_KEY, merged);
+    if (bytes > SYNC_QUOTA_BYTES_PER_ITEM) notes.push(`Skipped the glossary: with yours it would take ${bytes} bytes, over Chrome's sync limit of ${SYNC_QUOTA_BYTES_PER_ITEM} bytes for one setting.`);
+    else {
+      items[GLOSSARY_KEY] = merged;
+      glossaryCount = plan.glossary.length;
+    }
+  }
+
+  const never = new Set(plan.never ?? []);
+  const allow = (plan.allow ?? []).filter((p) => !never.has(p));
+  if (plan.allow || plan.never) {
+    if (allow.length < (plan.allow?.length ?? 0)) notes.push('A site listed as both always and never translate stays on the never list.');
+    items[SITE_ALLOWLIST_KEY] = cleanSiteList([...lists.allow.filter((p) => !never.has(p)), ...allow]);
+    items[SITE_NEVER_KEY] = cleanSiteList([...lists.never.filter((p) => !allow.includes(p)), ...never]);
+  }
+
+  const secrets: Record<string, string> = {};
+  let replaced = 0;
+  const inFile = Object.keys(plan.keys).length;
+  if (withKeys) {
+    for (const [id, key] of Object.entries(plan.keys)) {
+      if (!connectionIds.has(id)) {
+        notes.push(`Ignored a key for "${id}": that connection is in neither the file nor this browser.`);
+        continue;
+      }
+      const current = local[`${SECRET_PREFIX}${id}`];
+      if (current === key) continue;
+      if (typeof current === 'string' && current !== '') replaced++;
+      secrets[secretKey(id)] = key;
+    }
+  }
+  const endpoints = [...new Set(plan.connections.map((c) => c.baseUrl).filter((u) => u !== ''))];
+  return {
+    items,
+    secrets,
+    report: {
+      connections: { added: plan.connections.filter((c) => !storedConn.has(c.id)).length, replaced: plan.connections.filter((c) => storedConn.has(c.id)).length },
+      profiles: { added: plan.profiles.filter((p) => !storedProf.has(p.id)).length, replaced: plan.profiles.filter((p) => storedProf.has(p.id)).length },
+      routing,
+      siteRules: Array.isArray(items[SITE_RULES_KEY]) ? plan.siteRules.filter((r) => profileIds.has(r.translate)).length : 0,
+      prefs: plan.prefs !== undefined,
+      glossary: glossaryCount,
+      sites: { allow: plan.allow?.length ?? 0, never: plan.never?.length ?? 0 },
+      keys: { inFile, written: Object.keys(secrets).length, replaced },
+      endpoints,
+      notes,
+    },
+  };
+}
+
+/** What importing `plan` would do here, without doing it (the preview the user confirms). */
+export function previewImport(api: Browser, plan: ImportPlan, withKeys: boolean): Promise<ImportReport> {
+  return resolveImport(api, plan, withKeys).then((r) => r.report);
+}
+
+/**
+ * Merges `plan` into storage: one sync write for everything (it fits the sync quota or nothing
+ * changes), then the keys, only when `withKeys` and only the ones the file carries. Nothing the file
+ * does not mention is removed or changed.
+ */
+export function applyImport(api: Browser, plan: ImportPlan, withKeys: boolean): Promise<ImportReport> {
+  return queued(async () => {
+    const { items, secrets, report } = await resolveImport(api, plan, withKeys);
+    if (Object.keys(items).length > 0) {
+      await checkQuota(api, items);
+      await api.storage.sync.set(items);
+    }
+    if (Object.keys(secrets).length > 0) await api.storage.local.set(secrets);
+    return report;
+  });
+}

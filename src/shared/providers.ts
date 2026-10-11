@@ -388,7 +388,7 @@ export const readProviderSettings = migrateProviders;
 let writes: Promise<unknown> = Promise.resolve();
 
 /** Runs storage updates one after another, each on what the last one wrote. */
-function queued<T>(task: () => Promise<T>): Promise<T> {
+export function queued<T>(task: () => Promise<T>): Promise<T> {
   const run = writes.then(task);
   writes = run.catch(() => undefined);
   return run;
@@ -400,7 +400,7 @@ function queued<T>(task: () => Promise<T>): Promise<T> {
  * the total over the sync quota, or more items than Chrome keeps. `items` are the keys to set,
  * `removed` the keys the same write drops.
  */
-async function checkQuota(api: Browser, items: Record<string, unknown>, removed: readonly string[] = []): Promise<void> {
+export async function checkQuota(api: Browser, items: Record<string, unknown>, removed: readonly string[] = []): Promise<void> {
   for (const [key, value] of Object.entries(items)) {
     const bytes = syncItemBytes(key, value);
     if (bytes > SYNC_QUOTA_BYTES_PER_ITEM) throw new Error(`This setting would take ${bytes} bytes, over Chrome's sync limit of ${SYNC_QUOTA_BYTES_PER_ITEM} bytes for one setting. Shorten it (fewer extra headers or a shorter label).`);

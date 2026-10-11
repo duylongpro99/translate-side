@@ -25,6 +25,7 @@ import {
 import { isProviderKey, readProviderSettings, resolveRoute, type ProviderSettings } from '@/shared/providers';
 import { openOnboarding } from '@/shared/onboarding';
 import { ProvidersSection, type AdapterFor } from './Providers.tsx';
+import { TransferSection } from './Transfer.tsx';
 import { openTranslationCache, type CacheStats, type TranslationCache } from '@/shared/cache';
 import { formatUsd } from '@/shared/cost';
 import { pricingFor } from '@/shared/pricing';
@@ -696,6 +697,7 @@ export function Options({ api, cache = openTranslationCache(), adapterFor }: { a
       <SitesSection api={api} />
       <SpendSection api={api} />
       <CacheSection cache={cache} />
+      <TransferSection api={api} />
     </main>
   );
 }
