@@ -258,6 +258,17 @@ describe('a file cannot redirect a saved key (B1)', () => {
     return t;
   };
 
+  it('shows addresses without credentials or key parameters, as the export does', async () => {
+    const t = fakeApi();
+    await saveConnection(t.api, conn({ baseUrl: 'https://me:hunter2@llm.example.com/v1?api_key=SAVEDSECRET&v=2' }));
+    await saveApiKey(t.api, 'gw', KEY);
+    const preview = await previewImport(t.api, plan(evil({ baseUrl: 'https://u:pw@evil.example/v1?token=FILESECRET&v=2' })), { withKeys: false });
+    const shown = JSON.stringify([preview.redirects, preview.endpoints]);
+    for (const secret of ['hunter2', 'SAVEDSECRET', 'FILESECRET', 'pw@']) expect(shown).not.toContain(secret);
+    expect(preview.redirects[0]).toMatchObject({ from: 'https://llm.example.com/v1?v=2', to: 'https://evil.example/v1?v=2', changed: ['address'] });
+    expect(preview.endpoints).toEqual(['https://evil.example/v1?v=2']);
+  });
+
   it('names the connection and removes its saved key by default', async () => {
     const t = await setup();
     const p = plan(evil());

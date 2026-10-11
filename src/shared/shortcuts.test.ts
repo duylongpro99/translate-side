@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { SHORTCUTS } from './shortcuts.ts';
+import { SCREEN_READER_NOTE, SHORTCUTS } from './shortcuts.ts';
 
 describe('the shortcut list', () => {
   it('lists Alt+T, and no key twice', () => {
@@ -16,5 +16,10 @@ describe('the shortcut list', () => {
     expect(rows).toHaveLength(SHORTCUTS.length);
     // Same description, same order (the keys are marked up there, so compare the text).
     rows.forEach((row, i) => expect(row.replace(/<\/?kbd>/g, '').replace(/\s+/g, ' ')).toContain(SHORTCUTS[i]?.what.replace(/\(rebind.*\)/, '').trim() ?? ''));
+  });
+
+  it('says the same screen reader note in the README', () => {
+    const readme = readFileSync(new URL('../../README.md', import.meta.url), 'utf8');
+    expect(readme).toContain(SCREEN_READER_NOTE);
   });
 });

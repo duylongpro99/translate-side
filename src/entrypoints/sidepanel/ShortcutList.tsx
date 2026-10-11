@@ -1,4 +1,4 @@
-import { SHORTCUTS } from '@/shared/shortcuts';
+import { SCREEN_READER_NOTE, SHORTCUTS } from '@/shared/shortcuts';
 
 /** The panel's keyboard shortcuts (plan M5-E10), as the same list the options page and the README show. */
 export function ShortcutList({ id, onClose }: { id: string; onClose: () => void }) {
@@ -16,6 +16,7 @@ export function ShortcutList({ id, onClose }: { id: string; onClose: () => void 
         ))}
       </dl>
       <p class="panel__meta">The letters and arrows work while a block or one of its buttons has focus. Tab reaches the list once; the arrows move through it.</p>
+      <p class="panel__meta">{SCREEN_READER_NOTE}</p>
       <button type="button" class="panel__action" data-testid="shortcuts-close" onClick={onClose}>
         Close
       </button>

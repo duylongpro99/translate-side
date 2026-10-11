@@ -20,5 +20,8 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { keys: 'R', what: 'Retranslate this block', scope: 'block' },
   { keys: 'E', what: 'Explain this block', scope: 'block' },
   { keys: 'C', what: 'Copy this block as plain text', scope: 'block' },
-  { keys: 'Esc', what: 'Close the shortcut list', scope: 'block' },
+  { keys: 'Esc', what: 'Close the shortcut list in the panel', scope: 'block' },
 ];
+
+/** Said under the list in the panel, on the options page and in the README. */
+export const SCREEN_READER_NOTE = 'With a screen reader, the letter and arrow shortcuts need focus mode (forms or application mode) on; every action can also be reached with Tab and pressed with Enter.';

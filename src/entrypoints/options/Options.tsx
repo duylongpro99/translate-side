@@ -26,7 +26,7 @@ import { isProviderKey, readProviderSettings, resolveRoute, type ProviderSetting
 import { openOnboarding } from '@/shared/onboarding';
 import { ProvidersSection, type AdapterFor } from './Providers.tsx';
 import { TransferSection } from './Transfer.tsx';
-import { SHORTCUTS } from '@/shared/shortcuts';
+import { SCREEN_READER_NOTE, SHORTCUTS } from '@/shared/shortcuts';
 import { openTranslationCache, type CacheStats, type TranslationCache } from '@/shared/cache';
 import { formatUsd } from '@/shared/cost';
 import { pricingFor } from '@/shared/pricing';
@@ -515,6 +515,7 @@ function ShortcutsSection() {
         </tbody>
       </table>
       <p class="opt__hint">The letters and arrows work while a block in the panel, or one of its buttons, has keyboard focus, so they do not clash with a page's or Chrome's shortcuts.</p>
+      <p class="opt__hint">{SCREEN_READER_NOTE}</p>
     </section>
   );
 }

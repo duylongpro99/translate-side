@@ -111,6 +111,28 @@ function portableConnection(c: ProviderConnection): ProviderConnection {
   return out;
 }
 
+/** An address with its credentials and key-named query parameters removed; `removed` says what went. Not a URL: returned as is. */
+export function redactAddress(address: string): { url: string; removed: string[] } {
+  const removed: string[] = [];
+  try {
+    const url = new URL(address);
+    if (url.username !== '' || url.password !== '') {
+      url.username = '';
+      url.password = '';
+      removed.push('credentials in the base URL');
+    }
+    for (const name of [...url.searchParams.keys()]) {
+      if (!SENSITIVE_NAME.test(name)) continue;
+      url.searchParams.delete(name);
+      removed.push(`base URL parameter ${name}`);
+    }
+    if (removed.length > 0) return { url: url.toString().replace(/\/$/, address.endsWith('/') ? '/' : ''), removed };
+  } catch {
+    // Not a URL (a built-in with no base): nothing to strip.
+  }
+  return { url: address, removed };
+}
+
 function redactConnection(c: ProviderConnection, omitted: string[]): ProviderConnection {
   const out: ProviderConnection = { ...c };
   const drop = (kind: string, record: Record<string, string> | undefined) => {
@@ -124,25 +146,9 @@ function redactConnection(c: ProviderConnection, omitted: string[]): ProviderCon
   delete out.queryParams;
   if (headers) out.extraHeaders = headers;
   if (params) out.queryParams = params;
-  try {
-    const url = new URL(c.baseUrl);
-    let changed = false;
-    if (url.username !== '' || url.password !== '') {
-      url.username = '';
-      url.password = '';
-      changed = true;
-      omitted.push(`${c.label}: credentials in the base URL`);
-    }
-    for (const name of [...url.searchParams.keys()]) {
-      if (!SENSITIVE_NAME.test(name)) continue;
-      url.searchParams.delete(name);
-      changed = true;
-      omitted.push(`${c.label}: base URL parameter ${name}`);
-    }
-    if (changed) out.baseUrl = url.toString().replace(/\/$/, c.baseUrl.endsWith('/') ? '/' : '');
-  } catch {
-    // Not a URL (a built-in with no base): nothing to strip.
-  }
+  const base = redactAddress(c.baseUrl);
+  for (const what of base.removed) omitted.push(`${c.label}: ${what}`);
+  if (base.removed.length > 0) out.baseUrl = base.url;
   return out;
 }
 
@@ -593,9 +599,9 @@ async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKey
       keyAction = keepKeys.has(c.id) ? 'kept' : 'removed';
       if (keyAction === 'removed') removeSecrets.push(secretKey(c.id));
     }
-    redirects.push({ id: c.id, label: current.label, from: current.baseUrl, to: c.baseUrl, changed, keyAction });
+    redirects.push({ id: c.id, label: current.label, from: redactAddress(current.baseUrl).url, to: redactAddress(c.baseUrl).url, changed, keyAction });
   }
-  const endpoints = [...new Set(plan.connections.map((c) => c.baseUrl).filter((u) => u !== ''))];
+  const endpoints = [...new Set(plan.connections.map((c) => redactAddress(c.baseUrl).url).filter((u) => u !== ''))];
   return {
     items,
     secrets,

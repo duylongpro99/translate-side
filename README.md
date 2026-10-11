@@ -133,11 +133,13 @@ For live reloading while you work, run `pnpm dev`.
 | <kbd>R</kbd> | Retranslate this block |
 | <kbd>E</kbd> | Explain this block |
 | <kbd>C</kbd> | Copy this block as plain text |
-| <kbd>Esc</kbd> | Close the shortcut list |
+| <kbd>Esc</kbd> | Close the shortcut list in the panel |
 
 The block keys work while a block or one of its buttons has keyboard focus, so they never clash
 with a page's or Chrome's own shortcuts. The panel's **?** button lists them too, and so does
 the options page.
+
+With a screen reader, the letter and arrow shortcuts need focus mode (forms or application mode) on; every action can also be reached with Tab and pressed with Enter.
 
 ### Useful scripts
 
