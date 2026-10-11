@@ -30,17 +30,26 @@ export default defineContentScript({
 
     const docId = crypto.randomUUID();
     // The last read of this document, for stable ids and for telling a real change (plan M5-E2).
-    let last: { segments: Segment[]; signature: string } | undefined;
-    /** Reads the page, keeping the ids of blocks that did not change since the last read. */
+    let last: { segments: Segment[]; signature: string; url: string } | undefined;
+    /**
+     * Reads the page, keeping the ids of blocks that did not change since the last read.
+     * `changed`: it differs from the last read. An unreadable read counts as a change only when the
+     * address moved (a route change to an empty or mid-render page): the page shown is not this one.
+     */
     const read = (targets: Map<string, Element | Range>) => {
       const fresh = new Map<string, Element | Range>();
       const result = extractPage(document, fresh);
-      if (!result.ok) return { result, changed: false };
+      if (!result.ok) {
+        const moved = last !== undefined && withoutHash(result.url) !== withoutHash(last.url);
+        // Keep the blocks for their ids (the reader may come back); the next good read is a change.
+        if (last) last = { ...last, signature: '', url: result.url };
+        return { result, changed: moved };
+      }
       const renames = keepIds(last?.segments ?? [], result.segments);
       for (const [id, target] of fresh) targets.set(renames.get(id) ?? id, target);
       const signature = readSignature(result.url, result.segments);
       const changed = signature !== last?.signature;
-      last = { segments: result.segments, signature };
+      last = { segments: result.segments, signature, url: result.url };
       return { result, changed };
     };
     browser.runtime.onConnect.addListener((port) => {
@@ -66,8 +75,15 @@ export default defineContentScript({
         const targets = new Map<string, Element | Range>();
         const { result, changed } = read(targets);
         changes?.reported(changed);
-        // An unreadable moment (a password field has focus, the content is mid-render) sends nothing.
-        if (!result.ok || !changed) return;
+        if (!changed) return;
+        // An unreadable moment on the same address (a password field has focus, the content is
+        // mid-render) sent nothing above; on a new address the panel must drop the old page.
+        if (!result.ok) {
+          watch?.stop();
+          watch = undefined;
+          emit(port, 'changed', result);
+          return;
+        }
         const { visible, anchor } = look(targets, result.segments);
         emit(port, 'changed', { ...result, visible, ...(anchor ? { anchor } : {}) });
       };
@@ -93,6 +109,8 @@ export default defineContentScript({
     return 'injected';
   },
 });
+
+const withoutHash = (url: string) => url.replace(/#.*$/, '');
 
 function isRuntimeAlive(): boolean {
   try {

@@ -2,8 +2,8 @@
 // URL-change detection handles SPAs"; §9). SPA frameworks re-render constantly (plan M5 §8 risk), so:
 // - mutations are debounced: the page is read again once the DOM has been quiet for `settleMs`,
 //   or after `maxWaitMs` of steady change at the latest;
-// - mutations only inside site chrome (nav, sidebars, header, footer) or <head> are ignored: the
-//   reader's content is in main (an active sidebar link changing is not a new page);
+// - mutations only inside site chrome (nav, sidebars, footer) or <head> are ignored: extraction
+//   drops those regions (an active sidebar link changing is not a new page);
 // - a page that keeps changing (a ticker, a live feed) is read less often: each change reported
 //   within `stormWindowMs` of the one before doubles the settle time, up to `maxSettleMs`.
 // URL changes (history.pushState, back/forward, hash) are caught by the mutations they cause, and
@@ -23,8 +23,11 @@ export interface ChangeWatch {
   reported(changed: boolean): void;
 }
 
-/** Elements whose own changes never make a new page: site chrome around the content. */
-const CHROME = 'head, nav, aside, header, footer, [role=navigation], [role=complementary], [role=banner], [role=contentinfo]';
+/**
+ * Elements whose own changes never make a new page: site chrome around the content, the same
+ * landmarks extraction drops (clean.ts LANDMARK_NOISE). A page-level <header> is read, so watched.
+ */
+const CHROME = 'head, nav, aside, footer, [role=navigation], [role=complementary], [role=contentinfo], [role=search]';
 
 const MAIN = 'main, article, [role=main]';
 
@@ -34,7 +37,7 @@ function inChrome(record: MutationRecord): boolean {
   if (!target) return true;
   const chrome = target.closest(CHROME);
   if (!chrome) return false;
-  // An article's own <header> (its title) is content, not chrome; so is a wrapper that holds the content.
+  // Chrome inside the content (an article's footer) or around it (a wrapper that holds main) is content.
   return !chrome.closest(MAIN) && !chrome.querySelector(MAIN);
 }
 

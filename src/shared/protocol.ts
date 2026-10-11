@@ -67,9 +67,10 @@ export type ContentEvents = {
   /**
    * The document changed after it was read (plan M5-E2: an SPA route change, content rendered
    * late): the content script read it again by itself, after the DOM settled. Sent only when the
-   * segments differ from the last read. Blocks that did not change keep their ids.
+   * segments differ from the last read. Blocks that did not change keep their ids. Not ok only when
+   * the address moved to a page that cannot be read (yet): the page read before is gone.
    */
-  changed: Extract<ExtractResult, { ok: true }>;
+  changed: ExtractResult;
 };
 
 export type EventMessage<E extends Record<string, unknown> = ContentEvents> = {

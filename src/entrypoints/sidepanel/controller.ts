@@ -322,7 +322,8 @@ export class PanelController {
    * the job follows (translator.ts). A document that is not shown as read (empty, failed, mid
    * reload) takes it as its first read.
    */
-  private changed(tabId: number, s: TabSession, result: Extract<ExtractResult, { ok: true }>): void {
+  private changed(tabId: number, s: TabSession, result: ExtractResult): void {
+    if (!result.ok) return this.changedAway(tabId, s, result);
     const shown = s.view.kind === 'ready' ? s.view : s.view.kind === 'loading' && s.beforeLoad?.kind === 'ready' ? s.beforeLoad : undefined;
     if (s.beforeLoad) s.beforeLoad = { kind: 'ready', result, docId: s.docId ?? '' };
     const docId = s.docId ?? '';
@@ -330,6 +331,18 @@ export class PanelController {
     const urlChanged = shown !== undefined && withoutHash(shown.result.url) !== withoutHash(result.url);
     // A first read that came out empty (an SPA still rendering) keeps what asked for it.
     this.opts.hooks?.ready?.(tabId, docId, result, shown ? { asked: false, update: { urlChanged } } : { asked: s.asked !== false });
+  }
+
+  /**
+   * An SPA route change to a page that cannot be read (yet): the page shown is gone, so is its job
+   * (review N8). The route was not asked for, so its first good read follows the navigation rule.
+   */
+  private changedAway(tabId: number, s: TabSession, result: Exclude<ExtractResult, { ok: true }>): void {
+    const view: PanelView = result.reason === 'denylisted' || result.reason === 'password' ? { kind: 'blocked', reason: result.reason } : { kind: 'empty', url: result.url };
+    s.asked = false;
+    this.opts.hooks?.gone?.(tabId);
+    if (s.beforeLoad) s.beforeLoad = view;
+    if (s.view.kind !== 'loading' || !s.pageLoading) this.setView(tabId, view);
   }
 
   private fail(tabId: number, s: TabSession, generation: number, err: unknown): void {

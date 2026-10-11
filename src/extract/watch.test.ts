@@ -47,7 +47,7 @@ describe('watchChanges', () => {
     expect(fired).toHaveBeenCalledTimes(1);
   });
 
-  it('ignores changes inside site chrome (nav, sidebar, footer), not inside an article header', async () => {
+  it('ignores changes inside site chrome (nav, sidebar, footer), which extraction drops; not a header', async () => {
     const fired = vi.fn();
     w = watchChanges(window, fired, { settleMs: 100 });
     $('side').querySelector('a')?.classList.add('active');
@@ -59,6 +59,10 @@ describe('watchChanges', () => {
     $('title').textContent = 'New title';
     await tick(150);
     expect(fired).toHaveBeenCalledTimes(1);
+    // A page-level header is read by the walk (clean.ts keeps it), so it is watched too.
+    document.body.prepend(Object.assign(document.createElement('header'), { textContent: 'Late banner' }));
+    await tick(150);
+    expect(fired).toHaveBeenCalledTimes(2);
   });
 
   it('a whole-layout swap (the content replaced along with the chrome) is seen', async () => {

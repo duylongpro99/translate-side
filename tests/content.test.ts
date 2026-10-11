@@ -6,7 +6,7 @@ import { CONTENT_PORT_NAME, createClient, PROTOCOL_VERSION, type ContentApi, typ
 type Fn = (m?: unknown) => void;
 
 const h = vi.hoisted(() => {
-  const state = { connectListeners: [] as ((port: unknown) => void)[], runtimeId: 'ext' as string | undefined, page: false, rerendered: false };
+  const state = { connectListeners: [] as ((port: unknown) => void)[], runtimeId: 'ext' as string | undefined, page: false, rerendered: false, away: false };
   const api = {
     runtime: {
       get id() {
@@ -23,6 +23,7 @@ vi.mock('@/extract', () => ({
   // With `page`, two paragraphs: the first on screen (jsdom has no layout: a fixed rect).
   extractPage: (doc: Document, targets?: Map<string, Element>) => {
     if (!h.state.page) return { ok: false, reason: 'no-content', url: 'https://example.com/' };
+    if (h.state.away) return { ok: false, reason: 'no-content', url: 'https://example.com/other' };
     doc.body.innerHTML = '<p>One</p><p>Two</p>';
     const [a, b] = [...doc.querySelectorAll('p')];
     if (a && b) {
@@ -73,6 +74,7 @@ beforeEach(() => {
   globalThis.__translateSide = undefined;
   h.state.page = false;
   h.state.rerendered = false;
+  h.state.away = false;
   h.state.connectListeners.length = 0;
   h.state.runtimeId = 'ext';
 });
@@ -153,5 +155,27 @@ describe('content script', () => {
     ]);
     // The viewport follows the kept id.
     expect(changed?.visible).toEqual(['a']);
+  });
+
+  it('a route change to a page that cannot be read is pushed once, as not ok; the next good read is pushed (review N8)', async () => {
+    h.state.page = true;
+    main();
+    const events: { name: string; body: { ok: boolean; url: string } }[] = [];
+    const client = createClient<ContentApi>(connect(), { onEvent: (e) => events.push(e as never) });
+    await client.request('hello', { v: PROTOCOL_VERSION });
+    await client.request('extract', {});
+    h.state.away = true;
+    document.body.append(document.createElement('div'));
+    await vi.waitFor(() => expect(events.filter((e) => e.name === 'changed')).toHaveLength(1), { timeout: 2000 });
+    // More unreadable reads on the same address push nothing more.
+    document.body.append(document.createElement('div'));
+    await new Promise((r) => setTimeout(r, 700));
+    h.state.away = false;
+    document.body.append(document.createElement('div'));
+    await vi.waitFor(() => expect(events.filter((e) => e.name === 'changed')).toHaveLength(2), { timeout: 2000 });
+    expect(events.filter((e) => e.name === 'changed').map((e) => [e.body.ok, e.body.url])).toEqual([
+      [false, 'https://example.com/other'],
+      [true, 'https://example.com/'],
+    ]);
   });
 });

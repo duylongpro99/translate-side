@@ -580,6 +580,23 @@ describe('PanelController session hooks (plan M1-E8)', () => {
       expect(reads).toEqual([{ asked: true }]);
     });
 
+    it('a route change to a page that cannot be read drops the old page and its job; the next good read was not asked for (review N8)', async () => {
+      const w = fakeWorld();
+      const calls: unknown[] = [];
+      w.pages[10] = { docId: 'd1', result: at('https://docs.example/a', 2) };
+      w.store[accessKey(10)] = { status: 'ready', trigger: 'gesture', at: 0 };
+      const { c } = await started(w, { hooks: { ready: (_t: number, _d: string, _r: unknown, read?: unknown) => calls.push(read), gone: () => calls.push('gone') } });
+      await wait();
+      emit(w.contentEnds[10] as PortLike, 'changed', { ok: false, reason: 'no-content', url: 'https://docs.example/b' });
+      await wait();
+      expect(c.view).toEqual({ kind: 'empty', url: 'https://docs.example/b' });
+      emit(w.contentEnds[10] as PortLike, 'changed', at('https://docs.example/b', 3));
+      await wait();
+      expect(c.view.kind === 'ready' && c.view.result.url).toBe('https://docs.example/b');
+      expect(calls).toEqual([{ asked: true }, 'gone', { asked: false }]);
+      expect(w.connects).toEqual([10]);
+    });
+
     it('a re-read during a same-document load is kept for when the load ends', async () => {
       const w = fakeWorld();
       w.pages[10] = { docId: 'd1', result: at('https://docs.example/a', 2) };
