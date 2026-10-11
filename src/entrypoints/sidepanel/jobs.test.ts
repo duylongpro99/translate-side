@@ -850,9 +850,15 @@ describe('Jobs: lazy mode for long pages (plan M5-E4)', () => {
     const ids = (w: Set<string>) => [...w].map((id) => Number(id.slice(1)));
     const top = ids(lazyWindow(segs, []));
     expect(top[0]).toBe(0);
-    expect(top.length).toBe(LAZY_MIN_AHEAD + 1);
-    const w = ids(lazyWindow(segs, Array.from({ length: 20 }, (_, i) => `s${100 + i}`)));
+    expect(top.length).toBeGreaterThan(LAZY_MIN_AHEAD);
+    const screen = Array.from({ length: 20 }, (_, i) => `s${100 + i}`);
+    // Long blocks: two screens after, by block count.
+    const long = tr(500).map((x) => ({ ...x, inlineMarkup: words(200) }));
+    const w = ids(lazyWindow(long, screen));
     expect([Math.min(...w), Math.max(...w)]).toEqual([100, 119 + 40]);
+    // Short blocks: reaches on until two chunks' worth of text is covered.
+    const short = ids(lazyWindow(segs, screen));
+    expect(short.length).toBeGreaterThan(61);
     // The end of the page clamps.
     expect(Math.max(...ids(lazyWindow(segs, ['s498', 's499'])))).toBe(499);
   });
@@ -862,7 +868,7 @@ describe('Jobs: lazy mode for long pages (plan M5-E4)', () => {
     const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client), lazyAbove: 50 });
     jobs.setActive(1);
     jobs.setViewport(1, 'd', ['s20', 's21', 's22', 's23', 's24']);
-    await jobs.start(1, 'd', doc(120, 20));
+    await jobs.start(1, 'd', doc(120, 200));
     const v = jobs.get(1) as JobView;
     expect(v.status).toBe('done');
     const sent = sentIds(client);
@@ -886,7 +892,7 @@ describe('Jobs: lazy mode for long pages (plan M5-E4)', () => {
     const client = translatorClient();
     const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client), lazyAbove: 50 });
     jobs.setActive(1);
-    await jobs.start(1, 'd', doc(200, 20));
+    await jobs.start(1, 'd', doc(200, 200));
     const first = jobs.get(1) as JobView;
     const finalBefore = first.counts.final;
     const costBefore = first.cost ?? 0;
@@ -964,6 +970,22 @@ describe('Jobs: lazy mode for long pages (plan M5-E4)', () => {
     // Nothing of the first window beyond what was in flight was ever sent.
     const sent = inner.requests.flatMap((r) => wireLines(r.messages.find((m) => m.role === 'user')?.content ?? '').map((l) => Number(/^P(\d+)/.exec(l.source)?.[1])));
     expect(sent.filter((n) => n >= 15 && n < 100)).toEqual([]);
+  });
+
+  it('Retranslate page on a lazy page redoes the window; blocks outside it wait again (no old text, counted in rest)', async () => {
+    const client = translatorClient();
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client), lazyAbove: 50 });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(120, 200));
+    await jobs.translateRest(1);
+    expect(jobs.get(1)?.counts.final).toBe(120);
+    await jobs.start(1, 'd', doc(120, 200), { fresh: true, keepCost: true });
+    const v = jobs.get(1) as JobView;
+    expect(v.segs.get('s0')?.status).toBe('final');
+    expect(v.segs.get('s100')).toEqual({ status: 'pending' });
+    expect(v.counts.final).toBeLessThan(60);
+    expect(v.lazy?.rest).toBe(120 - v.counts.final);
+    expect(v.kept).toBeUndefined();
   });
 
   it('Translate the rest translates everything and drops the lazy note', async () => {

@@ -22,7 +22,7 @@
 // - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
-import { briefCacheKey, contextual, createDefaultPromptRegistry, createEngine, decideRetry, explain, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy } from '@/engine/index';
+import { briefCacheKey, contextual, estimateTokens, createDefaultPromptRegistry, createEngine, decideRetry, explain, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy } from '@/engine/index';
 import type { SnippetRequest } from '@/engine/types';
 import type { LLMClient, LLMError, LLMErrorKind, NormalizedRequest } from '@/llm/types';
 import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
@@ -435,12 +435,21 @@ export const LAZY_SEGMENTS = 400;
 export const LAZY_AHEAD_SCREENS = 2;
 /** The least a round covers after the screen, when the screen holds few blocks (one tall block, no report yet). */
 export const LAZY_MIN_AHEAD = 24;
+/**
+ * A round covers at least this much source text (two chunks of 1,500 tokens), so the profile's two
+ * request slots both get a chunk; and the next round starts only when the reader gets within
+ * `LAZY_LOW_WATER` of the end of what is translated (a screen, 8 blocks at least), so rounds are
+ * big rather than one screen at a time.
+ */
+export const LAZY_MIN_TOKENS = 3000;
+export const LAZY_LOW_WATER = { screens: 1, minAhead: 8, minTokens: 0 } as const;
 
 /**
  * The ids a lazy round covers: the segments on screen and `LAZY_AHEAD_SCREENS` screens after them
  * (a screen's size is the number of blocks on it). With no screen reported yet, from the top.
  */
-export function lazyWindow(translatable: readonly Segment[], screen: readonly string[]): Set<string> {
+export function lazyWindow(translatable: readonly Segment[], screen: readonly string[], reach: { screens?: number; minAhead?: number; minTokens?: number } = {}): Set<string> {
+  const { screens = LAZY_AHEAD_SCREENS, minAhead = LAZY_MIN_AHEAD, minTokens = LAZY_MIN_TOKENS } = reach;
   const onScreen = new Set(screen);
   let lo = -1;
   let hi = -1;
@@ -454,7 +463,15 @@ export function lazyWindow(translatable: readonly Segment[], screen: readonly st
     hi = -1;
   }
   const size = hi < lo ? 0 : hi - lo + 1;
-  const end = Math.min(translatable.length - 1, Math.max(hi, lo) + Math.max(LAZY_MIN_AHEAD, size * LAZY_AHEAD_SCREENS));
+  let end = Math.min(translatable.length - 1, Math.max(hi, lo) + Math.max(minAhead, Math.ceil(size * screens)));
+  // Enough text for every request slot to get a chunk (two chunks of the profile's size): short blocks on a long page.
+  let tokens = 0;
+  for (let i = lo; i <= end; i++) tokens += estimateTokens(translatable[i]?.inlineMarkup ?? '');
+  while (tokens < minTokens && end < translatable.length - 1) tokens += estimateTokens(translatable[++end]?.inlineMarkup ?? '');
+  // A table row is one chunk (criterion M5-E5): the window takes whole rows at both edges.
+  const row = (i: number) => translatable[i]?.groupId;
+  while (lo > 0 && row(lo) !== undefined && row(lo - 1) === row(lo)) lo--;
+  while (end < translatable.length - 1 && row(end) !== undefined && row(end + 1) === row(end)) end++;
   return new Set(translatable.slice(lo, end + 1).map((s) => s.id));
 }
 
@@ -703,9 +720,13 @@ export class Jobs {
     // A retranslate keeps the page's translation on screen until each block's new one arrives;
     // so does a resume of a retranslate that stopped, for the blocks it still owes.
     const before = fresh && prev?.docId === docId ? prev : undefined;
+    // Lazy mode (M5-E4): a Retranslate page redoes the window; the blocks outside it go back to waiting,
+    // not left on the old translation as if current.
+    const lazy = !all && translatable.length > (this.deps.lazyAbove ?? LAZY_SEGMENTS);
+    const around = lazy && before !== undefined ? lazyWindow(translatable, this.screenOf(tabId, docId)) : undefined;
     for (const s of translatable) {
       const old = keep?.segs.get(s.id) ?? before?.segs.get(s.id);
-      const owed = before !== undefined && (keep === undefined || keep.earlier.has(s.id));
+      const owed = before !== undefined && (keep === undefined || keep.earlier.has(s.id)) && (around === undefined || around.has(s.id));
       // Started while another retranslate runs: a block it had not redone yet (pending or
       // streaming) still owes its earlier translation, which that run holds.
       const prior = old?.status === 'final' ? old : before?.earlier.get(s.id);
@@ -720,7 +741,6 @@ export class Jobs {
     const todo = new Set(translatable.filter((s) => segs.get(s.id)?.status !== 'final').map((s) => s.id));
     const gate = new Gate();
     gate.set(tabId === this.activeTabId);
-    const lazy = !all && translatable.length > (this.deps.lazyAbove ?? LAZY_SEGMENTS);
     const job: Job = {
       lazy,
       all,
@@ -1441,8 +1461,8 @@ export class Jobs {
   private reach(tabId: number, job: Job): void {
     if (!job.lazy || job.stalled || this.jobs.get(tabId) !== job || job.view.status !== 'done' || job.view.limit) return;
     const translatable = (job.translatable ??= job.view.segments.filter((s) => s.translate));
-    const window = lazyWindow(translatable, this.screenOf(tabId, job.docId));
-    if (![...window].some((id) => job.segs.get(id)?.status === 'pending')) return;
+    const near = lazyWindow(translatable, this.screenOf(tabId, job.docId), LAZY_LOW_WATER);
+    if (![...near].some((id) => job.segs.get(id)?.status === 'pending')) return;
     void this.resume(tabId);
   }
 

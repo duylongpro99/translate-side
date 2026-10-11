@@ -127,6 +127,21 @@ const click = (label: string) =>
 const rows = () => [...root.querySelectorAll('[data-testid=glossary-entry]')].map((li) => li.textContent?.replace(/\s*Edit\s*Remove\s*$/, '').trim());
 
 describe('options: style and personal glossary (plan M2-E6)', () => {
+  it('stores the captions and alt-text settings: captions on and alt text off by default (M5-E5)', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    const captions = root.querySelector('#captions') as HTMLInputElement;
+    const alt = root.querySelector('#alt-text') as HTMLInputElement;
+    expect([captions.checked, alt.checked]).toEqual([true, false]);
+    act(() => captions.click());
+    act(() => alt.click());
+    await flush();
+    expect(f.sync.get('prefs')).toMatchObject({ captions: false, altText: true });
+    expect((root.querySelector('#captions') as HTMLInputElement).checked).toBe(false);
+    expect((root.querySelector('#alt-text') as HTMLInputElement).checked).toBe(true);
+  });
+
   it('stores the style mode and the gloss setting in sync prefs, keeping the languages (M2-D1 defaults)', async () => {
     const f = fakeApi();
     act(() => render(<Options api={f.api} />, root));

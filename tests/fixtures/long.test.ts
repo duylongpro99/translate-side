@@ -5,7 +5,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { chunkSegments, chunkLimits } from '@/engine/chunker';
 import { extractPage } from '@/extract';
-import { LAZY_SEGMENTS } from '@/entrypoints/sidepanel/jobs';
+import { LAZY_SEGMENTS, lazyWindow } from '@/entrypoints/sidepanel/jobs';
 import { FIXTURES, loadHtml } from './load.ts';
 
 const read = (name: string) => {
@@ -37,5 +37,23 @@ describe('fixtures/long', () => {
       expect(holding, `row ${row}`).toHaveLength(1);
     }
     expect(chunks.length).toBeGreaterThan(3);
+  });
+
+  it('large-table: a lazy window never cuts a row, wherever its edge falls (rows stay one chunk per round)', () => {
+    const translatable = read('large-table.html').filter((s) => s.translate);
+    for (let at = 0; at < translatable.length; at += 3) {
+      const window = lazyWindow(translatable, [translatable[at]?.id ?? '']);
+      const inside = translatable.filter((s) => window.has(s.id));
+      for (const s of inside) {
+        if (s.groupId === undefined) continue;
+        const row = translatable.filter((x) => x.groupId === s.groupId);
+        expect(row.every((x) => window.has(x.id)), `row ${s.groupId} at ${at}`).toBe(true);
+      }
+    }
+    // Each window's chunks hold every row whole as well.
+    const window = lazyWindow(translatable, [translatable[17]?.id ?? '']);
+    const chunks = chunkSegments(translatable.filter((s) => window.has(s.id)), chunkLimits(1500));
+    const rows = new Set(translatable.filter((s) => window.has(s.id)).map((s) => s.groupId).filter(Boolean));
+    for (const g of rows) expect(chunks.filter((c) => c.segments.some((s) => s.groupId === g))).toHaveLength(1);
   });
 });
