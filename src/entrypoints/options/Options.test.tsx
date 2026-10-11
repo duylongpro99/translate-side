@@ -20,7 +20,7 @@ function fakeApi({ grant = true, answer = Promise.resolve() } = {}) {
   const area = (m: Map<string, unknown>, name: string) => {
     const listeners = new Set<(c: Record<string, unknown>) => void>();
     return {
-      get: (k: string | null) => Promise.resolve(k === null ? Object.fromEntries(m) : m.has(k) ? { [k]: m.get(k) } : {}),
+      get: (k: string | string[] | null) => Promise.resolve(k === null ? Object.fromEntries(m) : Object.fromEntries((Array.isArray(k) ? k : [k]).filter((x) => m.has(x)).map((x) => [x, m.get(x)]))),
       set: (o: Record<string, unknown>) => {
         log.push(`${name}.set ${Object.keys(o).join(',')}`);
         for (const [k, v] of Object.entries(o)) m.set(k, v);
@@ -42,13 +42,13 @@ function fakeApi({ grant = true, answer = Promise.resolve() } = {}) {
           return grant;
         });
       },
-      remove: ({ origins }: { origins: string[] }) => Promise.resolve(origins.every((o) => granted.delete(o))),
+      remove: ({ origins }: { origins: string[] }) => (log.push(`revoke ${origins.join(',')}`), Promise.resolve(origins.every((o) => granted.delete(o)))),
     },
     i18n: { getUILanguage: () => 'en-US' },
     runtime: { getURL: (p: string) => `chrome-extension://abc${p}` },
     tabs: { create: (o: { url: string }) => (log.push(`tab ${o.url}`), Promise.resolve({})) },
   } as unknown as Api;
-  return { api, local, sync, log };
+  return { api, local, sync, log, granted };
 }
 
 let root: HTMLElement;
@@ -402,5 +402,88 @@ describe('usage per model, the estimate and the soft limit (plan M4-E10)', () =>
     await waitFor(() => !f.local.has('spendLimit'));
     await waitFor(() => root.querySelector('[data-testid=spend-limit-remove]') === null);
     expect(root.querySelector('[data-testid=spend-limit-continued]')).toBeNull();
+  });
+});
+
+describe('options: site rules (plan M5-E6)', () => {
+  const submitIn = (testid: string) => act(() => void root.querySelector(`[data-testid=${testid}]`)?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  const typeIn = (label: string, value: string) =>
+    act(() => {
+      const el = root.querySelector(`[aria-label="${label}"]`) as HTMLInputElement;
+      el.value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  const sites = (kind: string) => [...root.querySelectorAll(`[data-testid=sites-${kind}] .opt__term`)].map((e) => e.textContent);
+  const note = () => root.querySelector('[data-testid=sites-note]')?.textContent ?? '';
+
+  it('allowlisting asks for the site first in the click, then stores it; removing gives the access back', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => root.querySelector('#sites-h') !== null);
+    expect(root.querySelector('#sites-h')?.textContent).toBe('Site rules');
+    typeIn('Site to translate by itself', 'https://Docs.Example.org/guide/intro');
+    const before = f.log.length;
+    submitIn('sites-allow-form');
+    // The permission prompt is the first thing the click does (S5): nothing is stored before it.
+    expect(f.log[before]).toBe('request https://docs.example.org/*,http://docs.example.org/*');
+    await waitFor(() => sites('allow').length === 1);
+    expect(f.sync.get('siteAllowlist')).toEqual(['docs.example.org']);
+    expect(note()).toBe('docs.example.org added.');
+
+    act(() => void (root.querySelector('[aria-label="Remove docs.example.org"]') as HTMLElement).click());
+    await waitFor(() => sites('allow').length === 0);
+    expect(f.log).toContain('revoke https://docs.example.org/*,http://docs.example.org/*');
+    expect(f.granted.size).toBe(0);
+  });
+
+  it('a refused permission adds nothing; a full list is refused before the browser asks', async () => {
+    const f = fakeApi({ grant: false });
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => root.querySelector('#sites-h') !== null);
+    typeIn('Site to translate by itself', 'docs.example.org');
+    submitIn('sites-allow-form');
+    await waitFor(() => note().includes('was not granted'));
+    expect(f.sync.has('siteAllowlist')).toBe(false);
+
+    const g = fakeApi();
+    g.sync.set('siteAllowlist', Array.from({ length: 200 }, (_, i) => `s${i}.example.com`));
+    act(() => render(null, root));
+    act(() => render(<Options api={g.api} />, root));
+    await waitFor(() => sites('allow').length === 200);
+    typeIn('Site to translate by itself', 'docs.example.org');
+    submitIn('sites-allow-form');
+    await flush();
+    expect(note()).toContain('At most 200');
+    expect(g.log.some((l) => l.startsWith('request'))).toBe(false);
+  });
+
+  it('never translate: stored, takes the site off the allowlist, and says it works like the built-in denylist', async () => {
+    const f = fakeApi();
+    f.sync.set('siteAllowlist', ['bank.example.com']);
+    f.granted.add('https://bank.example.com/*');
+    f.granted.add('http://bank.example.com/*');
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => sites('allow').length === 1);
+    expect(root.querySelector('#sites')?.textContent).toContain('the same as the built-in list of mail and sign-in pages');
+    typeIn('Site to never translate', 'bank.example.com');
+    submitIn('sites-never-form');
+    await waitFor(() => sites('never').length === 1);
+    expect(sites('allow')).toEqual([]);
+    expect(f.sync.get('siteNever')).toEqual(['bank.example.com']);
+    expect(f.granted.size).toBe(0);
+    expect(note()).toBe('bank.example.com added, and taken off auto-translate.');
+    act(() => void (root.querySelector('[aria-label="Remove bank.example.com"]') as HTMLElement).click());
+    await waitFor(() => sites('never').length === 0);
+    expect(f.sync.get('siteNever')).toEqual([]);
+  });
+
+  it('an allowlisted site whose access was removed says so and can be granted again', async () => {
+    const f = fakeApi();
+    f.sync.set('siteAllowlist', ['docs.example.org']);
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => root.querySelector('[aria-label="Grant access to docs.example.org"]') !== null);
+    act(() => void (root.querySelector('[aria-label="Grant access to docs.example.org"]') as HTMLElement).click());
+    await waitFor(() => root.querySelector('[aria-label="Grant access to docs.example.org"]') === null);
+    expect(f.granted.has('https://docs.example.org/*')).toBe(true);
   });
 });

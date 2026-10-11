@@ -10,7 +10,8 @@ import type { ModelInfo, Protocol, ProtocolAdapter } from '@/llm/types';
 import { connectMessage, corsGuide, displayModels, fixBaseUrl, isClaudeModel, preferredProtocol, testConnection, URL_FIX_TEXT, type ConnectMessage, type GuideKind, type GuideStep, type TestResult } from '@/shared/connect';
 import { AUTH_LABELS, PICKER_GROUPS, presetFor, PROTOCOL_LABELS, ROLE_LABELS, type PresetId } from '@/shared/presets';
 import { pricingFor } from '@/shared/pricing';
-import { BASIC_FALLBACK, isProviderKey, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnectionStatus, saveProfile, saveRouting, saveSetup, type ProviderSettings } from '@/shared/providers';
+import { BASIC_FALLBACK, isLocalConnection, isProviderKey, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnectionStatus, saveProfile, saveRouting, saveSetup, type ProviderSettings, type SiteRule } from '@/shared/providers';
+import { sitePattern } from '@/shared/sites';
 import { BUILTIN_CONNECTIONS, hasHostPermission, maskKey, originPattern, readApiKey, resolveConnection, SECRET_PREFIX, type ModelProfile, type ProviderConnection } from '@/shared/settings';
 import { draftFromConnection, draftFromPreset, fieldsFor, originMoved, testInputOf, toConnection, toProfile, usableStoredKey, type ConnectionDraft, type TestStatus } from './form.ts';
 
@@ -349,7 +350,12 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
       (err: unknown) => onNote(err instanceof Error ? err.message : String(err), true),
     );
   };
-  const sites = settings.routing.siteOverrides ?? [];
+  const saveSites = (siteOverrides: SiteRule[], said: string) => {
+    saveRouting(api, { ...settings.routing, siteOverrides }).then(
+      () => onNote(said),
+      (err: unknown) => onNote(err instanceof Error ? err.message : String(err), true),
+    );
+  };
   return (
     <div class="prov__block" data-testid="routing">
       <h3>Routing</h3>
@@ -375,16 +381,86 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
       </div>
       <p class="opt__hint">The document brief is one short call per page that finds its topic, tone and key terms; a cheaper model often does it well.</p>
       <FallbackChain settings={settings} profiles={profiles} options={options} onSave={(fallback, said) => save({ fallback }, said)} />
-      {sites.length ? (
-        <ul class="prov__list" data-testid="site-rules">
-          {sites.map((r) => (
-            <li key={r.pattern} class="opt__hint">
-              Site rule: {r.pattern} → {profiles.find((p) => p.id === r.translate)?.model ?? '(missing model)'}
-              {r.localOnly ? ' (local only)' : ''}
+      <SiteModelRules settings={settings} profiles={profiles} options={options} onSave={(siteOverrides, said) => saveSites(siteOverrides, said)} />
+    </div>
+  );
+}
+
+/**
+ * Site rules for the model (DESIGN §4.3.1 siteOverrides, §4.3.5, plan M5-E6): a site that always
+ * uses one model, and "local only" for a site whose text must not leave the machine (no cloud
+ * fallback, §4.3.3 privacy rule). The first matching rule wins, in list order.
+ */
+function SiteModelRules({ settings, profiles, options, onSave }: { settings: ProviderSettings; profiles: readonly ModelProfile[]; options: (selected: string | undefined) => ComponentChildren; onSave: (rules: SiteRule[], said: string) => void }) {
+  const rules = settings.routing.siteOverrides ?? [];
+  const [site, setSite] = useState('');
+  const [model, setModel] = useState('');
+  const [localOnly, setLocalOnly] = useState(false);
+  const [problem, setProblem] = useState<string | undefined>();
+  const chosen = model || settings.routing.translate;
+  const cloud = (id: string) => {
+    const p = profiles.find((x) => x.id === id);
+    const c = p && settings.connections.find((x) => x.id === p.connectionId);
+    return c ? !isLocalConnection(c) : false;
+  };
+  const tidy = ({ localOnly: lo, ...r }: SiteRule): SiteRule => (lo ? { ...r, localOnly: true } : r);
+  const edit = (pattern: string, patch: Partial<SiteRule>, said: string) => onSave(rules.map((r) => (r.pattern === pattern ? tidy({ ...r, ...patch }) : r)), said);
+  const add = (e: Event) => {
+    e.preventDefault();
+    const pattern = sitePattern(site);
+    if (!pattern) return setProblem('Enter a site, like docs.example.com or *.example.com.');
+    if (rules.some((r) => r.pattern === pattern)) return setProblem(`${pattern} already has a rule.`);
+    setProblem(undefined);
+    onSave([...rules, { pattern, translate: chosen, ...(localOnly ? { localOnly: true } : {}) }], `Site rule for ${pattern} saved.`);
+    setSite('');
+    setLocalOnly(false);
+  };
+  return (
+    <div class="prov__sites" data-testid="site-rules">
+      <h4>Model per site</h4>
+      {rules.length ? (
+        <ul class="prov__list">
+          {rules.map((r) => (
+            <li key={r.pattern} class="prov__row" data-testid="site-rule">
+              <span class="prov__name">{r.pattern}</span>
+              <select value={r.translate} aria-label={`Model for ${r.pattern}`} onChange={(e) => edit(r.pattern, { translate: (e.target as HTMLSelectElement).value }, `Site rule for ${r.pattern} saved.`)}>
+                {options(r.translate)}
+              </select>
+              <label class="opt__check">
+                <input type="checkbox" checked={r.localOnly === true} aria-label={`Local only for ${r.pattern}`} onChange={(e) => edit(r.pattern, { localOnly: (e.target as HTMLInputElement).checked }, `Site rule for ${r.pattern} saved.`)} /> Local only
+              </label>
+              <span class="prov__actions">
+                <button type="button" aria-label={`Remove the rule for ${r.pattern}`} onClick={() => onSave(rules.filter((x) => x.pattern !== r.pattern), `Site rule for ${r.pattern} removed.`)}>
+                  Remove
+                </button>
+              </span>
+              {r.localOnly && cloud(r.translate) ? (
+                <p class="opt__status opt__status--warn" data-testid="site-rule-cloud">
+                  {r.pattern} is local only, but its model is not on this machine: pages there are sent to it. Pick a local model.
+                </p>
+              ) : null}
             </li>
           ))}
         </ul>
       ) : null}
+      <form class="opt__row" onSubmit={add} data-testid="site-rule-form">
+        <input aria-label="Site" placeholder="docs.example.com or *.example.com" value={site} onInput={(e) => setSite((e.target as HTMLInputElement).value)} />
+        <select aria-label="Model for the site" value={chosen} onChange={(e) => setModel((e.target as HTMLSelectElement).value)}>
+          {options(chosen)}
+        </select>
+        <label class="opt__check">
+          <input type="checkbox" checked={localOnly} onChange={(e) => setLocalOnly((e.target as HTMLInputElement).checked)} /> Local only
+        </label>
+        <button type="submit" disabled={site.trim() === ''}>
+          Add rule
+        </button>
+      </form>
+      {problem ? (
+        <p class="opt__status opt__status--warn" role="status" data-testid="site-rule-problem">
+          {problem}
+        </p>
+      ) : null}
+      <p class="opt__hint">Pages on a site with a rule are translated by its model instead of the one above. “Local only” never falls back to a cloud model when the site’s model fails.</p>
     </div>
   );
 }

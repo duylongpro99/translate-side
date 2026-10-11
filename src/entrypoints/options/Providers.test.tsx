@@ -359,6 +359,59 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     expect($('[data-testid=providers-note]').textContent).toBe('Fallback removed.');
   });
 
+  it('routing: model per site, with local only (plan M5-E6 on M4-E8 siteRules)', async () => {
+    const local = { id: 'o1', label: 'Home Ollama', presetId: 'ollama', protocol: 'openai-chat', baseUrl: 'http://localhost:11434/v1', auth: { style: 'none' }, quirks: {}, status: 'ok' };
+    const cloud = { id: 'c9', label: 'Work gateway', presetId: 'custom-openai', protocol: 'openai-chat', baseUrl: 'https://gw.example.com/v1', auth: { style: 'bearer' }, quirks: {}, status: 'ok' };
+    const f = fakeApi({
+      sync: {
+        schemaVersion: 1,
+        'conn:o1': local,
+        'conn:c9': cloud,
+        'profile:q': { id: 'q', connectionId: 'o1', model: 'qwen3:8b', maxConcurrency: 1, chunkTokens: 600 },
+        'profile:w': { id: 'w', connectionId: 'c9', model: 'gpt-5-mini', maxConcurrency: 1, chunkTokens: 600 },
+        routing: { translate: 'w' },
+      },
+      local: { 'secret:c9': 'sk-work-0123456789wxyz' },
+    });
+    await mount(f, server(() => openaiList()));
+    const form = () => $('[data-testid=site-rule-form]');
+    const rule = () => $('[data-testid=site-rule]');
+    const pick = (sel: HTMLSelectElement, value: string) =>
+      act(() => {
+        sel.value = value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    type('[aria-label="Site"]', 'https://Wiki.Corp.Example.com/page');
+    pick(form().querySelector('select') as HTMLSelectElement, 'q');
+    click(form().querySelector('input[type=checkbox]'));
+    act(() => void form().dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    await waitFor(() => f.sync.has('siteRules'));
+    expect(f.sync.get('siteRules')).toEqual([{ pattern: 'wiki.corp.example.com', translate: 'q', localOnly: true }]);
+    expect(f.sync.get('routing')).toEqual({ translate: 'w' });
+    await waitFor(() => rule() !== null);
+    expect($('[data-testid=site-rule-cloud]')).toBeNull();
+
+    // A local-only site on a cloud model is called out.
+    pick(rule().querySelector('select') as HTMLSelectElement, 'w');
+    await waitFor(() => $('[data-testid=site-rule-cloud]') !== null);
+    expect(f.sync.get('siteRules')).toEqual([{ pattern: 'wiki.corp.example.com', translate: 'w', localOnly: true }]);
+    click(rule().querySelector('input[type=checkbox]'));
+    await waitFor(() => (f.sync.get('siteRules') as { localOnly?: boolean }[])[0]?.localOnly === undefined);
+    expect(f.sync.get('siteRules')).toEqual([{ pattern: 'wiki.corp.example.com', translate: 'w' }]);
+
+    // The same site twice, and a non-site, are refused.
+    type('[aria-label="Site"]', 'wiki.corp.example.com');
+    act(() => void form().dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect($('[data-testid=site-rule-problem]').textContent).toContain('already has a rule');
+    type('[aria-label="Site"]', 'not a site');
+    act(() => void form().dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect($('[data-testid=site-rule-problem]').textContent).toContain('Enter a site');
+
+    click(rule().querySelector('[aria-label^="Remove the rule"]'));
+    await waitFor(() => rule() === null);
+    expect(f.sync.get('siteRules')).toEqual([]);
+  });
+
   const GW = { id: 'c9', label: 'Work gateway', presetId: 'custom-openai', protocol: 'openai-chat', baseUrl: 'https://gw.example.com/v1', auth: { style: 'bearer' }, quirks: {}, status: 'ok' };
 
   it('moving a connection to another origin needs its key again: the stored key is never sent there (review C1 #1)', async () => {

@@ -31,6 +31,7 @@ import { pricingFor } from '@/shared/pricing';
 import { estimateSpend, monthKey, readSpend, readSpendLimit, resetSpend, saveSpendLimit, SPEND_KEY, SPEND_LIMIT_KEY, type SpendLimit, type SpendTotals } from '@/shared/spend';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
+import { addAllowlisted, addNever, MAX_SITES, readSiteLists, removeAllowlisted, removeNever, requestSitePermission, SITE_ALLOWLIST_KEY, SITE_NEVER_KEY, siteOrigins, sitePattern, type SiteLists } from '@/shared/sites';
 
 type Browser = typeof browser;
 
@@ -321,6 +322,146 @@ function GlossarySection({ api }: { api: Browser }) {
   );
 }
 
+/**
+ * Site rules (plan M5-E6, DESIGN §7 "auto-translate when the panel is open / never translate",
+ * §8): the sites whose pages translate by themselves while the panel is open (each one asks for
+ * its host permission, plan §5), and the sites Translate Side never reads, like the built-in
+ * denylist (D23). The model per site is under Providers › Routing.
+ */
+function SitesSection({ api }: { api: Browser }) {
+  const [lists, setLists] = useState<SiteLists | undefined>();
+  /** Allowlisted sites whose permission is missing (refused, or removed in chrome://extensions). */
+  const [noAccess, setNoAccess] = useState<string[]>([]);
+  const [allowInput, setAllowInput] = useState('');
+  const [neverInput, setNeverInput] = useState('');
+  const [note, setNote] = useState<{ text: string; warn: boolean } | undefined>();
+  const load = () =>
+    readSiteLists(api).then(
+      async (l) => {
+        setLists(l);
+        const missing = await Promise.all(l.allow.map(async (p) => ((await api.permissions.contains({ origins: siteOrigins(p).slice(0, 1) }).catch(() => false)) ? null : p)));
+        setNoAccess(missing.filter((p): p is string => p !== null));
+      },
+      () => setLists({ allow: [], never: [] }),
+    );
+  useEffect(() => {
+    void load();
+    const onChanged = (changes: Record<string, unknown>) => {
+      if (SITE_ALLOWLIST_KEY in changes || SITE_NEVER_KEY in changes) void load();
+    };
+    api.storage.sync.onChanged.addListener(onChanged);
+    return () => api.storage.sync.onChanged.removeListener(onChanged);
+  }, []);
+  if (!lists) return null;
+
+  const failed = (e: unknown) => setNote({ text: e instanceof Error ? e.message : String(e), warn: true });
+  /** The click handler: the permission prompt must be its first await (S5). */
+  const allow = async (input: string) => {
+    const pattern = sitePattern(input);
+    if (!pattern) return setNote({ text: 'Enter a site, like docs.example.com or *.example.com.', warn: true });
+    // Full: refuse before the browser asks for a permission that would then go unused (review N2).
+    if (!lists.allow.includes(pattern) && lists.allow.length >= MAX_SITES) return setNote({ text: `At most ${MAX_SITES} sites per list. Remove a site first.`, warn: true });
+    const granted = await requestSitePermission(api, pattern);
+    if (!granted) return setNote({ text: `Access to ${pattern} was not granted, so it was not added.`, warn: true });
+    try {
+      await addAllowlisted(api, pattern);
+    } catch (e) {
+      return failed(e);
+    }
+    setAllowInput('');
+    setNote({ text: lists.never.includes(pattern) ? `${pattern} added, and taken off never translate.` : `${pattern} added.`, warn: false });
+    await load();
+  };
+  const never = async (input: string) => {
+    const pattern = sitePattern(input);
+    if (!pattern) return setNote({ text: 'Enter a site, like mail.example.com or *.example.com.', warn: true });
+    try {
+      await addNever(api, pattern);
+    } catch (e) {
+      return failed(e);
+    }
+    setNeverInput('');
+    setNote({ text: lists.allow.includes(pattern) ? `${pattern} added, and taken off auto-translate.` : `${pattern} added.`, warn: false });
+    await load();
+  };
+  const run = (p: Promise<unknown>, said: string) =>
+    p.then(
+      () => (setNote({ text: said, warn: false }), load()),
+      failed,
+    );
+  const list = (sites: string[], kind: 'allow' | 'never') =>
+    sites.length ? (
+      <ul class="opt__glossary" data-testid={`sites-${kind}`}>
+        {sites.map((p) => (
+          <li key={p} data-testid="site-entry">
+            <span class="opt__term">{p}</span>{' '}
+            {kind === 'allow' && noAccess.includes(p) ? (
+              <>
+                <span class="opt__status--warn">no access · </span>
+                <button type="button" class="opt__link" onClick={() => void allow(p)} aria-label={`Grant access to ${p}`}>
+                  Grant access
+                </button>{' '}
+              </>
+            ) : null}
+            <button type="button" class="opt__link" aria-label={`Remove ${p}`} onClick={() => void run(kind === 'allow' ? removeAllowlisted(api, p) : removeNever(api, p), `${p} removed.`)}>
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="opt__status">None yet.</p>
+    );
+  return (
+    <section class="opt__section" id="sites" aria-labelledby="sites-h">
+      <h2 id="sites-h">Site rules</h2>
+      <h3>Translate by itself while the panel is open</h3>
+      <p class="opt__hint">
+        On these sites, each page you open is translated without a click while the panel is open. Chrome asks once for access to each site. On other sites, a page you reach by a link waits for “Translate this page”.
+      </p>
+      {list(lists.allow, 'allow')}
+      <form
+        class="opt__row"
+        data-testid="sites-allow-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void allow(allowInput);
+        }}
+      >
+        <input aria-label="Site to translate by itself" placeholder="docs.example.com or *.example.com" value={allowInput} onInput={(e) => setAllowInput((e.target as HTMLInputElement).value)} />
+        <button type="submit" disabled={allowInput.trim() === ''}>
+          Add
+        </button>
+      </form>
+      <h3>Never translate</h3>
+      <p class="opt__hint">
+        Translate Side never reads these sites and sends nothing from them, the same as the built-in list of mail and sign-in pages: not the page, not a selection, not even when you press the toolbar
+        button. A page open on one is let go at once.
+      </p>
+      {list(lists.never, 'never')}
+      <form
+        class="opt__row"
+        data-testid="sites-never-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void never(neverInput);
+        }}
+      >
+        <input aria-label="Site to never translate" placeholder="mail.example.com or *.example.com" value={neverInput} onInput={(e) => setNeverInput((e.target as HTMLInputElement).value)} />
+        <button type="submit" disabled={neverInput.trim() === ''}>
+          Add
+        </button>
+      </form>
+      <p class="opt__hint">A model for a site, and “local only”, are set in Providers › Routing › Model per site.</p>
+      {note ? (
+        <p class={note.warn ? 'opt__status opt__status--warn' : 'opt__note'} role="status" data-testid="sites-note">
+          {note.text}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 const mb = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(0, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`);
 
 /** The translation cache (plan M3-E2): what it holds, and a way to empty it. */
@@ -528,6 +669,7 @@ export function Options({ api, cache = openTranslationCache(), adapterFor }: { a
       <LanguageSection api={api} />
       <StyleSection api={api} />
       <GlossarySection api={api} />
+      <SitesSection api={api} />
       <SpendSection api={api} />
       <CacheSection cache={cache} />
     </main>
