@@ -16,3 +16,7 @@ web-ext.config.ts
 .claude/skills/managed-session
 .cache/
 eval-results/
+
+# Playwright e2e output (e2e/)
+test-results/
+playwright-report/
