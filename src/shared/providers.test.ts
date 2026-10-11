@@ -755,9 +755,11 @@ describe('fallback chain routing (plan M4-E9, DESIGN §4.3.5 privacy rule)', () 
   const lan: ProviderConnection = { ...ollama, id: 'lan', label: 'Office box', baseUrl: 'http://192.168.1.20:11434/v1' };
   const qwen: ModelProfile = { id: 'ollama-qwen', connectionId: 'ollama', model: 'qwen3:8b', maxConcurrency: 1, chunkTokens: 800 };
   const lanQwen: ModelProfile = { ...qwen, id: 'lan-qwen', connectionId: 'lan' };
+  const studio: ProviderConnection = { ...ollama, id: 'studio', label: 'LM Studio', baseUrl: 'http://127.0.0.1:1234/v1' };
+  const studioQwen: ModelProfile = { ...qwen, id: 'studio-qwen', connectionId: 'studio' };
   const base = settings({
-    connections: [structuredClone(APIBOX_CONNECTION), structuredClone(GEMINI_CONNECTION), ollama, lan],
-    profiles: [structuredClone(APIBOX_QWEN_PROFILE), structuredClone(APIBOX_PRO_PROFILE), structuredClone(GEMINI_PROFILE), qwen, lanQwen],
+    connections: [structuredClone(APIBOX_CONNECTION), structuredClone(GEMINI_CONNECTION), ollama, lan, studio],
+    profiles: [structuredClone(APIBOX_QWEN_PROFILE), structuredClone(APIBOX_PRO_PROFILE), structuredClone(GEMINI_PROFILE), qwen, lanQwen, studioQwen],
     routing: { translate: qwen.id, fallback: [qwen.id, 'basic', GEMINI_PROFILE.id, 'gone', GEMINI_PROFILE.id, lanQwen.id, APIBOX_PRO_PROFILE.id] },
   });
   const routeOf = (s: ProviderSettings, url?: string) => {
@@ -777,12 +779,24 @@ describe('fallback chain routing (plan M4-E9, DESIGN §4.3.5 privacy rule)', () 
   });
 
   it('a local-only site rule never falls back to a cloud profile (§3 #6): only loopback links stay', () => {
-    const s: ProviderSettings = { ...base, routing: { ...base.routing, translate: GEMINI_PROFILE.id, fallback: [GEMINI_PROFILE.id, APIBOX_PRO_PROFILE.id, lanQwen.id, 'basic', qwen.id], siteOverrides: [{ pattern: '*.corp.example.com', translate: GEMINI_PROFILE.id, localOnly: true }] } };
+    const s: ProviderSettings = { ...base, routing: { ...base.routing, translate: GEMINI_PROFILE.id, fallback: [GEMINI_PROFILE.id, APIBOX_PRO_PROFILE.id, lanQwen.id, 'basic', qwen.id], siteOverrides: [{ pattern: '*.corp.example.com', translate: studioQwen.id, localOnly: true }] } };
     const local = routeOf(s, 'https://wiki.corp.example.com/page');
     expect(local.localOnly).toBe(true);
     expect(fallbackRoutesIn(s, local).map((f) => f.profile.id)).toEqual([qwen.id]);
     // The same settings off that site: the cloud links come back.
     expect(fallbackRoutesIn(s, routeOf(s, 'https://other.com/')).map((f) => f.profile.id)).toEqual([APIBOX_PRO_PROFILE.id, lanQwen.id, qwen.id]);
+  });
+
+  it('a local-only site rule whose own model is not local fails closed: no route, nothing sent (review R1)', () => {
+    for (const model of [GEMINI_PROFILE.id, lanQwen.id]) {
+      const s: ProviderSettings = { ...base, routing: { ...base.routing, fallback: [qwen.id], siteOverrides: [{ pattern: '*.corp.example.com', translate: model, localOnly: true }] } };
+      const r = resolveRouteIn(s, 'translate', { url: 'https://wiki.corp.example.com/page' });
+      expect(r, model).toMatchObject({ ok: false, source: 'site', message: expect.stringMatching(/local only.*not on this device/) });
+      // analyze is held by the same rule.
+      expect(resolveRouteIn({ ...s, routing: { ...s.routing, analyze: APIBOX_PRO_PROFILE.id } }, 'analyze', { url: 'https://wiki.corp.example.com/' })).toMatchObject({ ok: false });
+      // The rule without local only still runs on its model.
+      expect(routeOf({ ...s, routing: { ...s.routing, siteOverrides: [{ pattern: '*.corp.example.com', translate: model }] } }, 'https://wiki.corp.example.com/').profile.id).toBe(model);
+    }
   });
 
   it('the panel route builds a client per runnable link; a link without its key or access is left out, never an error', async () => {

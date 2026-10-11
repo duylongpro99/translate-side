@@ -398,18 +398,41 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
   const [localOnly, setLocalOnly] = useState(false);
   const [problem, setProblem] = useState<string | undefined>();
   const chosen = model || settings.routing.translate;
-  const cloud = (id: string) => {
+  const connectionOf = (id: string) => {
     const p = profiles.find((x) => x.id === id);
-    const c = p && settings.connections.find((x) => x.id === p.connectionId);
+    return p && settings.connections.find((x) => x.id === p.connectionId);
+  };
+  const cloud = (id: string) => {
+    const c = connectionOf(id);
     return c ? !isLocalConnection(c) : false;
   };
+  // A local-only rule runs only on a model on this device (review R2): routing refuses the other
+  // combination (nothing is sent), so it is never saved. Ticking Local only picks the first local model.
+  const firstLocal = profiles.find((p) => { const c = connectionOf(p.id); return c !== undefined && isLocalConnection(c); })?.id;
+  const NEEDS_LOCAL = 'Local only needs a model on this device (Ollama, LM Studio). Add one above first.';
   const tidy = ({ localOnly: lo, ...r }: SiteRule): SiteRule => (lo ? { ...r, localOnly: true } : r);
-  const edit = (pattern: string, patch: Partial<SiteRule>, said: string) => onSave(rules.map((r) => (r.pattern === pattern ? tidy({ ...r, ...patch }) : r)), said);
+  const edit = (pattern: string, patch: Partial<SiteRule>, said: string) => {
+    const rule = rules.find((r) => r.pattern === pattern);
+    if (!rule) return;
+    const next = tidy({ ...rule, ...patch });
+    if (next.localOnly && cloud(next.translate)) {
+      // Ticked on a cloud model: move to a local one. A cloud model picked for a local-only rule: refused.
+      if (patch.localOnly && firstLocal) next.translate = firstLocal;
+      else return setProblem(patch.localOnly ? NEEDS_LOCAL : `${pattern} is local only: pick a model on this device, or untick Local only first.`);
+    }
+    setProblem(undefined);
+    onSave(rules.map((r) => (r.pattern === pattern ? next : r)), said);
+  };
+  const tickLocal = (on: boolean) => {
+    setLocalOnly(on);
+    if (on && cloud(chosen) && firstLocal) setModel(firstLocal);
+  };
   const add = (e: Event) => {
     e.preventDefault();
     const pattern = sitePattern(site);
     if (!pattern) return setProblem('Enter a site, like docs.example.com or *.example.com.');
     if (rules.some((r) => r.pattern === pattern)) return setProblem(`${pattern} already has a rule.`);
+    if (localOnly && cloud(chosen)) return setProblem(firstLocal ? 'Local only: pick a model on this device for the site.' : NEEDS_LOCAL);
     setProblem(undefined);
     onSave([...rules, { pattern, translate: chosen, ...(localOnly ? { localOnly: true } : {}) }], `Site rule for ${pattern} saved.`);
     setSite('');
@@ -436,7 +459,7 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
               </span>
               {r.localOnly && cloud(r.translate) ? (
                 <p class="opt__status opt__status--warn" data-testid="site-rule-cloud">
-                  {r.pattern} is local only, but its model is not on this machine: pages there are sent to it. Pick a local model.
+                  {r.pattern} is local only, but its model is not on this machine, so pages there are not translated (nothing is sent). Pick a local model.
                 </p>
               ) : null}
             </li>
@@ -449,7 +472,7 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
           {options(chosen)}
         </select>
         <label class="opt__check">
-          <input type="checkbox" checked={localOnly} onChange={(e) => setLocalOnly((e.target as HTMLInputElement).checked)} /> Local only
+          <input type="checkbox" checked={localOnly} aria-label="Local only for the site" onChange={(e) => tickLocal((e.target as HTMLInputElement).checked)} /> Local only
         </label>
         <button type="submit" disabled={site.trim() === ''}>
           Add rule
@@ -460,7 +483,7 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
           {problem}
         </p>
       ) : null}
-      <p class="opt__hint">Pages on a site with a rule are translated by its model instead of the one above. “Local only” never falls back to a cloud model when the site’s model fails.</p>
+      <p class="opt__hint">Pages on a site with a rule are translated by its model instead of the one above. “Local only” keeps the site’s pages on this device: its model must be local, and it never falls back to a cloud model.</p>
     </div>
   );
 }

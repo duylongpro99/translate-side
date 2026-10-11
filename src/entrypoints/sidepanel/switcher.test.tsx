@@ -229,11 +229,12 @@ describe('quick switcher (M4-E11)', () => {
     expect(q('model-switcher')?.getAttribute('title')).toContain(`${GEMINI_PROFILE.model} · `);
   });
 
-  it('says a local-only rule is local only', async () => {
-    const { t } = setup({ siteRules: [{ pattern: '*.example.com', translate: GEMINI_PROFILE.id, localOnly: true }] });
-    await until(() => t.jobs.get(1)?.status !== undefined);
+  it('a local-only rule whose model is not local sends nothing and says why (review R1: fails closed)', async () => {
+    const { t, calls } = setup({ siteRules: [{ pattern: '*.example.com', translate: GEMINI_PROFILE.id, localOnly: true }] });
+    await until(() => t.jobs.get(1)?.status !== undefined && t.jobs.get(1)?.status !== 'running');
     await act(() => settle(30));
-    expect(q('switcher-site-rule')?.textContent).toContain('local only');
+    expect(calls).toEqual([]);
+    expect(root.textContent).toContain('set to local only');
   });
 
   it('a tab choice for a model that no longer exists is ignored', async () => {

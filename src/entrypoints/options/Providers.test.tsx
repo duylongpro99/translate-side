@@ -382,8 +382,16 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
         sel.dispatchEvent(new Event('change', { bubbles: true }));
       });
     type('[aria-label="Site"]', 'https://Wiki.Corp.Example.com/page');
-    pick(form().querySelector('select') as HTMLSelectElement, 'q');
+    // The form starts on the default model (cloud); ticking Local only moves it to the local one (review R2).
+    expect((form().querySelector('select') as HTMLSelectElement).value).toBe('w');
     click(form().querySelector('input[type=checkbox]'));
+    expect((form().querySelector('select') as HTMLSelectElement).value).toBe('q');
+    // Picking the cloud model back with Local only ticked is refused, not saved.
+    pick(form().querySelector('select') as HTMLSelectElement, 'w');
+    act(() => void form().dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect($('[data-testid=site-rule-problem]').textContent).toContain('pick a model on this device');
+    expect(f.sync.has('siteRules')).toBe(false);
+    pick(form().querySelector('select') as HTMLSelectElement, 'q');
     act(() => void form().dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
     await waitFor(() => f.sync.has('siteRules'));
     expect(f.sync.get('siteRules')).toEqual([{ pattern: 'wiki.corp.example.com', translate: 'q', localOnly: true }]);
@@ -391,13 +399,19 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     await waitFor(() => rule() !== null);
     expect($('[data-testid=site-rule-cloud]')).toBeNull();
 
-    // A local-only site on a cloud model is called out.
+    // A local-only rule cannot be moved to a cloud model.
     pick(rule().querySelector('select') as HTMLSelectElement, 'w');
-    await waitFor(() => $('[data-testid=site-rule-cloud]') !== null);
-    expect(f.sync.get('siteRules')).toEqual([{ pattern: 'wiki.corp.example.com', translate: 'w', localOnly: true }]);
+    expect($('[data-testid=site-rule-problem]').textContent).toContain('is local only');
+    expect(f.sync.get('siteRules')).toEqual([{ pattern: 'wiki.corp.example.com', translate: 'q', localOnly: true }]);
+    // Untick, move to the cloud model, then tick again: the rule goes back to the local model.
     click(rule().querySelector('input[type=checkbox]'));
     await waitFor(() => (f.sync.get('siteRules') as { localOnly?: boolean }[])[0]?.localOnly === undefined);
+    pick(rule().querySelector('select') as HTMLSelectElement, 'w');
+    await waitFor(() => (f.sync.get('siteRules') as { translate: string }[])[0]?.translate === 'w');
     expect(f.sync.get('siteRules')).toEqual([{ pattern: 'wiki.corp.example.com', translate: 'w' }]);
+    click(rule().querySelector('input[type=checkbox]'));
+    await waitFor(() => (f.sync.get('siteRules') as { localOnly?: boolean }[])[0]?.localOnly === true);
+    expect(f.sync.get('siteRules')).toEqual([{ pattern: 'wiki.corp.example.com', translate: 'q', localOnly: true }]);
 
     // The same site twice, and a non-site, are refused.
     type('[aria-label="Site"]', 'wiki.corp.example.com');
@@ -410,6 +424,28 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     click(rule().querySelector('[aria-label^="Remove the rule"]'));
     await waitFor(() => rule() === null);
     expect(f.sync.get('siteRules')).toEqual([]);
+  });
+
+  it('routing: with no local model, Local only cannot be saved; a stored local-only rule on a cloud model says nothing is sent (review R2)', async () => {
+    const f = fakeApi({
+      sync: {
+        schemaVersion: 1,
+        'conn:c9': { id: 'c9', label: 'Work gateway', presetId: 'custom-openai', protocol: 'openai-chat', baseUrl: 'https://gw.example.com/v1', auth: { style: 'bearer' }, quirks: {}, status: 'ok' },
+        'profile:w': { id: 'w', connectionId: 'c9', model: 'gpt-5-mini', maxConcurrency: 1, chunkTokens: 600 },
+        routing: { translate: 'w' },
+        siteRules: [{ pattern: 'old.example.com', translate: 'w', localOnly: true }],
+      },
+      local: { 'secret:c9': 'sk-work-0123456789wxyz' },
+    });
+    await mount(f, server(() => openaiList()));
+    await waitFor(() => $('[data-testid=site-rule-cloud]') !== null);
+    expect($('[data-testid=site-rule-cloud]').textContent).toContain('nothing is sent');
+    const form = $('[data-testid=site-rule-form]');
+    type('[aria-label="Site"]', 'wiki.example.com');
+    click(form.querySelector('input[type=checkbox]'));
+    act(() => void form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect($('[data-testid=site-rule-problem]').textContent).toContain('needs a model on this device');
+    expect(f.sync.get('siteRules')).toEqual([{ pattern: 'old.example.com', translate: 'w', localOnly: true }]);
   });
 
   const GW = { id: 'c9', label: 'Work gateway', presetId: 'custom-openai', protocol: 'openai-chat', baseUrl: 'https://gw.example.com/v1', auth: { style: 'bearer' }, quirks: {}, status: 'ok' };

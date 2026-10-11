@@ -716,6 +716,7 @@ export type Route =
  * cloud analyze profile never sees that site's text. A site rule whose profile is gone is an
  * error, not a fall-through (it would send the page elsewhere than the user chose); a tab
  * override whose profile is gone is ignored (session state, e.g. the profile was removed).
+ * A local-only site rule whose own model is not local is an error too: nothing leaves the device.
  */
 export function resolveRouteIn(settings: ProviderSettings, role: ModelRole, ctx: RouteContext = {}): Route {
   const profiles = new Map(settings.profiles.map((p) => [p.id, p]));
@@ -725,6 +726,10 @@ export function resolveRouteIn(settings: ProviderSettings, role: ModelRole, ctx:
     if (!profile) return { ok: false, source, message: `The ${ROLE_LABELS[role].toLowerCase()} route points at a model that no longer exists. Choose a model in settings.` };
     const connection = connections.get(profile.connectionId);
     if (!connection) return { ok: false, source, message: `The model ${profile.model} has no connection. Set it up again in settings.` };
+    // A local-only rule fails closed: its own model must keep the text on this device too, not just the fallback.
+    if (extra.localOnly && !isLocalConnection(connection)) {
+      return { ok: false, source, connection, message: `This site is set to local only, but its model ${profile.model} is not on this device. Nothing was sent. Choose a local model for the site in settings.` };
+    }
     return { ok: true, profile, connection, source, localOnly: extra.localOnly === true, ...(extra.rule ? { rule: extra.rule } : {}) };
   };
   const rule = siteRuleFor(settings.routing, ctx.url);
