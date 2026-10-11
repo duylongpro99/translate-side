@@ -592,4 +592,28 @@ describe('Jobs with the translation cache: a revisit makes no API call (§3 #3)'
     await until(() => jobs.get(1)?.segs.get('s100')?.status === 'final' && jobs.get(1)?.segs.get('s100')?.text?.startsWith('new:') === true);
     expect(jobs.get(1)?.segs.get('s101')?.text).toMatch(/^new:/);
   });
+
+  it('Retranslate page on a lazy page, then Translate the rest cancelled and resumed: blocks never reached still go to the model, not the cache', async () => {
+    const cache = newCache();
+    let tag = 'old';
+    const client = translatorClient((lines, _n, req) => (isAnalyze(req) ? JSON.stringify(BRIEF) : renderLines(lines, (src) => `${tag}:${src}`)), { model: GEMINI_PROFILE.model });
+    const jobs = track(new Jobs({ translateClient: ok(client), cache, lazyAbove: 50 }));
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(120, 200));
+    await jobs.translateRest(1);
+    await idle();
+    tag = 'new';
+    await jobs.start(1, 'd', doc(120, 200), { fresh: true, keepCost: true });
+    await idle();
+    // Translate the rest, stopped at once; then resumed.
+    const rest = jobs.translateRest(1);
+    jobs.cancel(1);
+    await rest.catch(() => undefined);
+    await jobs.resume(1);
+    await idle();
+    const v = jobs.get(1) as JobView;
+    const texts = [...v.segs.values()].map((x) => x.text ?? '');
+    expect(v.counts.final).toBe(120);
+    expect(texts.filter((t) => t.startsWith('old:'))).toEqual([]);
+  });
 });

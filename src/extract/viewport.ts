@@ -70,8 +70,11 @@ export function watchViewport(win: Window, targets: ReadonlyMap<string, Viewport
       if (!coarse(el, rect)) rects.set(el, rect);
     }
     // A fixed or sticky box is on screen wherever the reader is: apart from `visible`, and never the anchor.
-    const pinned = new Set<ViewportTarget>();
-    for (const el of rects.keys()) if (isPinned(win, el)) pinned.add(el);
+    let pinned = new Set<ViewportTarget>();
+    const seen = new Map<Element, boolean>();
+    for (const el of rects.keys()) if (isPinned(win, el, seen)) pinned.add(el);
+    // Everything on screen pinned (a shell the checks missed): nothing is, or the reader would be nowhere.
+    if (pinned.size === rects.size) pinned = new Set();
     const shownIds = order.filter((id) => {
       const el = targets.get(id);
       return el !== undefined && rects.has(el);
@@ -140,15 +143,45 @@ export function watchViewport(win: Window, targets: ReadonlyMap<string, Viewport
   };
 }
 
-/** Whether the target sits in a box that is `position: fixed` or `sticky` (its own or an ancestor's). */
-function isPinned(win: Window, t: ViewportTarget): boolean {
+/**
+ * Whether one box pins what is inside it to the window: `position: fixed`, or `sticky` while it is
+ * stuck at its offset. Not these: a fixed box that is a scroll container or covers most of the window
+ * (an app shell or reader wrapping the article, whose content scrolls inside it), and a sticky box
+ * in normal flow (a table header or heading that has not reached its edge scrolls like content).
+ */
+function pins(win: Window, el: Element): boolean {
+  const style = win.getComputedStyle(el);
+  const position = style.position;
+  if (position !== 'fixed' && position !== 'sticky') return false;
+  if (/auto|scroll/.test(`${style.overflowY} ${style.overflowX}`)) return false;
+  const r = el.getBoundingClientRect();
+  if (position === 'fixed') return !(r.width * r.height >= 0.8 * win.innerWidth * win.innerHeight);
+  const near = (offset: string, edge: number) => /^-?[\d.]+px$/.test(offset) && Math.abs(edge - parseFloat(offset)) < 1.5;
+  return near(style.top, r.top) || near(style.bottom, win.innerHeight - r.bottom);
+}
+
+/** Whether the target sits in a box that pins it (`pins`); `seen` shares the answer per ancestor within one read. */
+function isPinned(win: Window, t: ViewportTarget, seen: Map<Element, boolean>): boolean {
   if (typeof win.getComputedStyle !== 'function') return false;
-  let el: Element | null = isElement(t) ? t : t.startContainer.nodeType === 1 ? (t.startContainer as Element) : t.startContainer.parentElement;
-  for (; el !== null && el !== win.document.documentElement; el = el.parentElement) {
-    const position = win.getComputedStyle(el).position;
-    if (position === 'fixed' || position === 'sticky') return true;
+  const start: Element | null = isElement(t) ? t : t.startContainer.nodeType === 1 ? (t.startContainer as Element) : t.startContainer.parentElement;
+  const path: Element[] = [];
+  let found = false;
+  for (let el = start; el !== null && el !== win.document.documentElement; el = el.parentElement) {
+    const known = seen.get(el);
+    if (known !== undefined) {
+      found = known;
+      break;
+    }
+    path.push(el);
+    if (pins(win, el)) {
+      found = true;
+      break;
+    }
   }
-  return false;
+  // Every element walked has the same answer from here up (an ancestor that pins pins what is under it).
+  if (found) for (const el of path) seen.set(el, true);
+  else for (const el of path) if (!seen.has(el)) seen.set(el, false);
+  return found;
 }
 
 function isElement(t: ViewportTarget): t is Element {

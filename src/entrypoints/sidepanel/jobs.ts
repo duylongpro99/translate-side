@@ -562,7 +562,7 @@ interface Job {
   /** A retranslate run: its stored finals replace whatever the cache has. */
   fresh?: boolean;
   /**
-   * A Retranslate page on a lazy page, carried through its later rounds: a window the reader reaches
+   * A Retranslate page on a lazy page, carried through its later rounds and a Translate the rest after it: a window the reader reaches
    * later holds no earlier finals, yet must be retranslated too, not served from the cache.
    */
   redo?: boolean;
@@ -788,7 +788,7 @@ export class Jobs {
       earlier,
       apart: costFrom ? { usage: { ...costFrom.apart.usage }, usd: costFrom.apart.usd } : { usage: { input: 0, cachedInput: 0, output: 0 }, usd: undefined },
       fresh,
-      ...(lazy && (before !== undefined || (resume && prev?.docId === docId && prev.redo)) ? { redo: true } : {}),
+      ...((lazy && before !== undefined) || (resume && prev?.docId === docId && prev.redo) ? { redo: true } : {}),
       view: {
         ...(lazy && todo.size > 0 ? { lazy: { rest: todo.size } } : {}),
         status: 'running',

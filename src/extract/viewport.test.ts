@@ -80,6 +80,71 @@ describe('watchViewport', () => {
     w.stop();
   });
 
+  describe('what pins a block to the window', () => {
+    const rect = (top: number, h: number, w = 500) => () => ({ top, bottom: top + h, left: 0, right: w, width: w, height: h, x: 0, y: top, toJSON: () => ({}) }) as DOMRect;
+
+    it('a fixed app shell or scroller wrapping the article pins nothing: the reader is still followed', () => {
+      for (const style of ['position: fixed; inset: 0; overflow: auto', 'position: fixed; overflow-y: scroll; width: 300px; height: 100px']) {
+        const { targets, order } = page();
+        const shell = document.createElement('div');
+        shell.setAttribute('style', style);
+        shell.getBoundingClientRect = rect(0, 300, 800);
+        document.body.append(shell);
+        shell.append(...document.querySelectorAll('p'));
+        const w = watchViewport(window, targets, order, () => undefined);
+        expect(w.now()).toEqual({ visible: ['s0', 's1', 's2'], anchor: { id: 's0', offset: 0 } });
+        w.stop();
+      }
+    });
+
+    it('everything on screen pinned (a small fixed wrapper around all of it): none counts as pinned', () => {
+      const { targets, order } = page();
+      const box = document.createElement('div');
+      box.setAttribute('style', 'position: fixed');
+      box.getBoundingClientRect = rect(0, 100, 100);
+      document.body.append(box);
+      box.append(...document.querySelectorAll('p'));
+      const w = watchViewport(window, targets, order, () => undefined);
+      expect(w.now()).toEqual({ visible: ['s0', 's1', 's2'], anchor: { id: 's0', offset: 0 } });
+      w.stop();
+    });
+
+    it('a sticky block counts as pinned only while it is stuck at its offset', () => {
+      const { targets, order, scrollTo } = page();
+      const th = document.getElementById('e3') as HTMLElement;
+      th.setAttribute('style', 'position: sticky; top: 0px');
+      scrollTo(200);
+      // Not reached its edge: s3 sits at y=100 of the window, like content.
+      const w = watchViewport(window, targets, order, () => undefined);
+      expect(w.now().fixed).toBeUndefined();
+      expect(w.now().visible).toContain('s3');
+      // Stuck at the top while the page scrolls on.
+      th.getBoundingClientRect = rect(0, 100);
+      scrollTo(500);
+      const v = w.now();
+      expect(v.fixed).toEqual(['s3']);
+      expect(v.visible).not.toContain('s3');
+      w.stop();
+    });
+
+    it('works out each ancestor once per read', () => {
+      const { targets, order } = page(12);
+      const wrap = document.createElement('section');
+      wrap.setAttribute('style', 'position: relative');
+      document.body.append(wrap);
+      wrap.append(...document.querySelectorAll('p'));
+      const spy = vi.spyOn(window, 'getComputedStyle');
+      const w = watchViewport(window, targets, order, () => undefined);
+      spy.mockClear();
+      w.now();
+      // The pin check looks at the shared wrapper once for all three blocks (the other calls are the
+      // scroll-edge lookup, once per block and once for the anchor), not once per block.
+      expect(spy.mock.calls.filter(([el]) => el === wrap).length).toBeLessThanOrEqual(3 + 1 + 1);
+      spy.mockRestore();
+      w.stop();
+    });
+  });
+
   it('pushes a change after a scroll, throttled, and only when it differs', () => {
     vi.useFakeTimers();
     const { targets, order, scrollTo } = page();
