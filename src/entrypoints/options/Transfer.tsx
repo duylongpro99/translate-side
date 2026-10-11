@@ -1,7 +1,7 @@
 // Export and import of the settings as JSON (plan M5-E9, DESIGN §4.3.7). Keys stay out of the
 // file unless the user ticks "include keys" and confirms; an imported file is shown as a summary
 // of what it would change, and nothing is written until the user confirms that too (§8).
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
 import { applyImport, buildExport, exportFileName, MAX_IMPORT_BYTES, parseImport, previewImport, type ImportPlan, type ImportReport } from '@/shared/portable';
 
@@ -23,7 +23,7 @@ function download(text: string, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-function Summary({ report }: { report: ImportReport }) {
+function Summary({ report, keep, onKeep }: { report: ImportReport; keep: ReadonlySet<string>; onKeep: (id: string, on: boolean) => void }) {
   const lines: string[] = [];
   const { connections: c, profiles: p } = report;
   if (c.added + c.replaced > 0) lines.push(`Connections: ${c.added} new, ${c.replaced} replaced.`);
@@ -46,6 +46,29 @@ function Summary({ report }: { report: ImportReport }) {
           Nothing in this file would change your settings.
         </p>
       )}
+      {report.redirects.length > 0 ? (
+        <ul class="opt__status opt__status--warn" data-testid="import-redirects" aria-label="Connections that would point somewhere else">
+          {report.redirects.map((r) => (
+            <li key={r.id} data-testid="import-redirect">
+              <strong>{r.label}</strong> would change its {r.changed.join(', ')}
+              {r.changed.includes('address') ? (
+                <>
+                  : <code>{r.from || '(none)'}</code> → <code>{r.to || '(none)'}</code>
+                </>
+              ) : null}
+              .{' '}
+              {r.keyAction === 'removed' ? 'Your saved key for it will be removed, so it is not sent to the new address.' : null}
+              {r.keyAction === 'replaced' ? 'Its saved key is replaced by the key in the file.' : null}
+              {r.keyAction === 'kept' ? 'Your saved key stays, and will be sent to the new address.' : null}
+              {r.keyAction === 'removed' || r.keyAction === 'kept' ? (
+                <label class="opt__check">
+                  <input type="checkbox" data-testid="import-keep-key" checked={keep.has(r.id)} onChange={(e) => onKeep(r.id, (e.target as HTMLInputElement).checked)} /> Keep my saved key for {r.label} and send it to {r.to || 'the new address'}
+                </label>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {report.endpoints.length > 0 ? (
         <p class="opt__hint" data-testid="import-endpoints">
           Page text will go to these servers when you translate with the imported connections: {report.endpoints.join(', ')}. Chrome asks for permission for each when you test it.
@@ -68,9 +91,41 @@ export function TransferSection({ api }: { api: Browser }) {
   const [exportNote, setExportNote] = useState<Note | undefined>();
   const [pending, setPending] = useState<{ plan: ImportPlan; report: ImportReport; fileName: string } | undefined>();
   const [importKeys, setImportKeys] = useState(false);
+  const [keep, setKeep] = useState<ReadonlySet<string>>(() => new Set());
   const [importNote, setImportNote] = useState<Note | undefined>();
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const includeKeysBox = useRef<HTMLInputElement>(null);
+  const confirmCancel = useRef<HTMLButtonElement>(null);
+  const previewBox = useRef<HTMLDivElement>(null);
+  const wasConfirming = useRef(false);
+  const hadPreview = useRef(false);
+
+  // Focus follows what opens: into the confirmation and the preview, and back to where the user was when they close.
+  useEffect(() => {
+    if (confirming) confirmCancel.current?.focus();
+    else if (wasConfirming.current) includeKeysBox.current?.focus();
+    wasConfirming.current = confirming;
+  }, [confirming]);
+  const hasPreview = pending !== undefined;
+  useEffect(() => {
+    if (hasPreview) previewBox.current?.querySelector<HTMLElement>('input, button')?.focus();
+    else if (hadPreview.current) fileInput.current?.focus();
+    hadPreview.current = hasPreview;
+  }, [hasPreview]);
+  // The preview follows the two choices that change what the import does.
+  const plan = pending?.plan;
+  useEffect(() => {
+    if (!plan) return;
+    let live = true;
+    previewImport(api, plan, { withKeys: importKeys, keepKeys: keep }).then(
+      (report) => live && setPending((p) => (p && p.plan === plan ? { ...p, report } : p)),
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [plan, importKeys, keep]);
 
   const runExport = async (includeKeys: boolean) => {
     setConfirming(false);
@@ -80,7 +135,11 @@ export function TransferSection({ api }: { api: Browser }) {
       download(out.json, exportFileName());
       const parts = [includeKeys ? `Exported, with ${plural(out.keyCount, 'API key')} in the file. Keep it private.` : 'Exported. The file has no API keys.'];
       if (out.omitted.length > 0) parts.push(`Left out because they look like keys: ${out.omitted.join('; ')}.`);
-      setExportNote({ text: parts.join(' '), warn: includeKeys || out.omitted.length > 0 });
+      if (!includeKeys) {
+        parts.push('Only headers and query parameters with key-like names, and credentials in a base URL, are removed; a key written anywhere else is not detected.');
+        if (out.suspects.length > 0) parts.push(`Check these before you share the file, they look like a key: ${out.suspects.join('; ')}.`);
+      }
+      setExportNote({ text: parts.join(' '), warn: includeKeys || out.omitted.length > 0 || out.suspects.length > 0 });
     } catch (e) {
       setExportNote({ text: `The export failed: ${e instanceof Error ? e.message : String(e)}`, warn: true });
     } finally {
@@ -95,6 +154,7 @@ export function TransferSection({ api }: { api: Browser }) {
     setPending(undefined);
     setImportNote(undefined);
     setImportKeys(false);
+    setKeep(new Set());
     if (!file) return;
     if (file.size > MAX_IMPORT_BYTES) {
       setImportNote({ text: 'This file is too large to be a settings file.', warn: true });
@@ -106,7 +166,7 @@ export function TransferSection({ api }: { api: Browser }) {
       return;
     }
     try {
-      setPending({ plan: parsed.plan, report: await previewImport(api, parsed.plan, false), fileName: file.name });
+      setPending({ plan: parsed.plan, report: await previewImport(api, parsed.plan, { withKeys: false }), fileName: file.name });
     } catch (err) {
       setImportNote({ text: `The file could not be read: ${err instanceof Error ? err.message : String(err)}`, warn: true });
     }
@@ -117,9 +177,12 @@ export function TransferSection({ api }: { api: Browser }) {
     if (!pending) return;
     setBusy(true);
     try {
-      const report = await applyImport(api, pending.plan, importKeys);
-      const written = report.keys.written;
-      setImportNote({ text: `Imported from ${pending.fileName}.${importKeys ? ` ${plural(written, 'API key')} saved.` : keyCount > 0 ? ' The keys in the file were not imported.' : ''}`, warn: false });
+      const report = await applyImport(api, pending.plan, { withKeys: importKeys, keepKeys: keep });
+      const parts = [`Imported from ${pending.fileName}.`];
+      if (importKeys) parts.push(`${plural(report.keys.written, 'API key')} saved.`);
+      else if (keyCount > 0) parts.push('The keys in the file were not imported.');
+      if (report.keys.removed > 0) parts.push(`${plural(report.keys.removed, 'saved key')} removed because the connection now points to another address.`);
+      setImportNote({ text: parts.join(' '), warn: report.keys.removed > 0 });
       setPending(undefined);
     } catch (err) {
       setImportNote({ text: `Nothing was imported: ${err instanceof Error ? err.message : String(err)}`, warn: true });
@@ -139,6 +202,7 @@ export function TransferSection({ api }: { api: Browser }) {
         <label class="opt__check">
           <input
             type="checkbox"
+            ref={includeKeysBox}
             data-testid="include-keys"
             checked={withKeys}
             onChange={(e) => {
@@ -158,11 +222,9 @@ export function TransferSection({ api }: { api: Browser }) {
           <p id="keys-confirm-h">
             <strong>The file will hold your API keys in plain text.</strong> Anyone who gets the file can use them and spend your money. Share it only with yourself, and delete it after you import it.
           </p>
-          <button type="button" data-testid="keys-confirm-yes" onClick={() => setConfirming(false)}>
-            Include keys
-          </button>{' '}
           <button
             type="button"
+            ref={confirmCancel}
             data-testid="keys-confirm-no"
             onClick={() => {
               setConfirming(false);
@@ -170,6 +232,9 @@ export function TransferSection({ api }: { api: Browser }) {
             }}
           >
             Cancel
+          </button>{' '}
+          <button type="button" data-testid="keys-confirm-yes" onClick={() => setConfirming(false)}>
+            Include keys
           </button>
         </div>
       ) : null}
@@ -184,14 +249,25 @@ export function TransferSection({ api }: { api: Browser }) {
         <input id="import-file" ref={fileInput} type="file" accept=".json,application/json" data-testid="import-file" onChange={(e) => void onFile(e)} />
       </div>
       {pending ? (
-        <div data-testid="import-preview" role="group" aria-label={`What importing ${pending.fileName} would change`}>
+        <div ref={previewBox} data-testid="import-preview" role="group" aria-label={`What importing ${pending.fileName} would change`}>
           <p>
             <strong>{pending.fileName}</strong> would change this:
           </p>
-          <Summary report={pending.report} />
+          <Summary
+            report={pending.report}
+            keep={keep}
+            onKeep={(id, on) =>
+              setKeep((cur) => {
+                const next = new Set(cur);
+                if (on) next.add(id);
+                else next.delete(id);
+                return next;
+              })
+            }
+          />
           {keyCount > 0 ? (
             <label class="opt__check">
-              <input type="checkbox" data-testid="import-keys" checked={importKeys} onChange={(e) => setImportKeys((e.target as HTMLInputElement).checked)} /> Also import the {plural(keyCount, 'API key')} in this file (a key for a connection you already have replaces yours)
+              <input type="checkbox" data-testid="import-keys" checked={importKeys} onChange={(e) => setImportKeys((e.target as HTMLInputElement).checked)} /> Also import the {plural(keyCount, 'API key')} in this file{pending.report.keys.wouldReplace > 0 ? ` (${plural(pending.report.keys.wouldReplace, 'key')} replace${pending.report.keys.wouldReplace === 1 ? 's' : ''} one you have saved)` : ''}
             </label>
           ) : null}
           <p>

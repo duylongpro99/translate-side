@@ -15,7 +15,7 @@ function fakeApi(opts: { syncQuota?: number } = {}) {
       for (const [k, v] of Object.entries(o)) m.set(k, v);
       return Promise.resolve();
     },
-    remove: (k: string) => Promise.resolve(void m.delete(k)),
+    remove: (k: string | string[]) => Promise.resolve(void [k].flat().forEach((x) => m.delete(x))),
     ...(m === sync && opts.syncQuota !== undefined
       ? { getBytesInUse: (keys?: string | string[] | null) => Promise.resolve([...m].filter(([k]) => keys == null || [keys].flat().includes(k)).reduce((n, [k, v]) => n + (k + JSON.stringify(v)).length, 0)) }
       : {}),
@@ -99,8 +99,8 @@ describe('round trip', () => {
     if (!parsed.ok) throw new Error(parsed.error);
 
     const fresh = fakeApi();
-    const report = await applyImport(fresh.api, parsed.plan, false);
-    expect(report.keys).toEqual({ inFile: 1, written: 0, replaced: 0 });
+    const report = await applyImport(fresh.api, parsed.plan, { withKeys: false });
+    expect(report.keys).toEqual({ inFile: 1, wouldWrite: 1, wouldReplace: 0, written: 0, removed: 0 });
     expect(await readApiKey(fresh.api, 'gw')).toBeUndefined();
     const s = await readProviderSettings(fresh.api);
     expect(s.connections.find((c) => c.id === 'gw')?.label).toBe('Company gateway');
@@ -110,7 +110,7 @@ describe('round trip', () => {
     expect(await readGlossary(fresh.api)).toEqual([{ term: 'deploy', rendering: 'deploy' }]);
     expect(await readSiteLists(fresh.api)).toEqual({ allow: ['docs.rs'], never: ['bank.com'] });
 
-    await applyImport(fresh.api, parsed.plan, true);
+    await applyImport(fresh.api, parsed.plan, { withKeys: true });
     expect(await readApiKey(fresh.api, 'gw')).toBe(KEY);
   });
 
@@ -123,9 +123,9 @@ describe('round trip', () => {
     const src = await seeded();
     const parsed = parseImport((await buildExport(src.api, { includeKeys: true })).json);
     if (!parsed.ok) throw new Error(parsed.error);
-    const preview = await previewImport(t.api, parsed.plan, true);
+    const preview = await previewImport(t.api, parsed.plan, { withKeys: true });
     expect(preview.keys.written).toBe(1);
-    await applyImport(t.api, parsed.plan, true);
+    await applyImport(t.api, parsed.plan, { withKeys: true });
     expect(await readApiKey(t.api, 'apibox')).toBe('apibox-key');
     expect(await readApiKey(t.api, 'other')).toBe('other-key');
     expect((await readGlossary(t.api)).map((g) => g.term).sort()).toEqual(['deploy', 'mine']);
@@ -138,14 +138,15 @@ describe('round trip', () => {
     await saveApiKey(t.api, 'gw', 'old-key');
     const parsed = parseImport(JSON.stringify({ format: EXPORT_FORMAT, formatVersion: 1, settings: { connections: [conn()] }, keys: { gw: KEY } }));
     if (!parsed.ok) throw new Error(parsed.error);
-    expect((await previewImport(t.api, parsed.plan, true)).keys).toEqual({ inFile: 1, written: 1, replaced: 1 });
-    expect((await previewImport(t.api, parsed.plan, false)).keys.written).toBe(0);
+    expect((await previewImport(t.api, parsed.plan, { withKeys: true })).keys).toEqual({ inFile: 1, wouldWrite: 1, wouldReplace: 1, written: 1, removed: 0 });
+    const off = (await previewImport(t.api, parsed.plan, { withKeys: false })).keys;
+    expect(off).toMatchObject({ written: 0, wouldWrite: 1, wouldReplace: 1 });
   });
 
   it('writes nothing when the sync write would not fit', async () => {
     const t = fakeApi({ syncQuota: 1 });
     const big: ImportPlan = { connections: [conn({ label: 'x'.repeat(9000) })] as never, profiles: [], siteRules: [], keys: {}, notes: [] };
-    await expect(applyImport(t.api, big, false)).rejects.toThrow(/limit/);
+    await expect(applyImport(t.api, big, { withKeys: false })).rejects.toThrow(/limit/);
     expect([...t.sync.keys()].some((k) => k.startsWith('conn:'))).toBe(false);
   });
 });
@@ -200,7 +201,7 @@ describe('validation', () => {
     const t = fakeApi();
     await saveRouting(t.api, { translate: DEFAULT_PROFILE.id });
     const p = plan(file({ routing: { translate: 'ghost' }, siteRules: [{ pattern: 'a.com', translate: 'ghost' }] }));
-    const report = await applyImport(t.api, p, false);
+    const report = await applyImport(t.api, p, { withKeys: false });
     expect(report.routing).toBe('kept');
     expect((await readProviderSettings(t.api)).routing.translate).toBe(DEFAULT_PROFILE.id);
     expect(report.notes.join('|')).toMatch(/ghost/);
@@ -209,14 +210,120 @@ describe('validation', () => {
   it('writes a key only for a connection the file or this browser has', async () => {
     const t = fakeApi();
     const p = plan(file({ connections: [conn()] }, { keys: { gw: KEY, ghost: 'zzz' } }));
-    await applyImport(t.api, p, true);
+    await applyImport(t.api, p, { withKeys: true });
     expect(await readApiKey(t.api, 'gw')).toBe(KEY);
     expect(await readApiKey(t.api, 'ghost')).toBeUndefined();
   });
 
   it('a site on both lists stays never-translate', async () => {
     const t = fakeApi();
-    await applyImport(t.api, plan(file({ siteAllowlist: ['x.com'], siteNever: ['x.com'] })), false);
+    await applyImport(t.api, plan(file({ siteAllowlist: ['x.com'], siteNever: ['x.com'] })), { withKeys: false });
     expect(await readSiteLists(t.api)).toEqual({ allow: [], never: ['x.com'] });
+  });
+
+  it('ignores a key whose connection record in the file was skipped (N5)', async () => {
+    const t = fakeApi();
+    await saveConnection(t.api, conn());
+    await saveApiKey(t.api, 'gw', 'old-key');
+    const p = plan(file({ connections: [conn({ baseUrl: 'javascript:x' })] }, { keys: { gw: 'evil-key' } }));
+    expect(p.keys).toEqual({});
+    expect(p.notes.join('|')).toMatch(/Ignored the key for "gw"/);
+  });
+
+  it('bounds auth header names, routing ids and site-rule patterns (N1)', () => {
+    const p = plan(
+      file({
+        connections: [conn({ authByProtocol: { 'openai-chat': { style: 'custom-header', headerName: 'bad header\r\n' } } })],
+        routing: { translate: 'ok', analyze: 'bad id!', fallback: ['fine', 'x'.repeat(500), 'basic'] },
+        siteRules: [{ pattern: 'ok.com', translate: 'ok' }, { pattern: 'no/slash', translate: 'ok' }, { pattern: 'a.com', translate: 'bad id!' }],
+      }),
+    );
+    expect(p.connections).toEqual([]);
+    expect(p.routing).toEqual({ translate: 'ok', fallback: ['fine', 'basic'] });
+    expect(p.siteRules).toEqual([{ pattern: 'ok.com', translate: 'ok' }]);
+  });
+});
+
+describe('a file cannot redirect a saved key (B1)', () => {
+  const evil = (over: Record<string, unknown> = {}) => JSON.stringify({ format: EXPORT_FORMAT, formatVersion: 1, settings: { connections: [conn({ baseUrl: 'https://evil.example/v1', ...over })] } });
+  const plan = (text: string): ImportPlan => {
+    const r = parseImport(text);
+    if (!r.ok) throw new Error(r.error);
+    return r.plan;
+  };
+  const setup = async () => {
+    const t = fakeApi();
+    await saveConnection(t.api, conn());
+    await saveApiKey(t.api, 'gw', KEY);
+    return t;
+  };
+
+  it('names the connection and removes its saved key by default', async () => {
+    const t = await setup();
+    const p = plan(evil());
+    const preview = await previewImport(t.api, p, { withKeys: false });
+    expect(preview.redirects).toEqual([{ id: 'gw', label: 'Company gateway', from: 'https://llm.example.com/v1', to: 'https://evil.example/v1', changed: ['address'], keyAction: 'removed' }]);
+    expect(await readApiKey(t.api, 'gw')).toBe(KEY); // a preview writes nothing
+    const report = await applyImport(t.api, p, { withKeys: false });
+    expect(report.keys.removed).toBe(1);
+    expect(await readApiKey(t.api, 'gw')).toBeUndefined();
+    expect((await readProviderSettings(t.api)).connections.find((c) => c.id === 'gw')?.baseUrl).toBe('https://evil.example/v1');
+  });
+
+  it('keeps the key only for a connection the user ticked', async () => {
+    const t = await setup();
+    const report = await applyImport(t.api, plan(evil()), { withKeys: false, keepKeys: new Set(['gw']) });
+    expect(report.redirects[0]?.keyAction).toBe('kept');
+    expect(await readApiKey(t.api, 'gw')).toBe(KEY);
+  });
+
+  it('catches a change of headers, query parameters and auth, not only the address', async () => {
+    const t = await setup();
+    const p = plan(evil({ baseUrl: 'https://llm.example.com/v1', extraHeaders: { 'X-Route': 'evil' }, queryParams: { to: 'evil' }, auth: { style: 'custom-header', headerName: 'X-Leak' } }));
+    expect((await previewImport(t.api, p, { withKeys: false })).redirects[0]?.changed).toEqual(['auth', 'headers', 'query parameters']);
+    await applyImport(t.api, p, { withKeys: false });
+    expect(await readApiKey(t.api, 'gw')).toBeUndefined();
+  });
+
+  it('a file key replaces the saved one instead; an identical connection redirects nothing', async () => {
+    const t = await setup();
+    const withKey = parseImport(JSON.stringify({ format: EXPORT_FORMAT, formatVersion: 1, settings: { connections: [conn({ baseUrl: 'https://evil.example/v1' })] }, keys: { gw: 'file-key' } }));
+    if (!withKey.ok) throw new Error(withKey.error);
+    expect((await previewImport(t.api, withKey.plan, { withKeys: true })).redirects[0]?.keyAction).toBe('replaced');
+    const same = plan(JSON.stringify({ format: EXPORT_FORMAT, formatVersion: 1, settings: { connections: [conn()] } }));
+    const report = await applyImport(t.api, same, { withKeys: false });
+    expect(report.redirects).toEqual([]);
+    expect(await readApiKey(t.api, 'gw')).toBe(KEY);
+  });
+
+  it('protects the key of a built-in connection too', async () => {
+    const t = fakeApi();
+    await saveApiKey(t.api, 'apibox', 'apibox-key');
+    await applyImport(t.api, plan(JSON.stringify({ format: EXPORT_FORMAT, formatVersion: 1, settings: { connections: [conn({ id: 'apibox', baseUrl: 'https://evil.example/v1' })] } })), { withKeys: false });
+    expect(await readApiKey(t.api, 'apibox')).toBeUndefined();
+  });
+});
+
+describe('routing round trip (N4)', () => {
+  it('keeps a removed basic fallback removed, and a stored basic', async () => {
+    for (const fallback of [[], ['basic']]) {
+      const src = fakeApi();
+      await saveConnection(src.api, conn());
+      await saveProfile(src.api, profile);
+      await saveRouting(src.api, { translate: 'gw-m', fallback });
+      const parsed = parseImport((await buildExport(src.api)).json);
+      if (!parsed.ok) throw new Error(parsed.error);
+      const fresh = fakeApi();
+      await applyImport(fresh.api, parsed.plan, { withKeys: false });
+      expect((await readProviderSettings(fresh.api)).routing.fallback ?? []).toEqual(fallback);
+      expect(fresh.sync.get('routing')).toMatchObject({ basicMigrated: true });
+    }
+  });
+
+  it('flags a key-like string the name-based redaction cannot see', async () => {
+    const t = fakeApi();
+    await saveConnection(t.api, conn({ baseUrl: 'https://llm.example.com/v1/abcdefghijklmnopqrstuvwxyz0123456789' }));
+    const out = await buildExport(t.api);
+    expect(out.suspects).toEqual(['Company gateway: base URL']);
   });
 });

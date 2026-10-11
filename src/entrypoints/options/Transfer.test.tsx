@@ -15,7 +15,7 @@ function fakeApi() {
   const area = (m: Map<string, unknown>) => ({
     get: (k: string | string[] | null) => Promise.resolve(k === null ? Object.fromEntries(m) : Object.fromEntries((Array.isArray(k) ? k : [k]).filter((x) => m.has(x)).map((x) => [x, m.get(x)]))),
     set: (o: Record<string, unknown>) => (Object.entries(o).forEach(([k, v]) => m.set(k, v)), Promise.resolve()),
-    remove: (k: string) => Promise.resolve(void m.delete(k)),
+    remove: (k: string | string[]) => Promise.resolve(void [k].flat().forEach((x) => m.delete(x))),
   });
   return { api: { storage: { local: area(local), sync: area(sync) }, i18n: { getUILanguage: () => 'en-US' } } as unknown as Api, local, sync };
 }
@@ -103,5 +103,35 @@ describe('TransferSection', () => {
     expect(q('import-note').textContent).toContain('not valid JSON');
     expect(q('import-preview')).toBeNull();
     expect(t.sync.size).toBe(0);
+  });
+
+  it('names a connection the file points elsewhere, says its key goes, and keeps it only when ticked (B1)', async () => {
+    const t = fakeApi();
+    await saveConnection(t.api, gw as never);
+    await saveApiKey(t.api, 'gw', 'sk-MINE');
+    render(<TransferSection api={t.api} />, root);
+    await pick(JSON.stringify({ format: EXPORT_FORMAT, formatVersion: 1, settings: { connections: [{ ...gw, baseUrl: 'https://evil.example/v1' }] } }));
+    expect(q('import-redirect').textContent).toContain('https://evil.example/v1');
+    expect(q('import-redirect').textContent).toContain('saved key for it will be removed');
+    await act(() => q('import-keep-key').click());
+    await flush();
+    expect(q('import-redirect').textContent).toContain('stays, and will be sent');
+    await click('import-apply');
+    expect(await readApiKey(t.api, 'gw')).toBe('sk-MINE');
+  });
+
+  it('moves focus into the keys confirmation and back, and into the preview and back', async () => {
+    const t = fakeApi();
+    render(<TransferSection api={t.api} />, root);
+    document.body.append(root);
+    await act(() => q('include-keys').click());
+    await flush();
+    expect(document.activeElement).toBe(q('keys-confirm-no'));
+    await click('keys-confirm-no');
+    expect(document.activeElement).toBe(q('include-keys'));
+    await pick(JSON.stringify({ format: EXPORT_FORMAT, formatVersion: 1, settings: { glossary: [{ term: 'a', rendering: 'b' }] } }));
+    expect(q('import-preview').contains(document.activeElement)).toBe(true);
+    await click('import-cancel');
+    expect(document.activeElement).toBe(q('import-file'));
   });
 });

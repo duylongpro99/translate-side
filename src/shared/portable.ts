@@ -48,7 +48,7 @@ import {
   type Preferences,
   type ProviderConnection,
 } from './settings.ts';
-import { cleanSiteList, readSiteLists, SITE_ALLOWLIST_KEY, SITE_NEVER_KEY } from './sites.ts';
+import { cleanSiteList, readSiteLists, SITE_ALLOWLIST_KEY, SITE_NEVER_KEY, sitePattern } from './sites.ts';
 
 type Browser = typeof browser;
 
@@ -94,8 +94,10 @@ export interface ExportFile {
 export interface ExportResult {
   file: ExportFile;
   json: string;
-  /** Header and query-parameter values (and URL credentials) left out because they look like keys. */
+  /** Header and query-parameter values (and URL credentials) left out because their names look like keys. */
   omitted: string[];
+  /** Strings left in the file that look like a key (a key can hide in a label or a URL path, which the name-based redaction cannot see). */
+  suspects: string[];
   keyCount: number;
 }
 
@@ -189,7 +191,24 @@ export async function buildExport(api: Browser, { includeKeys = false, now = () 
     },
     ...(keys ? { keys } : {}),
   };
-  return { file, json: `${JSON.stringify(file, null, 2)}\n`, omitted, keyCount: keys ? Object.keys(keys).length : 0 };
+  return { file, json: `${JSON.stringify(file, null, 2)}\n`, omitted, suspects: includeKeys ? [] : findSuspects(connections), keyCount: keys ? Object.keys(keys).length : 0 };
+}
+
+const KEY_LIKE = /(?:\b(?:sk|pk|rk|ak)-[A-Za-z0-9_-]{16,}|AIza[0-9A-Za-z_-]{30,}|\b[A-Za-z0-9_-]{32,}\b)/;
+
+/** Where, in the connections as exported, a string looks like a key. */
+function findSuspects(connections: readonly ProviderConnection[]): string[] {
+  const out: string[] = [];
+  for (const c of connections) {
+    const fields: [string, string][] = [
+      ['label', c.label],
+      ['base URL', c.baseUrl],
+      ...Object.entries(c.extraHeaders ?? {}).map(([k, v]): [string, string] => [`header ${k}`, v]),
+      ...Object.entries(c.queryParams ?? {}).map(([k, v]): [string, string] => [`query parameter ${k}`, v]),
+    ];
+    for (const [where, value] of fields) if (KEY_LIKE.test(value)) out.push(`${c.label}: ${where}`);
+  }
+  return out;
 }
 
 export const exportFileName = (now: Date = new Date()) => `translate-side-settings-${now.toISOString().slice(0, 10)}.json`;
@@ -265,8 +284,9 @@ function importConnection(raw: unknown, notes: string[]): ProviderConnection | n
     notes.push(`Skipped connection "${c.id}": a header or query parameter in it is not valid.`);
     return null;
   }
-  if (c.auth.headerName !== undefined && !HEADER_NAME_RE.test(c.auth.headerName)) {
-    notes.push(`Skipped connection "${c.id}": its auth header name is not valid.`);
+  const authHeaders = [c.auth, ...Object.values(c.authByProtocol ?? {})].flatMap((a) => (a?.headerName === undefined ? [] : [a.headerName]));
+  if (!authHeaders.every((h) => HEADER_NAME_RE.test(h))) {
+    notes.push(`Skipped connection "${c.id}": an auth header name in it is not valid.`);
     return null;
   }
   // Learned from this device's requests, not portable: re-detected on the first test.
@@ -318,6 +338,25 @@ function importPrefs(raw: unknown, notes: string[]): Partial<Preferences> | unde
   return out;
 }
 
+/** The routing with every id bounded (ids name storage keys and are shown in the settings). */
+function importRouting(raw: unknown, notes: string[]): ImportPlan['routing'] {
+  if (raw === undefined) return undefined;
+  const routing = cleanRouting(raw);
+  if (!routing || !ID_RE.test(routing.translate)) {
+    notes.push('Skipped the routing: it names no valid model to translate with.');
+    return undefined;
+  }
+  const ok = (id: string | undefined) => id === undefined || ID_RE.test(id);
+  const fallback = routing.fallback?.filter((id) => ID_RE.test(id));
+  if (!ok(routing.analyze) || !ok(routing.review) || fallback?.length !== routing.fallback?.length) notes.push('Dropped model ids in the routing that are not valid.');
+  return {
+    translate: routing.translate,
+    ...(ok(routing.analyze) && routing.analyze ? { analyze: routing.analyze } : {}),
+    ...(ok(routing.review) && routing.review ? { review: routing.review } : {}),
+    ...(fallback && fallback.length > 0 ? { fallback } : {}),
+  };
+}
+
 function capped<T>(list: readonly T[], max: number, what: string, notes: string[]): T[] {
   if (list.length > max) notes.push(`The file lists ${list.length} ${what}; only the first ${max} were read.`);
   return list.slice(0, max);
@@ -348,12 +387,14 @@ export function parseImport(text: string): ParseResult {
       seen.add(`${what}:${i.id}`);
       return [i];
     });
-  const connections = unique(capped(list(s.connections), MAX_CONNECTIONS, 'connections', notes).map((c) => importConnection(c, notes)), 'connection');
+  const rawConnections = capped(list(s.connections), MAX_CONNECTIONS, 'connections', notes);
+  const connections = unique(rawConnections.map((c) => importConnection(c, notes)), 'connection');
+  // A key travels with a connection that was read: one whose record was skipped brings none (it could be a key for the id of one you already have).
+  const skippedIds = new Set(rawConnections.flatMap((c) => (isRecord(c) && typeof c.id === 'string' && !connections.some((k) => k.id === c.id) ? [c.id] : [])));
   const profiles = unique(capped(list(s.profiles), MAX_PROFILES, 'model profiles', notes).map((p) => importProfile(p, notes)), 'profile');
 
-  const routing = s.routing === undefined ? undefined : (cleanRouting(s.routing) ?? undefined);
-  if (s.routing !== undefined && !routing) notes.push('Skipped the routing: it names no model to translate with.');
-  const siteRules = cleanSiteRules(capped(list(s.siteRules), MAX_SITE_RULES, 'site rules', notes));
+  const routing = importRouting(s.routing, notes);
+  const siteRules = cleanSiteRules(capped(list(s.siteRules), MAX_SITE_RULES, 'site rules', notes)).filter((r) => ID_RE.test(r.translate) && sitePattern(r.pattern) === r.pattern);
   if (Array.isArray(s.siteRules) && siteRules.length < Math.min(s.siteRules.length, MAX_SITE_RULES)) notes.push('Skipped some site rules that are not valid.');
   const glossary = Array.isArray(s.glossary) ? cleanGlossary(capped(s.glossary, MAX_GLOSSARY, 'glossary entries', notes)) : undefined;
   const prefs = importPrefs(s.prefs, notes);
@@ -364,7 +405,8 @@ export function parseImport(text: string): ParseResult {
     else {
       for (const [id, value] of Object.entries(root.keys).slice(0, MAX_CONNECTIONS)) {
         const key = typeof value === 'string' ? value.trim() : '';
-        if (!ID_RE.test(id) || key === '' || key.length > MAX_KEY_LENGTH || CONTROL_RE.test(key)) notes.push(`Ignored a key that is not valid (for "${id.slice(0, 40)}").`);
+        if (skippedIds.has(id)) notes.push(`Ignored the key for "${id.slice(0, 40)}": its connection in the file was skipped.`);
+        else if (!ID_RE.test(id) || key === '' || key.length > MAX_KEY_LENGTH || CONTROL_RE.test(key)) notes.push(`Ignored a key that is not valid (for "${id.slice(0, 40)}").`);
         else Object.defineProperty(keys, id, { value: key, enumerable: true, writable: true, configurable: true });
       }
     }
@@ -396,21 +438,66 @@ export interface ImportReport {
   prefs: boolean;
   glossary: number | null;
   sites: { allow: number; never: number };
-  /** Keys the file carries / that would be written (new, or replacing a different one). */
-  keys: { inFile: number; written: number; replaced: number };
+  /**
+   * Keys: what the file carries; what importing them would write (new, or replacing a different
+   * one: `wouldReplace` of `wouldWrite`) whether or not they are ticked; what this import actually
+   * wrote (`written`); and the saved keys it removed because their connection now points elsewhere.
+   */
+  keys: { inFile: number; wouldWrite: number; wouldReplace: number; written: number; removed: number };
+  /**
+   * Connections the file replaces with a different address, auth or headers. A saved key would be
+   * sent to the new address, so unless the file brings its own key or the user keeps it, it is removed.
+   */
+  redirects: Redirect[];
   /** The endpoints the imported connections send page text to. */
   endpoints: string[];
   /** Things the user should know: skipped records, references that do not resolve. */
   notes: string[];
 }
 
+export interface Redirect {
+  id: string;
+  label: string;
+  from: string;
+  to: string;
+  /** What differs: address, auth, headers, query parameters. */
+  changed: string[];
+  /** What happens to the key saved here: none saved, removed, kept (the user ticked it), or replaced by the file's key. */
+  keyAction: 'none' | 'removed' | 'kept' | 'replaced';
+}
+
+export interface ImportOptions {
+  /** Write the keys the file carries. */
+  withKeys: boolean;
+  /** Connections whose saved key stays although the file points them elsewhere. */
+  keepKeys?: ReadonlySet<string>;
+}
+
 interface Resolved {
   items: Record<string, unknown>;
   secrets: Record<string, string>;
+  removeSecrets: string[];
   report: ImportReport;
 }
 
-async function resolveImport(api: Browser, plan: ImportPlan, withKeys: boolean): Promise<Resolved> {
+/** JSON with sorted keys, so two records compare equal whatever order their fields came in. */
+function stable(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(stable).join(',')}]`;
+  if (typeof v === 'object' && v !== null) return `{${Object.entries(v).filter(([, x]) => x !== undefined).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, x]) => `${JSON.stringify(k)}:${stable(x)}`).join(',')}}`;
+  return JSON.stringify(v) ?? 'null';
+}
+
+/** What a replacing connection changes where a request (and the key in it) goes. */
+function changedRouteOf(current: ProviderConnection, next: ProviderConnection): string[] {
+  const changed: string[] = [];
+  if (current.baseUrl !== next.baseUrl) changed.push('address');
+  if (stable({ a: current.auth, p: current.authByProtocol }) !== stable({ a: next.auth, p: next.authByProtocol })) changed.push('auth');
+  if (stable(current.extraHeaders ?? {}) !== stable(next.extraHeaders ?? {})) changed.push('headers');
+  if (stable(current.queryParams ?? {}) !== stable(next.queryParams ?? {})) changed.push('query parameters');
+  return changed;
+}
+
+async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKeys = new Set() }: ImportOptions): Promise<Resolved> {
   const [settings, prefs, glossary, lists, local] = await Promise.all([readProviderSettings(api), readPreferences(api), readGlossary(api), readSiteLists(api), api.storage.local.get(null)]);
   const implicit = settings.implicit ?? { connections: [], profiles: [] };
   const storedConn = new Set(settings.connections.filter((c) => !implicit.connections.includes(c.id)).map((c) => c.id));
@@ -475,24 +562,44 @@ async function resolveImport(api: Browser, plan: ImportPlan, withKeys: boolean):
   }
 
   const secrets: Record<string, string> = {};
-  let replaced = 0;
   const inFile = Object.keys(plan.keys).length;
-  if (withKeys) {
-    for (const [id, key] of Object.entries(plan.keys)) {
-      if (!connectionIds.has(id)) {
-        notes.push(`Ignored a key for "${id}": that connection is in neither the file nor this browser.`);
-        continue;
-      }
-      const current = local[`${SECRET_PREFIX}${id}`];
-      if (current === key) continue;
-      if (typeof current === 'string' && current !== '') replaced++;
-      secrets[secretKey(id)] = key;
+  let wouldWrite = 0;
+  let wouldReplace = 0;
+  for (const [id, key] of Object.entries(plan.keys)) {
+    if (!connectionIds.has(id)) {
+      notes.push(`Ignored a key for "${id}": that connection is in neither the file nor this browser.`);
+      continue;
     }
+    const current = local[`${SECRET_PREFIX}${id}`];
+    if (current === key) continue;
+    wouldWrite++;
+    if (typeof current === 'string' && current !== '') wouldReplace++;
+    if (withKeys) secrets[secretKey(id)] = key;
+  }
+  // A key saved here goes wherever its connection points. A file that points a connection you
+  // already have somewhere else must not carry your key along with it (DESIGN §8, §4.3.4).
+  const redirects: Redirect[] = [];
+  const removeSecrets: string[] = [];
+  for (const c of plan.connections) {
+    const current = settings.connections.find((x) => x.id === c.id);
+    if (!current) continue;
+    const changed = changedRouteOf(current, c);
+    if (changed.length === 0) continue;
+    const saved = local[secretKey(c.id)];
+    const hasKey = typeof saved === 'string' && saved !== '';
+    let keyAction: Redirect['keyAction'] = 'none';
+    if (secretKey(c.id) in secrets) keyAction = 'replaced';
+    else if (hasKey) {
+      keyAction = keepKeys.has(c.id) ? 'kept' : 'removed';
+      if (keyAction === 'removed') removeSecrets.push(secretKey(c.id));
+    }
+    redirects.push({ id: c.id, label: current.label, from: current.baseUrl, to: c.baseUrl, changed, keyAction });
   }
   const endpoints = [...new Set(plan.connections.map((c) => c.baseUrl).filter((u) => u !== ''))];
   return {
     items,
     secrets,
+    removeSecrets,
     report: {
       connections: { added: plan.connections.filter((c) => !storedConn.has(c.id)).length, replaced: plan.connections.filter((c) => storedConn.has(c.id)).length },
       profiles: { added: plan.profiles.filter((p) => !storedProf.has(p.id)).length, replaced: plan.profiles.filter((p) => storedProf.has(p.id)).length },
@@ -501,7 +608,8 @@ async function resolveImport(api: Browser, plan: ImportPlan, withKeys: boolean):
       prefs: plan.prefs !== undefined,
       glossary: glossaryCount,
       sites: { allow: plan.allow?.length ?? 0, never: plan.never?.length ?? 0 },
-      keys: { inFile, written: Object.keys(secrets).length, replaced },
+      keys: { inFile, wouldWrite, wouldReplace, written: Object.keys(secrets).length, removed: removeSecrets.length },
+      redirects,
       endpoints,
       notes,
     },
@@ -509,23 +617,25 @@ async function resolveImport(api: Browser, plan: ImportPlan, withKeys: boolean):
 }
 
 /** What importing `plan` would do here, without doing it (the preview the user confirms). */
-export function previewImport(api: Browser, plan: ImportPlan, withKeys: boolean): Promise<ImportReport> {
-  return resolveImport(api, plan, withKeys).then((r) => r.report);
+export function previewImport(api: Browser, plan: ImportPlan, options: ImportOptions): Promise<ImportReport> {
+  return resolveImport(api, plan, options).then((r) => r.report);
 }
 
 /**
  * Merges `plan` into storage: one sync write for everything (it fits the sync quota or nothing
  * changes), then the keys, only when `withKeys` and only the ones the file carries. Nothing the file
- * does not mention is removed or changed.
+ * does not mention is removed or changed, except the saved key of a connection the file points
+ * somewhere else (`redirects`), which goes unless the user kept it.
  */
-export function applyImport(api: Browser, plan: ImportPlan, withKeys: boolean): Promise<ImportReport> {
+export function applyImport(api: Browser, plan: ImportPlan, options: ImportOptions): Promise<ImportReport> {
   return queued(async () => {
-    const { items, secrets, report } = await resolveImport(api, plan, withKeys);
+    const { items, secrets, removeSecrets, report } = await resolveImport(api, plan, options);
     if (Object.keys(items).length > 0) {
       await checkQuota(api, items);
       await api.storage.sync.set(items);
     }
     if (Object.keys(secrets).length > 0) await api.storage.local.set(secrets);
+    if (removeSecrets.length > 0) await api.storage.local.remove(removeSecrets);
     return report;
   });
 }
