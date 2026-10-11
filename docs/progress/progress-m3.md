@@ -243,3 +243,180 @@ The plan has no per-phase done criteria; these are the §2/§3 lines that map to
 ## WRAP-UP — 2026-10-08
 - User asked to commit and push master now (supersedes M3-D15's "merge after Phase E"): m3 fast-forwarded into master and pushed with this log. Phase E (dogfood) stays open; it can continue on master or a new branch.
 - M3-D16 (user, 2026-10-08): M3 stays OPEN until the 7-day dogfood (Phase E) is done; the user returns after 7 days and re-runs the M3 /loop to triage and close. M4 may run in parallel (its plan allows it) on an `m4` branch; the user dogfoods a `master` build; any M3 MVP blocker is fixed on master first, then m4 is rebased.
+
+## PHASE E RESUMED — 2026-10-10 (supervisor session `m4`, pane `wC:p2J`, Opus 5.5)
+- M4 is complete and fast-forwarded into master (6af810b, not pushed). M3 Phase E resumes on master.
+- **User decision (2026-10-10): the 7-day human dogfood (M3-E11) is replaced by an agent QA pass** — a deviation from §3 #8 approved by the user. Report: docs/progress/dogfood-m3.md (19 content sites + 3 negative cases; 12 pass, 3 borderline, 4 fail/degraded; denylist/password rule pass; spend $0.545). Not testable by an agent: real toolbar click/Alt+T/side panel, real permission prompt, logged-in sites, the human 7-day criterion.
+- **Triage (user chose "a", 2026-10-10):** MVP blockers fixed in M3:
+  - B1 bad Gemini key → every block "Retry failed", no "Fix key" (Gemini answers HTTP 400 for an invalid key; errors.ts treats 400 as bad_request) — breaks §7 demo step 5.
+  - B2 a failed "Retranslate page" replaces the on-screen translation with errors and deletes the cached entries.
+  - B3 layout tables (Paul Graham essay → one row of 290 cells; HN comment threads → side-by-side columns) are unreadable.
+  - B4 mid-article open: the job marks the visible screen done at ~2 s, but visible paragraphs finish at 7.6–9.7 s (Substack, BBC) — recheck the M3-D11 evidence.
+  Later: B5 SPA navigation (M5); B6 wide table overflows the panel header, B7 raw `[link]` marker flashes while streaming; B8/B10 quality (M7); B9 Stack Overflow recheck in the user's Chrome; B11/B12 timing labels, $0 on a cancelled run.
+- Work runs on branch `m3e` (worktree ../translate-side-m3e) off master 6af810b; merged into master after acceptance.
+- Sessions (Phase E fixes): m3e-impl, pane wC:p5E (tab wC:t4H), implementer, **Opus 5.5** (four bugs across error classification, cache/retranslate, extraction policy and scheduling; design choices for layout-table detection and visible-first). Goal scratchpad goal-M3E-impl.md, state state-M3E-impl.md. Reviewer + tester (Sonnet) after its first commit; scout for the final commit check.
+- m3e first commit 488d86d (B1: 400/422 → auth only on Google's key-invalid signal; tests in errors.test.ts and adapters.test.ts; auth latches, stops the job, "Fix key", no fallback). Started reviewer m3e-review (wC:p5F) and tester m3e-test (wC:p5G), Sonnet 5.5; goals goal-M3E-review.md / goal-M3E-test.md (common-M3E.md).
+- Phase E review round 1 (488d86d, B1): PASS, no blocking. Rulings: fix the onAuthError doc (jobs.ts:~388); add a job-level "Fix key, no fallback" test for the Google 400; accept the message regex firing on any provider's 400 (specific phrases). Forwarded to m3e-impl.
+- Phase E tester (488d86d): **B1 PASS** — check green 1405; built extension, bad Gemini key on MDN → "Key invalid or missing" + Fix key, 2 Gemini 400s, 0 requests elsewhere. B2–B4 and regressions pending.
+- m3e 8925483 (job-level B1 test, real adapter, 0 requests to fallback) + cc8f1dd (B2: Job.earlier keeps earlier finals on screen during a fresh run; a failed block restores the earlier final with redoError and keeps its cache; finish() restores unreached blocks on stop/cancel; Retry re-runs owed blocks; 3 tests fail without the fix; onAuthError doc fixed). Review round 2 sent; tester told to test B2.
+- Phase E review round 2 (cc8f1dd): 8925483 good. **1 BLOCKING (B2):** a retranslate started during a running job seeds that job's unfinished (pending-with-text) blocks as empty and ignores prev.earlier → content reverts, and a later failure drops the cache entry → fix + test. Non-blocking, ruled fix: partial-owed resume test; bar note when blocks were restored (+ confirm resume() redoing them is intended). Forwarded to m3e-impl.
+- Phase E tester (cc8f1dd): **B2 PASS** for a retranslate on a finished page (bad key → Fix key, 82 finals kept, failure note; offline → finals kept; reopen/revisit 0 requests). Regressions on 488d86d pass (offline → Retry 54/54, cache 0 requests, denylist). Asked the tester to add the retranslate-during-run case on the next B2 commit.
+- m3e d5b174e: B2 round-2 fixes (seeding falls back to before.earlier for unfinished blocks; tests for a second retranslate mid-run and for a partial-owed resume; JobView.kept + bar note "N blocks kept their earlier translation" with Retry; resume() redoing restored blocks intended, commented). Review round 3 sent; tester told.
+- Phase E review round 3 (d5b174e): **B2 PASS**, no blocking; full suite 1412, tsc clean. Non-blocking: test for the kept decrement on single-block redo → asked; bar test with a hand-built view → accepted.
+- Phase E tester (d5b174e): **B2 follow-up PASS** — retranslate during a run plus a bad key: "82 blocks kept their earlier translation · Fix key", 82 finals kept, reopen/revisit 0 requests. Flake seen: adapters.test.ts "a stream that keeps sending events… not cut" (M4 idle guard, 20 ms vs 30 ms) failed once under load → asked m3e-impl for a test-only margin fix.
+- m3e c1350a1 (B3): isLayoutTable() (Readability _markDataTables on the table's own rows/cells) → layout cells become plain containers; liveTexts() maps copy text nodes to live ones (survives Readability's innerHTML retry), Range targets in viewport.ts; real pages: PG 290 table-cells → 262 p, HN 265 → 265 p; 10 existing site snapshots unchanged; fixtures layout-table-essay/thread (structural replicas, filler text, MIT); tests. Open: HN author line dropped by Readability, nesting lost (later site rule). 53c340b idle-guard test margins 300/100 ms (still fail without touch()). 48d5275 kept-decrement test. Suite 1430. Review round 4 + tester B3 sent.
+- Phase E review round 4 (48d5275): **B3 PASS**, no blocking; general rule (mirrors Readability _markDataTables), data-table fixtures unchanged; HN byline/nesting loss accepted for M3 (on-page nesting kept; only the panel list is flat). Rulings: document the layout-table rule and its small-data-table consequence in S3-extraction-policy.md (fix); verify the Range zero-rect-after-replacement against B4 ordering and the "screen done" signal in the live run (fix if it distorts); liveTexts worst-case cost accepted.
+- Phase E tester (48d5275): **B3 PASS** — check green 1431, no flake; PG essay 263 blocks, no table cells, panel width 1200 px (was 41,463); HN thread 272 blocks, flowing (usernames/nesting absent, accepted); PostgreSQL data table still a grid (Wikipedia blocked the automated browser); MDN 64/64 and Docusaurus 69/69 (2 transient failures healed on reopen; revisit 0 requests). Timing seen for B4: PG screen-done 4.8 s; after a jump to 70%, the 13 on-screen blocks were final within 12 s. One-off MDN panel scrollWidth 2854 right after a reopen, not reproduced (likely B6).
+- ctx check (2026-10-10): supervisor 36%, m3e-impl 30% (working on B4) → checkpoint request sent (compact once idle); m3e-review 12% (idle), m3e-test 11% (idle).
+
+### RESUME STATE (Phase E fixes) — 2026-10-10
+- Sessions: m3e-impl wC:p5E (Opus; goal scratchpad/goal-M3E-impl.md, state state-M3E-impl.md) — B4 in progress, checkpoint requested, then compact + resume. m3e-review wC:p5F, m3e-test wC:p5G (Sonnet; goals goal-M3E-review/test.md, common-M3E.md). No scout yet (start one for the final commit check).
+- Branch m3e (worktree ../translate-side-m3e) @ 48d5275: B1 488d86d+8925483 PASS/PASS; B2 cc8f1dd+d5b174e(+48d5275) PASS/PASS; B3 c1350a1 PASS/PASS; idle-guard test margins 53c340b. B4 pending (plus: S3 decision-record line; verify Range zero-rect after replacement vs B4 ordering and "screen done").
+- After B4: review + test B4 (tester reruns regressions on the final tip, demo step 5 live), scout confirms commits, accept Phase E (user approved the agent QA as the dogfood substitute), merge m3e → master (fast-forward if master hasn't moved), commit this log + docs/progress/dogfood-m3.md, close sessions; then the user decides on M5.
+- m3e-impl checkpoint: B4 part 1 b7d5c88 (screen chunk cut at both screen edges; up to 3 screen chunks skip the brief, each with its own revise pass). Live harness before the fix (Wikipedia at 40%): first visible final 3.2 s, visible finals 3.2–6.0 s, part of the screen in a second chunk waiting for the brief (21.7 s). Hypothesis: the QA's 7–10 s also includes background-tab throttling. Compacting m3e-impl.
+- Phase E review round 5 (b7d5c88): logic right ("reorder pending only, never abort in-flight" holds), but untested. Rulings: tests required before B4 passes (breakBefore array, end-break incl. table-row groupId and a screen at doc end, freeChunks up to MAX_SCREEN_CHUNKS, revise count); log the cost — up to 3 revise calls per contextual page, tiny screen chunks lose context (accepted trade-off for the ~2 s target); live run must open mid-article after the viewport is reported; part 2 must make "screen done" use the same ids as the visible paragraphs (B3 Range targets), with a test. To forward after compaction.
+- m3e-impl kept working past its checkpoint (/goal) to 34%; the /compact text didn't take. Sent STOP; compact once idle (a background wait for its ctx drop is running), then resume with review round 5 notes (B4 tests; "screen done" on the visible ids; live run mid-article after the viewport is reported; S3 decision-record line; Range zero-rect check). Supervisor at 38%: self-compacting soon; RESUME STATE above is current.
+- m3e 334df84 (B4 part 2: revise waits until all brief-free screen chunks have started; 3 priority tests; engine 373). Live Wikipedia at 40% (unthrottled): on-screen set correct (9 segments, one 831-token chunk); first visible final 2.1–2.8 s; full visible 2.4–5.6 s (before: 3.2–6.0 s + one 21.7 s). Remaining tails = Gemini mid-stream stalls (~16 s gap; one 52 s hang caught by the idle guard). **Supervisor ruling:** no hedging in M3; accept the stall tails and record them under the accepted speed gap M3-D11 (hedging / shorter screen-chunk idle limit → later robustness work). Compacting m3e-impl (sent /compact while idle).
+- Phase E review round 6 (334df84): B4 chunking half PASS (revise gate can't deadlock; tests cover multi-chunk screen, cap 3, table rows). **BLOCKING for B4:** the "screen done" signal is unchanged and untested — screenDoneAt (jobs.ts:1052, 1128) snapshots screen ids at job start and counts `failed` as done, never checks the page; explain the QA discrepancy (stale viewport at start? ids not matching the visible paragraphs?) and fix/test it. Needed: live mid-article run (Substack/BBC style, after the viewport has reported) measuring when the in-window paragraphs have translated text in the DOM next to data-screen-done (both ~2 s and agreeing; also covers the B3 Range-collapse question). Non-blocking: eval/latency.ts:122 also counts failed as screen-done → report failed separately.
+
+### RESUME STATE (Phase E fixes) — updated 2026-10-10 (supervisor self-compacting at ~39%)
+- m3e-impl wC:p5E (Opus): /compact sent while idle at 34–36%; a background wait for its ctx drop was running. NEXT ACTION: once its ctx is low, SendMessage "m3e-impl": re-read state-M3E-impl.md, then do — (1) review round 6 BLOCKING: fix + test the "screen done" signal (screenDoneAt must reflect the paragraphs actually visible, not a start snapshot counting failed); explain the QA's 2.1 s vs 7.6–9.7 s; (2) supervisor ruling: no hedging for Gemini mid-stream stalls in M3, record under M3-D11; (3) the live mid-article run (BBC/Substack, after the viewport reports; DOM-translated time vs data-screen-done; throttled run for the background-tab hypothesis); (4) eval/latency.ts report failed separately; (5) S3 decision-record layout-table line; (6) Range zero-rect check on live PG; (7) final Playwright run for B1 demo step 5, B2, B3, B4 with screenshots; pnpm run check; final report.
+- m3e-review wC:p5F, m3e-test wC:p5G (Sonnet): idle; send them the next B4 commit; the tester reruns regressions on the final tip.
+- Then: scout for the final commit check, accept Phase E, merge m3e → master, commit this log + dogfood-m3.md, close sessions, report to the user (M5 next).
+- Iteration (post supervisor compact): ctx — supervisor 5%, m3e-impl 39% (working; its earlier /compact didn't take), m3e-review 14% (done), m3e-test 13% (working on regressions). Sent m3e-impl a checkpoint request (notify_when_idle); next: compact it, then send the round-6 NEXT ACTION above.
+- Phase E tester (334df84): **B4 NOT met**. Check green (70 files, 1434 tests). Time until all on-screen blocks are final, new tip vs baseline 6af810b: ACX 3.0 vs 5.8 s; Wiki Industrial_Revolution 7.5 vs 11.0; Movable_type 7.1 (no baseline); Byzantine 17.2 vs 10.9; Roman 17.4 vs 14.4. The first on-screen block is final at 0.8–3 s; stamped screen-done is 7–9 s on Wikipedia. BBC unreachable (ERR_TIMED_OUT). Confound: the shared Gemini key is returning 429 (47/51 requests on MDN), so the live check is partly blocked. 429 handling is correct. Denylist regression passes; the offline/Retry rerun is inconclusive (429). Spend about $0.35–0.45. Ruling: hold; retest on the next B4 commit; report the 429 state before measuring.
+- m3e-impl checkpoint 3:
+  - New commits: b5c4280 adds the layout-table line to the S3 decision record. 4be2a5d adds `ext-run --scroll/--screen-only` with visibleFirstMs, visibleAllMs and screenDoneMs; not validated yet because Gemini returned 429s.
+  - PG live: 262 paragraphs, no overflow, screen done at 5.5 s, scroll follow tracks the page. The extension never writes to the page, so the Range question is closed.
+  - Cause of the QA numbers: the QA harness navigated within the same tab. The worker re-injected at load, so the job started at the top about 3.9 s before the gesture, and the gesture was ignored. The implementer calls this **B5**: a possible product bug (navigating within a tab ignores the reading position), to put to the user.
+  - Fresh-tab runs: ACX at 30% scroll, visible paragraphs final at 3.5–4.6 s; Wikipedia at 40%, 2.1–5.6 s. These conflict with the tester's 7–17 s on dense Wikipedia.
+  - Compact sent at about 39%, while it was idle.
+- m3e-impl compacted (ctx 0%). Sent round 6: (1) BLOCKING screenDoneAt fix + tests; (2) stall ruling → M3-D11; (3) eval/latency failed separately; (4) explain the gap to the tester's 7–17 s; (5) B5 description only, user decision pending; (6) live runs after the 429s clear, ACX + Wikipedia + throttled; (7) final Playwright + check + report. Reviewer and tester holding for the next B4 commit.
+- m3e-impl round 6:
+  - **4583a68**:
+    - screenDoneAt is now the first moment every block in the latest viewport report is final, with at least one block owed by this run.
+    - It doesn't count failed blocks, or a retranslate that reverted to its earlier text.
+    - It is re-checked on segment events, cache hits and setViewport.
+    - 4 tests in jobs.test.ts. Check green (1437 tests).
+    - latency.ts reports screenFailed separately, and a screen with a failed block gets no screenDoneMs.
+  - **984007f**:
+    - scripts/eval/README.md "Visible first": records the stalls under M3-D11 and the QA same-tab explanation.
+    - ext-run gains --url and --throttle.
+  - **M3-D11 addendum (supervisor ruling):** Gemini mid-stream stalls are not hedged in M3; they are accepted under the M3-D11 speed gap.
+  - **B5 (not fixed):** in a tab that already has access, a full navigation re-injects at load, and the job starts from the screen at load time. A later scroll costs one chunk round trip (3–6 s), and Alt+T during the job does nothing. Nothing is wrong, only slower.
+    - Fix (a): delay the auto-start until the first viewport report after load settles; about 30 lines.
+    - Fix (b): a gesture from a different screen cancels the pending chunks and re-reads the screen; about 20 lines.
+    - Neither aborts in-flight requests. The SPA half belongs to M5.
+    - USER DECISION PENDING.
+  - Live runs (items 4, 6, 7) are waiting: Gemini still returns 429 to a probe. The implementer re-probes every 10 minutes.
+  - Sent 4583a68 and 984007f to m3e-review for round 7.
+- **USER DECISION (2026-10-10): fix B5 in M3 with option (b).** A gesture on a running job, made from a different screen, cancels the chunks that haven't started and re-reads the screen; in-flight requests are never aborted. Sent to m3e-impl, along with a same-tab live run before and after.
+- **Review round 7 (4583a68, 984007f): PASS, no blocking findings.** The reviewer showed the new tests fail against the old jobs.ts.
+  - Non-blocking 1: the stamp is set once.
+  - Non-blocking 2: the stamp and ext-run measure job and panel state, not the page DOM. **Noted here.**
+  - Non-blocking 3: the same-tab explanation hasn't been reproduced on the branch.
+  - **§3 #1 "~2 s" is only partly met:** fresh-tab runs show 2.1–5.6 s on Wikipedia and 3.5–4.6 s on ACX, plus the Gemini stalls. Propose accepting this under M3-D11; **the user must acknowledge it in the final log.**
+  - The reviewer still needs the live Playwright run before signing off the whole set: B1 demo step 5, B2, B3 (paulgraham/HN, a real data table, the Range check after translation).
+- Tester: Gemini returns 429 on every request (13/13 at 984007f). Told to wait for quota and the B5 tip; the B4 verdict must come from the tester.
+- m3e-impl: **B5 committed, 7033b60 (option b)**. hooks.asked → Jobs.refocus (bumps focus when the screen differs); runner recut replaces pending elements and keeps in-flight ones; recutChunks in single-pass and contextual. Tests in priority, jobs and controller; mutation check: 2 fail with recut off. Known limit: re-cutting changes the stage output order the check stage sees. 30500a4: README note that the stamp measures panel and job state, not the DOM. Check green (1445 tests). Gemini still 429 at 19:24. Sent to m3e-review for round 8.
+- **Review round 8 (30500a4 incl. 7033b60 B5): PASS, no blocking findings.**
+  - Never-abort, send-once, contextual and cache: all OK.
+  - Non-blocking 1: re-cut breaks page order in the check stage (check.ts:91, :106). Sent to the implementer: sort outcomes by page index, plus a test.
+  - Non-blocking 2: cutAround changes only on a gesture, never on a scroll, as designed. Noted here.
+  - Non-blocking 3: no jobs-level test combines cache hits with a recut (optional).
+- Gemini 429 all day, probably the daily quota (reset around 14:00 +07 on 2026-10-11).
+  - User first said "wait for quota". Then, told it is probably the daily quota, the user chose to **split**: functional checks run now on another key; only the B4 timings, the throttled run and the timing reconciliation wait for Gemini.
+- Implementer, without quota, at 30500a4:
+  - B1 demo step 5 on PG: bad key → "Key invalid or missing · Fix key" in 0.8 s.
+  - B3: HN 8863 gives 113 paragraphs, no overflow. A Wikipedia population list stays a table (1434 cells).
+  - Shots are in the implementer's scratchpad.
+- Next, both started on another key:
+  - Implementer: B2, the Range check, same-tab before/after B5, ext-run validation, plus the check-order fix.
+  - Tester: B5, B2 and the regressions.
+- Review of **6690291** (check-stage page-order sort + test): PASS, no findings (1446 tests). Reviewer: the B1–B5 code and tests all PASS, with no blocking findings, at 6690291. Sign-off of the whole set waits on the live evidence (B2 real page, Range check, B4 tester numbers, B5 same-tab before/after).
+- Phase E tester (30500a4, APIBOX qwen3.8-flash): **B5 Alt+T PASS, B2-live PASS, regressions PASS**. Check green (1445 tests).
+  - B5 on Docusaurus: with Alt+T from about 70% down, a brief-free chunk starting on screen went out after 3.7 s (2 slots were busy). The in-flight requests were not re-sent or aborted. The control with no Alt+T sent nothing from that screen in 22 s.
+  - B2 on MDN: "65 blocks kept their earlier translation · Fix key". Docusaurus kept 69/69, and reopening cost 0 requests.
+  - Regressions: offline then Retry reached 122/122; reopen and revisit cost 0; the denylist blocks with 0 requests; a 10 s outage self-healed.
+  - The tester's same-tab run was an SPA route change, which belongs to M5. Asked for a full-navigation same-tab run (Wikipedia→Wikipedia, or a reload mid-page) at 6690291 vs pre-B5, plus a check at the tip.
+- Phase E tester: **B5 full-navigation PASS at 6690291** (APIBOX). Check green (1446 tests).
+  - Run: Wikipedia Printing_press → link to Movable_type, scroll to the middle, Alt+T.
+  - At 6690291: the next chunk had 7 segments starting at the first on-screen paragraph and covered 6 of the 7 on-screen paragraphs.
+  - Pre-B5 (984007f): the next chunk had 22 segments starting above the screen.
+  - In both builds, in-flight chunks finished and were not re-sent.
+- Remaining before acceptance: the B4 timings on Gemini after the reset (around 14:00 +07, 2026-10-11) from both the tester and the implementer, and the implementer's functional-run report (B2, Range, ext-run). Then reviewer sign-off on the live evidence, the user's acknowledgement of §3 #1 under M3-D11, the scout's commit check, and the merge.
+- Iteration (about 20:30). Context use: supervisor 10%, m3e-impl 23% (running ext-run on APIBOX), m3e-review 19% (idle), m3e-test 22% (idle, waiting for the reset).
+  - Compact sent to the reviewer.
+  - Checkpoint requests sent to the tester (then compact) and the implementer (report, then compact).
+- m3e-test checkpoint: B1, B2, B3, B5 and the regressions PASS; check green at 6690291; B4 waits for Gemini. Worktrees wt (6690291) and wtbase (984007f); ports 18731 and 18741. Compact sent; the B4 baseline is 6af810b.
+- m3e-impl checkpoint 4 (HEAD **e6faade**). All live runs below were on AIBOX qwen3.8-flash, with shots in the implementer's scratchpad (final-*).
+  - e6faade changes ext-run:
+    - desktop user agent;
+    - reports "no-job" when the panel can't read the page;
+    - --screen-only clicks the header's Cancel (not re-run yet).
+  - B2 on PG fn.html:
+    - 27/27 translated, then a bad-key Retranslate: "27 blocks kept their earlier translation · Fix key", with all 27 still showing the earlier text;
+    - revisit: 0 requests.
+  - Range check after translation on PG: the panel follows the page at every scroll point (at 0.6 and 0.8 the panel is at its maximum scroll and the block is on screen).
+  - Same-tab, PG → Movable_type, scroll 0.4, Alt+T. The times are AIBOX-specific (about 50 s per request).
+    - Pre-B5: the screen was inside a 22-segment chunk; visible paragraphs final at 75–84 s.
+    - After B5: a 9-segment re-cut chunk; visible paragraphs final at 46–54 s.
+  - ext-run on ACX at 0.3: visibleFirst 6.3 s, visibleAll 9.6 s, screenDone 9.5 s (the stamp agrees with the panel).
+  - Open: Wikipedia sends ext-run's headless browser a robot-policy 403. The implementer's own harness loads Wikipedia, so it uses that for the Wikipedia timings.
+  - Waiting for the Gemini reset: the B4 timings, the throttled run, the timings on the tester's pages, the final check and the final report.
+  - Compact sent; e6faade sent to the reviewer.
+- **Review round 9 (e6faade): PASS.**
+  - Non-blocking: ext-run.mjs:~141 breaks the poll loop on any `.state`, which also matches loading and idle. Narrow it to `[data-state=blocked]`; sent to the implementer.
+  - **SIGNED OFF by the reviewer: B1, B2, B3, B5** (code at 6690291 plus the live evidence). Range caveat: at 0.6 and 0.8 the check confirms the block is on screen but doesn't test following; not blocking.
+  - Remaining:
+    - B4 Gemini timings and the tester's verdict;
+    - the §3 #1 "~2 s" partial result, to be recorded as accepted under M3-D11 with the user's acknowledgement;
+    - re-running the ext-run Cancel fix.
+  - No blocking findings open.
+- WAITING for the Gemini reset (around 14:00 +07, 2026-10-11). Then: tester go (probe, B4 vs 6af810b, regressions on the final tip); implementer B4 timings and final report; reviewer whole-set sign-off; user acknowledgement of §3 #1; scout commit check; accept; merge.
+- m3e-impl: committed the ext-run .state narrowing as 8f2ade4 (not pushed).
+- **USER DECISION (2026-10-11): "skip Gemini, make it accepted".** The B4 Gemini timings are waived. B4 is accepted on the review PASS (rounds 6–8) and the fresh-tab evidence (Wikipedia 2.1–5.6 s, ACX 3.5–4.6 s). The tester's 334df84 "not met" verdict is superseded by the user's waiver. **§3 #1 "~2 s" is only partly met; the user accepts it under M3-D11.**
+  - Closing steps:
+    - the implementer stops its Gemini probe and confirms a clean tree, plus a check at tip 8f2ade4;
+    - the reviewer signs off 8f2ade4 (eval tooling);
+    - the tester confirms the check at the final tip and cleans up;
+    - a scout confirms the commits;
+    - then accept and merge.
+- Started **m3e-scout** wC:p5H (Sonnet 5.5) with goal-M3E-scout.md: the m3e tip, a clean tree, master..m3e, whether master can fast-forward, the 18 commits, no username or paths, no servers. Sent close-out messages to the implementer (stop the probe, check, final report), the reviewer (8f2ade4 plus whole-set sign-off) and the tester (check at the tip, cleanup).
+- **Scout:** m3e tip **8f2ade4**, clean. master 6af810b is an ancestor, so master can fast-forward. All 18 commits are present and are exactly master..m3e. No username or paths in the commits. No listeners on 11434 or 1234. Two tester scratch worktrees remain (8f2ade4, 984007f); the tester is cleaning up.
+- **Reviewer, final (8f2ade4): WHOLE-SET SIGN-OFF B1–B5, no blocking findings.** Product code and tests are unchanged since round 8 (1446 tests, tsc clean). Non-blocking leftovers: the ext-run Cancel click hasn't been re-run live; the Range check at 0.6/0.8 only shows maximum scroll. No scope creep: B6–B12 and M5 untouched. M3-D11 wording recorded above: §3 #1 '~2 s' is only partly met (2.1–5.6 s Wikipedia, 3.5–4.6 s ACX) and accepted by the user.
+- **Tester, final (8f2ade4):** check green (70 files, 1446 tests). The first run had 2 timeouts at 30 s under load average about 30 (fixture-chunks mdn-promise-then, layout-tables HN); both pass alone and in the full rerun, so they look like load flakes (open item). Cleanup done. B1, B2, B3, B5 and the regressions PASS. B4 at 334df84 was not met; the user's waiver supersedes it.
+
+### PHASE E — ACCEPTED (2026-10-11)
+- Closing commit: **m3e 8f2ade4** (18 commits on top of master 6af810b).
+- **Conditions met:**
+  - The reviewer signed off the whole set B1–B5, with no blocking findings.
+  - The tester confirmed B1, B2, B3, B5 and the regressions, with the check green at 8f2ade4.
+  - B4's live timing criterion was waived by the user ("skip Gemini, make it accepted").
+  - User sign-offs:
+    - the agent QA in place of the 7-day dogfood (deviation from M3 §3 #8);
+    - triage "a";
+    - B5 fix (b);
+    - the split for live checks;
+    - the Gemini waiver;
+    - §3 #1 "~2 s" partly met, accepted under M3-D11.
+  - The scout confirmed the commits: clean, master can fast-forward, no username or paths.
+- **Open items carried forward:**
+  - B4 Gemini timings not reconciled with the tester's 7–17 s on dense Wikipedia; no throttled run.
+  - The ext-run --screen-only Cancel click not re-run live.
+  - ext-run gets a 403 from Wikipedia's robot policy.
+  - HN item 38000000 gives 0 blocks (not investigated).
+  - On HN, Readability drops the byline and the nesting (accepted).
+  - Optional jobs test of cache plus recut not written.
+  - Load-sensitive 30 s test timeouts: fixture-chunks, layout-tables HN.
+  - QA items B6–B12 untouched (see the triage above).
+  - The SPA half of B5 belongs to M5.
+- **Sessions:** m3e-impl wC:p5E (Opus 5.5), m3e-review wC:p5F (Sonnet 5.5), m3e-test wC:p5G (Sonnet 5.5), m3e-scout wC:p5H (Sonnet 5.5).
+- **Next:**
+  - fast-forward master to 8f2ade4 (local only, not pushed);
+  - commit this log and docs/progress/dogfood-m3.md on master;
+  - close the sessions;
+  - the user decides on M5.
+
+## M3 FINAL STATE — all phases A–E accepted (2026-10-11)
+- Closed m3e-review (wC:p5F) and m3e-test (wC:p5G). Asked m3e-impl to fast-forward master to 8f2ade4, scan the log and the QA report for username and paths, commit both on master (no push), and run the check.
