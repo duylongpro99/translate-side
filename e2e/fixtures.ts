@@ -84,17 +84,32 @@ export const test = base.extend<Fixtures, { servers: MockControl; extPath: strin
   allowedConsole: async ({}, use) => use([]),
   context: async ({ extPath, allowedConsole: allowed }, use) => {
     const errors: string[] = [];
-    // Closing the browser makes the worker's tab cleanup fail ("The browser is shutting down"): that is
-    // the harness ending the run, so only what is logged before the close counts.
+    // Closing the browser makes the worker's tab cleanup fail with "The browser is shutting down": that is
+    // the harness ending the run. Only that message is dropped once the close starts.
     let closing = false;
+    const SHUTDOWN = /The browser is shutting down/;
+    const report = (line: string) => {
+      if (!(closing && SHUTDOWN.test(line))) errors.push(line);
+    };
     const record = (where: () => string) => (m: ConsoleMessage) => {
-      if (!closing && m.type() === 'error' && !allowed.some((p) => p.test(m.text()))) errors.push(`${where()}: ${m.text()}`);
+      if (m.type() === 'error' && !allowed.some((p) => p.test(m.text()))) report(`${where()}: ${m.text()}`);
     };
     const watch = (page: Page) => {
       // Named when the message comes: a new tab is about:blank until it navigates.
       const where = () => (page.url().startsWith('chrome-extension://') ? 'panel' : 'page');
       page.on('console', record(where));
-      page.on('pageerror', (e) => closing || errors.push(`${where()} uncaught: ${e.message}`));
+      page.on('pageerror', (e) => report(`${where()} uncaught: ${e.message}`));
+    };
+    const watched = new Set<Worker>();
+    const watchWorker = async (worker: Worker) => {
+      if (watched.has(worker)) return;
+      watched.add(worker);
+      worker.on('console', record(() => 'worker'));
+      // A worker has no pageerror event: report its uncaught errors on its console.
+      await worker.evaluate(() => {
+        self.addEventListener('error', (e) => console.error(`uncaught: ${e.message}`));
+        self.addEventListener('unhandledrejection', (e) => console.error(`unhandled rejection: ${String(e.reason)}`));
+      });
     };
     const context = await chromium.launchPersistentContext('', {
       channel: 'chromium',
@@ -105,16 +120,19 @@ export const test = base.extend<Fixtures, { servers: MockControl; extPath: strin
     // The site fixtures keep their <base href> (fixtures/sites/README.md): stylesheets, fonts and images
     // would come from the original hosts. Answer them empty, so runs are offline and deterministic
     // (web app manifest links are cut by the fixture server, servers.ts). Fonts are fetched in CORS mode
-    // from the page's origin, hence the allow-origin header.
-    await context.route(/^https?:\/\/(?!127\.0\.0\.1[:/])/, (route) => route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, body: '' }));
-    context.on('page', watch);
-    const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
-    worker.on('console', record(() => 'worker'));
-    // A worker has no pageerror event: report its uncaught errors on its console.
-    await worker.evaluate(() => {
-      self.addEventListener('error', (e) => console.error(`uncaught: ${e.message}`));
-      self.addEventListener('unhandledrejection', (e) => console.error(`unhandled rejection: ${String(e.reason)}`));
+    // from the page's origin, hence the allow-origin header. The extension itself (worker, panel) talks
+    // only to the mock: any request it makes elsewhere fails the test (DESIGN.md §8, nothing leaves
+    // for a host the user did not choose).
+    await context.route(/^https?:\/\/(?!127\.0\.0\.1[:/])/, (route) => {
+      const request = route.request();
+      const from = request.serviceWorker() ? 'worker' : request.frame().url().startsWith('chrome-extension://') ? 'panel' : undefined;
+      if (from !== undefined) report(`${from} requested ${request.method()} ${request.url()}`);
+      return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, body: '' });
     });
+    context.on('page', watch);
+    // A worker that idles out comes back as a new instance: watch every one.
+    context.on('serviceworker', (worker) => void watchWorker(worker).catch(() => {}));
+    await watchWorker(context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker')));
     await use(context);
     closing = true;
     await context.close();
@@ -151,6 +169,12 @@ export const test = base.extend<Fixtures, { servers: MockControl; extPath: strin
           const [tab] = await chrome.tabs.query({ url });
           if (tab?.id === undefined) throw new Error(`no tab for ${url}`);
           await chrome.tabs.update(tab.id, { active: true });
+          // Unhandled rejections in the content script's world reach neither Playwright's pageerror nor
+          // CDP: put them on its console first, as for the worker.
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id, frameIds: [0] },
+            func: () => self.addEventListener('unhandledrejection', (e) => console.error(`content script unhandled rejection: ${String(e.reason)}`)),
+          });
           await chrome.storage.session.set({ [`access:${tab.id}`]: { status: 'injecting', at: Date.now() } });
           await chrome.scripting.executeScript({ target: { tabId: tab.id, frameIds: [0] }, files: ['content-scripts/content.js'] });
           await chrome.storage.session.set({ [`access:${tab.id}`]: { status: 'ready', at: Date.now() } });
