@@ -72,6 +72,7 @@ function fakeWorld() {
       onDetached: on('detached'),
     },
     storage: {
+      sync: { onChanged: on('syncChanged') },
       session: {
         get: (k: string) => Promise.resolve(k in store ? { [k]: store[k] } : {}),
         onChanged: on('changed'),
@@ -595,6 +596,29 @@ describe('PanelController session hooks (plan M1-E8)', () => {
       expect(c.view.kind === 'ready' && c.view.result.url).toBe('https://docs.example/b');
       expect(calls).toEqual([{ asked: true }, 'gone', { asked: false }]);
       expect(w.connects).toEqual([10]);
+    });
+
+    it('a site put on the never-translate list while its page is open: the connection closes, the job stops, the panel says why (review N1)', async () => {
+      const w = fakeWorld();
+      const calls: string[] = [];
+      w.pages[10] = { docId: 'd1', result: at('https://bank.example.com/account', 2) };
+      w.store[accessKey(10)] = { status: 'ready', trigger: 'gesture', at: 0 };
+      const { c } = await started(w, { hooks: { gone: () => calls.push('gone') } });
+      await wait();
+      let closed = false;
+      (w.contentEnds[10] as PortLike).onDisconnect.addListener(() => (closed = true));
+      w.fire('syncChanged', { siteNever: { newValue: ['other.example.org'] } });
+      await wait();
+      expect(c.view.kind).toBe('ready');
+      w.fire('syncChanged', { siteNever: { newValue: ['other.example.org', '*.example.com'] } });
+      await wait();
+      expect(c.view).toEqual({ kind: 'blocked', reason: 'never' });
+      expect(calls).toEqual(['gone']);
+      expect(closed).toBe(true);
+      // Its pushes are no longer heard.
+      emit(w.contentEnds[10] as PortLike, 'changed', at('https://bank.example.com/account', 3));
+      await wait();
+      expect(c.view.kind).toBe('blocked');
     });
 
     it('a re-read during a same-document load is kept for when the load ends', async () => {

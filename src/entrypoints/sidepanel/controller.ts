@@ -3,6 +3,7 @@
 // the content script with tabs.connect, says hello, and asks for the page's segments.
 import type { browser } from 'wxt/browser';
 import { readAccess, tabIdFromKey, type AccessReason, type TabAccess } from '@/shared/access';
+import { cleanSiteList, listedFor, SITE_NEVER_KEY } from '@/shared/sites';
 import {
   CONTENT_PORT_NAME,
   createClient,
@@ -167,6 +168,10 @@ export class PanelController {
         const tabId = tabIdFromKey(key);
         if (tabId !== null && tabId === this.activeTabId) void this.refresh(tabId);
       }
+    });
+    this.api.storage.sync.onChanged.addListener((changes) => {
+      const never = changes[SITE_NEVER_KEY];
+      if (never) this.neverChanged(cleanSiteList(never.newValue));
     });
     const [tab] = await this.api.tabs.query({ active: true, windowId: this.windowId });
     if (tab?.id !== undefined) this.setActive(tab.id);
@@ -343,6 +348,22 @@ export class PanelController {
     this.opts.hooks?.gone?.(tabId);
     if (s.beforeLoad) s.beforeLoad = view;
     if (s.view.kind !== 'loading' || !s.pageLoading) this.setView(tabId, view);
+  }
+
+  /**
+   * The never-translate list changed (review N1, D23 "never read or sent"): a page open on a site
+   * now on it is let go at once. The connection closes, so the content script stops watching and
+   * reading it; the job stops; the panel says why. A gesture there later is refused by the worker.
+   */
+  private neverChanged(never: readonly string[]): void {
+    for (const [tabId, s] of this.sessions) {
+      const view = s.view.kind === 'loading' ? s.beforeLoad : s.view;
+      const url = view?.kind === 'ready' ? view.result.url : view?.kind === 'empty' ? view.url : undefined;
+      if (!s.port || listedFor(never, url) === undefined) continue;
+      this.disconnect(tabId);
+      delete s.beforeLoad;
+      this.setView(tabId, { kind: 'blocked', reason: 'never' });
+    }
   }
 
   private fail(tabId: number, s: TabSession, generation: number, err: unknown): void {

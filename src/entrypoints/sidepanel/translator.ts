@@ -10,7 +10,7 @@ import type { GlossaryEntry } from '@/engine/types';
 import { GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences, SECRET_PREFIX, type Preferences } from '@/shared/settings';
 import type { ReadInfo, SessionHooks } from './controller.ts';
 import type { ExtractResult } from '@/shared/protocol';
-import { addAllowlisted, hasSitePermission, isNeverTranslate, readSiteLists, requestSitePermission, siteMode, siteOf } from '@/shared/sites';
+import { addAllowlisted, cleanSiteList, hasSitePermission, isNeverTranslate, listedFor, readSiteLists, requestSitePermission, siteMode, siteOf, SITE_NEVER_KEY } from '@/shared/sites';
 import { OfferStore } from './offers.ts';
 import type { JobActions } from './JobBar.tsx';
 import { openTranslationCache } from '@/shared/cache';
@@ -563,6 +563,15 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       // A connection, model or route changed (src/shared/providers.ts): a job stopped on it runs
       // again. Not the panel's own mark of a refused key (onAuthError): that changes nothing.
       if (Object.entries(changes).some(([k, c]) => isProviderKey(k) && !isErrorStatusWrite(k, c))) retryStopped();
+      // A site put on the never-translate list (review N1, D23): a selection from it stops at once.
+      // The page itself is let go by the controller, which closes its connection (`gone`).
+      if (SITE_NEVER_KEY in changes) {
+        const never = cleanSiteList(changes[SITE_NEVER_KEY]?.newValue);
+        for (const tabId of snippetStore.tabs()) {
+          const view = snippetStore.get(tabId);
+          if (view && !view.blocked && listedFor(never, view.url) !== undefined) closeSnippet(tabId);
+        }
+      }
       if (!(PREFS_KEY in changes) && !(GLOSSARY_KEY in changes)) return;
       const tabId = activeTab();
       if (tabId !== undefined) refresh(tabId);

@@ -18,11 +18,12 @@ type Api = Parameters<typeof createTranslator>[0];
 
 function fakeApi() {
   const onSession = new Set<(c: Record<string, { newValue?: unknown }>) => void>();
+  const onSync = new Set<(c: Record<string, { newValue?: unknown }>) => void>();
   const session = new Map<string, unknown>();
   const none = { addListener: () => {}, removeListener: () => {} };
   const api = {
     storage: {
-      sync: { get: (k: string) => Promise.resolve(k === 'prefs' ? { prefs: { targetLang: 'vi', sourceLang: 'auto' } } : {}), onChanged: none },
+      sync: { get: (k: string) => Promise.resolve(k === 'prefs' ? { prefs: { targetLang: 'vi', sourceLang: 'auto' } } : {}), onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) } },
       // The first-run privacy notice was acknowledged (M3-E10).
       local: { get: () => Promise.resolve({ privacyNotice: { version: 1, at: 0 } }), set: () => Promise.resolve(), onChanged: none },
       session: {
@@ -43,6 +44,9 @@ function fakeApi() {
       for (const fn of onSession) fn({ [`snippet:${tabId}`]: { newValue: record } });
     },
     session,
+    syncChange(changes: Record<string, { newValue?: unknown }>) {
+      for (const fn of onSync) fn(changes);
+    },
   };
 }
 
@@ -127,6 +131,32 @@ describe('selection mode in the panel (plan M3-E4, §3 #5)', () => {
     act(() => root.querySelector<HTMLButtonElement>('[data-testid="selection-close"]')?.click());
     expect(root.querySelector('[data-state="empty"]')).not.toBeNull();
     expect(t.snippets.store.get(3)).toBeUndefined();
+    stop();
+  });
+
+  it('a selection from a site just put on the never-translate list stops and goes away (review N1)', async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const f = fakeApi();
+    const slow = okClient();
+    const t = createTranslator(f.api, {
+      translateClient: async () => {
+        await gate;
+        return slow();
+      },
+    });
+    const stop = t.watch(() => 3);
+    (t.hooks as Required<typeof t.hooks>).active(3);
+    f.leave(3, record('Account number and balance.', 1, 'https://bank.example.com/account'));
+    await until(() => t.snippets.jobs.get(3)?.status === 'running');
+    f.syncChange({ siteNever: { newValue: ['other.example.org'] } });
+    expect(t.snippets.store.get(3)).toBeDefined();
+    f.syncChange({ siteNever: { newValue: ['bank.example.com'] } });
+    expect(t.snippets.store.get(3)).toBeUndefined();
+    expect(t.snippets.jobs.get(3)).toBeUndefined();
+    release();
+    await settle(50);
+    expect(sent).toEqual([]);
     stop();
   });
 
