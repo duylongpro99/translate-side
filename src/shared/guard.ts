@@ -11,6 +11,8 @@ export interface Guard {
   mark(): void;
   /** Is a scroll event now the echo of a marked scroll? */
   active(): boolean;
+  /** Ms left of the window (0 when closed). */
+  remaining(): number;
 }
 
 export function createGuard(now: () => number = Date.now, windowMs = SUPPRESS_MS): Guard {
@@ -20,5 +22,6 @@ export function createGuard(now: () => number = Date.now, windowMs = SUPPRESS_MS
       until = now() + windowMs;
     },
     active: () => now() < until,
+    remaining: () => Math.max(0, until - now()),
   };
 }

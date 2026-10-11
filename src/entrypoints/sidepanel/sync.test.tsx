@@ -134,6 +134,25 @@ describe('scroll sync both ways', () => {
     unmount();
   });
 
+  it('a reader scrolling in the last frames of the window is told to the page once it has passed', async () => {
+    let t = 0;
+    const guard = createGuard(() => t, 60);
+    const viewports = new ViewportStore();
+    const sent: unknown[] = [];
+    const unmount = mount(viewports, ((_t: number, name: string, body: unknown) => sent.push([name, body])) as SendToPage, guard);
+    await frame();
+    guard.mark();
+    scrollY = 250;
+    layout();
+    window.dispatchEvent(new Event('scroll'));
+    await frame();
+    expect(sent).toEqual([]);
+    t = 100;
+    await act(() => new Promise((r) => setTimeout(r, 120)));
+    expect(sent).toEqual([['scroll', { id: 'c', offset: 0.5 }]]);
+    unmount();
+  });
+
   it('a long run of alternating scrolls settles: no command is sent for a scroll the other side caused', async () => {
     const viewports = new ViewportStore();
     const sent: { id: string }[] = [];
@@ -168,15 +187,15 @@ describe('hover link', () => {
     const hovers = new HoverStore();
     const unmount = mount(hovers, () => undefined);
     act(() => hovers.set(7, 'd', 'b'));
-    expect(block('b').classList.contains('seg--linked')).toBe(true);
+    expect(block('b').hasAttribute('data-linked')).toBe(true);
     act(() => hovers.set(7, 'd', 'c'));
-    expect(block('b').classList.contains('seg--linked')).toBe(false);
-    expect(block('c').classList.contains('seg--linked')).toBe(true);
+    expect(block('b').hasAttribute('data-linked')).toBe(false);
+    expect(block('c').hasAttribute('data-linked')).toBe(true);
     act(() => hovers.set(7, 'd', undefined));
-    expect(document.querySelector('.seg--linked')).toBeNull();
+    expect(document.querySelector('[data-linked]')).toBeNull();
     // Another tab's hover is not shown.
     act(() => hovers.set(8, 'd', 'a'));
-    expect(document.querySelector('.seg--linked')).toBeNull();
+    expect(document.querySelector('[data-linked]')).toBeNull();
     unmount();
   });
 
@@ -195,6 +214,15 @@ describe('hover link', () => {
     ]);
     unmount();
     expect(sent).toHaveLength(3);
+  });
+
+  it('the mark survives a re-render that changes the block\'s class', () => {
+    const hovers = new HoverStore();
+    const unmount = mount(hovers, () => undefined);
+    act(() => hovers.set(7, 'd', 'b'));
+    block('b').className = 'seg seg--final';
+    expect(block('b').hasAttribute('data-linked')).toBe(true);
+    unmount();
   });
 
   it('is cleared on the page when the panel stops linking', () => {

@@ -6,8 +6,8 @@
 // the ids of unchanged blocks kept (stable.ts).
 import { browser } from 'wxt/browser';
 import { extractPage } from '@/extract';
-import { createHighlighter, scrollToSegment, watchHover, type HoverWatch } from '@/extract/link';
-import { watchViewport, type ViewportTarget, type ViewportWatch } from '@/extract/viewport';
+import { createHighlighter, indexTargets, placeOf, scrollToSegment, watchHover, type HoverWatch, type LinkIndex } from '@/extract/link';
+import { watchViewport, type ViewportWatch } from '@/extract/viewport';
 import { watchChanges, type ChangeWatch } from '@/extract/watch';
 import { keepIds, readSignature } from '@/segment/stable';
 import type { Segment } from '@/engine/types';
@@ -67,30 +67,31 @@ export default defineContentScript({
       // The link to the panel (plan M5-E1): the pointer over a block, the highlight the panel asks for,
       // and the scrolls it asks for, whose echoes are tagged so the panel does not follow them back.
       let hover: HoverWatch | undefined;
-      let found: Map<string, ViewportTarget> = new Map();
+      let found: LinkIndex = indexTargets(new Map(), []);
       const highlighter = createHighlighter(window);
       const scrolled = createGuard();
       port.onDisconnect.addListener(() => {
         watch?.stop();
         changes?.stop();
         hover?.stop();
-        highlighter.clear();
+        highlighter.dispose();
       });
       const look = (targets: Map<string, Element | Range>, segments: readonly Segment[]) => {
         watch?.stop();
         hover?.stop();
         const order = segments.map((s) => s.id);
-        found = targets;
+        found = indexTargets(targets, order);
         highlighter.clear();
         watch = watchViewport(window, targets, order, (v) => emit(port, 'viewport', scrolled.active() ? { ...v, echo: true } : v));
-        hover = watchHover(window, targets, order, (id) => emit(port, 'hover', id === undefined ? {} : { id }));
+        hover = watchHover(window, found, (id) => emit(port, 'hover', id === undefined ? {} : { id }));
         return watch.now();
       };
       listen(port, {
-        highlight: ({ id }) => void highlighter.show(id === undefined ? undefined : found.get(id)),
+        highlight: ({ id }) => void highlighter.show(typeof id === 'string' ? placeOf(window, found, id) : undefined),
         scroll: ({ id, offset }) => {
+          if (typeof id !== 'string') return;
           // Marked after the scroll, which is synchronous: the event it causes comes with the next frame.
-          if (scrollToSegment(window, found.get(id), offset)) scrolled.mark();
+          if (scrollToSegment(window, placeOf(window, found, id), offset)) scrolled.mark();
         },
       });
       const reread = () => {

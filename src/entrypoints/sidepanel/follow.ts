@@ -121,11 +121,18 @@ export function useScrollFollow(viewports: ViewportStore | undefined, tabId: num
     if (!on || !viewports || tabId === undefined || docId === undefined) return;
     let frame: number | undefined;
     let latest = viewports.get(tabId, docId)?.anchor;
+    let sent: Viewport['anchor'];
     const find = blockFinder(document);
     // One scroll per frame, to the latest anchor.
     const follow = () => {
       frame = undefined;
-      scrollToAnchor(document, latest, find, () => guard.mark());
+      let moved = false;
+      scrollToAnchor(document, latest, find, () => {
+        moved = true;
+        guard.mark();
+      });
+      // Where the follow left the panel is where the page is: not news to tell it.
+      if (moved) sent = panelAnchor(document);
     };
     const schedule = () => {
       frame ??= requestAnimationFrame(follow);
@@ -138,11 +145,17 @@ export function useScrollFollow(viewports: ViewportStore | undefined, tabId: num
     });
 
     let sendFrame: number | undefined;
-    let sent: Viewport['anchor'];
+    let retry: ReturnType<typeof setTimeout> | undefined;
     const tell = () => {
       sendFrame = undefined;
-      // The panel scrolled because the page did: not the reader's scroll.
-      if (!send || guard.active()) return;
+      if (!send) return;
+      // Inside the window the scroll is taken as the follow's. The reader may have scrolled in it
+      // too, so look again once it has passed: a panel already where the follow left it sends nothing.
+      if (guard.active()) {
+        clearTimeout(retry);
+        retry = setTimeout(onScroll, guard.remaining() + 20);
+        return;
+      }
       const anchor = panelAnchor(document);
       if (!anchor || (sent?.id === anchor.id && Math.abs(sent.offset - anchor.offset) < ANCHOR_EPSILON)) return;
       sent = anchor;
@@ -156,6 +169,7 @@ export function useScrollFollow(viewports: ViewportStore | undefined, tabId: num
       unsubscribe();
       if (frame !== undefined) cancelAnimationFrame(frame);
       if (sendFrame !== undefined) cancelAnimationFrame(sendFrame);
+      clearTimeout(retry);
       window.removeEventListener('scroll', onScroll);
     };
   }, [viewports, tabId, docId, on, send, guard]);
@@ -163,11 +177,12 @@ export function useScrollFollow(viewports: ViewportStore | undefined, tabId: num
 
 const SHARED_GUARD = createGuard();
 
-const LINKED = 'seg--linked';
+/** An attribute, not a class: a re-render that changes the block's class leaves it alone. */
+const LINKED = 'data-linked';
 
 /**
  * The hover link (plan M5-E1, DESIGN.md §3): the block of the page the pointer is over is
- * highlighted in the panel (a class on the block, no re-render), and the block of the panel the
+ * highlighted in the panel (an attribute on the block, no re-render), and the block of the panel the
  * pointer (or keyboard focus) is on is highlighted on the page (`highlight` command). Neither
  * direction raises an event on the other side, so the two cannot feed each other.
  */
@@ -177,9 +192,9 @@ export function useHoverLink(hovers: HoverStore | undefined, tabId: number | und
     const find = blockFinder(document);
     let shown: HTMLElement | undefined;
     const show = (id: string | undefined) => {
-      shown?.classList.remove(LINKED);
+      shown?.removeAttribute(LINKED);
       shown = id === undefined ? undefined : find(id);
-      shown?.classList.add(LINKED);
+      shown?.setAttribute(LINKED, '');
     };
     const unsubscribe = hovers?.subscribe((t, d, id) => {
       if (t === tabId && (id === undefined || d === docId)) show(id);
