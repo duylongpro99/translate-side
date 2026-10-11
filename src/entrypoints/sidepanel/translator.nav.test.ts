@@ -189,6 +189,22 @@ describe('SPA updates (plan M5-E2)', () => {
     expect([...sent].sort()).toEqual(more.segments.map((s) => s.text).sort());
   });
 
+  it('the click after a route-change offer sends only the new route’s own blocks: the repeated ones come from the cache (review N3, §3 #2)', async () => {
+    const { t, hooks, sent } = setup();
+    hooks.ready(1, 'd1', p1, { asked: true });
+    await until(() => t.jobs.get(1)?.status === 'done');
+    await t.jobs.cacheIdle();
+    sent.length = 0;
+    hooks.ready(1, 'd1', p2, { asked: false, update: { urlChanged: true } });
+    await settle(30);
+    expect(t.offers.get(1)?.reason).toBe('ask');
+    expect(sent).toEqual([]);
+    t.translatePage(1);
+    await until(() => t.jobs.get(1)?.status === 'done');
+    expect(sent).toEqual([p2.segments[2]?.text]);
+    expect(t.jobs.get(1)?.cached).toBe(2);
+  });
+
   it('a route change on a site that is not allowlisted waits for Translate this page; the old route’s job is let go', async () => {
     const { t, hooks } = setup();
     hooks.ready(1, 'd1', p1, { asked: true });
