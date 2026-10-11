@@ -10,6 +10,8 @@ export interface SegmentActions {
   retry(id: string): void;
   /** This block again, skipping the cache (M3-E5). Absent: no Retranslate button. */
   retranslate?(id: string): void;
+  /** A short note on this block's idioms and cultural references (M5-E8). Absent: no Explain button. */
+  explain?(id: string): void;
 }
 
 // Segments rendered by kind (plan M0-E7), with the translation streaming in (plan M1-E10).
@@ -119,6 +121,19 @@ function BlockActions({ seg, state, actions, original, onOriginal }: Props) {
           Retranslate
         </button>
       ) : null}
+      {done && actions?.explain ? (
+        <button
+          type="button"
+          class="seg__action"
+          data-testid="seg-explain"
+          aria-label={`Explain this: "${name}"`}
+          title="A short note on idioms or cultural references in this block"
+          disabled={state?.explain?.status === 'loading'}
+          onClick={() => actions.explain?.(seg.id)}
+        >
+          {state?.explain?.status === 'loading' ? 'Explaining…' : state?.explain ? 'Explain again' : 'Explain this'}
+        </button>
+      ) : null}
       <button type="button" class="seg__action" data-testid="seg-copy" aria-label={`Copy: "${name}"`} onClick={copy}>
         {copied === 'ok' ? 'Copied' : copied === 'failed' ? "Couldn't copy" : 'Copy'}
       </button>
@@ -182,8 +197,28 @@ function Notes(props: Props) {
           Retranslate failed: {failureText(state.redoError)}. The earlier translation is kept.
         </span>
       ) : null}
+      <ExplainNote {...props} />
       <BlockActions {...props} />
     </>
+  );
+}
+
+/** The "Explain this" note under a block: plain text, never HTML (§5.6, §8), on a failure the reason. */
+function ExplainNote({ state }: Props) {
+  const explain = state?.status === 'final' ? state.explain : undefined;
+  if (!explain) return null;
+  if (explain.status === 'failed') {
+    return (
+      <span class="seg__note seg__note--failed" role="note" data-testid="seg-explain-failed">
+        No explanation: {explain.error ? failureText(explain.error) : 'it failed'}
+      </span>
+    );
+  }
+  if (explain.status === 'loading' && !explain.text) return null;
+  return (
+    <span class="seg__explain" role="note" data-testid="seg-explain-note" aria-live="polite">
+      <span class="seg__explain-label">Explanation</span> {explain.text}
+    </span>
   );
 }
 

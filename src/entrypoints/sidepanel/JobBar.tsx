@@ -17,6 +17,8 @@ export interface JobActions {
   retrySegment(id: string): void;
   /** This one block again, skipping the cache; its new text replaces the stored one (M3-E5, decision M3-D2). */
   retranslateSegment(id: string): void;
+  /** A short note on this block's idioms and cultural references (its Explain this, M5-E8). */
+  explainSegment(id: string): void;
   /** The whole page again with the current settings, skipping the cache (the header, M3-E6; decision M3-D2). */
   retranslatePage(): void;
   /** Asks for the provider's host permission. Must run inside the click (a user gesture, §4.3.3). */

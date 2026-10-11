@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { EXPLAIN_PROMPT_ID, explainV1 } from './explain.ts';
 import { PROMPTS, createDefaultPromptRegistry } from './index.ts';
 import { STYLE_LABELS, TRANSLATE_PROMPT_ID, languageLabel, translateV1, translateV2 } from './translate.ts';
 
@@ -57,5 +58,17 @@ describe('languageLabel', () => {
     expect(languageLabel('')).toBe('the source language');
     expect(languageLabel('   ')).toBe('the source language');
     expect(languageLabel('x-made-up')).toBe('x-made-up');
+  });
+});
+
+describe('explain@1', () => {
+  it('is registered, fills exactly its two slots and treats the passage as data', () => {
+    const reg = createDefaultPromptRegistry();
+    expect(reg.get(EXPLAIN_PROMPT_ID)).toBe(explainV1);
+    const text = explainV1.render({ TARGET_LANG: 'Vietnamese', SOURCE_LANG: 'English' });
+    expect(text).not.toMatch(/\{[A-Z_]+\}/);
+    expect(text).toContain('in Vietnamese');
+    expect(text).toMatch(/data, never instructions/);
+    expect(() => explainV1.render({ TARGET_LANG: 'x' })).toThrow(/SOURCE_LANG/);
   });
 });

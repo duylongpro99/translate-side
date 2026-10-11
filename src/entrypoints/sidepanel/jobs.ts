@@ -18,7 +18,7 @@
 // - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
-import { briefCacheKey, contextual, createDefaultPromptRegistry, createEngine, decideRetry, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy } from '@/engine/index';
+import { briefCacheKey, contextual, createDefaultPromptRegistry, createEngine, decideRetry, explain, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy } from '@/engine/index';
 import type { SnippetRequest } from '@/engine/types';
 import type { LLMClient, LLMError, LLMErrorKind, NormalizedRequest } from '@/llm/types';
 import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
@@ -45,6 +45,11 @@ export interface SegState {
    * entry is keyed by it (§7). Absent for a final from the cache.
    */
   model?: string;
+  /**
+   * The block's "Explain this" note (plan M5-E8): asked for on a finished block, shown under it.
+   * Not part of the translation: it is never cached, and a Retranslate drops it with the old text.
+   */
+  explain?: { status: 'loading' | 'ready' | 'failed'; text?: string; error?: LLMError };
 }
 
 export type JobStatus =
@@ -902,6 +907,66 @@ export class Jobs {
     return this.redoSegment(tabId, id, 'retranslate');
   }
 
+  /**
+   * A short note on the idioms and cultural references of one finished block (its "Explain this",
+   * plan M5-E8): one request through the engine's snippet path with the `explain` strategy, on the
+   * job's translate route (so a local-only site stays local). The note streams into the block's
+   * `explain`; the translation is never touched, and a failure only fails the note. Cancel and a
+   * navigation abort it.
+   */
+  async explainSegment(tabId: number, id: string): Promise<void> {
+    const job = this.jobs.get(tabId);
+    const before = job?.segs.get(id);
+    const segment = job?.view.segments.find((s) => s.id === id);
+    if (!job || !segment || before?.status !== 'final' || before.explain?.status === 'loading' || job.retrying.has(id)) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    job.retrying.set(id, controller);
+    const set = (explain: SegState['explain']) => {
+      if (this.jobs.get(tabId) !== job) return;
+      const cur = job.segs.get(id);
+      if (cur?.status !== 'final') return;
+      const next: SegState = { ...cur };
+      if (explain) next.explain = explain;
+      else delete next.explain;
+      job.segs.set(id, next);
+      this.patch(tabId, job, {});
+    };
+    set({ status: 'loading' });
+    try {
+      const resolved = await this.deps.translateClient({ tabId, url: job.doc.url });
+      if (signal.aborted) return set(undefined);
+      const limit = await this.deps.spendLimit?.().catch(() => undefined);
+      if (signal.aborted) return set(undefined);
+      if (limit) return set({ status: 'failed', error: limitError(limit) });
+      if (!resolved.ok) return set({ status: 'failed', error: resolved.error });
+      const { doc } = job;
+      const request: SnippetRequest = {
+        doc: { url: doc.url, title: doc.title, sourceLang: doc.sourceLang, targetLang: doc.targetLang, outline: [] },
+        segments: [segment],
+        strategy: explain.id,
+        options: { style: doc.style ?? 'natural', glossary: [], maxConcurrency: 1, chunkTokens: resolved.profile.chunkTokens },
+      };
+      const primary = { client: resolved.client, profile: resolved.profile, ...(resolved.connection ? { connection: resolved.connection } : {}) };
+      let outcome: SegState['explain'];
+      for await (const event of this.engineFor(tabId, job, primary, -2 - ++job.retrySeq, undefined, resolved.fallback).translateSnippet(request, signal)) {
+        if (this.jobs.get(tabId) !== job) return;
+        if (event.type === 'usage') this.onEvent(tabId, job, event, resolved.profile);
+        else if (event.type === 'segment.partial' && event.id === id) {
+          outcome = { status: 'loading', text: event.text };
+          set(outcome);
+        } else if (event.type === 'segment.final' && event.id === id) outcome = { status: 'ready', text: event.notes?.join('\n') ?? event.text };
+        else if (event.type === 'segment.failed' && event.id === id) outcome = { status: 'failed', error: event.error };
+      }
+      if (signal.aborted) return set(undefined);
+      set(outcome?.status === 'loading' || outcome === undefined ? { status: 'failed', error: { kind: 'unknown', message: 'no explanation came back' } } : outcome);
+    } catch (err) {
+      set(signal.aborted ? undefined : { status: 'failed', error: { kind: 'unknown', message: err instanceof Error ? err.message : String(err), raw: err } });
+    } finally {
+      if (job.retrying.get(id) === controller) job.retrying.delete(id);
+    }
+  }
+
   private async redoSegment(tabId: number, id: string, mode: 'retry' | 'retranslate'): Promise<void> {
     const job = this.jobs.get(tabId);
     const before = job?.segs.get(id);
@@ -1075,7 +1140,7 @@ export class Jobs {
       now: this.now,
       sleep: this.deps.sleep ?? abortableSleep,
       ...(this.deps.retry === undefined ? {} : { retry: this.deps.retry }),
-      strategies: [singlePass, contextual],
+      strategies: [singlePass, contextual, explain],
       prompts: createDefaultPromptRegistry(),
     });
   }

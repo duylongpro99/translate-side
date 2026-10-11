@@ -179,6 +179,7 @@ describe('translation in the panel (plan M1-E10)', () => {
         openOptions: () => calls.push('options'),
         retrySegment: (id: string) => calls.push(`retry:${id}`),
         retranslateSegment: (id: string) => calls.push(`retranslate:${id}`),
+        explainSegment: (id: string) => calls.push(`explain:${id}`),
         retranslatePage: () => calls.push('retranslate-page'),
         grantAccess: () => calls.push('grant'),
         continuePastLimit: () => calls.push('continue-limit'),

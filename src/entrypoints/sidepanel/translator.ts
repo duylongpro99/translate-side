@@ -489,6 +489,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     openOptions: () => void api.runtime.openOptionsPage(),
     retrySegment: (id) => void jobs.retrySegment(tabId, id),
     retranslateSegment: (id) => void jobs.retranslateSegment(tabId, id),
+    explainSegment: (id) => void jobs.explainSegment(tabId, id),
     retranslatePage: () => retranslate(tabId),
     // The soft limit's "Continue anyway" (M4-E10): holds for the rest of the month.
     // It carries out what the limit stopped: a Retranslate page skips the cache, a block redo redoes it.
@@ -524,6 +525,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       ),
     retrySegment: (id) => void snippetJobs.retrySegment(tabId, id),
     retranslateSegment: (id) => void snippetJobs.retranslateSegment(tabId, id),
+    explainSegment: (id) => void snippetJobs.explainSegment(tabId, id),
     // A selection has no cache to skip: translating it again is a new run of the same text.
     retranslatePage: () => {
       const current = snippetJobs.docFor(tabId);

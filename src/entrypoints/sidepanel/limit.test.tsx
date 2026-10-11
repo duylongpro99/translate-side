@@ -219,6 +219,7 @@ describe('the bar at the limit (M4-E10)', () => {
     openOptions: () => calls.push('options'),
     retrySegment: () => calls.push('retry'),
     retranslateSegment: () => calls.push('retranslate'),
+    explainSegment: () => calls.push('explain'),
     retranslatePage: () => calls.push('retranslate-page'),
     grantAccess: () => calls.push('grant'),
     continuePastLimit: () => calls.push('continue-limit'),
