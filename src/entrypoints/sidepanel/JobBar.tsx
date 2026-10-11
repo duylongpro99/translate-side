@@ -75,7 +75,16 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
   // A fallback took over (M4-E9): say which model is translating now, and why.
   const fallbackNote = job.fallback ? (
     <span class="job__fallback" data-testid="job-fallback" role="note">
-      {job.fallback.from} {fallbackWhy(job.fallback.error)}; {job.status === 'running' ? 'continuing' : 'continued'} with {job.fallback.to}. Blocks it translated are marked.
+      {job.fallback.basic ? (
+        // Every provider gave up: Chrome's Translator took over (M5-E7).
+        <>
+          {job.fallback.from} {fallbackWhy(job.fallback.error)} and no other model answered; {job.status === 'running' ? 'continuing' : 'continued'} with {job.fallback.to}. Its blocks are marked “basic translation”.
+        </>
+      ) : (
+        <>
+          {job.fallback.from} {fallbackWhy(job.fallback.error)}; {job.status === 'running' ? 'continuing' : 'continued'} with {job.fallback.to}. Blocks it translated are marked.
+        </>
+      )}
     </span>
   ) : null;
   // A Retranslate page that ended early (M3 dogfood B2): some blocks show their earlier translation.

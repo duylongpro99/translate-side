@@ -2,7 +2,7 @@
 // Lives in engine/ so the engine can import it; the shell imports it from here.
 // Also the engine contract (§5.2–§5.6), below.
 
-import type { LLMClient, LLMError, ModelRole } from '../llm/types.ts';
+import type { LLMClient, LLMError, MTClient, ModelRole } from '../llm/types.ts';
 
 export type SegmentKind = 'heading' | 'p' | 'li' | 'quote' | 'code' | 'table-cell' | 'caption';
 
@@ -88,6 +88,12 @@ export interface JobOptions {
    * M3 brief cache). It seeds working memory and the analyze stage makes no call.
    */
   brief?: DocumentBrief;
+  /**
+   * The route's fallback chain ends in the terminal `basic` entry (plan M5-E7, §4.3.5): when the
+   * last provider gives up on a rate limit, an overload or the network, the job switches to the
+   * `basic` strategy for the blocks it has not translated (engine.ts). Absent: no such switch.
+   */
+  basicFallback?: boolean;
 }
 
 export interface TranslationJob {
@@ -236,6 +242,8 @@ export interface StageContext {
   focus?: () => number;
   /** TranslationJob.within. */
   within?: () => ReadonlySet<string> | undefined;
+  /** The machine translator the `basic` strategy uses (EngineDeps.mt). Absent: none on this device. */
+  mt?: MTClient;
 }
 
 export interface Strategy {

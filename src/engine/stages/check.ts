@@ -40,9 +40,10 @@ export interface CheckFailedRaw {
   /**
    * What became of the re-request: its text failed the checks again (`after`), it did not return
    * the segment, the call failed (the event's error is the call's; its raw is `cause`), or none was
-   * made because the budget was spent.
+   * made because the budget was spent, or none was made because asking again gives the same text
+   * (the `basic` strategy's translator, strategies/basic.ts).
    */
-  outcome: 'failed-again' | 'not-returned' | 'call-failed' | 'budget';
+  outcome: 'failed-again' | 'not-returned' | 'call-failed' | 'budget' | 'no-request';
   /** The checks the shown text failed, which caused the re-request. */
   checks: CheckFailure[];
   after?: CheckFailure[];

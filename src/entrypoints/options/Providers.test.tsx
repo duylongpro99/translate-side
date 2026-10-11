@@ -168,7 +168,7 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     expect(f.local.get(`secret:${conn.id}`)).toBe('sk-ant-api03-0123456789abcd');
     const profile = [...f.sync.values()].find((v) => (v as { model?: string }).model === 'claude-sonnet-4-6') as { id: string; maxConcurrency: number; contextWindow: number };
     expect(profile).toMatchObject({ maxConcurrency: 2, contextWindow: 200000 });
-    expect(f.sync.get('routing')).toEqual({ translate: profile.id });
+    expect(f.sync.get('routing')).toEqual({ translate: profile.id, fallback: ['basic'] });
     expect(JSON.stringify([...f.sync.values()])).not.toContain('sk-ant');
     await waitFor(() => rowOf('Anthropic (Claude)') !== undefined);
     expect(rowOf('Anthropic (Claude)')?.querySelector('[data-testid=connection-status]')?.textContent).toBe('✓ Connected');
@@ -325,11 +325,11 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
       sel.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await waitFor(() => f.sync.has('routing'));
-    expect(f.sync.get('routing')).toEqual({ translate: 'apibox-qwen3.8-flash', analyze: 'q' });
+    expect(f.sync.get('routing')).toEqual({ translate: 'apibox-qwen3.8-flash', analyze: 'q', fallback: ['basic'] });
     expect($('[data-testid=providers-note]').textContent).toBe('Document brief route saved.');
   });
 
-  it('routing: "If it fails" adds and removes fallback models; a `basic` entry (M5) is kept until removed (plan M4-E9)', async () => {
+  it('routing: "If it fails" adds and removes fallback models; the terminal `basic` entry (M5-E7) stays last and can be added back (plan M4-E9)', async () => {
     const conn = { id: 'o1', label: 'Home Ollama', presetId: 'ollama', protocol: 'openai-chat', baseUrl: 'http://localhost:11434/v1', auth: { style: 'none' }, quirks: {}, status: 'ok' };
     const f = fakeApi({
       sync: {
@@ -342,21 +342,30 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     });
     await mount(f, server(() => openaiList()));
     const chain = () => $('[data-testid=route-fallback]');
-    expect(chain().textContent).toContain('Chrome built-in (basic)');
+    expect(chain().textContent).toContain('Chrome basic translation');
+    expect($('[data-testid=fallback-add-basic]')).toBeNull();
     click($('[data-testid=fallback-add]'));
     await waitFor(() => (f.sync.get('routing') as { fallback?: string[] }).fallback?.length === 2);
-    // The model not routed yet is offered first; the keyless built-in is not listed.
-    expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['basic', 'g'] });
+    // The model not routed yet is offered first, before the terminal basic entry; the keyless built-in is not listed.
+    expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['g', 'basic'] });
     await waitFor(() => chain().querySelector('select') !== null);
     expect((chain().querySelector('select') as HTMLSelectElement).value).toBe('g');
     // The translate model itself is never offered as its own fallback (M4-D tester).
     expect([...(chain().querySelector('select') as HTMLSelectElement).options].map((o) => o.value)).toEqual(['g']);
     click(chain().querySelector('[aria-label^="Remove fallback 1"]'));
     await waitFor(() => (f.sync.get('routing') as { fallback?: string[] }).fallback?.length === 1);
-    expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['g'] });
+    expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['basic'] });
     click(chain().querySelector('[aria-label^="Remove fallback 1"]'));
     await waitFor(() => (f.sync.get('routing') as { fallback?: string[] }).fallback === undefined);
     expect($('[data-testid=providers-note]').textContent).toBe('Fallback removed.');
+    // Added back, it goes last even after a model.
+    click($('[data-testid=fallback-add]'));
+    await waitFor(() => (f.sync.get('routing') as { fallback?: string[] }).fallback?.length === 1);
+    await waitFor(() => $('[data-testid=fallback-add-basic]') !== null);
+    click($('[data-testid=fallback-add-basic]'));
+    await waitFor(() => (f.sync.get('routing') as { fallback?: string[] }).fallback?.length === 2);
+    expect(f.sync.get('routing')).toEqual({ translate: 'q', fallback: ['g', 'basic'] });
+    expect($('[data-testid=fallback-add-basic]')).toBeNull();
   });
 
   it('routing: model per site, with local only (plan M5-E6 on M4-E8 siteRules)', async () => {

@@ -2,16 +2,18 @@
 // the outside comes through EngineDeps ports, so it runs unchanged in the panel, in tests and in
 // the Node harness (§5.1).
 
-import type { LLMClient, LLMError, ModelRole } from '../llm/types.ts';
+import type { LLMClient, LLMError, MTClient, ModelRole, NormalizedEvent, NormalizedRequest } from '../llm/types.ts';
 import { createBudget } from './budget.ts';
 import { DEFAULT_CONTEXT_PROVIDERS } from './context/budget.ts';
 import { createWorkingMemory } from './memory.ts';
 import { withFallback, withLatch, type FallbackInfo } from './fallback.ts';
-import { withRetry, type RetryPolicy } from './retry.ts';
+import { isRetryable, withRetry, type RetryPolicy } from './retry.ts';
+import { BASIC_ID, basicTranslate } from './strategies/basic.ts';
 import type {
   ContextProvider,
   EngineEvent,
   PromptRegistry,
+  Segment,
   SnippetRequest,
   StageContext,
   Strategy,
@@ -42,6 +44,25 @@ export interface EngineDeps {
   retry?: RetryPolicy;
   /** For backoff jitter; deterministic in tests. */
   random?: () => number;
+  /**
+   * The machine translator of the `basic` strategy (Chrome's Translator, plan M5-E7): the last
+   * fallback of a job with `options.basicFallback`. Absent: none on this device.
+   */
+  mt?: MTClient;
+}
+
+/**
+ * The `stage` event that says a job switched to the `basic` strategy (plan M5-E7): every provider
+ * gave up; `info` is `BasicSwitchInfo`. Sent once, before the first block the switch takes over.
+ */
+export const BASIC_SWITCH_STAGE = 'basic-fallback';
+
+export interface BasicSwitchInfo {
+  /** The model that gave up last. */
+  from: string;
+  /** The translator that takes over (`MTClient.model`), absent when there is none. */
+  to?: string;
+  error: LLMError;
 }
 
 /** Shown for segments left untranslated when a strategy fails unexpectedly. */
@@ -53,10 +74,12 @@ export function createEngine(deps: EngineDeps): TranslationEngine {
   async function* translate(job: TranslationJob, signal: AbortSignal): AsyncGenerator<EngineEvent> {
     const strategy = strategies.get(job.strategy);
     if (strategy === undefined) throw new Error(`unknown strategy ${job.strategy}`);
-    const ctx = createStageContext(deps, job, signal);
+    const toBasic = job.options.basicFallback === true && strategy.id !== BASIC_ID ? createSwitch() : undefined;
+    const ctx = createStageContext(deps, job, signal, toBasic);
     const failed = new Set<string>();
     try {
-      for await (const event of strategy.run(job, ctx)) {
+      const events = toBasic ? withBasicSwitch(strategy.run(job, ctx), toBasic, job, ctx) : strategy.run(job, ctx);
+      for await (const event of events) {
         if (event.type === 'usage') ctx.budget.record(event);
         else if (event.type === 'segment.final') {
           const known = ctx.memory.translated.get(event.id);
@@ -97,7 +120,113 @@ export function createEngine(deps: EngineDeps): TranslationEngine {
   };
 }
 
-function createStageContext(deps: EngineDeps, job: TranslationJob, signal: AbortSignal): StageContext {
+// ---- The terminal `basic` entry (plan M5-E7, §4.3.5) ------------------------------------------
+// The chain's profiles hand a request on until the last one gives up (fallback.ts); with
+// `options.basicFallback` the engine then switches the job to the `basic` strategy:
+// - A block that failed on an error the pipeline backs off on (`isRetryable`: rate limit,
+//   overload, network) and has no good revision is not reported failed: the switch takes it over.
+// - From then on every role's client answers at once with that error, without sending anything,
+//   so the chunks not started yet come straight to the switch instead of backing off again on
+//   providers that are down. Chunks already streaming finish (their text is not taken back).
+// - The blocks taken over are translated by `basicTranslate` as they arrive, alongside the
+//   strategy, and marked by `producedBy.strategy` = `basic`. A device without a translator for the
+//   pair answers each block with why (never a silent failure).
+// `auth`, `quota`, `cors` and the other stop errors never switch: they stop at the link that hit
+// them (§4.3.5), as they never fall back to another provider either.
+
+interface BasicSwitch {
+  /** The error the last provider gave up on; set once. */
+  error?: LLMError;
+}
+
+const createSwitch = (): BasicSwitch => ({});
+
+async function* withBasicSwitch(events: AsyncIterable<EngineEvent>, state: BasicSwitch, job: TranslationJob, ctx: StageContext): AsyncGenerator<EngineEvent> {
+  const queue: Segment[] = [];
+  const byId = new Map(job.doc.segments.map((s) => [s.id, s]));
+  let wake: (() => void) | undefined;
+  let strategyDone = false;
+  const poke = () => {
+    wake?.();
+    wake = undefined;
+  };
+  async function* worker(): AsyncGenerator<EngineEvent> {
+    for (;;) {
+      if (queue.length === 0) {
+        if (strategyDone) return;
+        await new Promise<void>((resolve) => (wake = resolve));
+        continue;
+      }
+      yield* basicTranslate(queue.splice(0), job, ctx, state.error);
+    }
+  }
+  async function* strategy(): AsyncGenerator<EngineEvent> {
+    try {
+      for await (const event of events) {
+        const segment = event.type === 'segment.failed' && event.revision === undefined && isRetryable(event.error) && !ctx.memory.translated.has(event.id) ? byId.get(event.id) : undefined;
+        if (segment === undefined || event.type !== 'segment.failed') {
+          yield event;
+          continue;
+        }
+        if (state.error === undefined) {
+          state.error = event.error;
+          const info: BasicSwitchInfo = { from: ctx.llm('translate').model, ...(ctx.mt ? { to: ctx.mt.model } : {}), error: event.error };
+          yield { type: 'stage', stage: BASIC_SWITCH_STAGE, status: 'start', info };
+        }
+        queue.push(segment);
+        poke();
+      }
+    } finally {
+      strategyDone = true;
+      poke();
+    }
+  }
+  yield* merge(strategy(), worker());
+}
+
+/** The events of `a` and `b` as they come. Either throwing stops both (the other is returned). */
+async function* merge<T>(a: AsyncGenerator<T>, b: AsyncGenerator<T>): AsyncGenerator<T> {
+  const live = new Map<AsyncGenerator<T>, Promise<{ from: AsyncGenerator<T>; result: IteratorResult<T> }>>();
+  const pull = (from: AsyncGenerator<T>) => live.set(from, from.next().then((result) => ({ from, result })));
+  pull(a);
+  pull(b);
+  try {
+    while (live.size > 0) {
+      const { from, result } = await Promise.race(live.values());
+      if (result.done) live.delete(from);
+      else {
+        yield result.value;
+        pull(from);
+      }
+    }
+  } finally {
+    for (const g of live.keys()) void g.return(undefined).catch(() => {});
+  }
+}
+
+/** `client`, answering at once with the switch's error once the job switched to `basic`. */
+function switchable(client: LLMClient, state: BasicSwitch): LLMClient {
+  return {
+    get model() {
+      return client.model;
+    },
+    get id() {
+      return client.id;
+    },
+    reasoningReserveTokens: (req) => client.reasoningReserveTokens(req),
+    servedBy: (req) => client.servedBy?.(req),
+    async *stream(req: NormalizedRequest): AsyncGenerator<NormalizedEvent> {
+      if (state.error !== undefined) {
+        req.signal.throwIfAborted();
+        yield { type: 'error', error: state.error };
+        return;
+      }
+      yield* client.stream(req);
+    },
+  };
+}
+
+function createStageContext(deps: EngineDeps, job: TranslationJob, signal: AbortSignal, toBasic?: BasicSwitch): StageContext {
   // One client per role, built once: each link retrying on its own (the pipeline is the single
   // retry owner), then the role's fallback chain over them (fallback.ts). A client shared by two
   // roles gets one retrying wrapper, so a link that gave up is skipped by both (`dead`).
@@ -128,6 +257,7 @@ function createStageContext(deps: EngineDeps, job: TranslationJob, signal: Abort
         const links = [deps.llm(role), ...(deps.fallback?.(role) ?? [])].map(retried);
         const onFallback = deps.onFallback;
         client = withFallback(links, { dead, ...(onFallback === undefined ? {} : { onFallback: (info: FallbackInfo) => onFallback({ ...info, role }) }) });
+        if (toBasic) client = switchable(client, toBasic);
         clients.set(role, client);
       }
       return client;
@@ -140,5 +270,6 @@ function createStageContext(deps: EngineDeps, job: TranslationJob, signal: Abort
     priority: job.livePriority ?? (() => job.priority),
     ...(job.focus === undefined ? {} : { focus: job.focus }),
     ...(job.within === undefined ? {} : { within: job.within }),
+    ...(deps.mt === undefined ? {} : { mt: deps.mt }),
   };
 }

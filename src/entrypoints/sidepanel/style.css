@@ -352,6 +352,11 @@ body {
   vertical-align: middle;
   white-space: nowrap;
 }
+/* Chrome's Translator stood in for the model (M5-E7): easy to tell from a model's text. */
+.seg__badge--basic {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .job__fallback,
 .job__kept {
   flex-basis: 100%;

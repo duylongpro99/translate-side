@@ -491,12 +491,16 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
 /**
  * "If it fails" (DESIGN §4.3.3 A, plan M4-E9): the fallback chain, tried in order when the model
  * routed for a page is rate-limited, overloaded or unreachable. Entries that are not profiles
- * (the `basic` entry of M5-E7) are kept as they are and can only be removed.
+ * are kept as they are and can only be removed. The `basic` entry (M5-E7, Chrome's Translator)
+ * is terminal: it is always last, models are added before it, and it can be added back.
  */
 function FallbackChain({ settings, profiles, options, onSave }: { settings: ProviderSettings; profiles: readonly ModelProfile[]; options: (selected: string | undefined, exclude?: readonly string[]) => ComponentChildren; onSave: (fallback: string[], said: string) => void }) {
   const chain = settings.routing.fallback ?? [];
   const unused = profiles.filter((p) => p.id !== settings.routing.translate && !chain.includes(p.id));
-  const named = (id: string) => (id === BASIC_FALLBACK ? 'Chrome built-in (basic)' : (profiles.find((p) => p.id === id)?.model ?? '(missing model)'));
+  const named = (id: string) => (id === BASIC_FALLBACK ? 'Chrome basic translation' : (profiles.find((p) => p.id === id)?.model ?? '(missing model)'));
+  const hasBasic = chain.includes(BASIC_FALLBACK);
+  /** `id` added to the chain, before the terminal `basic` entry. */
+  const withAdded = (id: string) => (hasBasic ? [...chain.filter((x) => x !== BASIC_FALLBACK), id, BASIC_FALLBACK] : [...chain, id]);
   return (
     <div class="opt__row prov__fallback" data-testid="route-fallback">
       <span class="prov__label" id="route-fallback-label">
@@ -529,17 +533,24 @@ function FallbackChain({ settings, profiles, options, onSave }: { settings: Prov
         ))}
         {unused.length ? (
           <li>
-            <button type="button" class="prov__small" data-testid="fallback-add" onClick={() => onSave([...chain, (unused[0] as ModelProfile).id], 'Fallback added.')}>
-              {chain.length ? '+' : '+ Add a fallback model'}
+            <button type="button" class="prov__small" data-testid="fallback-add" onClick={() => onSave(withAdded((unused[0] as ModelProfile).id), 'Fallback added.')}>
+              {chain.some((id) => id !== BASIC_FALLBACK) ? '+' : '+ Add a fallback model'}
             </button>
           </li>
         ) : chain.length === 0 ? (
           <li class="opt__hint">Add a second model to use one.</li>
         ) : null}
+        {hasBasic ? null : (
+          <li>
+            <button type="button" class="prov__small" data-testid="fallback-add-basic" title="Chrome's built-in translator, on this device: literal, used only when no model answers" onClick={() => onSave([...chain, BASIC_FALLBACK], 'Basic translation added.')}>
+              + Chrome basic translation
+            </button>
+          </li>
+        )}
       </ol>
       <p class="opt__hint">
         Used when the routed model is rate-limited, overloaded or unreachable; never when its key is refused or out of credit, so text never goes to another provider for those. A site rule marked “local only” falls back only to
-        models on this device.
+        models on this device. Chrome basic translation comes last: Chrome's built-in translator, on this device, when no model answers.
       </p>
     </div>
   );

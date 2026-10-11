@@ -471,6 +471,12 @@ describe('the fallback note (plan M4-E9)', () => {
     expect(root.querySelector('[data-testid="job-fallback"]')).toBeNull();
   });
 
+  it('every provider down (M5-E7): says Chrome Translator took over and how its blocks are marked', () => {
+    const fallback = { from: 'claude-haiku-4-5', to: 'Chrome Translator', basic: true as const, error: { kind: 'network' as const, message: "Can't reach api.anthropic.com" } };
+    act(() => render(<JobBar job={{ ...base, status: 'running', fallback }} actions={actions([])} />, root));
+    expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('claude-haiku-4-5 is unreachable and no other model answered; continuing with Chrome Translator. Its blocks are marked “basic translation”.');
+  });
+
   it('a local-only page that stops names the local provider and the rule that kept it off the cloud (M4-D tester O1)', () => {
     const plain: JobView = { ...base, status: 'stopped', connection: { id: 'ollama', label: 'Home Ollama' }, stopError: { kind: 'network', message: "Can't reach localhost:11434" } };
     act(() => render(<JobBar job={{ ...plain, localOnly: 'intra.example.com' }} actions={actions([])} />, root));

@@ -22,9 +22,9 @@
 // - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
-import { briefCacheKey, contextual, estimateTokens, createDefaultPromptRegistry, createEngine, decideRetry, explain, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy } from '@/engine/index';
+import { BASIC_ID, BASIC_SWITCH_STAGE, basic, briefCacheKey, contextual, estimateTokens, createDefaultPromptRegistry, createEngine, decideRetry, explain, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy, type BasicSwitchInfo } from '@/engine/index';
 import type { SnippetRequest } from '@/engine/types';
-import type { LLMClient, LLMError, LLMErrorKind, NormalizedRequest } from '@/llm/types';
+import type { LLMClient, LLMError, LLMErrorKind, MTClient, NormalizedRequest } from '@/llm/types';
 import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
 import { costUsd, formatUsd, type UsageTotals } from '@/shared/cost';
 import type { Detection } from '@/shared/language';
@@ -49,6 +49,12 @@ export interface SegState {
    * entry is keyed by it (§7). Absent for a final from the cache.
    */
   model?: string;
+  /**
+   * The final came from the `basic` strategy (Chrome's Translator, plan M5-E7): every provider was
+   * down. The block is labeled "basic translation" and the text is never cached, so the next run
+   * asks the model again.
+   */
+  basic?: true;
   /**
    * The block's "Explain this" note (plan M5-E8): asked for on a finished block, shown under it.
    * Not part of the translation: it is never cached, and a Retranslate drops it with the old text.
@@ -134,7 +140,7 @@ export interface JobView {
    * The latest hand-over to a fallback profile in this run (M4-E9): `from` gave up on `error`
    * (rate limit, overloaded, network) and the job goes on with `to`. Absent when none.
    */
-  fallback?: { from: string; to: string; error: LLMError };
+  fallback?: { from: string; to: string; error: LLMError; basic?: true };
   /** The page is under a local-only site rule (its pattern): a stop says why nothing fell back to the cloud (M4-D tester O1). */
   localOnly?: string;
   /** Epoch ms: when this run started, when its first text became visible, when it ended. */
@@ -196,7 +202,7 @@ export function applySegmentEvent(cur: SegState | undefined, e: EngineEvent): Se
         const newer = e.revision > (cur.revision ?? 1) || (e.revision === cur.revision && attempt > (cur.attempt ?? 1));
         if (!newer) return cur;
       } else if (cur?.status === 'failed' && e.revision <= (cur.revision ?? 1)) return cur;
-      return { status: 'final', text: e.text, revision: e.revision, attempt, model: e.producedBy.model };
+      return { status: 'final', text: e.text, revision: e.revision, attempt, model: e.producedBy.model, ...(e.producedBy.strategy === BASIC_ID ? { basic: true as const } : {}) };
     }
     case 'segment.failed':
       if (cur?.status === 'final' && (cur.revision ?? 1) > (e.revision ?? 1)) return { ...cur, error: e.error };
@@ -345,6 +351,8 @@ export type ClientResult =
       connection?: JobConnection;
       /** The fallback chain after `client`, in order (M4-E9). Absent or empty: none. */
       fallback?: FallbackLink[];
+      /** The chain ends in the terminal `basic` entry (M5-E7): Chrome's Translator when every provider is down. */
+      basic?: boolean;
       /** The local-only site rule (its pattern) that routed the page: no cloud link in `fallback` (§4.3.5). */
       localOnly?: string;
       /**
@@ -402,6 +410,8 @@ export interface JobDeps {
   engine?: (client: LLMClient, analyze?: LLMClient, fallback?: readonly LLMClient[]) => TranslationEngine;
   /** Test seam: the strategy jobs run (default PANEL_STRATEGY). */
   strategy?: StrategyId;
+  /** The `basic` strategy's translator (Chrome's Translator, plan M5-E7). Absent: none, and a switch to basic says so. */
+  mt?: MTClient | undefined;
   /** The translation cache (M3-E2). Absent: every run goes to the model. */
   cache?: TranslationCache | undefined;
   /** How long a run waits for the cache before it goes to the model without it (default 1500). */
@@ -887,6 +897,8 @@ export class Jobs {
         chunkTokens: profile.chunkTokens,
         // A resumed run keeps its brief: no second analyze call (and none made from the leftover segments only).
         ...(job.view.brief ? { brief: job.view.brief } : {}),
+        // The chain ends in Chrome's Translator (M5-E7).
+        ...(resolved.basic ? { basicFallback: true } : {}),
       },
     };
     try {
@@ -1146,6 +1158,7 @@ export class Jobs {
           maxConcurrency: 1,
           chunkTokens: resolved.profile.chunkTokens,
           ...(job.view.brief ? { brief: job.view.brief } : {}),
+          ...(resolved.basic ? { basicFallback: true } : {}),
         },
       };
       let outcome: SegState | undefined;
@@ -1275,8 +1288,9 @@ export class Jobs {
       now: this.now,
       sleep: this.deps.sleep ?? abortableSleep,
       ...(this.deps.retry === undefined ? {} : { retry: this.deps.retry }),
-      strategies: [singlePass, contextual, explain],
+      strategies: [singlePass, contextual, explain, basic],
       prompts: createDefaultPromptRegistry(),
+      ...(this.deps.mt === undefined ? {} : { mt: this.deps.mt }),
     });
   }
 
@@ -1307,6 +1321,13 @@ export class Jobs {
           job.controller.abort(new DOMException('stopped', 'AbortError'));
           this.finish(tabId, job, 'stopped', event.error);
         }
+        return;
+      }
+      case 'stage': {
+        // Every provider gave up and the job switched to Chrome's Translator (M5-E7).
+        if (event.stage !== BASIC_SWITCH_STAGE || event.status !== 'start' || job.view.status !== 'running') return;
+        const info = event.info as BasicSwitchInfo;
+        this.patch(tabId, job, { fallback: { from: info.from, to: info.to ?? 'basic translation', error: info.error, basic: true } });
         return;
       }
       case 'artifact': {
@@ -1390,6 +1411,8 @@ export class Jobs {
 
   /** Stores the final a segment now shows (the highest revision only), or drops the entry of one that failed. */
   private remember(job: Job, id: string, state: SegState): void {
+    // A basic translation (M5-E7) is a stopgap: not stored, so the next run asks the model again.
+    if (state.basic) return;
     // A final is stored under the model that produced it (§7); a failure drops the job model's entry.
     const key = state.status === 'final' ? this.keyFor(job, id, state.model) : job.keys.get(id);
     if (key === undefined || !this.deps.cache) return;

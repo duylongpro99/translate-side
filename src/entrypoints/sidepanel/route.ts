@@ -6,7 +6,7 @@
 import type { browser } from 'wxt/browser';
 import { createClient } from '@/llm/client';
 import { DEFAULT_CONNECTION, hasHostPermission, originPattern, protocolOf, resolveConnection, withProfileQuirks, type ProviderConnection } from '@/shared/settings';
-import { resolveFallback, resolveRoute, saveLearnedQuirk, type Route } from '@/shared/providers';
+import { fallbackRoutesIn, hasBasicFallback, readProviderSettings, resolveFallback, resolveRoute, saveLearnedQuirk, type Route } from '@/shared/providers';
 import { pricingFor } from '@/shared/pricing';
 import type { AnalyzeResult, ClientResult, FallbackLink, JobConnection } from './jobs.ts';
 
@@ -103,9 +103,9 @@ export async function translateClient(api: Browser, target: RouteTarget & { anal
   }
   const translate = await clientFor(api, route);
   if (!translate.ok || !route.ok) return translate;
-  const fallback = await fallbackClients(api, route);
+  const { links: fallback, basic } = await fallbackClients(api, route);
   const routed = route.localOnly && route.rule ? { ...translate, localOnly: route.rule.pattern } : translate;
-  const withFallback = fallback.length > 0 ? { ...routed, fallback } : routed;
+  const withFallback = { ...routed, ...(fallback.length > 0 ? { fallback } : {}), ...(basic ? { basic } : {}) };
   if (!target.analyze) return withFallback;
   const profileId = translate.profile.id;
   return { ...withFallback, analyze: () => analyzeClient(api, target, profileId) };
@@ -113,23 +113,27 @@ export async function translateClient(api: Browser, target: RouteTarget & { anal
 
 /**
  * The route's fallback chain (§4.3.5, plan M4-E9): `Routing.fallback` without the `basic` entry
- * (M5-E7) and, under a local-only site rule, without cloud connections (providers.ts
- * fallbackRoutesIn). A link that can't run (no key, no access, no protocol) is left out: a fallback
- * is a spare, so it never stops a job that its primary can run. Settings that can't be read: none.
+ * and, under a local-only site rule, without cloud connections (providers.ts fallbackRoutesIn),
+ * and whether it ends in the `basic` entry (M5-E7; on the device, so kept under local only). A
+ * link that can't run (no key, no access, no protocol) is left out: a fallback is a spare, so it
+ * never stops a job that its primary can run. Settings that can't be read: none.
  */
-async function fallbackClients(api: Browser, route: Extract<Route, { ok: true }>): Promise<FallbackLink[]> {
+async function fallbackClients(api: Browser, route: Extract<Route, { ok: true }>): Promise<{ links: FallbackLink[]; basic: boolean }> {
   let routes;
+  let basic: boolean;
   try {
-    routes = await resolveFallback(api, route);
+    const settings = await readProviderSettings(api);
+    routes = fallbackRoutesIn(settings, route);
+    basic = hasBasicFallback(settings.routing);
   } catch {
-    return [];
+    return { links: [], basic: false };
   }
   const links: FallbackLink[] = [];
   for (const { profile, connection } of routes) {
     const link = await clientFor(api, { ok: true, profile, connection, source: 'routing', localOnly: route.localOnly });
     if (link.ok) links.push({ client: link.client, profile: link.profile, ...(link.connection ? { connection: link.connection } : {}) });
   }
-  return links;
+  return { links, basic };
 }
 
 /** The routed model and where it sends text: what the header and the privacy notice name. */

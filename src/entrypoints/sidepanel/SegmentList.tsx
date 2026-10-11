@@ -167,6 +167,14 @@ function statusAttrs(seg: Segment, state: SegState | undefined, extra = '') {
  * fallback profile took over (M4-E9).
  */
 function ModelBadge({ state, model }: Props) {
+  // Every provider was down and Chrome's Translator translated the block (M5-E7, DESIGN §9).
+  if (state?.status === 'final' && state.basic) {
+    return (
+      <span class="seg__badge seg__badge--basic" data-testid="seg-basic-badge" title={`Translated on this device by ${state.model ?? "Chrome's built-in translator"}, because no model could be reached. It is literal; Retranslate when the model is back.`}>
+        basic translation
+      </span>
+    );
+  }
   if (state?.status !== 'final' || state.model === undefined || model === undefined || model === '' || state.model === model) return null;
   return (
     <span class="seg__badge" data-testid="seg-model-badge" title={`Translated by ${state.model}, because ${model} was unavailable`} aria-label={`Translated by the fallback model ${state.model}`}>

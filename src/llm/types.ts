@@ -212,3 +212,23 @@ export interface ProtocolAdapter {
   /** Used by "Test connection". */
   probe(conn: ResolvedConnection): Promise<ProbeResult>;
 }
+
+// ---- Machine translation port (plan M5 §5 "Chrome built-in shape", DESIGN.md §4.2.6) -----------
+
+/** Chrome's answer for a language pair: ready, needs a one-time download, downloading, or never. */
+export type MTAvailability = 'available' | 'downloadable' | 'downloading' | 'unavailable';
+
+export type MTResult = { ok: true; text: string } | { ok: false; error: LLMError };
+
+/**
+ * A translator that takes text, not a prompt (Chrome's on-device `Translator`): no system prompt,
+ * no brief, no markers, no usage. Used only by the `basic` strategy, the last fallback (§5.3).
+ * `from` is a language code, or '' when the page's language is not known (the client detects it,
+ * or answers why it can't). Failures are a result, never a throw; a cancel throws `signal.reason`.
+ */
+export interface MTClient {
+  /** Names the translator in `producedBy.model`. */
+  readonly model: string;
+  availability(from: string, to: string): Promise<MTAvailability>;
+  translate(text: string, from: string, to: string, signal: AbortSignal): Promise<MTResult>;
+}

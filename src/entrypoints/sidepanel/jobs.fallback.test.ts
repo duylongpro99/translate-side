@@ -26,10 +26,10 @@ const LOCAL: ModelProfile = { id: 'ollama-qwen', connectionId: 'ollama', model: 
 const CLOUD: ModelProfile = { id: 'haiku', connectionId: 'anthropic', model: 'claude-haiku-4-5', maxConcurrency: 2, chunkTokens: 1200, pricing: { inPerM: 1, cachedInPerM: 0.1, outPerM: 5 } };
 
 /** A local server that answers `upFor` requests, then is stopped (every request: network error). */
-function stoppable(upFor: number): LLMClient & { requests: number } {
-  const inner = translatorClient(undefined, { model: LOCAL.model });
+function stoppable(upFor: number, model = LOCAL.model): LLMClient & { requests: number } {
+  const inner = translatorClient(undefined, { model });
   const c = {
-    model: LOCAL.model,
+    model,
     requests: 0,
     reasoningReserveTokens: () => 0,
     async *stream(req: Parameters<LLMClient['stream']>[0]) {
@@ -229,5 +229,70 @@ describe('a local-only page (M4-D tester O1)', () => {
     expect(view?.localOnly).toBe('intra.example.com');
     expect(view?.connection).toMatchObject({ label: 'Home Ollama' });
     expect(view?.fallback).toBeUndefined();
+  });
+});
+
+describe('Jobs with the terminal basic entry (plan M5-E7, §3 #4: all providers down)', () => {
+  /** Chrome's Translator, faked: `vi:` + the text. */
+  const mt = (state: 'available' | 'unavailable' = 'available') => {
+    const calls: string[] = [];
+    return {
+      model: 'Chrome Translator',
+      calls,
+      availability: async () => state,
+      translate: async (text: string) => {
+        calls.push(text);
+        return { ok: true as const, text: `vi:${text}` };
+      },
+    };
+  };
+  const allDown = (basic: boolean): (() => Promise<ClientResult>) => () =>
+    Promise.resolve({ ok: true, client: stoppable(0), profile: LOCAL, connection: { id: 'ollama', label: 'Home Ollama' }, fallback: [{ client: stoppable(0, CLOUD.model), profile: CLOUD, connection: { id: 'anthropic', label: 'My Anthropic' } }], ...(basic ? { basic: true } : {}) });
+
+  it('every block is translated by Chrome Translator and marked basic; the bar says why; nothing is cached', async () => {
+    const cache = openTranslationCache({ factory: new IDBFactory() }) as TranslationCache;
+    const translator = mt();
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: allDown(true), sleep: instant, cache, mt: translator });
+    jobs.setActive(1);
+    const d = doc(3);
+    await jobs.start(1, 'd', d);
+    await jobs.cacheIdle();
+    const view = jobs.get(1);
+    expect(view?.status).toBe('done');
+    expect(view?.counts).toEqual({ total: 3, final: 3, failed: 0 });
+    expect([...(view?.segs.values() ?? [])].map((s) => [s.basic, s.model, s.text?.startsWith('vi:')])).toEqual(Array.from({ length: 3 }, () => [true, 'Chrome Translator', true]));
+    expect(view?.fallback).toMatchObject({ from: CLOUD.model, to: 'Chrome Translator', basic: true, error: { kind: 'network' } });
+    for (const model of [LOCAL.model, CLOUD.model, 'Chrome Translator']) {
+      const scope = scopeHash(keyScope({ targetLang: 'vi', model, strategy: 'single-pass' }));
+      expect((await cache.getMany(d.segments.map((s) => segmentKey(scope, s)))).size).toBe(0);
+    }
+  });
+
+  it('without the basic entry, or without a translator for the pair, the job stops on the provider error as before, and says why basic did not help', async () => {
+    const plain = new Jobs({ strategy: 'single-pass', translateClient: allDown(false), sleep: instant, mt: mt() });
+    plain.setActive(1);
+    await plain.start(1, 'd', doc(2));
+    expect(plain.get(1)).toMatchObject({ status: 'stopped', counts: { total: 2, final: 0, failed: 1 }, stopError: { kind: 'network', message: "Can't reach localhost:11434" } });
+    for (const translator of [mt('unavailable'), undefined]) {
+      const none = new Jobs({ strategy: 'single-pass', translateClient: allDown(true), sleep: instant, mt: translator });
+      none.setActive(1);
+      await none.start(1, 'd', doc(2));
+      const view = none.get(1);
+      expect(view).toMatchObject({ status: 'stopped', counts: { total: 2, final: 0, failed: 1 }, stopError: { kind: 'network' } });
+      expect(view?.stopError?.message).toMatch(/^Can't reach localhost:11434 .*no basic translation either\.$/);
+      expect(translator?.calls ?? []).toEqual([]);
+    }
+  });
+
+  it('Retranslate on one block while every provider is down: basic answers it too', async () => {
+    const translator = mt();
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: allDown(true), sleep: instant, mt: translator });
+    jobs.setActive(1);
+    const d = doc(2);
+    await jobs.start(1, 'd', d);
+    translator.calls.length = 0;
+    await jobs.retranslateSegment(1, 's0');
+    expect(translator.calls).toEqual([d.segments[0]?.text]);
+    expect(jobs.get(1)?.segs.get('s0')).toMatchObject({ status: 'final', basic: true });
   });
 });

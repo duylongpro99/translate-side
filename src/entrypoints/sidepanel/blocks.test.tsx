@@ -255,4 +255,18 @@ describe('model badges (plan M4-E9, DESIGN §4.3.5: the panel shows which model 
     expect(badges.map((b) => [b.closest('[data-id]')?.getAttribute('data-id'), b.textContent])).toEqual([['2', 'claude-haiku-4-5']]);
     expect(badges[0]?.getAttribute('title')).toBe('Translated by claude-haiku-4-5, because qwen3:8b was unavailable');
   });
+
+  it('a block Chrome Translator translated (every provider down, M5-E7) is labeled "basic translation", not with a model badge', () => {
+    const root = document.createElement('div');
+    document.body.replaceChildren(root);
+    const states = new Map<string, SegState>([
+      ['1', { status: 'final', text: 'Một', revision: 1, model: 'Chrome Translator', basic: true }],
+      ['2', { status: 'final', text: 'Hai', revision: 1, model: 'qwen3:8b' }],
+    ]);
+    act(() => render(<SegmentList segments={['1', '2'].map(seg)} states={states as JobView['segs']} model="qwen3:8b" />, root));
+    const labels = [...root.querySelectorAll('[data-testid=seg-basic-badge]')];
+    expect(labels.map((b) => [b.closest('[data-id]')?.getAttribute('data-id'), b.textContent])).toEqual([['1', 'basic translation']]);
+    expect(labels[0]?.getAttribute('title')).toMatch(/^Translated on this device by Chrome Translator, because no model could be reached\./);
+    expect(root.querySelectorAll('[data-testid=seg-model-badge]')).toHaveLength(0);
+  });
 });

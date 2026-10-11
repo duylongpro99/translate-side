@@ -16,6 +16,7 @@ import type { JobActions } from './JobBar.tsx';
 import { openTranslationCache } from '@/shared/cache';
 import { checkSpendLimit, continuePastLimit, SpendLedger } from '@/shared/spend';
 import { anyDenylisted, clearSnippet, readSnippet, tabIdFromSnippetKey, type SnippetRecord } from '@/shared/snippet';
+import { chromeTranslator } from '@/llm/chrome-translator';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
 import { snippetDocId, snippetView, SnippetStore } from './snippet.ts';
 import { chooseForTab, makeDefault, readSwitcher, type SwitcherState } from './switcher.ts';
@@ -100,10 +101,12 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     spendLimit: () => checkSpendLimit(api),
     ...deps,
   };
-  const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), ...deps });
+  // Chrome's Translator, the `basic` fallback's translator (M5-E7); undefined in a browser without it.
+  const mt = 'mt' in deps ? deps.mt : chromeTranslator();
+  const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), ...deps, mt });
   // No cache: a selection is a one-off, and its text is not kept beyond the session.
   // Single-pass: one request per chunk, never the contextual brief (analyze) call for a selection.
-  const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target), ...deps, strategy: 'single-pass', cache: undefined, lazyAbove: Infinity });
+  const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target), ...deps, mt, strategy: 'single-pass', cache: undefined, lazyAbove: Infinity });
   const snippetStore = new SnippetStore();
   const viewports = new ViewportStore();
   const hovers = new HoverStore();

@@ -3,6 +3,7 @@ import { mockFetch, openaiStream, type ScriptedResponse } from '@/llm/testing';
 import type { NormalizedEvent } from '@/llm/types';
 import { routedSummary, translateClient } from '@/entrypoints/sidepanel/route';
 import {
+  BASIC_FALLBACK,
   cleanConnection,
   cleanProfile,
   cleanRouting,
@@ -179,7 +180,7 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
     const s = await migrateProviders(f.api);
     expect(ids(s.connections)).toEqual(['gemini', 'apibox', 'anthropic']);
     expect(s.profiles[0]).toEqual(GEMINI_PROFILE);
-    expect(s.routing).toEqual({ translate: GEMINI_PROFILE.id });
+    expect(s.routing).toEqual({ translate: GEMINI_PROFILE.id, fallback: [BASIC_FALLBACK] });
     // Stored: the version and this device's keyed records — never `routing`; the derived route is
     // this device's own, in storage.local.
     expect([...f.sync.data.keys()].sort()).toEqual(['conn:gemini', 'glossary', 'prefs', 'profile:gemini-flash-lite', 'schemaVersion']);
@@ -197,7 +198,7 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
     const f = fakeApi({ sync: M3_SYNC, local: M3_LOCAL });
     const s = await migrateProviders(f.api);
     expect(s.connections).toEqual(BUILTIN_CONNECTIONS);
-    expect(s.routing).toEqual({ translate: DEFAULT_PROFILE.id });
+    expect(s.routing).toEqual({ translate: DEFAULT_PROFILE.id, fallback: [BASIC_FALLBACK] });
     expect(f.sync.data.has('routing') || f.sync.data.has('migratedRoute')).toBe(false);
     expect(f.local.data.get('migratedRoute')).toEqual({});
     expect(await resolveRoute(f.api, 'translate')).toMatchObject({ ok: true, profile: APIBOX_QWEN_PROFILE, connection: APIBOX_CONNECTION });
@@ -212,7 +213,7 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
     const anthropic = await seedFromM1(anthropicApi);
     expect(Object.keys(anthropic).sort()).toEqual(['conn:anthropic', `profile:${ANTHROPIC_HAIKU_PROFILE.id}`, 'schemaVersion']);
     expect(await migratedRouteFromM1(anthropicApi)).toEqual({ translate: ANTHROPIC_HAIKU_PROFILE.id });
-    expect(parseStored(anthropic, await migratedRouteFromM1(anthropicApi))?.routing).toEqual({ translate: ANTHROPIC_HAIKU_PROFILE.id });
+    expect(parseStored(anthropic, await migratedRouteFromM1(anthropicApi))?.routing).toEqual({ translate: ANTHROPIC_HAIKU_PROFILE.id, fallback: [BASIC_FALLBACK] });
   });
 
   it('a fresh install writes only the version; the default connection and route apply at read time', async () => {
@@ -222,7 +223,7 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
     expect(s.connections).toEqual(BUILTIN_CONNECTIONS);
     expect(ids(s.profiles)).toEqual(ids(BUILTIN_PROFILES));
     expect(ids(s.profiles).slice(0, 3)).toEqual([APIBOX_QWEN_PROFILE.id, APIBOX_PRO_PROFILE.id, APIBOX_FLASH_PROFILE.id]);
-    expect(s.routing).toEqual({ translate: DEFAULT_PROFILE.id });
+    expect(s.routing).toEqual({ translate: DEFAULT_PROFILE.id, fallback: [BASIC_FALLBACK] });
   });
 
   it("a fresh device that migrates before sync has pulled never overwrites the user's routing (review B-4)", async () => {
@@ -599,12 +600,12 @@ describe('adding a connection (plan M4 §2, carry-over B4)', () => {
     const f = permApi({ sync: { schemaVersion: 1 } });
     expect(await saveSetup(f.api, { connection: MY_ANTHROPIC, apiKey: ' sk-ant-0123456789 ', profile: SONNET })).toEqual({ routed: true });
     expect(f.local.data.get('secret:mine')).toBe('sk-ant-0123456789');
-    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet' });
+    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet', fallback: [BASIC_FALLBACK] });
     expect(f.sync.data.get('conn:mine')).toMatchObject({ label: 'My Anthropic' });
     expect(JSON.stringify([...f.sync.data.values()])).not.toContain('sk-ant');
     // The second one does not take over.
     expect(await saveSetup(f.api, { connection: OLLAMA, profile: QWEN })).toEqual({ routed: false });
-    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet' });
+    expect(f.sync.data.get('routing')).toEqual({ translate: 'sonnet', fallback: [BASIC_FALLBACK] });
   });
 
   it('a device already translating with a migrated keyed route keeps it until the user picks another', async () => {
@@ -617,7 +618,7 @@ describe('adding a connection (plan M4 §2, carry-over B4)', () => {
   it('a key added to the routed (keyless) built-in connection keeps its route and sets none', async () => {
     const f = permApi({ sync: { schemaVersion: 1 } });
     expect(await saveSetup(f.api, { connection: APIBOX_CONNECTION, apiKey: 'sk-apibox-0123456789', profile: APIBOX_QWEN_PROFILE })).toEqual({ routed: true });
-    expect(f.sync.data.get('routing')).toEqual({ translate: APIBOX_QWEN_PROFILE.id });
+    expect(f.sync.data.get('routing')).toEqual({ translate: APIBOX_QWEN_PROFILE.id, fallback: [BASIC_FALLBACK] });
   });
 
   it('marks the built-ins that apply only at read time, and whether routing is stored', async () => {

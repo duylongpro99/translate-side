@@ -4,7 +4,8 @@
 
 export const ENGINE_VERSION = 1;
 
-export { DEGRADED_MESSAGE, createEngine, type EngineDeps } from './engine.ts';
+export { BASIC_SWITCH_STAGE, DEGRADED_MESSAGE, createEngine, type BasicSwitchInfo, type EngineDeps } from './engine.ts';
+export { BASIC_ID, BASIC_MISSING_MESSAGE, BASIC_STAGE, BASIC_VERSION, basic, basicTranslate, basicUnavailableMessage } from './strategies/basic.ts';
 export { defineStage, defineStrategy, isEngineEvent, multiplex, runStages, type AnyStage, type StrategyDefinition } from './runner.ts';
 export { withFallback, withLatch, type FallbackInfo, type FallbackOptions } from './fallback.ts';
 export { DEFAULT_RETRY_POLICY, addUsage, decideRetry, isRetryable, withRetry, type RetryDecision, type RetryInfo, type RetryOptions, type RetryPolicy } from './retry.ts';

@@ -210,7 +210,9 @@ export function cleanSiteRules(raw: unknown): SiteRule[] {
 /** Routing without its site rules (stored apart); null without a `translate` id. */
 export function cleanRouting(raw: unknown): Omit<Routing, 'siteOverrides'> | null {
   if (!isRecord(raw) || !nonEmpty(raw.translate)) return null;
-  const fallback = Array.isArray(raw.fallback) ? raw.fallback.filter(nonEmpty) : [];
+  const listed = Array.isArray(raw.fallback) ? raw.fallback.filter(nonEmpty) : [];
+  // The `basic` entry is terminal (M5-E7): it ends the chain wherever it was put.
+  const fallback = listed.includes(BASIC_FALLBACK) ? [...listed.filter((id) => id !== BASIC_FALLBACK), BASIC_FALLBACK] : listed;
   return {
     translate: raw.translate,
     ...(nonEmpty(raw.analyze) ? { analyze: raw.analyze } : {}),
@@ -255,7 +257,9 @@ export function parseStored(items: Record<string, unknown>, migratedRoute?: unkn
   }
   const sites = cleanSiteRules(items[SITE_RULES_KEY]);
   const stored = cleanRouting(items[ROUTING_KEY]);
-  const routing = stored ?? cleanRouting(migratedRoute) ?? { translate: DEFAULT_PROFILE.id };
+  // A route the user never chose ends in the terminal `basic` entry (plan M5-E7): with every
+  // provider down, Chrome's Translator takes over. A stored route has it only if the user kept it.
+  const routing = stored ?? { ...(cleanRouting(migratedRoute) ?? { translate: DEFAULT_PROFILE.id }), fallback: [BASIC_FALLBACK] };
   return { schemaVersion: version, connections, profiles, routing: sites.length > 0 ? { ...routing, siteOverrides: sites } : routing, implicit, routingStored: stored !== null };
 }
 
@@ -753,8 +757,16 @@ export async function resolveRoute(api: Browser, role: ModelRole, ctx: { url?: s
 
 // ---- Fallback (§4.3.5, plan M4-E9) -------------------------------------------------------------
 
-/** The `Routing.fallback` entry M5-E7 gives meaning to: the `basic` strategy (Chrome Translator), not a profile. */
+/** The terminal `Routing.fallback` entry (M5-E7): the `basic` strategy (Chrome Translator), not a profile. */
 export const BASIC_FALLBACK = 'basic';
+
+/**
+ * Does the route's fallback chain end in the `basic` entry (M5-E7)? Chrome's Translator runs on
+ * the device, so a local-only site rule keeps it too (§4.3.5 privacy rule).
+ */
+export function hasBasicFallback(routing: Pick<Routing, 'fallback'>): boolean {
+  return routing.fallback?.includes(BASIC_FALLBACK) === true;
+}
 
 /**
  * A loopback host: `localhost` (and `*.localhost`), 127.0.0.0/8, `::1`. Nothing else counts as
@@ -784,7 +796,7 @@ export type FallbackRoute = { profile: ModelProfile; connection: ProviderConnect
 
 /**
  * The fallback profiles of a resolved route, in order (`Routing.fallback`): the route's own
- * profile, repeats, entries that name no profile (the `basic` entry until M5-E7, a removed
+ * profile, repeats, entries that name no profile (the `basic` entry, hasBasicFallback; a removed
  * profile) and profiles without a connection are left out. Under a local-only site rule only
  * local connections stay (`isLocalConnection`): the page never falls back to a cloud provider.
  */

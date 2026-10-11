@@ -6,6 +6,7 @@
 // use is ever fetched. Import this file, not ./index.ts (which re-exports the adapters
 // statically), from code that should stay light.
 
+import { createChromeBuiltinAdapter } from './chrome-builtin.ts';
 import { reserveTokensOf } from './reasoning.ts';
 import type { AdapterOptions } from './sdk.ts';
 import type { LLMClient, Protocol, ProtocolAdapter, ResolvedConnection } from './types.ts';
@@ -48,8 +49,18 @@ function lazyAdapter(protocol: Exclude<Protocol, 'chrome-builtin'>, options: Ada
   };
 }
 
-export function createAdapter(protocol: Protocol, options: AdapterOptions = {}): ProtocolAdapter {
-  if (protocol === 'chrome-builtin') throw new Error('chrome-builtin is not implemented yet (M4)');
+/**
+ * Feature flag (plan M5-E7): the `chrome-builtin` adapter for Gemini Nano (chrome-builtin.ts) is
+ * experimental, so it is off by default: a profile on a `chrome-builtin` connection can't run.
+ * Chrome's Translator is not behind it: the `basic` fallback uses it through the MTClient port.
+ */
+export const CHROME_NANO = false;
+
+export function createAdapter(protocol: Protocol, options: AdapterOptions = {}, nano: boolean = CHROME_NANO): ProtocolAdapter {
+  if (protocol === 'chrome-builtin') {
+    if (!nano) throw new Error('Gemini Nano (chrome-builtin) is experimental and off in this version');
+    return createChromeBuiltinAdapter();
+  }
   return lazyAdapter(protocol, options);
 }
 
