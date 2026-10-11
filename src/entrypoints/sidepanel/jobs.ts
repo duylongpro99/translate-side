@@ -583,6 +583,13 @@ interface Job {
    * retranslates it again.
    */
   earlier: Map<string, SegState>;
+  /**
+   * The basic note came from the run this one resumes and this run has not switched itself (M5-E7):
+   * every request of this run started after that switch, so a model's final means a provider is
+   * back. Within a run that switched, only the engine's `done` + `recovered` says so (a chunk that
+   * was streaming when it switched still finishes on the model).
+   */
+  basicCarried?: boolean;
   /** Cache keys whose next write replaces the stored entry (a retranslated block, M3-E5). */
   replaceKeys: Set<string>;
   /** The brief cache key of this document; undefined without a cache. */
@@ -796,6 +803,7 @@ export class Jobs {
       retrySeq: 0,
       replaceKeys: new Set(),
       earlier,
+      ...(keep?.view.fallback?.basic ? { basicCarried: true } : {}),
       apart: costFrom ? { usage: { ...costFrom.apart.usage }, usd: costFrom.apart.usd } : { usage: { input: 0, cachedInput: 0, output: 0 }, usd: undefined },
       fresh,
       ...((lazy && before !== undefined) || (resume && prev?.docId === docId && prev.redo) ? { redo: true } : {}),
@@ -1319,10 +1327,10 @@ export class Jobs {
         if (!restored) this.remember(job, event.id, next);
         const patch: Partial<JobView> = { counts: count(job.segs) };
         if (job.view.firstVisibleAt === undefined && next.text) patch.firstVisibleAt = this.now();
-        // A model translated a block again after Chrome's Translator took over (M5-E7): in this run,
-        // or in a later round of a lazy page (a run of its own, which carries the note over).
+        // A model translated a block again after Chrome's Translator took over in an earlier run of
+        // the page (a lazy round, Retry: the note was carried over). See `basicCarried`.
         const fb = job.view.fallback;
-        if (event.type === 'segment.final' && next.status === 'final' && !next.basic && fb?.basic && !fb.recovered) patch.fallback = { ...fb, recovered: true };
+        if (job.basicCarried && event.type === 'segment.final' && next.status === 'final' && !next.basic && fb?.basic && !fb.recovered) patch.fallback = { ...fb, recovered: true };
         this.screenDone(tabId, job, patch);
         this.patch(tabId, job, patch);
         if (event.type === 'segment.failed' && STOP_KINDS.has(event.error.kind)) {
@@ -1336,7 +1344,10 @@ export class Jobs {
         // `recovered`: a provider answered again and the job went back to it.
         if (event.stage !== BASIC_SWITCH_STAGE || job.view.status !== 'running') return;
         const info = event.info as BasicSwitchInfo;
-        if (event.status === 'start') this.patch(tabId, job, { fallback: { from: info.from, to: info.to ?? 'basic translation', error: info.error, basic: true } });
+        if (event.status === 'start') {
+          job.basicCarried = false;
+          this.patch(tabId, job, { fallback: { from: info.from, to: info.to ?? 'basic translation', error: info.error, basic: true } });
+        }
         else if (event.status === 'done' && info.recovered && job.view.fallback?.basic) this.patch(tabId, job, { fallback: { ...job.view.fallback, recovered: true } });
         return;
       }

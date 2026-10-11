@@ -374,6 +374,39 @@ describe('Jobs with the terminal basic entry (plan M5-E7, §3 #4: all providers 
     expect(jobs.get(1)?.fallback).toMatchObject({ basic: true, recovered: true });
   });
 
+  it('a chunk that was streaming when the job switched finishes on the model without marking the note recovered (review D round 4 O1)', async () => {
+    // Two request slots: the first request streams (held), every later one fails, probes too.
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const inner = translatorClient(undefined, { model: LOCAL.model });
+    let n = 0;
+    const client: LLMClient = {
+      model: LOCAL.model,
+      reasoningReserveTokens: () => 0,
+      async *stream(req) {
+        if (n++ === 0) {
+          await held;
+          yield* inner.stream(req);
+        } else yield { type: 'error', error: { kind: 'network', message: "Can't reach localhost:11434" } };
+      },
+    };
+    const translator = mt();
+    const two = { ...LOCAL, maxConcurrency: 2 };
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: () => Promise.resolve({ ok: true, client, profile: two, connection: { id: 'ollama', label: 'Home Ollama' }, basic: true }), sleep: instant, mt: translator });
+    jobs.setActive(1);
+    const run = jobs.start(1, 'd', doc(6));
+    await until(() => translator.calls.length > 0);
+    release();
+    await run;
+    const view = jobs.get(1);
+    expect(view?.status).toBe('done');
+    const segs = [...(view?.segs.values() ?? [])];
+    expect(segs.some((s) => s.status === 'final' && !s.basic)).toBe(true);
+    expect(segs.some((s) => s.basic)).toBe(true);
+    expect(view?.fallback).toMatchObject({ basic: true });
+    expect(view?.fallback?.recovered).toBeUndefined();
+  });
+
   it('Retranslate on one block while every provider is down: basic answers it too', async () => {
     const translator = mt();
     const jobs = new Jobs({ strategy: 'single-pass', translateClient: allDown(true), sleep: instant, mt: translator });
