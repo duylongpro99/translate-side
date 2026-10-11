@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [master, main]
+    branches: [master, main, m6]
   pull_request:
 
 jobs:
@@ -23,9 +23,36 @@ jobs:
         run: pnpm run typecheck
       - name: Engine boundary (resolver closure, .ts-only engine/)
         run: pnpm run check:engine
-      - name: Unit, snapshot and boundary tests
-        run: pnpm run test
+      - name: Unit, snapshot and boundary tests, with coverage thresholds for engine/ and llm/
+        run: pnpm run test:coverage
       - name: Build
         run: pnpm run build
       - name: Check built manifest
         run: pnpm run check:manifest
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Full Chromium, not the headless shell: only the `chromium` channel runs extensions headless.
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Build
+        run: pnpm run build
+      - name: E2E (the built extension, 20 fixture pages, the mock provider)
+        run: pnpm run e2e
+      - name: Upload traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
