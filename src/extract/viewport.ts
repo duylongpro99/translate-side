@@ -4,6 +4,7 @@
 // elements on screen; scroll events (any scroller, so docs sites with an inner scroll pane count)
 // move the anchor. Changes are pushed at most every `throttleMs`, and only when they differ.
 import type { Viewport } from '@/shared/protocol';
+import { edgeOf } from './link.ts';
 
 export interface ViewportWatch {
   /** What is on screen now, worked out from the layout (no observer needed). */
@@ -79,7 +80,7 @@ export function watchViewport(win: Window, targets: ReadonlyMap<string, Viewport
     }
     const id = top && idsOf.get(top.el)?.[0];
     if (!top || id === undefined) return { visible };
-    const offset = Math.min(1, Math.max(0, -top.rect.top / top.rect.height));
+    const offset = Math.min(1, Math.max(0, (edgeOf(win, top.el) - top.rect.top) / top.rect.height));
     return { visible, anchor: { id, offset: Math.round(offset * 1000) / 1000 } };
   };
 

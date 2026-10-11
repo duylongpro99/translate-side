@@ -181,13 +181,19 @@ export function watchHover(win: Window, index: LinkIndex, onHover: (id: string |
 }
 
 /** The nearest ancestor that scrolls (an inner pane of a docs site), else the window's scroller. */
-function scrollerOf(win: Window, from: Node): Element | undefined {
+export function scrollerOf(win: Window, from: Node): Element | undefined {
   for (let el = from.nodeType === 1 ? (from as Element) : from.parentElement; el; el = el.parentElement) {
     if (el === win.document.documentElement || el === win.document.body) return undefined;
-    const overflow = win.getComputedStyle(el).overflowY;
+    const overflow = win.getComputedStyle?.(el).overflowY;
     if ((overflow === 'auto' || overflow === 'scroll') && el.scrollHeight > el.clientHeight) return el;
   }
   return undefined;
+}
+
+/** Top edge, in window coordinates, of what scrolls the target: 0 for the window, else the pane's. */
+export function edgeOf(win: Window, target: ViewportTarget): number {
+  const scroller = scrollerOf(win, (target as Range).commonAncestorContainer ?? (target as Node));
+  return scroller ? Math.max(0, scroller.getBoundingClientRect().top) : 0;
 }
 
 /**
@@ -202,8 +208,9 @@ export function scrollToSegment(win: Window, target: ViewportTarget | undefined,
   const rect = target.getBoundingClientRect();
   if (rect.height <= 0 && rect.width <= 0) return false;
   const scroller = scrollerOf(win, (target as Range).commonAncestorContainer ?? (target as Node));
-  // The point goes to the top edge of what scrolls: the window's, or an inner pane's own.
-  const edge = scroller ? Math.max(0, scroller.getBoundingClientRect().top) : 0;
+  // The point goes to the top edge of what scrolls: the window's, or an inner pane's own (the
+  // viewport's anchor offset is measured from the same edge, `edgeOf`).
+  const edge = edgeOf(win, target);
   const delta = Math.round(rect.top + along * rect.height - edge);
   if (Math.abs(delta) < 1) return false;
   if (scroller) scroller.scrollBy({ top: delta, behavior: 'instant' });

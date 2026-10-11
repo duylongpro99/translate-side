@@ -571,3 +571,12 @@ body {
   background: rgba(255, 200, 0, 0.22);
   box-shadow: -3px 0 0 rgba(255, 200, 0, 0.8);
 }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

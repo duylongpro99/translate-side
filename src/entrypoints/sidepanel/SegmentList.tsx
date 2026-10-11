@@ -215,11 +215,17 @@ function ExplainNote({ state }: Props) {
     );
   }
   if (explain.status === 'loading' && !explain.text) return null;
+  const ready = explain.status === 'ready';
   return (
-    // Hidden from screen readers while it streams, so each delta is not announced; read once it is whole.
-    <span class="seg__explain" role="note" data-testid="seg-explain-note" {...(explain.status === 'loading' ? { 'aria-hidden': true } : {})}>
-      <span class="seg__explain-label">Explanation</span> {explain.text}
-    </span>
+    <>
+      {/* Hidden from screen readers (it would be read delta by delta); the status region below says it once, when whole. */}
+      <span class="seg__explain" role="note" data-testid="seg-explain-note" aria-hidden="true">
+        <span class="seg__explain-label">Explanation</span> {explain.text}
+      </span>
+      <span class="sr-only" role="status" data-testid="seg-explain-status">
+        {ready ? `Explanation: ${explain.text ?? ''}` : ''}
+      </span>
+    </>
   );
 }
 

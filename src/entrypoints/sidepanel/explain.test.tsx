@@ -173,6 +173,14 @@ describe('Explain this in the block', () => {
     expect(el.querySelector<HTMLButtonElement>('[data-testid=seg-explain]')?.textContent).toBe('Explain again');
   });
 
+  it('announces the note once, when whole: empty status while streaming, the text when ready', () => {
+    const streaming = mount(new Map([['s0', { status: 'final' as const, text: 'vi', explain: { status: 'loading' as const, text: 'part' } }]]), () => {});
+    expect(streaming.querySelector('[data-testid=seg-explain-status]')?.textContent).toBe('');
+    expect(streaming.querySelector('[data-testid=seg-explain-note]')?.getAttribute('aria-hidden')).toBe('true');
+    const ready = mount(new Map([['s0', { status: 'final' as const, text: 'vi', explain: { status: 'ready' as const, text: 'whole note' } }]]), () => {});
+    expect(ready.querySelector('[data-testid=seg-explain-status]')?.textContent).toBe('Explanation: whole note');
+  });
+
   it('says why an explanation failed, and disables the button while it loads', () => {
     const failedEl = mount(new Map([['s0', { status: 'final' as const, text: 'vi', explain: { status: 'failed' as const, error: { kind: 'network' as const, message: 'down' } } }]]), () => {});
     expect(failedEl.querySelector('[data-testid=seg-explain-failed]')?.textContent).toMatch(/No explanation/);
