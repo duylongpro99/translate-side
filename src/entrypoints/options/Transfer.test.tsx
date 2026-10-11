@@ -74,7 +74,7 @@ describe('TransferSection', () => {
     const input = q('import-file') as HTMLInputElement;
     const file = new File([text], 'in.json', { type: 'application/json' });
     Object.defineProperty(input, 'files', { value: [file], configurable: true });
-    await act(() => input.dispatchEvent(new Event('change', { bubbles: true })));
+    await act(() => void input.dispatchEvent(new Event('change', { bubbles: true })));
     await flush();
   };
 
