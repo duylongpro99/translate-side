@@ -27,7 +27,9 @@ async function* play(output: string, stopReason: StopReason): AsyncGenerator<Nor
 
 const limits = chunkLimits(DEFAULT_CHUNK_TOKENS);
 
-describe('fixture chunks', () => {
+// The layout-table fixtures take seconds per case; under coverage instrumentation (pnpm check, CI) the
+// default 30 s left too little margin.
+describe('fixture chunks', { timeout: 60_000 }, () => {
   // Review T-B1 (twir-671 at chunkTokens 800 ended a chunk with a heading whose section was next).
   it.each(slugs)('%s: no chunk ends with a heading the next chunk could carry (sizes 800 and 1,500)', (slug) => {
     for (const lim of [chunkLimits(800), limits]) {
