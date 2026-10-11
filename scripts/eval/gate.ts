@@ -1,8 +1,8 @@
 // Eval regression gate: pnpm run eval:gate [-- --timeout-min n]
 //                       pnpm run eval:gate -- --baseline 5    (re-baseline: writes eval/runs/gate-baseline-<n>/ and eval/gate.json)
 // Translates the 23 eval passages with the shipped default (DEFAULT_PROFILE's model and quirks, the panel's
-// strategy) at chunk 400, so every passage is several chunks and the brief, briefed chunks and chunk-0 revision
-// all run, then scores them with the pinned judge and compares each dimension's mean with eval/gate.json:
+// strategy) at chunk 400, so the passages long enough to split (about 10 of the 23) run the brief, briefed chunks
+// and the chunk-0 revision, then scores them with the pinned judge and compares each dimension's mean with eval/gate.json:
 // a dimension below its baseline mean minus its margin fails the pass. A failed pass is run once more; the gate
 // is red only when both fail. It refuses (exit 2) when gate.json's judge differs from judge-core.ts, and stops a
 // pass at the spend cap or the timeout with a verdict. Runs locally with the keys in .env (eval/README.md says when).
@@ -10,8 +10,9 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, isDeepStrictEqual } from 'node:util';
-import { contextual, singlePass } from '@/engine/index';
+import { contextual, CONTEXTUAL_TRANSLATE_PROMPT_ID, singlePass, TRANSLATE_PROMPT_ID } from '@/engine/index';
 import { PANEL_STRATEGY } from '@/entrypoints/sidepanel/jobs';
+import { APIBOX_JUDGE_QUIRKS } from '@/llm/presets';
 import type { Quirks } from '@/llm/types';
 import { DEFAULT_CONNECTION, DEFAULT_PROFILE, withProfileQuirks } from '@/shared/settings';
 import { JUDGE_MODEL, JUDGE_PROMPT_ID } from './judge-core.ts';
@@ -20,15 +21,32 @@ import { dimensionMeans } from './report-core.ts';
 import { DIMENSIONS, type Dimension } from './rubric.ts';
 import { loadRun, type RunSummary } from './runs.ts';
 
-/** Every eval passage splits into several chunks at this size (one chunk would skip the brief, contextual.ts). */
+/**
+ * About 10 of the 23 eval passages split into several chunks at this size; a one-chunk passage skips the brief
+ * (contextual.ts), so the gate checks that some chunks were briefed and some segments revised.
+ */
 export const GATE_CHUNK_TOKENS = 400;
 /** A margin never below this: the judge scores whole points, so a smaller one turns noise red. */
 export const MIN_MARGIN = 0.1;
 /** USD at the nominal prices of pricing.ts (the APIBOX ones are unverified); a gate run stops above it. */
 export const SPEND_CAP_USD = 0.5;
 export const GATE_FILE = 'eval/gate.json';
+/** Fewer baseline runs give no usable standard deviation (the plan takes 5). */
+export const MIN_BASELINE_RUNS = 3;
 export const M2_C400_RUN = 'eval/runs/baseline-contextual-translate2-qwen3.8-flash-c400';
 export const BASELINE_DIR = (n: number): string => `eval/runs/gate-baseline-${n}`;
+
+/** What makes judge scores comparable: the model, the prompt id and the thinking effort (judge.ts resumes only on all three). */
+export interface JudgeIdentity {
+  model: string;
+  prompt: string;
+  effort: string;
+}
+
+/** The judge judge-core.ts pins, with the thinking judge.ts sends to APIBOX. */
+export const PINNED_JUDGE: JudgeIdentity = { model: JUDGE_MODEL, prompt: JUDGE_PROMPT_ID, effort: String(APIBOX_JUDGE_QUIRKS.reasoning?.lowest ?? 'off') };
+
+const judgeLabel = (j: JudgeIdentity): string => `${j.model} (${j.prompt}, thinking ${j.effort})`;
 
 export interface GateConfig {
   /** The harness provider whose connection is the shipped default's (providers.ts). */
@@ -58,7 +76,7 @@ export interface GateDimension {
 }
 
 export interface GateFile {
-  judge: { model: string; prompt: string };
+  judge: JudgeIdentity;
   config: GateConfig;
   marginRule: string;
   dimensions: Record<Dimension, GateDimension>;
@@ -87,7 +105,7 @@ export function shippedConfig(): GateConfig {
     quirks: app,
     strategy: strategy.id,
     strategyVersion: strategy.version,
-    translatePrompt: strategy.id === contextual.id ? 'translate@2' : 'translate@1',
+    translatePrompt: strategy.id === contextual.id ? CONTEXTUAL_TRANSLATE_PROMPT_ID : TRANSLATE_PROMPT_ID,
     chunkTokens: GATE_CHUNK_TOKENS,
     concurrency: DEFAULT_PROFILE.maxConcurrency,
     set: 'eval',
@@ -101,9 +119,9 @@ export function translateArgs(cfg: GateConfig, out: string): string[] {
 }
 
 /** Why the gate must not compare against gate.json, or undefined: scores of another judge are not comparable. */
-export function judgeMismatch(gate: Pick<GateFile, 'judge'>, judge = { model: JUDGE_MODEL, prompt: JUDGE_PROMPT_ID }): string | undefined {
-  if (gate.judge.model === judge.model && gate.judge.prompt === judge.prompt) return undefined;
-  return `${GATE_FILE} was scored by ${gate.judge.model} (${gate.judge.prompt}) but judge-core.ts pins ${judge.model} (${judge.prompt}): re-baseline deliberately (eval/README.md) before gating`;
+export function judgeMismatch(gate: Pick<GateFile, 'judge'>, judge = PINNED_JUDGE): string | undefined {
+  if (gate.judge.model === judge.model && gate.judge.prompt === judge.prompt && gate.judge.effort === judge.effort) return undefined;
+  return `${GATE_FILE} was scored by ${judgeLabel(gate.judge)} but the pinned judge is ${judgeLabel(judge)}: re-baseline deliberately (eval/README.md) before gating`;
 }
 
 export function sampleSd(xs: readonly number[]): number {
@@ -140,8 +158,8 @@ export interface PassResult {
   translatable: number;
   translateUsd: number | null;
   judgeUsd: number | null;
-  judgeModel?: string;
-  judgePrompt?: string;
+  /** Who scored the pass (judge.json). */
+  judge?: JudgeIdentity;
   wallMs: number;
   /** A timeout, the spend cap, or a harness/judge failure. */
   error?: string;
@@ -166,11 +184,11 @@ export interface PassVerdict {
 export const passSpend = (p: Pick<PassResult, 'translateUsd' | 'judgeUsd'>): number => (p.translateUsd ?? 0) + (p.judgeUsd ?? 0);
 
 /** What makes a pass unusable whatever its scores: it stopped, is incomplete, skipped the briefed path, lost segments or spent nothing. */
-export function passProblems(p: PassResult, judge: GateFile['judge']): string[] {
+export function passProblems(p: PassResult, judge: JudgeIdentity): string[] {
   const reasons: string[] = [];
   if (p.error) reasons.push(p.error);
   if (p.passages === 0 || p.scored < p.passages) reasons.push(`judge scored ${p.scored}/${p.passages} passages`);
-  if (p.judgeModel !== undefined && (p.judgeModel !== judge.model || p.judgePrompt !== judge.prompt)) reasons.push(`scored by ${p.judgeModel} (${p.judgePrompt}), not ${judge.model} (${judge.prompt})`);
+  if (p.judge !== undefined && judgeMismatch({ judge: p.judge }, judge)) reasons.push(`scored by ${judgeLabel(p.judge)}, not ${judgeLabel(judge)}`);
   if (p.briefedChunks === 0) reasons.push('no chunk carried the brief: the contextual path did not run');
   if (p.revised === 0) reasons.push('no segment was revised: the chunk-0 second pass did not run');
   if (p.lost > 0) reasons.push(`${p.lost}/${p.translatable} segments lost`);
@@ -329,7 +347,7 @@ async function livePass(cfg: GateConfig, dir: string, deadline: number, budgetUs
     translatable: summary?.total.translatable ?? 0,
     translateUsd: summary === undefined && translateUsd === 0 ? null : translateUsd,
     judgeUsd: judge ? judge.costUsd : null,
-    ...(judge ? { judgeModel: judge.judgeModel, judgePrompt: judge.prompt } : {}),
+    ...(judge ? { judge: { model: judge.judgeModel, prompt: judge.prompt, effort: judge.reasoning?.effort ?? 'off' } } : {}),
     wallMs: Date.now() - t0,
     ...(error === undefined ? {} : { error }),
   };
@@ -349,7 +367,7 @@ async function baseline(cfg: GateConfig, n: number, timeoutMin: number): Promise
     const dir = BASELINE_DIR(i);
     console.log(`\nbaseline run ${i}/${n} → ${dir}`);
     const r = await livePass(cfg, dir, Date.now() + timeoutMin * 60_000, SPEND_CAP_USD, true);
-    const problems = passProblems(r, { model: JUDGE_MODEL, prompt: JUDGE_PROMPT_ID });
+    const problems = passProblems(r, PINNED_JUDGE);
     console.log(`baseline run ${i}: ${DIMENSIONS.map((d) => `${d} ${f2(r.means[d])}`).join(', ')}; briefed chunks ${r.briefedChunks}, revised ${r.revised}; spend translate ${usd(r.translateUsd)} + judge ${usd(r.judgeUsd)}`);
     if (problems.length) {
       console.log(`baseline run ${i} is not usable:\n${problems.map((x) => `- ${x}`).join('\n')}\nFix the cause and run the same command again (finished runs are kept).`);
@@ -359,7 +377,7 @@ async function baseline(cfg: GateConfig, n: number, timeoutMin: number): Promise
     results.push(r);
   }
   const m2 = loadRun(path.join(ROOT, M2_C400_RUN)).judge;
-  if (m2 === undefined || judgeMismatch({ judge: { model: m2.judgeModel, prompt: m2.prompt } })) throw new Error(`${M2_C400_RUN} has no judge.json from ${JUDGE_MODEL} (${JUDGE_PROMPT_ID})`);
+  if (m2 === undefined || judgeMismatch({ judge: { model: m2.judgeModel, prompt: m2.prompt, effort: m2.reasoning?.effort ?? 'off' } })) throw new Error(`${M2_C400_RUN} has no judge.json from ${judgeLabel(PINNED_JUDGE)}`);
   const dims = computeDimensions(
     results.map((r) => r.means as Record<Dimension, number>),
     dimensionMeans(m2.scores) as Record<Dimension, number>,
@@ -371,7 +389,7 @@ async function baseline(cfg: GateConfig, n: number, timeoutMin: number): Promise
     console.log(`\nHEAD is below the M2 c400 reference on ${below.join(', ')}: ${GATE_FILE} not written. Report it; do not re-baseline over a regression.`);
     return 3;
   }
-  const file: GateFile = { judge: { model: JUDGE_MODEL, prompt: JUDGE_PROMPT_ID }, config: cfg, marginRule: `max(2 × sample SD of the ${n} run means, ${MIN_MARGIN})`, dimensions: dims, baselineRuns: results.map((r) => r.dir), m2c400Run: M2_C400_RUN, createdAt: new Date().toISOString() };
+  const file: GateFile = { judge: PINNED_JUDGE, config: cfg, marginRule: `max(2 × sample SD of the ${n} run means, ${MIN_MARGIN})`, dimensions: dims, baselineRuns: results.map((r) => r.dir), m2c400Run: M2_C400_RUN, createdAt: new Date().toISOString() };
   fs.writeFileSync(path.join(ROOT, GATE_FILE), `${JSON.stringify(file, null, 1)}\n`);
   console.log(`\nwrote ${GATE_FILE}`);
   return 0;
@@ -384,6 +402,15 @@ export async function main(argv: string[]): Promise<number> {
     options: { baseline: { type: 'string' }, 'timeout-min': { type: 'string', default: '25' } },
   });
   const timeoutMin = Number(opt['timeout-min']);
+  if (!(Number.isFinite(timeoutMin) && timeoutMin > 0)) {
+    console.log(`eval gate refused: --timeout-min expects a number of minutes above 0, not "${opt['timeout-min']}"`);
+    return 2;
+  }
+  const runs = opt.baseline === undefined ? undefined : Number(opt.baseline);
+  if (runs !== undefined && !(Number.isInteger(runs) && runs >= MIN_BASELINE_RUNS)) {
+    console.log(`eval gate refused: --baseline expects a whole number of runs, at least ${MIN_BASELINE_RUNS} (the margin needs a standard deviation), not "${opt.baseline}"`);
+    return 2;
+  }
   let cfg: GateConfig;
   try {
     cfg = shippedConfig();
@@ -396,8 +423,8 @@ export async function main(argv: string[]): Promise<number> {
     console.log(`eval gate refused: ${noKey}`);
     return 2;
   }
-  console.log(`eval gate: ${cfg.provider}/${cfg.model}, ${cfg.strategy}@${cfg.strategyVersion} (${cfg.translatePrompt}), chunk ${cfg.chunkTokens}, ${cfg.concurrency} in flight, judge ${JUDGE_MODEL} (${JUDGE_PROMPT_ID})`);
-  if (opt.baseline !== undefined) return baseline(cfg, Number(opt.baseline), timeoutMin);
+  console.log(`eval gate: ${cfg.provider}/${cfg.model}, ${cfg.strategy}@${cfg.strategyVersion} (${cfg.translatePrompt}), chunk ${cfg.chunkTokens}, ${cfg.concurrency} in flight, judge ${judgeLabel(PINNED_JUDGE)}`);
+  if (runs !== undefined) return baseline(cfg, runs, timeoutMin);
   const gate = readJson<GateFile>(path.join(ROOT, GATE_FILE));
   if (gate === undefined) {
     console.log(`eval gate refused: no ${GATE_FILE} (run pnpm run eval:gate -- --baseline 5)`);

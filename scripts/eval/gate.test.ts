@@ -1,15 +1,15 @@
-import { describe, expect, it } from 'vitest';
-import { contextual } from '@/engine/index';
+import { describe, expect, it, vi } from 'vitest';
+import { contextual, CONTEXTUAL_TRANSLATE_PROMPT_ID } from '@/engine/index';
 import { PANEL_STRATEGY } from '@/entrypoints/sidepanel/jobs';
-import { APIBOX_QWEN_QUIRKS } from '@/llm/presets';
+import { APIBOX_JUDGE_QUIRKS, APIBOX_QWEN_QUIRKS } from '@/llm/presets';
 import { DEFAULT_CONNECTION, DEFAULT_PROFILE } from '@/shared/settings';
-import { belowM2, computeDimensions, GATE_CHUNK_TOKENS, judgeMismatch, judgePass, lineCost, MIN_MARGIN, runGate, sampleSd, shippedConfig, translateArgs, type GateFile, type PassResult } from './gate';
+import { belowM2, computeDimensions, GATE_CHUNK_TOKENS, judgeMismatch, judgePass, lineCost, main, MIN_MARGIN, PINNED_JUDGE, runGate, sampleSd, shippedConfig, translateArgs, type GateFile, type PassResult } from './gate';
 import { JUDGE_MODEL, JUDGE_PROMPT_ID } from './judge-core';
 import { PROVIDERS } from './providers';
 
 const dims = (baseline: number, margin: number) => ({ baseline, sd: margin / 2, margin, m2c400: baseline, runs: [baseline] });
 const gate: Pick<GateFile, 'dimensions' | 'judge'> = {
-  judge: { model: JUDGE_MODEL, prompt: JUDGE_PROMPT_ID },
+  judge: PINNED_JUDGE,
   dimensions: { fidelity: dims(4.5, 0.1), naturalness: dims(4, 0.2), tone: dims(4.2, 0.1), terminology: dims(4.4, 0.1) },
 };
 const pass = (over: Partial<PassResult> = {}): PassResult => ({
@@ -23,8 +23,7 @@ const pass = (over: Partial<PassResult> = {}): PassResult => ({
   translatable: 149,
   translateUsd: 0.005,
   judgeUsd: 0.15,
-  judgeModel: JUDGE_MODEL,
-  judgePrompt: JUDGE_PROMPT_ID,
+  judge: PINNED_JUDGE,
   wallMs: 900_000,
   ...over,
 });
@@ -37,14 +36,14 @@ describe('shippedConfig', () => {
     expect(cfg.quirks).toMatchObject(APIBOX_QWEN_QUIRKS);
     expect(cfg.strategy).toBe(PANEL_STRATEGY);
     expect(cfg.strategyVersion).toBe(contextual.version);
-    expect(cfg.translatePrompt).toBe('translate@2');
+    expect(cfg.translatePrompt).toBe(CONTEXTUAL_TRANSLATE_PROMPT_ID);
     expect(cfg.concurrency).toBe(DEFAULT_PROFILE.maxConcurrency);
     expect(cfg.chunkTokens).toBe(GATE_CHUNK_TOKENS);
     expect(PROVIDERS[cfg.provider]?.conn.baseUrl).toBe(DEFAULT_CONNECTION.baseUrl);
   });
   it('passes that configuration to the harness', () => {
     const args = translateArgs(shippedConfig(), 'out');
-    expect(args.join(' ')).toBe(`--set eval --provider apibox --model ${DEFAULT_PROFILE.model} --strategy contextual --prompt translate@2 --chunk-tokens 400 --concurrency ${DEFAULT_PROFILE.maxConcurrency} --target vi --out out`);
+    expect(args.join(' ')).toBe(`--set eval --provider apibox --model ${DEFAULT_PROFILE.model} --strategy contextual --prompt ${CONTEXTUAL_TRANSLATE_PROMPT_ID} --chunk-tokens 400 --concurrency ${DEFAULT_PROFILE.maxConcurrency} --target vi --out out`);
   });
 });
 
@@ -70,7 +69,8 @@ describe('judgePass', () => {
     expect(judgePass(gate, pass({ lost: 2 })).reasons).toEqual(['2/149 segments lost']);
     expect(judgePass(gate, pass({ judgeUsd: null })).ok).toBe(false);
     expect(judgePass(gate, pass({ translateUsd: 0, judgeUsd: 0 })).reasons).toEqual(['no priced calls reported: a pass without real spend is not a result']);
-    expect(judgePass(gate, pass({ judgeModel: 'mock-judge' })).ok).toBe(false);
+    expect(judgePass(gate, pass({ judge: { ...PINNED_JUDGE, model: 'mock-judge' } })).ok).toBe(false);
+    expect(judgePass(gate, pass({ judge: { ...PINNED_JUDGE, effort: 'off' } })).reasons[0]).toContain('thinking off');
     const timedOut = judgePass(gate, pass({ error: 'timed out while judging (25 min)', means: {}, scored: 0 }));
     expect(timedOut.ok).toBe(false);
     expect(timedOut.reasons[0]).toBe('timed out while judging (25 min)');
@@ -120,10 +120,14 @@ describe('runGate', () => {
 });
 
 describe('judge pin', () => {
-  it('accepts the judge judge-core.ts pins and refuses another model or prompt', () => {
+  it('pins the judge-core.ts model and prompt with the thinking judge.ts sends', () => {
+    expect(PINNED_JUDGE).toEqual({ model: JUDGE_MODEL, prompt: JUDGE_PROMPT_ID, effort: APIBOX_JUDGE_QUIRKS.reasoning?.lowest });
+  });
+  it('accepts the pinned judge and refuses another model, prompt or thinking effort', () => {
     expect(judgeMismatch(gate)).toBeUndefined();
-    expect(judgeMismatch({ judge: { model: 'gemini-3.7-flash', prompt: JUDGE_PROMPT_ID } })).toContain('re-baseline deliberately');
-    expect(judgeMismatch({ judge: { model: JUDGE_MODEL, prompt: 'judge@2' } })).toContain(`pins ${JUDGE_MODEL} (${JUDGE_PROMPT_ID})`);
+    expect(judgeMismatch({ judge: { ...PINNED_JUDGE, model: 'gemini-3.7-flash' } })).toContain('re-baseline deliberately');
+    expect(judgeMismatch({ judge: { ...PINNED_JUDGE, prompt: 'judge@2' } })).toContain(`the pinned judge is ${JUDGE_MODEL} (${JUDGE_PROMPT_ID}, thinking ${PINNED_JUDGE.effort})`);
+    expect(judgeMismatch({ judge: { ...PINNED_JUDGE, effort: 'low' } })).toContain('thinking low');
   });
 });
 
@@ -147,5 +151,24 @@ describe('lineCost', () => {
     expect(lineCost('k8s-pods final 9/9 calls 3 in 1 out 1 2.0s $0.00030')).toBeCloseTo(0.0003);
     expect(lineCost('k8s-pods final 9/9 calls 3 in 1 out 1 2.0s cost n/a')).toBe(0);
     expect(lineCost('results: eval-results/x  total lost 0/149  cost $0.00534')).toBe(0);
+  });
+});
+
+describe('main', () => {
+  it.each([
+    [['--baseline', '0'], '--baseline expects'],
+    [['--baseline', 'x'], '--baseline expects'],
+    [['--baseline', '2'], '--baseline expects'],
+    [['--baseline', '4.5'], '--baseline expects'],
+    [['--timeout-min', 'x'], '--timeout-min expects'],
+    [['--timeout-min', '0'], '--timeout-min expects'],
+  ])('refuses %j before any call', async (argv, message) => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      expect(await main(argv)).toBe(2);
+      expect(log.mock.calls.flat().join('\n')).toContain(message);
+    } finally {
+      log.mockRestore();
+    }
   });
 });
