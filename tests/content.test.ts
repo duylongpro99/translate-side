@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 // Content script (M0-E3/E4): idempotent injection and the panel handshake.
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CONTENT_PORT_NAME, createClient, PROTOCOL_VERSION, type ContentApi, type PortLike } from '../src/shared/protocol.ts';
 
 type Fn = (m?: unknown) => void;
 
 const h = vi.hoisted(() => {
-  const state = { connectListeners: [] as ((port: unknown) => void)[], runtimeId: 'ext' as string | undefined, page: false };
+  const state = { connectListeners: [] as ((port: unknown) => void)[], runtimeId: 'ext' as string | undefined, page: false, rerendered: false };
   const api = {
     runtime: {
       get id() {
@@ -31,13 +31,22 @@ vi.mock('@/extract', () => ({
       targets?.set('a', a);
       targets?.set('b', b);
     }
-    const seg = (id: string) => ({ id, kind: 'p', text: id, inlineMarkup: id, domPath: '/p', translate: true });
+    const seg = (id: string, text = id) => ({ id, kind: 'p', text, inlineMarkup: text, domPath: '/p', translate: true });
+    // After a re-render: block "a" moved (a new path, so a new fresh id) and a block "c" came in.
+    if (h.state.rerendered) {
+      targets?.delete('a');
+      if (a) targets?.set('moved', a);
+      return { ok: true, via: 'walk', url: 'https://example.com/#x', title: 'T', segments: [seg('moved', 'a'), seg('b'), seg('c')] };
+    }
     return { ok: true, via: 'walk', url: 'https://example.com/', title: 'T', segments: [seg('a'), seg('b')] };
   },
 }));
 
 const { default: content } = await import('../src/entrypoints/content.ts');
 const main = () => (content.main as (ctx?: unknown) => unknown)(undefined);
+
+/** The page ends' disconnect listeners: each test hangs up, so no change watch outlives it. */
+const hangUps: Fn[] = [];
 
 /** Connect like the panel does: returns the panel's end. */
 function connect(name = CONTENT_PORT_NAME): PortLike {
@@ -54,7 +63,7 @@ function connect(name = CONTENT_PORT_NAME): PortLike {
     postMessage: (m: unknown) => setTimeout(() => toPanel.forEach((fn) => fn(structuredClone(m))), 0),
     disconnect: () => undefined,
     onMessage: { addListener: (fn: Fn) => toPage.push(fn) },
-    onDisconnect: { addListener: () => undefined },
+    onDisconnect: { addListener: (fn: Fn) => hangUps.push(fn) },
   };
   h.state.connectListeners.forEach((fn) => fn(pageEnd));
   return panelEnd;
@@ -63,9 +72,11 @@ function connect(name = CONTENT_PORT_NAME): PortLike {
 beforeEach(() => {
   globalThis.__translateSide = undefined;
   h.state.page = false;
+  h.state.rerendered = false;
   h.state.connectListeners.length = 0;
   h.state.runtimeId = 'ext';
 });
+afterEach(() => hangUps.splice(0).forEach((fn) => fn()));
 
 describe('content script', () => {
   it('is registered at runtime only, never in the manifest', () => {
@@ -118,5 +129,29 @@ describe('content script', () => {
     b.getBoundingClientRect = () => ({ top: -10, bottom: 40, left: 0, right: 100, width: 100, height: 50 }) as DOMRect;
     document.dispatchEvent(new Event('scroll'));
     await vi.waitFor(() => expect(events).toEqual([{ kind: 'evt', name: 'viewport', body: { visible: ['b'], anchor: { id: 'b', offset: 0.2 } } }]));
+  });
+
+  it('reads the page again when it changes and pushes it, keeping the ids of unchanged blocks (plan M5-E2)', async () => {
+    h.state.page = true;
+    main();
+    const events: { name: string; body: { segments?: { id: string; text: string }[]; visible?: string[] } }[] = [];
+    const client = createClient<ContentApi>(connect(), { onEvent: (e) => events.push(e as never) });
+    await client.request('hello', { v: PROTOCOL_VERSION });
+    await client.request('extract', {});
+    // Reads that find the same page push nothing.
+    document.body.append(document.createElement('div'));
+    await new Promise((r) => setTimeout(r, 700));
+    expect(events.filter((e) => e.name === 'changed')).toEqual([]);
+    h.state.rerendered = true;
+    document.body.append(document.createElement('div'));
+    await vi.waitFor(() => expect(events.filter((e) => e.name === 'changed')).toHaveLength(1), { timeout: 2000 });
+    const changed = events.find((e) => e.name === 'changed')?.body;
+    expect(changed?.segments?.map((s) => [s.id, s.text])).toEqual([
+      ['a', 'a'],
+      ['b', 'b'],
+      ['c', 'c'],
+    ]);
+    // The viewport follows the kept id.
+    expect(changed?.visible).toEqual(['a']);
   });
 });
