@@ -16,6 +16,8 @@ import type { SwitcherState } from './switcher.ts';
 import type { Translator } from './translator.ts';
 import type { PrivacyGate, PrivacyState } from './privacy.ts';
 import { SelectionView } from './SelectionView.tsx';
+import { OfferBar } from './OfferBar.tsx';
+import type { OfferStore, PageOffer } from './offers.ts';
 import { StateMessage } from './StateMessage.tsx';
 import type { SnippetStore, SnippetView } from './snippet.ts';
 import type { ViewportStore } from './viewport.ts';
@@ -36,6 +38,10 @@ export interface TranslatorProps {
   routed?(target: RouteTarget): Promise<Routed | undefined>;
   /** The quick switcher (plan M4-E11). */
   switcher?: Translator['switcher'];
+  /** Pages read but not translated on their own (plan M5-E3), and their two actions. */
+  offers?: OfferStore;
+  translatePage?(tabId: number): void;
+  allowSite?(tabId: number): Promise<boolean>;
 }
 
 /** What the translate role resolves to for the tab and page on screen; re-read when they or the job change. */
@@ -120,15 +126,20 @@ function useJob(jobs: Jobs | undefined, tabId: number | undefined, docId: string
     setJob(read());
     if (!jobs) return;
     let scheduled = false;
+    let live = true;
     const unsubscribe = jobs.subscribe((id) => {
       if (id !== tabId || scheduled) return;
       scheduled = true;
       nextFrame(() => {
         scheduled = false;
-        setJob(read());
+        // A frame queued for an earlier document must not overwrite the current one's job.
+        if (live) setJob(read());
       });
     });
-    return unsubscribe;
+    return () => {
+      live = false;
+      unsubscribe();
+    };
     // read() closes over exactly these three.
   }, [jobs, tabId, docId]);
   return job;
@@ -143,6 +154,23 @@ function useSnippet(store: SnippetStore | undefined, tabId: number | undefined):
     });
   }, [store, tabId]);
   return view;
+}
+
+/** The tab's offer, if it belongs to the document on screen. */
+function useOffer(store: OfferStore | undefined, tabId: number | undefined, docId: string | undefined): PageOffer | undefined {
+  const read = () => {
+    const offer = store && tabId !== undefined ? store.get(tabId) : undefined;
+    return offer && offer.docId === docId ? offer : undefined;
+  };
+  const [offer, setOffer] = useState<PageOffer | undefined>(read);
+  useEffect(() => {
+    setOffer(read());
+    return store?.subscribe((id) => {
+      if (id === tabId) setOffer(read());
+    });
+    // read() closes over exactly these three.
+  }, [store, tabId, docId]);
+  return offer;
 }
 
 function usePrivacy(gate: PrivacyGate | undefined): PrivacyState | undefined {
@@ -177,6 +205,7 @@ export function App({ controller, translator }: { controller: PanelController; t
     [controller],
   );
   const job = useJob(translator?.jobs, tabId, view.kind === 'ready' ? view.docId : undefined);
+  const offer = useOffer(translator?.offers, tabId, view.kind === 'ready' ? view.docId : undefined);
   const privacy = usePrivacy(translator?.privacy);
   const prefs = usePrefs(translator?.prefs);
   const routed = useRouted(translator, tabId, view.kind === 'ready' ? view.result.url : undefined, job);
@@ -309,6 +338,8 @@ export function App({ controller, translator }: { controller: PanelController; t
         <>
           {job && translator && tabId !== undefined ? (
             <JobBar job={job} actions={translator.actions(tabId)} cancel={false} />
+          ) : offer && translator && tabId !== undefined ? (
+            <OfferBar offer={offer} blocks={view.result.segments.length} onTranslate={() => translator.translatePage?.(tabId)} onAllow={() => translator.allowSite?.(tabId) ?? Promise.resolve(false)} onSettings={openOptions} />
           ) : (
             <p class="panel__meta" data-testid="panel-ready">
               Original text · {view.result.segments.length} blocks

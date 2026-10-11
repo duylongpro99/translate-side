@@ -8,8 +8,8 @@ export interface SnippetView {
   /** The job's document id: one per click. */
   docId: string;
   url: string;
-  /** From a denylisted site: nothing is shown or sent. */
-  blocked?: 'denylisted';
+  /** From a denylisted or never-translate site: nothing is shown or sent. */
+  blocked?: 'denylisted' | 'never';
   /** More text was selected than is sent. */
   truncated?: boolean;
   /** What is translated, as segments of one pseudo-page (empty when blocked). */

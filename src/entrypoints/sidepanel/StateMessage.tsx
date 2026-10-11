@@ -1,4 +1,4 @@
-import { DENYLIST_MESSAGE, EXTRACTION_HINT, PASSWORD_MESSAGE } from '@/shared/snippet';
+import { DENYLIST_MESSAGE, EXTRACTION_HINT, NEVER_MESSAGE, PASSWORD_MESSAGE } from '@/shared/snippet';
 import type { PanelView } from './controller.ts';
 
 // Loading, empty, error and access states (plan M0-E7; "can't read this page", criterion #4).
@@ -32,6 +32,8 @@ export function StateMessage({ view, onRetry }: { view: Exclude<PanelView, { kin
           <p>
             {view.reason === 'denylisted'
               ? DENYLIST_MESSAGE
+              : view.reason === 'never'
+                ? NEVER_MESSAGE
               : 'Chrome does not let extensions read this page (browser pages, the Web Store and similar).'}
           </p>
         </div>

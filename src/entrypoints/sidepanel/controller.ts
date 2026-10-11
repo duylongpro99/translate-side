@@ -10,6 +10,7 @@ import {
   ProtocolError,
   type Client,
   type ContentApi,
+  type EventMessage,
   type ExtractResult,
   type PortLike,
   type Viewport,
@@ -45,8 +46,15 @@ interface TabSession {
   generation: number;
   /** Between tabs.onUpdated 'loading' and 'complete'. */
   pageLoading?: boolean;
+  /**
+   * Did the read in progress follow a gesture (the toolbar, Alt+T, the context menu, Try again)?
+   * From the access record's trigger (plan M5-E3): a read after a navigation is not "asked".
+   */
+  asked?: boolean;
   /** The view a page load replaced with "loading", restored if the document survives (same-document navigation). */
   beforeLoad?: PanelView;
+  /** autoInject was tried for this page (reset by a navigation). */
+  autoTried?: boolean;
   /** Waiting for the worker's re-injection: the "lost" timer starts once the page has loaded. */
   awaiting?: { generation: number; accessAt: number | undefined };
   lostTimer?: ReturnType<typeof setTimeout>;
@@ -62,12 +70,29 @@ export interface ControllerOptions {
   lostAfterMs?: number;
   /** Job lifecycle (plan M1-E8): what the page's translation job follows. */
   hooks?: SessionHooks;
+  /**
+   * A tab with no access record yet (never read in this session): inject into it with no gesture
+   * if its site allows that (an allowlisted site with its host permission, plan M5-E3), so the
+   * open panel reads each such tab by itself. Resolves whether it injected.
+   */
+  autoInject?(tabId: number): Promise<boolean>;
+}
+
+/** How a read came about (plan M5-E3/E2). */
+export interface ReadInfo {
+  /** A gesture asked for it (the toolbar, Alt+T, the context menu, Try again), not a navigation. */
+  asked: boolean;
+  /**
+   * The same document read again on its own after it changed (an SPA route change or new content,
+   * plan M5-E2). `urlChanged`: its address changed (a route change), not only its content.
+   */
+  update?: { urlChanged: boolean };
 }
 
 /** The panel's view of a tab's document, for the job that translates it (sidepanel/jobs.ts). */
 export interface SessionHooks {
   /** The document's segments were read (a new document, or the same one read again). */
-  ready?(tabId: number, docId: string, result: Extract<ExtractResult, { ok: true }>): void;
+  ready?(tabId: number, docId: string, result: Extract<ExtractResult, { ok: true }>, read?: ReadInfo): void;
   /**
    * The connection to the document ended: a navigation or reload, a lost grant, a re-read.
    * Its job must stop.
@@ -151,7 +176,7 @@ export class PanelController {
   retry(): void {
     if (this.activeTabId === undefined) return;
     this.disconnect(this.activeTabId);
-    void this.refresh(this.activeTabId, { force: true });
+    void this.refresh(this.activeTabId, { force: true, asked: true });
   }
 
   private setActive(tabId: number): void {
@@ -180,11 +205,18 @@ export class PanelController {
     for (const fn of this.listeners) fn(view, this.activeTabId);
   }
 
-  private async refresh(tabId: number, { force = false } = {}): Promise<void> {
+  private async refresh(tabId: number, { force = false, asked = false } = {}): Promise<void> {
     clearTimeout(this.idleTimer);
     const access = await readAccess(this.api, tabId).catch(() => undefined);
     if (tabId !== this.activeTabId) return;
     const s = this.session(tabId);
+    if (!access && this.opts.autoInject && !s.autoTried) {
+      // Once per page: the worker's record (written by the injection) brings us back here.
+      s.autoTried = true;
+      if (s.view.kind !== 'loading') this.setView(tabId, { kind: 'loading' });
+      const injected = await this.opts.autoInject(tabId).catch(() => false);
+      if (injected || tabId !== this.activeTabId) return;
+    }
     if (!access) {
       // The worker writes the record right after it opens the panel; give it a moment.
       if (s.view.kind !== 'loading') this.setView(tabId, { kind: 'loading' });
@@ -195,7 +227,9 @@ export class PanelController {
     }
     const changed = access.at !== s.accessAt;
     s.accessAt = access.at;
-    this.apply(tabId, s, access, force || changed, changed);
+    // A record without a trigger comes from an earlier version: read as a gesture.
+    if (changed || asked) s.asked = asked || access.trigger !== 'navigation';
+    this.apply(tabId, s, access, force || changed, changed && access.trigger !== 'navigation');
   }
 
   private apply(tabId: number, s: TabSession, access: TabAccess, changed: boolean, gesture = false): void {
@@ -242,8 +276,10 @@ export class PanelController {
       this.setView(tabId, { kind: 'error', message: messageOf(err) });
       return;
     }
-    const onEvent = (event: { name: 'viewport'; body: Viewport }) => {
-      if (s.generation === generation && s.docId !== undefined && event.name === 'viewport') this.opts.hooks?.viewport?.(tabId, s.docId, event.body);
+    const onEvent = (event: EventMessage) => {
+      if (s.generation !== generation || s.docId === undefined) return;
+      if (event.name === 'viewport') this.opts.hooks?.viewport?.(tabId, s.docId, event.body);
+      else if (event.name === 'changed') this.changed(tabId, s, event.body);
     };
     const client = createClient<ContentApi>(port, { onEvent, ...(this.opts.requestTimeoutMs ? { timeoutMs: this.opts.requestTimeoutMs } : {}) });
     s.port = port;
@@ -271,13 +307,29 @@ export class PanelController {
       if (s.generation !== generation) return;
       if (result.ok) {
         this.setView(tabId, { kind: 'ready', result, docId: s.docId ?? '' });
-        this.opts.hooks?.ready?.(tabId, s.docId ?? '', result);
+        this.opts.hooks?.ready?.(tabId, s.docId ?? '', result, { asked: s.asked !== false });
       }
       else if (result.reason === 'denylisted' || result.reason === 'password') this.setView(tabId, { kind: 'blocked', reason: result.reason });
       else this.setView(tabId, { kind: 'empty', url: result.url });
     } catch (err) {
       this.fail(tabId, s, generation, err);
     }
+  }
+
+  /**
+   * The content script read its document again by itself after it changed (plan M5-E2: an SPA
+   * route change, or new content on the same page). Shown at once, with no "loading" in between;
+   * the job follows (translator.ts). A document that is not shown as read (empty, failed, mid
+   * reload) takes it as its first read.
+   */
+  private changed(tabId: number, s: TabSession, result: Extract<ExtractResult, { ok: true }>): void {
+    const shown = s.view.kind === 'ready' ? s.view : s.view.kind === 'loading' && s.beforeLoad?.kind === 'ready' ? s.beforeLoad : undefined;
+    if (s.beforeLoad) s.beforeLoad = { kind: 'ready', result, docId: s.docId ?? '' };
+    const docId = s.docId ?? '';
+    if (s.view.kind !== 'loading' || !s.pageLoading) this.setView(tabId, { kind: 'ready', result, docId });
+    const urlChanged = shown !== undefined && withoutHash(shown.result.url) !== withoutHash(result.url);
+    // A first read that came out empty (an SPA still rendering) keeps what asked for it.
+    this.opts.hooks?.ready?.(tabId, docId, result, shown ? { asked: false, update: { urlChanged } } : { asked: s.asked !== false });
   }
 
   private fail(tabId: number, s: TabSession, generation: number, err: unknown): void {
@@ -289,6 +341,7 @@ export class PanelController {
   /** A navigation started: the panel shows "loading" until the page settles. */
   private pageLoading(tabId: number, s: TabSession): void {
     s.pageLoading = true;
+    delete s.autoTried;
     if (s.view.kind === 'ready' || s.view.kind === 'empty') {
       s.beforeLoad = s.view;
       this.setView(tabId, { kind: 'loading' });
@@ -302,6 +355,8 @@ export class PanelController {
     if (s.awaiting) this.startLostTimer(tabId, s);
     // Same-document navigation: the connection survived, so the page is what it was.
     else if (before && s.view.kind === 'loading' && s.client && !s.client.closed) this.setView(tabId, before);
+    // A tab never read in this session (no access record): an allowlisted site reads itself (M5-E3).
+    else if (s.accessAt === undefined && tabId === this.activeTabId) void this.refresh(tabId);
   }
 
   /**
@@ -357,3 +412,4 @@ export class PanelController {
 }
 
 const messageOf = (err: unknown) => (err instanceof Error ? err.message : String(err));
+const withoutHash = (url: string) => url.replace(/#.*$/, '');

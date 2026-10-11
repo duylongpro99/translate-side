@@ -11,6 +11,9 @@ type Browser = typeof browser;
 /** What the panel shows when a selection came from a denylisted site. Same wording as the page state. */
 export const DENYLIST_MESSAGE = 'Translate Side never reads this site (mail and sign-in pages are on a built-in denylist).';
 
+/** A site on the user's never-translate list (src/shared/sites.ts): same rule as the built-in denylist. */
+export const NEVER_MESSAGE = 'You chose never to translate this site. Translate Side does not read it. Change it in Settings › Site rules.';
+
 /** What the panel shows when a password field had focus as the page was read (M3-D5). Nothing was read or sent. */
 export const PASSWORD_MESSAGE = 'A password field has focus on this page, so Translate Side did not read it. Nothing was sent.';
 
@@ -27,8 +30,8 @@ export interface SnippetRecord {
   url: string;
   /** The selected text. Absent when `blocked`. */
   text?: string;
-  /** The selection came from a denylisted site: nothing was kept, nothing will be sent. */
-  blocked?: 'denylisted';
+  /** The selection came from a denylisted or never-translate site: nothing was kept, nothing will be sent. */
+  blocked?: 'denylisted' | 'never';
 }
 
 const PREFIX = 'snippet:';

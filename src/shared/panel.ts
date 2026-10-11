@@ -5,6 +5,7 @@ import { clearAccess, readAccess } from './access.ts';
 import { injectInto, type TabRef } from './inject.ts';
 import { clearTabOverride } from './providers.ts';
 import { anyDenylisted, clearSnippet, writeSnippet } from './snippet.ts';
+import { readSiteLists, listedFor } from './sites.ts';
 
 export const CONTEXT_MENU_ID = 'translate-side.open-panel';
 export const CONTEXT_MENU_TITLE = 'Translate in side panel';
@@ -85,7 +86,13 @@ export async function handOverSelection(api: Browser, tab: TabRef | undefined, i
   if (tabId === undefined || !text) return;
   const url = info.pageUrl ?? tab?.url ?? '';
   try {
-    if (anyDenylisted(tab?.url, info.pageUrl, info.frameUrl)) await writeSnippet(api, tabId, { url, blocked: 'denylisted' });
+    if (anyDenylisted(tab?.url, info.pageUrl, info.frameUrl)) return await writeSnippet(api, tabId, { url, blocked: 'denylisted' });
+    // The user's never-translate list (plan M5-E6); unreadable counts as empty, like the injection's check.
+    const never = await readSiteLists(api).then(
+      (l) => l.never,
+      () => [],
+    );
+    if ([tab?.url, info.pageUrl, info.frameUrl].some((u) => listedFor(never, u) !== undefined)) await writeSnippet(api, tabId, { url, blocked: 'never' });
     else await writeSnippet(api, tabId, { url, text });
   } catch (err) {
     logError('handing over the selection')(err);

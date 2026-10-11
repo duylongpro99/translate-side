@@ -2,7 +2,8 @@
 // script with tabs.connect(tabId); the worker is not on this path. The panel speaks first
 // (`hello`), so the content script never pushes into a panel that isn't there yet (S5). Once the
 // panel has asked for the page (`extract`), the content script pushes what is on screen on the
-// same port (`viewport` events, plan M3-E1/E7) until the port closes.
+// same port (`viewport` events, plan M3-E1/E7) until the port closes, and the page read again
+// when it changes (`changed` events, plan M5-E2).
 import type { Segment } from '@/engine/types';
 
 /** Bump on any incompatible change to the messages below. */
@@ -63,6 +64,12 @@ export interface Viewport {
 /** Events the content script pushes after `extract`, without a request. */
 export type ContentEvents = {
   viewport: Viewport;
+  /**
+   * The document changed after it was read (plan M5-E2: an SPA route change, content rendered
+   * late): the content script read it again by itself, after the DOM settled. Sent only when the
+   * segments differ from the last read. Blocks that did not change keep their ids.
+   */
+  changed: Extract<ExtractResult, { ok: true }>;
 };
 
 export type EventMessage<E extends Record<string, unknown> = ContentEvents> = {

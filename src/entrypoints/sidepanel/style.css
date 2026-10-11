@@ -520,3 +520,37 @@ body {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+/* A page read after a navigation, waiting for Translate this page (plan M5-E3). */
+.offer {
+  margin: 10px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.offer[data-reason='never'] {
+  border-left-color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.offer__text {
+  margin: 0 0 6px;
+  color: var(--muted);
+}
+.offer[data-reason='never'] .offer__text {
+  margin: 0;
+  flex: 1;
+}
+.offer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.job__button--primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: Canvas;
+}

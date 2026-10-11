@@ -1,4 +1,4 @@
-import { DENYLIST_MESSAGE } from '@/shared/snippet';
+import { DENYLIST_MESSAGE, NEVER_MESSAGE } from '@/shared/snippet';
 import { JobBar, type JobActions } from './JobBar.tsx';
 import type { JobView } from './jobs.ts';
 import { SegmentList } from './SegmentList.tsx';
@@ -18,7 +18,7 @@ export function SelectionView({ snippet, job, actions, onClose, pageReady }: { s
       {snippet.blocked ? (
         <div class="state" data-state="blocked" role="alert">
           <p class="state__title">Can't translate this selection</p>
-          <p>{DENYLIST_MESSAGE}</p>
+          <p>{snippet.blocked === 'never' ? NEVER_MESSAGE : DENYLIST_MESSAGE}</p>
         </div>
       ) : (
         <>

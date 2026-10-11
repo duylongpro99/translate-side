@@ -1,11 +1,17 @@
-// Wires the page sessions (controller.ts) to the translation jobs (jobs.ts): a page that was read
-// is translated at once (DESIGN.md §3 "starts translating at once"), its job stops when the page
-// goes away, and settings changes restart a job that was waiting for them.
+// Wires the page sessions (controller.ts) to the translation jobs (jobs.ts): a page the user asked
+// for is translated at once (DESIGN.md §3 "starts translating at once"), its job stops when the page
+// goes away, and settings changes restart a job that was waiting for them. A page reached by a
+// navigation is translated on its own only on an allowlisted site; elsewhere it waits for
+// **Translate this page** (plan M5-E3, §8). A page that changes under the panel (an SPA, plan M5-E2)
+// is translated again from the cache, so only new or changed blocks are sent.
 import type { browser } from 'wxt/browser';
 import { chromeLanguageDetector, detectionSample, detectSourceLanguage, MIXED_LANGUAGE_DETECTION, sameLanguage, segmentsInLanguage, type LanguageDetectorPort } from '@/shared/language';
 import type { GlossaryEntry } from '@/engine/types';
 import { GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences, SECRET_PREFIX, type Preferences } from '@/shared/settings';
-import type { SessionHooks } from './controller.ts';
+import type { ReadInfo, SessionHooks } from './controller.ts';
+import type { ExtractResult } from '@/shared/protocol';
+import { addAllowlisted, hasSitePermission, isNeverTranslate, readSiteLists, requestSitePermission, siteMode, siteOf } from '@/shared/sites';
+import { OfferStore } from './offers.ts';
 import type { JobActions } from './JobBar.tsx';
 import { openTranslationCache } from '@/shared/cache';
 import { checkSpendLimit, continuePastLimit, SpendLedger } from '@/shared/spend';
@@ -31,6 +37,15 @@ export interface Translator {
   privacy: PrivacyGate;
   /** The preferences the header shows and switches (plan M3-E6). */
   prefs: PrefsStore;
+  /** Pages read but not translated on their own (plan M5-E3): Translate this page, or never on this site. */
+  offers: OfferStore;
+  /** Translate this page (the offer's button). */
+  translatePage(tabId: number): void;
+  /**
+   * Always translate on this site: asks for the site's host permission (call it first in the click
+   * handler, it needs the gesture), allowlists it, and translates the page. Resolves whether it was granted.
+   */
+  allowSite(tabId: number): Promise<boolean>;
   hooks: SessionHooks;
   actions(tabId: number): JobActions;
   /** The model and provider the translate role resolves to for a tab and page now (§4.3.5), for the header and the privacy notice. */
@@ -92,6 +107,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   const mixed = options.mixedLanguage ?? MIXED_LANGUAGE_DETECTION;
   const privacy = options.privacy ?? new PrivacyGate(api);
   const prefs = new PrefsStore(api);
+  const offers = new OfferStore();
   const pageKey = (tabId: number) => `page:${tabId}`;
   const snippetKey = (tabId: number) => `snippet:${tabId}`;
 
@@ -241,8 +257,9 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
    */
   const takeSnippet = async (tabId: number, record: SnippetRecord) => {
     if (snippetStore.get(tabId)?.docId === snippetDocId(record)) return;
-    const blocked = record.blocked !== undefined || anyDenylisted(record.url);
-    const view = snippetView(blocked ? { at: record.at, url: record.url, blocked: 'denylisted' } : record);
+    const blocked = record.blocked ?? (anyDenylisted(record.url) ? 'denylisted' : (await isNeverTranslate(api, record.url)) ? 'never' : undefined);
+    if (snippetStore.get(tabId)?.docId === snippetDocId(record)) return;
+    const view = snippetView(blocked ? { at: record.at, url: record.url, blocked } : record);
     snippetJobs.drop(tabId);
     snippetStore.set(tabId, view);
     if (view.blocked || view.segments.length === 0) return;
@@ -268,43 +285,143 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     readSnippet(api, tabId).then((record) => (record ? takeSnippet(tabId, record) : undefined)).catch(() => {});
   };
 
+  /** The latest read of each tab's document, for Translate this page and the SPA updates. */
+  type Page = Extract<ExtractResult, { ok: true }>;
+  const latest = new Map<number, { docId: string; result: Page }>();
+  const isLatest = (tabId: number, result: Page) => latest.get(tabId)?.result === result;
+  /** A same-page update that arrived while the page's job was running: applied when it ends (no request in flight is thrown away). */
+  const pending = new Map<number, { docId: string; result: Page }>();
+
+  /** Translates a read of the page, once the first-run privacy notice allows it (M3-E10). */
+  const translateRead = (tabId: number, docId: string, result: Page, opts: { keepCost?: boolean; keepBrief?: boolean } = {}): void =>
+    void readSettings(api).then(async (settings) => {
+      const got = await prepare(tabId, settings, { url: result.url, title: result.title, pageLang: result.lang, segments: result.segments });
+      if (got === undefined) return;
+      // The page may have gone, been read again, or the tab closed, while the settings were read (review E-R1).
+      if (!isLive(tabId, docId) || !isLatest(tabId, result)) return got.unmark();
+      // A site on the never-translate list (sites.ts): nothing is sent, the page says why.
+      const never = await isNeverTranslate(api, result.url);
+      if (!isLive(tabId, docId) || !isLatest(tabId, result)) return got.unmark();
+      if (never) {
+        got.unmark();
+        return hold(tabId, docId, result, 'never');
+      }
+      if (privacy.state === 'acknowledged') return void begin(tabId, docId, got.prepared, opts);
+      // Nothing is sent before the first-run privacy notice is acknowledged (M3-E10). Once it
+      // is, the settings are read again: the page never goes out once under stale ones.
+      got.unmark();
+      privacy.whenAcknowledged(pageKey(tabId), () => {
+        if (isLive(tabId, docId) && isLatest(tabId, result)) translateRead(tabId, docId, result, opts);
+      });
+    });
+
+  /** The page is shown as the original and waits (an offer); a job of an earlier read of it is let go. */
+  const hold = (tabId: number, docId: string, result: Page, reason: 'ask' | 'never') => {
+    pending.delete(tabId);
+    privacy.forget(pageKey(tabId));
+    if (jobs.docOf(tabId) === docId) jobs.drop(tabId);
+    jobs.setViewport(tabId, docId, result.visible ?? []);
+    offers.set(tabId, { docId, url: result.url, reason, site: siteOf(result.url) });
+  };
+
+  /**
+   * The same page changed (an SPA rendered more, or changed blocks, plan M5-E2). A page that waits
+   * for Translate this page keeps waiting; one the user cancelled waits again (its old blocks are
+   * gone); otherwise it is translated again under the same brief and cost, from the cache, so only
+   * new or changed blocks are sent. A running job finishes first.
+   */
+  const updatePage = (tabId: number, docId: string, result: Page) => {
+    const offer = offers.get(tabId);
+    if (offer?.docId === docId) return offers.set(tabId, { ...offer, url: result.url });
+    const status = jobs.docOf(tabId) === docId ? jobs.get(tabId)?.status : undefined;
+    if (status === 'running') return void pending.set(tabId, { docId, result });
+    if (status === 'cancelled') return hold(tabId, docId, result, 'ask');
+    translateRead(tabId, docId, result, { keepCost: true, keepBrief: true });
+  };
+  jobs.subscribe((tabId, view) => {
+    const next = pending.get(tabId);
+    if (!next || view?.status === 'running') return;
+    pending.delete(tabId);
+    if (view === undefined) return;
+    // The run's last finals are still being stored: the next run reads them from the cache.
+    void jobs.cacheIdle().then(() => {
+      if (isLatest(tabId, next.result) && isLive(tabId, next.docId) && !pending.has(tabId)) updatePage(tabId, next.docId, next.result);
+    });
+  });
+
+  /**
+   * What a read of the page leads to: never on a never-translate site; at once when the user asked
+   * (a gesture) or the site is allowlisted with its permission held; otherwise Translate this page.
+   */
+  const onRead = async (tabId: number, docId: string, result: Page, read: ReadInfo) => {
+    // Asked for: at once (translateRead still checks the never-translate list before sending).
+    if (read.asked && !read.update) {
+      pending.delete(tabId);
+      offers.clear(tabId);
+      return translateRead(tabId, docId, result);
+    }
+    const lists = await readSiteLists(api).catch(() => ({ allow: [], never: [] }));
+    if (!isLatest(tabId, result)) return;
+    const mode = siteMode(lists, result.url);
+    if (mode === 'never') return hold(tabId, docId, result, 'never');
+    if (read.update && !read.update.urlChanged) return updatePage(tabId, docId, result);
+    const auto = read.asked || (mode === 'allow' && (await hasSitePermission(api, result.url)));
+    if (!isLatest(tabId, result)) return;
+    if (!auto) return hold(tabId, docId, result, 'ask');
+    pending.delete(tabId);
+    offers.clear(tabId);
+    translateRead(tabId, docId, result);
+  };
+
+  const translatePage = (tabId: number) => {
+    const offer = offers.get(tabId);
+    const page = latest.get(tabId);
+    if (offer?.reason !== 'ask' || !page || page.docId !== offer.docId || !isLive(tabId, page.docId)) return;
+    offers.clear(tabId);
+    translateRead(tabId, page.docId, page.result);
+  };
+
+  const allowSite = async (tabId: number): Promise<boolean> => {
+    const site = offers.get(tabId)?.site ?? siteOf(latest.get(tabId)?.result.url);
+    if (!site) return false;
+    // First await in the click handler: the prompt needs the gesture (S5).
+    const granted = await requestSitePermission(api, site);
+    if (!granted) return false;
+    await addAllowlisted(api, site);
+    translatePage(tabId);
+    return true;
+  };
+
+  const forgetPage = (tabId: number) => {
+    privacy.forget(pageKey(tabId));
+    live.delete(tabId);
+    latest.delete(tabId);
+    pending.delete(tabId);
+    offers.clear(tabId);
+  };
+
   const hooks: SessionHooks = {
-    ready(tabId, docId, result) {
+    ready(tabId, docId, result, read = { asked: true }) {
       live.set(tabId, docId);
+      latest.set(tabId, { docId, result });
       // Viewport first (plan M3-E1): what was on screen when the page was read.
       jobs.setViewport(tabId, docId, result.visible ?? []);
       // And where it was, so scroll follow (M3-E7) lines the panel up before the first scroll.
       viewports.set(tabId, docId, { visible: result.visible ?? [], ...(result.anchor ? { anchor: result.anchor } : {}) });
-      const translate = () =>
-        void readSettings(api).then(async (settings) => {
-          const got = await prepare(tabId, settings, { url: result.url, title: result.title, pageLang: result.lang, segments: result.segments });
-          if (got === undefined) return;
-          // The page may have gone, or the tab closed, while the settings were read (review E-R1).
-          if (!isLive(tabId, docId)) return got.unmark();
-          if (privacy.state === 'acknowledged') return void begin(tabId, docId, got.prepared);
-          // Nothing is sent before the first-run privacy notice is acknowledged (M3-E10). Once it
-          // is, the settings are read again: the page never goes out once under stale ones.
-          got.unmark();
-          privacy.whenAcknowledged(pageKey(tabId), () => {
-            if (isLive(tabId, docId)) translate();
-          });
-        });
-      translate();
+      void onRead(tabId, docId, result, read);
     },
     gone: (tabId) => {
-      privacy.forget(pageKey(tabId));
-      live.delete(tabId);
+      forgetPage(tabId);
       jobs.cancel(tabId);
     },
     // A selection belongs to the page it was made on: a navigation or reload ends it. Not `gone`,
     // which also fires on the panel's own reconnects (a right-click on an error view, Try again).
     navigated: (tabId) => closeSnippet(tabId),
     closed: (tabId) => {
-      privacy.forget(pageKey(tabId));
+      forgetPage(tabId);
       privacy.forget(snippetKey(tabId));
       snippetJobs.drop(tabId);
       snippetStore.clear(tabId);
-      live.delete(tabId);
       viewports.drop(tabId);
       used.delete(tabId);
       jobs.drop(tabId);
@@ -323,7 +440,12 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       viewports.set(tabId, docId, viewport);
     },
     // Asked again on a running page from another screen (M3 dogfood B5): that screen goes next.
-    asked: (tabId, docId) => void jobs.refocus(tabId, docId),
+    // On a page waiting for Translate this page, the gesture is that click (plan M5-E3).
+    asked: (tabId, docId) => {
+      const offer = offers.get(tabId);
+      if (offer?.docId === docId && offer.reason === 'ask') translatePage(tabId);
+      else void jobs.refocus(tabId, docId);
+    },
   };
 
   /**
@@ -465,5 +587,5 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     };
   };
 
-  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, privacy, prefs, hooks, actions, switcher, routed: (target) => routedSummary(api, target), watch };
+  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, privacy, prefs, offers, translatePage, allowSite, hooks, actions, switcher, routed: (target) => routedSummary(api, target), watch };
 }

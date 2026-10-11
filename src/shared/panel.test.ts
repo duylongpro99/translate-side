@@ -15,9 +15,10 @@ type Api = Parameters<typeof setupPanelBehavior>[0];
 type Listener = (...args: never[]) => void;
 
 /** A worker-side fake: sidePanel, scripting and storage.session, logging calls in order. */
-function fakeApi(opts: { inject?: () => Promise<unknown> } = {}) {
+function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, unknown> } = {}) {
   const calls: string[] = [];
   const store: Record<string, unknown> = {};
+  const sync = opts.sync ?? {};
   const listeners: Record<string, Listener[]> = {};
   const on = (name: string) => ({ addListener: (fn: Listener) => (listeners[name] ??= []).push(fn) });
   const api = {
@@ -36,6 +37,7 @@ function fakeApi(opts: { inject?: () => Promise<unknown> } = {}) {
         set: (o: Record<string, unknown>) => (Object.assign(store, o), Promise.resolve()),
         remove: (k: string) => ((store[k] = undefined), Promise.resolve()),
       },
+      sync: { get: (keys: string[]) => Promise.resolve(Object.fromEntries(keys.filter((k) => k in sync).map((k) => [k, sync[k]]))) },
     },
     action: { onClicked: on('action') },
     contextMenus: { onClicked: on('menu') },
@@ -92,6 +94,30 @@ describe('openPanelAndInject', () => {
     const f = fakeApi({ inject: () => Promise.reject(new Error('Cannot access contents of the page')) });
     await openPanelAndInject(f.api, { id: 6, url: 'https://example.com/' });
     expect(f.store[accessKey(6)]).toMatchObject({ status: 'blocked', reason: 'inject-failed' });
+  });
+
+  it('records what the injection followed: a gesture, or a navigation (plan M5-E3)', async () => {
+    const f = fakeApi();
+    listenForTabLifecycle(f.api);
+    await openPanelAndInject(f.api, { id: 3, url: 'https://example.com/' });
+    expect(f.store[accessKey(3)]).toMatchObject({ status: 'ready', trigger: 'gesture' });
+    f.fire('updated', 3, { status: 'complete' }, { url: 'https://example.com/b' });
+    await flush();
+    await flush();
+    expect(f.store[accessKey(3)]).toMatchObject({ status: 'ready', trigger: 'navigation' });
+  });
+
+  it("never injects into a site on the user's never-translate list (plan M5-E6, D23), gesture or navigation", async () => {
+    const f = fakeApi({ sync: { siteNever: ['*.bank.example'] } });
+    listenForTabLifecycle(f.api);
+    await openPanelAndInject(f.api, { id: 3, url: 'https://www.bank.example/accounts' });
+    expect(f.calls).toEqual(['open:3']);
+    expect(f.store[accessKey(3)]).toMatchObject({ status: 'blocked', reason: 'never' });
+    f.fire('updated', 3, { status: 'complete' }, { url: 'https://bank.example/' });
+    await flush();
+    await flush();
+    expect(f.calls).toEqual(['open:3']);
+    expect(f.store[accessKey(3)]).toMatchObject({ status: 'blocked', reason: 'never', trigger: 'navigation' });
   });
 
   it('records a repeat injection as ready ("already injected")', async () => {
@@ -180,6 +206,16 @@ describe('selection hand-over (plan M3-E4)', () => {
     await flush();
     expect(f.store['snippet:6']).toMatchObject({ blocked: 'denylisted' });
     expect(JSON.stringify(f.store)).not.toContain('my secret mail');
+  });
+
+  it("a selection from a never-translate site is never kept either (plan M5-E6)", async () => {
+    const f = fakeApi({ sync: { siteNever: ['bank.example'] } });
+    listenForContextMenuClicks(f.api);
+    f.fire('menu', { menuItemId: CONTEXT_MENU_ID, selectionText: 'my balance', pageUrl: 'https://bank.example/a' }, { id: 6, url: 'https://bank.example/a' });
+    await flush();
+    await flush();
+    expect(f.store['snippet:6']).toMatchObject({ blocked: 'never' });
+    expect(JSON.stringify(f.store)).not.toContain('my balance');
   });
 
   it('the record goes when its tab closes', async () => {

@@ -15,11 +15,19 @@ export type AccessStatus =
   /** The page navigated away from the `activeTab` grant; a new gesture is needed. */
   | 'lost';
 
-export type AccessReason = 'restricted' | 'denylisted' | 'inject-failed' | 'no-grant';
+/** `never`: the site is on the user's never-translate list (src/shared/sites.ts, decision D23). */
+export type AccessReason = 'restricted' | 'denylisted' | 'never' | 'inject-failed' | 'no-grant';
 
 export interface TabAccess {
   status: AccessStatus;
   reason?: AccessReason;
+  /**
+   * What the injection followed: a user gesture (the toolbar, Alt+T, the context menu, the panel's
+   * own Translate this page), or a navigation with no gesture (plan M5-E3). A page read after a
+   * navigation is translated on its own only on an allowlisted site (DESIGN §8). Absent in records
+   * of earlier versions: read as a gesture.
+   */
+  trigger?: 'gesture' | 'navigation';
   /** Error text from Chrome, for the dev view and logs. */
   detail?: string;
   /** Milliseconds since epoch; every write changes it, so the panel sees repeat injections. */

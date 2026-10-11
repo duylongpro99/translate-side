@@ -4,6 +4,7 @@
 import type { browser } from 'wxt/browser';
 import { writeAccess, type TabAccess } from './access.ts';
 import { classifyUrl } from './denylist.ts';
+import { isNeverTranslate } from './sites.ts';
 
 type Browser = typeof browser;
 
@@ -23,7 +24,7 @@ export interface TabRef {
 export async function injectInto(api: Browser, tab: TabRef, trigger: InjectTrigger): Promise<Omit<TabAccess, 'at'>> {
   const tabId = tab.id;
   if (tabId === undefined) return { status: 'blocked', reason: 'inject-failed', detail: 'no tab id' };
-  const access = await attempt(api, tabId, tab.url, trigger);
+  const access = { ...(await attempt(api, tabId, tab.url, trigger)), trigger };
   await writeAccess(api, tabId, access);
   return access;
 }
@@ -35,8 +36,10 @@ async function attempt(api: Browser, tabId: number, url: string | undefined, tri
   if (url !== undefined) {
     const verdict = classifyUrl(url);
     if (!verdict.ok) return { status: 'blocked', reason: verdict.reason };
+    // The user's own denylist (sites.ts): never read, so never injected.
+    if (await isNeverTranslate(api, url)) return { status: 'blocked', reason: 'never' };
   }
-  await writeAccess(api, tabId, { status: 'injecting' });
+  await writeAccess(api, tabId, { status: 'injecting', trigger });
   try {
     const [first] = await api.scripting.executeScript({ target: { tabId, frameIds: [0] }, files: [CONTENT_SCRIPT_FILE] });
     const outcome = first?.result as InjectOutcome | undefined;

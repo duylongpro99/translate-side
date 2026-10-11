@@ -20,7 +20,8 @@ function fakeApi() {
   const api = {
     storage: {
       sync: {
-        get: (k: string) => new Promise((resolve) => gets.push(() => resolve(sync.has(k) ? { [k]: sync.get(k) } : {}))),
+        // The site lists (plan M5-E3, read as a list of keys) answer at once: none are set.
+        get: (k: string | string[]) => (Array.isArray(k) ? Promise.resolve({}) : new Promise((resolve) => gets.push(() => resolve(sync.has(k) ? { [k]: sync.get(k) } : {})))),
         onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) },
       },
       // The first-run privacy notice was acknowledged (M3-E10).

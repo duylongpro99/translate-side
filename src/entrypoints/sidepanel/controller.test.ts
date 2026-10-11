@@ -511,4 +511,117 @@ describe('PanelController session hooks (plan M1-E8)', () => {
     await wait();
     expect(seen).toHaveLength(1);
   });
+
+  describe('navigation and SPA reads (plan M5-E3, E2)', () => {
+    const at = (url: string, n: number, text = 't'): Extract<ExtractResult, { ok: true }> => ({ ...(ok(n) as Extract<ExtractResult, { ok: true }>), url, segments: (ok(n) as Extract<ExtractResult, { ok: true }>).segments.map((seg) => ({ ...seg, text, inlineMarkup: text })) });
+
+    it('tells the job whether a gesture asked for the read: a navigation re-injection did not', async () => {
+      const w = fakeWorld();
+      const reads: string[] = [];
+      w.pages[10] = { docId: 'd1', result: ok(1) };
+      w.store[accessKey(10)] = { status: 'ready', trigger: 'gesture', at: 0 };
+      const { c } = await started(w, { hooks: { ready: (_t: number, docId: string, _r: unknown, read?: { asked: boolean }) => reads.push(`${docId} ${read?.asked}`) } });
+      await wait();
+      // A full navigation: the old document goes, the worker re-injects with no gesture.
+      (w.contentEnds[10] as PortLike).disconnect();
+      w.pages[10] = { docId: 'd2', result: ok(2) };
+      await wait();
+      w.setAccess(10, { status: 'ready', trigger: 'navigation' });
+      await wait();
+      await wait();
+      // Try again is a click: asked.
+      w.pages[10] = { docId: 'd3', result: ok(2) };
+      c.retry();
+      await wait();
+      await wait();
+      // A record of an earlier version (no trigger) reads as a gesture.
+      (w.contentEnds[10] as PortLike).disconnect();
+      w.pages[10] = { docId: 'd4', result: ok(2) };
+      await wait();
+      w.setAccess(10, { status: 'ready' });
+      await wait();
+      await wait();
+      expect(reads).toEqual(['d1 true', 'd2 false', 'd3 true', 'd4 true']);
+    });
+
+    it("shows the content script's own re-read at once, with no 'loading' in between, and says whether the URL changed", async () => {
+      const w = fakeWorld();
+      const reads: unknown[] = [];
+      w.pages[10] = { docId: 'd1', result: at('https://docs.example/a', 2) };
+      w.store[accessKey(10)] = { status: 'ready', trigger: 'gesture', at: 0 };
+      const { c, views } = await started(w, { hooks: { ready: (_t: number, docId: string, r: { segments: unknown[] }, read?: unknown) => reads.push([docId, r.segments.length, read]) } });
+      await wait();
+      const before = views.length;
+      emit(w.contentEnds[10] as PortLike, 'changed', at('https://docs.example/a#part', 3));
+      await wait();
+      emit(w.contentEnds[10] as PortLike, 'changed', at('https://docs.example/b', 4));
+      await wait();
+      expect(views.slice(before).map((v) => v.kind)).toEqual(['ready', 'ready']);
+      expect(c.view.kind === 'ready' && c.view.result.url).toBe('https://docs.example/b');
+      expect(reads).toEqual([
+        ['d1', 2, { asked: true }],
+        ['d1', 3, { asked: false, update: { urlChanged: false } }],
+        ['d1', 4, { asked: false, update: { urlChanged: true } }],
+      ]);
+      expect(w.connects).toEqual([10]);
+    });
+
+    it('a page first read empty (an SPA still rendering) that fills in later counts as the read the gesture asked for', async () => {
+      const w = fakeWorld();
+      const reads: unknown[] = [];
+      w.pages[10] = { docId: 'd1', result: { ok: false, reason: 'no-content', url: 'https://app.example/' } };
+      w.store[accessKey(10)] = { status: 'ready', trigger: 'gesture', at: 0 };
+      const { c } = await started(w, { hooks: { ready: (_t: number, _d: string, _r: unknown, read?: unknown) => reads.push(read) } });
+      await wait();
+      expect(c.view.kind).toBe('empty');
+      emit(w.contentEnds[10] as PortLike, 'changed', at('https://app.example/', 3));
+      await wait();
+      expect(c.view.kind).toBe('ready');
+      expect(reads).toEqual([{ asked: true }]);
+    });
+
+    it('a re-read during a same-document load is kept for when the load ends', async () => {
+      const w = fakeWorld();
+      w.pages[10] = { docId: 'd1', result: at('https://docs.example/a', 2) };
+      w.store[accessKey(10)] = { status: 'ready', trigger: 'gesture', at: 0 };
+      const { c } = await started(w);
+      await wait();
+      w.fire('updated', 10, { status: 'loading', url: 'https://docs.example/b' });
+      expect(c.view.kind).toBe('loading');
+      emit(w.contentEnds[10] as PortLike, 'changed', at('https://docs.example/b', 5));
+      await wait();
+      w.fire('updated', 10, { status: 'complete' });
+      await wait();
+      expect(c.view.kind === 'ready' && c.view.result.segments.length).toBe(5);
+    });
+
+    it('asks autoInject once for a tab with no access record, and again after it navigates', async () => {
+      const w = fakeWorld();
+      const asked: number[] = [];
+      const autoInject = (tabId: number) => (asked.push(tabId), Promise.resolve(false));
+      const { c } = await started(w, { autoInject, idleGraceMs: 20 });
+      await wait(50);
+      expect(asked).toEqual([10]);
+      expect(c.view.kind).toBe('idle');
+      w.fire('updated', 10, { status: 'loading' });
+      w.fire('updated', 10, { status: 'complete' });
+      await wait(50);
+      expect(asked).toEqual([10, 10]);
+    });
+
+    it('an autoInject that injected waits for the access record, then reads the page as not asked', async () => {
+      const w = fakeWorld();
+      const reads: unknown[] = [];
+      const autoInject = () => {
+        w.pages[10] = { docId: 'd1', result: ok(1) };
+        w.setAccess(10, { status: 'ready', trigger: 'navigation' });
+        return Promise.resolve(true);
+      };
+      const { c } = await started(w, { autoInject, hooks: { ready: (_t: number, _d: string, _r: unknown, read?: unknown) => reads.push(read) } });
+      await wait();
+      await wait();
+      expect(c.view.kind).toBe('ready');
+      expect(reads).toEqual([{ asked: false }]);
+    });
+  });
 });
