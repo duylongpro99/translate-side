@@ -189,4 +189,30 @@ describe('watchViewport', () => {
     w.stop();
     expect(disconnect).toHaveBeenCalled();
   });
+
+  it('in an inner pane, a block scrolled out under the pane edge is not the anchor (id and offset agree)', () => {
+    const pane = document.createElement('div');
+    const a = document.createElement('p');
+    const b = document.createElement('p');
+    pane.append(a, b);
+    document.body.append(pane);
+    Object.defineProperty(pane, 'scrollHeight', { value: 900, configurable: true });
+    Object.defineProperty(pane, 'clientHeight', { value: 300, configurable: true });
+    pane.getBoundingClientRect = () => ({ top: 100, bottom: 400, height: 300, width: 800, left: 0, right: 800 }) as DOMRect;
+    // a is above the pane's edge (y 100) but its bottom is still below window y 0.
+    a.getBoundingClientRect = () => ({ top: 20, bottom: 90, height: 70, width: 800, left: 0, right: 800 }) as DOMRect;
+    b.getBoundingClientRect = () => ({ top: 90, bottom: 190, height: 100, width: 800, left: 0, right: 800 }) as DOMRect;
+    const win = {
+      document,
+      innerHeight: 600,
+      innerWidth: 800,
+      getComputedStyle: (el: Element) => ({ overflowY: el === pane ? 'auto' : 'visible' }),
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    } as unknown as Window;
+    const w = watchViewport(win, new Map([['a', a], ['b', b]]), ['a', 'b'], () => undefined);
+    expect(w.now().anchor).toEqual({ id: 'b', offset: 0.1 });
+    w.stop();
+    pane.remove();
+  });
 });

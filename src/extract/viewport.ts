@@ -75,7 +75,8 @@ export function watchViewport(win: Window, targets: ReadonlyMap<string, Viewport
     });
     let top: { el: ViewportTarget; rect: DOMRect } | undefined;
     for (const [el, rect] of rects) {
-      if (rect.bottom <= 0 || rect.height <= 0) continue;
+      // Under the scroller's edge counts as scrolled out, the edge the offset is measured from.
+      if (rect.bottom <= edgeOf(win, el) || rect.height <= 0) continue;
       if (!top || rect.top < top.rect.top) top = { el, rect };
     }
     const id = top && idsOf.get(top.el)?.[0];
