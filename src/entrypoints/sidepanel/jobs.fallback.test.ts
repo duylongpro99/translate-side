@@ -279,7 +279,7 @@ describe('Jobs with the terminal basic entry (plan M5-E7, §3 #4: all providers 
       await none.start(1, 'd', doc(2));
       const view = none.get(1);
       expect(view).toMatchObject({ status: 'stopped', counts: { total: 2, final: 0, failed: 1 }, stopError: { kind: 'network' } });
-      expect(view?.stopError?.message).toMatch(/^Can't reach localhost:11434 .*no basic translation either\.$/);
+      expect(view?.stopError?.message).toMatch(/^Can't reach localhost:11434\. .*no basic translation either\.$/);
       expect(translator?.calls ?? []).toEqual([]);
     }
   });

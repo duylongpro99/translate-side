@@ -6,6 +6,9 @@
 // A pair whose model is not on the device yet ("downloadable") may need a user gesture to create;
 // the fallback starts long after any click, so creating can fail. That failure is the answer too.
 // One translator per pair, created on first use and kept; a failed create is tried again next time.
+// A create that does not settle within CREATE_TIMEOUT_MS (seen live: Chrome for Testing never
+// downloads the model) is an answer too, and while it is still pending, later blocks get that
+// answer at once instead of waiting again.
 
 import type { LLMError, MTAvailability, MTClient, MTResult } from './types.ts';
 
@@ -23,6 +26,9 @@ interface ChromeLanguageDetectorStatic {
   create(): Promise<{ detect(text: string): Promise<{ detectedLanguage: string; confidence: number }[]> }>;
 }
 
+/** How long a block waits for Chrome to create (and, if needed, download) the pair's translator. */
+export const CREATE_TIMEOUT_MS = 30_000;
+
 /** Below this confidence a detected language is not used as the source. */
 const DETECT_MIN_CONFIDENCE = 0.5;
 
@@ -38,11 +44,14 @@ export function unavailableMessage(from: string, to: string, state: MTAvailabili
 }
 
 /** The Translator of `scope` (the panel's window), or undefined when the browser has none. */
-export function chromeTranslator(scope: object = globalThis): MTClient | undefined {
+export function chromeTranslator(scope: object = globalThis, options: { createTimeoutMs?: number } = {}): MTClient | undefined {
+  const createTimeoutMs = options.createTimeoutMs ?? CREATE_TIMEOUT_MS;
   const api = (scope as { Translator?: ChromeTranslatorStatic }).Translator;
   if (api === undefined || typeof api.create !== 'function' || typeof api.availability !== 'function') return undefined;
   const detectorApi = (scope as { LanguageDetector?: ChromeLanguageDetectorStatic }).LanguageDetector;
   const made = new Map<string, Promise<ChromeTranslator>>();
+  /** Pairs whose create timed out and is still pending. */
+  const stalled = new Set<string>();
 
   const detect = async (text: string): Promise<string> => {
     if (detectorApi === undefined || typeof detectorApi.create !== 'function') return '';
@@ -54,15 +63,41 @@ export function chromeTranslator(scope: object = globalThis): MTClient | undefin
     }
   };
 
-  const translatorFor = (from: string, to: string): Promise<ChromeTranslator> => {
+  const translatorFor = (from: string, to: string, signal: AbortSignal): Promise<ChromeTranslator> => {
     const key = `${from}>${to}`;
     let t = made.get(key);
     if (t === undefined) {
       t = api.create({ sourceLanguage: from, targetLanguage: to });
       made.set(key, t);
-      t.catch(() => made.delete(key));
+      t.then(
+        () => stalled.delete(key),
+        () => {
+          made.delete(key);
+          stalled.delete(key);
+        },
+      );
     }
-    return t;
+    if (stalled.has(key)) return Promise.reject(new DOMException('still creating', 'TimeoutError'));
+    const created = t;
+    return new Promise<ChromeTranslator>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        stalled.add(key);
+        reject(new DOMException(`not created within ${createTimeoutMs} ms`, 'TimeoutError'));
+      }, createTimeoutMs);
+      const done = () => {
+        clearTimeout(timer);
+        signal.removeEventListener('abort', aborted);
+      };
+      const aborted = () => {
+        done();
+        reject(signal.reason);
+      };
+      signal.addEventListener('abort', aborted, { once: true });
+      created.then(
+        (v) => (done(), resolve(v)),
+        (e: unknown) => (done(), reject(e)),
+      );
+    });
   };
 
   return {
@@ -92,10 +127,10 @@ export function chromeTranslator(scope: object = globalThis): MTClient | undefin
       if (state === 'unavailable') return failure(unavailableMessage(source, to, state));
       let translator: ChromeTranslator;
       try {
-        translator = await translatorFor(source, to);
+        translator = await translatorFor(source, to, signal);
       } catch (error) {
         signal.throwIfAborted();
-        return failure(state === 'available' ? `Chrome's built-in translator did not start (${errorText(error)}).` : unavailableMessage(source, to, state), error);
+        return failure(state === 'available' && !(error instanceof Error && error.name === 'TimeoutError') ? `Chrome's built-in translator did not start (${errorText(error)}).` : unavailableMessage(source, to, 'downloadable'), error);
       }
       try {
         return { ok: true, text: await translator.translate(text, { signal }) };

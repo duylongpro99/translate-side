@@ -475,6 +475,12 @@ describe('the fallback note (plan M4-E9)', () => {
     const fallback = { from: 'claude-haiku-4-5', to: 'Chrome Translator', basic: true as const, error: { kind: 'network' as const, message: "Can't reach api.anthropic.com" } };
     act(() => render(<JobBar job={{ ...base, status: 'running', fallback }} actions={actions([])} />, root));
     expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('claude-haiku-4-5 is unreachable and no other model answered; continuing with Chrome Translator. Its blocks are marked “basic translation”.');
+    const segs = new Map([['1', { status: 'final' as const, text: 'Một', basic: true as const }]]);
+    act(() => render(<JobBar job={{ ...base, status: 'done', fallback, segs }} actions={actions([])} />, root));
+    expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('claude-haiku-4-5 is unreachable and no other model answered; continued with Chrome Translator. Its blocks are marked “basic translation”.');
+    // The translator could not do the pair (not downloaded, unavailable): the note does not claim it did.
+    act(() => render(<JobBar job={{ ...base, status: 'done', fallback }} actions={actions([])} />, root));
+    expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('claude-haiku-4-5 is unreachable and no other model answered; Chrome Translator could not translate the page either.');
   });
 
   it('a local-only page that stops names the local provider and the rule that kept it off the cloud (M4-D tester O1)', () => {

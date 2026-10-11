@@ -76,9 +76,12 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
   const fallbackNote = job.fallback ? (
     <span class="job__fallback" data-testid="job-fallback" role="note">
       {job.fallback.basic ? (
-        // Every provider gave up: Chrome's Translator took over (M5-E7).
+        // Every provider gave up: Chrome's Translator took over (M5-E7), or could not either.
         <>
-          {job.fallback.from} {fallbackWhy(job.fallback.error)} and no other model answered; {job.status === 'running' ? 'continuing' : 'continued'} with {job.fallback.to}. Its blocks are marked “basic translation”.
+          {job.fallback.from} {fallbackWhy(job.fallback.error)} and no other model answered;{' '}
+          {job.status !== 'running' && ![...job.segs.values()].some((s) => s.basic)
+            ? `${job.fallback.to} could not translate the page either.`
+            : `${job.status === 'running' ? 'continuing' : 'continued'} with ${job.fallback.to}. Its blocks are marked “basic translation”.`}
         </>
       ) : (
         <>

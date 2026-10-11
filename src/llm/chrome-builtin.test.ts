@@ -68,6 +68,20 @@ describe('chromeTranslator (MTClient over Chrome Translator)', () => {
     expect(log.filter((l) => l.startsWith('create'))).toHaveLength(2);
   });
 
+  it('a create that never settles (Chrome for Testing: no download) is answered after the timeout; later blocks are answered at once', async () => {
+    const { scope, log } = translatorScope({ state: 'downloadable', create: () => new Promise(() => {}) });
+    const mt = chromeTranslator(scope, { createTimeoutMs: 20 });
+    if (mt === undefined) throw new Error('no Translator');
+    const t0 = Date.now();
+    const first = await mt.translate('Hello.', 'en', 'vi', signal());
+    expect(first).toMatchObject({ ok: false, error: { message: unavailableMessage('en', 'vi', 'downloadable') } });
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(15);
+    const t1 = Date.now();
+    expect(await mt.translate('Bye.', 'en', 'vi', signal())).toMatchObject({ ok: false });
+    expect(Date.now() - t1).toBeLessThan(15);
+    expect(log.filter((l) => l.startsWith('create'))).toHaveLength(1);
+  });
+
   it('a translate that throws is a failure that names the error', async () => {
     const { scope } = translatorScope({ translate: () => Promise.reject(named('UnknownError', 'boom')) });
     expect(await mtOf(scope).translate('Hello.', 'en', 'vi', signal())).toMatchObject({ ok: false, error: { kind: 'unknown', message: "Chrome's built-in translator failed (UnknownError: boom)." } });

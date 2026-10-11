@@ -23,6 +23,9 @@ export const BASIC_MISSING_MESSAGE = 'There is no built-in translator here, so t
 export const basicUnavailableMessage = (model: string, from: string, to: string): string =>
   `${model} can't translate ${from || 'this language'} → ${to} on this device, so there is no basic translation either.`;
 
+/** Two messages as sentences: the provider's (which may lack a full stop), then basic's. */
+const joined = (first: string, then: string): string => `${first}${/[.!?…]$/.test(first.trim()) ? '' : '.'} ${then}`;
+
 /** The blocks of `segments` still to translate, viewport first (ctx.priority, read before each block). */
 function nextOf(todo: Segment[], ctx: StageContext): Segment | undefined {
   const first = new Set(ctx.priority?.() ?? []);
@@ -43,7 +46,7 @@ export async function* basicTranslate(segments: readonly Segment[], job: Transla
   // Basic can't help at all: after a switch the provider's error stays the reason (its kind, so the
   // panel handles it as before), and the message adds why there is no basic translation either.
   const failAll = function* (message: string): Generator<EngineEvent> {
-    const error: LLMError = cause ? { ...cause, message: `${cause.message} ${message}` } : { kind: 'unknown', message };
+    const error: LLMError = cause ? { ...cause, message: joined(cause.message, message) } : { kind: 'unknown', message };
     for (const s of todo) yield { type: 'segment.failed', id: s.id, error };
   };
   const mt = ctx.mt;
@@ -62,7 +65,7 @@ export async function* basicTranslate(segments: readonly Segment[], job: Transla
     const result = await mt.translate(s.text, from, to, ctx.signal);
     if (!result.ok) {
       // One block the translator failed on: `unknown`, so the job goes on with the others.
-      yield { type: 'segment.failed', id: s.id, error: cause ? { ...result.error, message: `${cause.message} ${result.error.message}` } : result.error };
+      yield { type: 'segment.failed', id: s.id, error: cause ? { ...result.error, message: joined(cause.message, result.error.message) } : result.error };
       continue;
     }
     const checks = checkSegment(s.text, result.text, to);
