@@ -1,6 +1,12 @@
-# via walk · 335 segments
+# via walk · 342 segments
 1oocarcxcjm p /html[1]/body[1]/article[1]/p[1]
   A *cat(1)* clone with syntax highlighting and Git integration.
+13h8eo2p8o5 caption [alt] /html[1]/body[1]/article[1]/p[1]/a[1]/img[1]#alt
+  bat - a cat clone with wings
+1c8llt82kgn caption [alt] /html[1]/body[1]/article[1]/p[1]/a[2]/img[1]#alt
+  Build Status
+1850a0xn3ue caption [alt] /html[1]/body[1]/article[1]/p[1]/a[4]/img[1]#alt
+  Version info
 06bpzmami97 p /html[1]/body[1]/article[1]/p[2]
   [link]Key Features[/link] • [link]How To Use[/link] • [link]Installation[/link] • [link]Customization[/link] • [link]Project goals, alternatives[/link]
   [English] [[link]中文[/link]] [[link]日本語[/link]] [[link]한국어[/link]] [[link]Русский[/link]]
@@ -8,14 +14,20 @@
   Syntax highlighting
 0etwop6sgrl p /html[1]/body[1]/article[1]/p[3]
   `bat` supports syntax highlighting for a large number of programming and markup languages:
+2bvglcm3mra caption [alt] /html[1]/body[1]/article[1]/p[4]/a[1]/img[1]#alt
+  Syntax highlighting example
 1atgshul8pq heading [h3] /html[1]/body[1]/article[1]/div[2]/h3[1]
   Git integration
 0zt8mw6kbd5 p /html[1]/body[1]/article[1]/p[5]
   `bat` communicates with `git` to show modifications with respect to the index (see left sidebar):
+14m782o1mnj caption [alt] /html[1]/body[1]/article[1]/p[6]/a[1]/img[1]#alt
+  Git integration example
 28ikuz9nzr0 heading [h3] /html[1]/body[1]/article[1]/div[3]/h3[1]
   Show non-printable characters
 1s5s37s8dmi p /html[1]/body[1]/article[1]/p[7]
   You can use the `-A`/`--show-all` option to show and highlight non-printable characters:
+0u9yr0dzu8k caption [alt] /html[1]/body[1]/article[1]/p[8]/a[1]/img[1]#alt
+  Non-printable character example
 1unaa6t8n33 heading [h3] /html[1]/body[1]/article[1]/div[4]/h3[1]
   Automatic paging
 0o5x2rc74gg p /html[1]/body[1]/article[1]/p[9]
@@ -174,6 +186,8 @@
   Please report any issues with the help syntax in [link]this repository[/link].
 0c0yzfa37lu heading [h2] /html[1]/body[1]/article[1]/div[37]/h2[1]
   Installation
+0yplw38qaql caption [alt] /html[1]/body[1]/article[1]/p[43]/a[1]/img[1]#alt
+  Packaging status
 22ymv9jyil6 heading [h3] /html[1]/body[1]/article[1]/div[38]/h3[1]
   On Ubuntu (using `apt`)
 25iex5w9wzj p /html[1]/body[1]/article[1]/p[44]

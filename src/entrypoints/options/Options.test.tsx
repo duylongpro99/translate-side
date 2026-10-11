@@ -94,7 +94,7 @@ describe('options: languages (plan M1-E9)', () => {
       source.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await flush();
-    expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'de', style: 'natural', gloss: 'first', budgetTokens: 400000 });
+    expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'de', style: 'natural', gloss: 'first', budgetTokens: 400000, captions: true, altText: false });
   });
 });
 
@@ -137,7 +137,7 @@ describe('options: style and personal glossary (plan M2-E6)', () => {
     choose('#style', 'simplified');
     choose('#gloss', 'off');
     await flush();
-    expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'auto', style: 'simplified', gloss: 'off', budgetTokens: 400000 });
+    expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'auto', style: 'simplified', gloss: 'off', budgetTokens: 400000, captions: true, altText: false });
     expect(root.querySelector('[data-testid=style-hint]')?.textContent).toContain('Short sentences');
   });
 

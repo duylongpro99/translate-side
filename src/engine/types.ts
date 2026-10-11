@@ -36,6 +36,11 @@ export interface Segment {
    * Kept (ids must be stable) and translated when shown (decision S3).
    */
   hidden?: true;
+  /**
+   * The `alt` text of an image (plan M5-E5), kind `caption`. Always read; whether it is shown and
+   * sent to the provider is the alt-text setting (§8): the panel drops it when the setting is off.
+   */
+  alt?: true;
 }
 
 // ---- Engine contract (DESIGN.md §5.2–§5.6) ----------------------------------------------------

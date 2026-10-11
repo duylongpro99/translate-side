@@ -14,6 +14,7 @@ function format(segments: Segment[], via: string): string {
       s.level ? `h${s.level}` : '',
       s.translate ? '' : 'no-translate',
       s.hidden ? 'hidden' : '',
+      s.alt ? 'alt' : '',
       s.groupId ? `group=${s.groupId}` : '',
       s.codeLang ? `lang=${s.codeLang}` : '',
     ].filter(Boolean);

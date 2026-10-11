@@ -147,17 +147,17 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
 
   it('defaults the target to the browser language and the source to auto; a saved override is read back', async () => {
     const { api, sync } = fakeApi({ ui: 'vi-VN' });
-    expect(await readPreferences(api)).toEqual({ targetLang: 'vi', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: 400000 });
-    await savePreferences(api, { targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off', budgetTokens: 400000 });
-    expect(sync.data).toEqual({ prefs: { targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off', budgetTokens: 400000 } });
-    expect(await readPreferences(api)).toEqual({ targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off', budgetTokens: 400000 });
+    expect(await readPreferences(api)).toEqual({ targetLang: 'vi', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: 400000, captions: true, altText: false });
+    await savePreferences(api, { targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off', budgetTokens: 400000, captions: true, altText: false });
+    expect(sync.data).toEqual({ prefs: { targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off', budgetTokens: 400000, captions: true, altText: false } });
+    expect(await readPreferences(api)).toEqual({ targetLang: 'ja', sourceLang: 'de', style: 'simplified', gloss: 'off', budgetTokens: 400000, captions: true, altText: false });
   });
 
   it('reads M1-era prefs (no style or gloss) and unknown values as the defaults: Natural, gloss on first use (M2-D1)', async () => {
     const { api, sync } = fakeApi({ ui: 'vi-VN' });
     await sync.set({ prefs: { targetLang: 'de', sourceLang: 'auto' } });
-    expect(await readPreferences(api)).toEqual({ targetLang: 'de', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: 400000 });
-    await sync.set({ prefs: { targetLang: 'de', sourceLang: 'auto', style: 'poetic', gloss: 'always', budgetTokens: 400000 } });
+    expect(await readPreferences(api)).toEqual({ targetLang: 'de', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: 400000, captions: true, altText: false });
+    await sync.set({ prefs: { targetLang: 'de', sourceLang: 'auto', style: 'poetic', gloss: 'always', budgetTokens: 400000, captions: true, altText: false } });
     expect(await readPreferences(api)).toMatchObject({ style: 'natural', gloss: 'first' });
   });
 

@@ -90,6 +90,7 @@ beforeEach(() => {
 const actions = (calls: string[]): JobActions => ({
   cancel: () => calls.push('cancel'),
   resume: () => calls.push('resume'),
+  translateRest: () => calls.push('rest'),
   openOptions: () => calls.push('options'),
   retrySegment: (id) => calls.push(`retry:${id}`),
   retranslateSegment: (id) => calls.push(`retranslate:${id}`),

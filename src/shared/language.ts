@@ -40,7 +40,7 @@ export const DETECT_TIMEOUT_MS = 1500;
 export function detectionSample(segments: readonly Segment[], maxChars = SAMPLE_CHARS): string {
   let out = '';
   for (const s of segments) {
-    if (!s.translate || s.kind === 'code') continue;
+    if (!s.translate || s.kind === 'code' || s.alt) continue;
     const text = s.text.trim();
     if (!text) continue;
     out = out ? `${out}\n${text}` : text;

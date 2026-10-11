@@ -12,6 +12,8 @@ export interface JobActions {
   cancel(): void;
   /** Translate what is left (after a cancel or failures), keeping the finals and the cost so far. */
   resume(): void;
+  /** A long page is translated around the reader (lazy mode, M5-E4): translate all of it now. */
+  translateRest(): void;
   openOptions(): void;
   /** Translate this one failed segment again (its inline Retry, M3-E8). */
   retrySegment(id: string): void;
@@ -82,6 +84,12 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
       {job.kept === 1 ? '1 block kept its' : `${job.kept} blocks kept their`} earlier translation
     </span>
   ) : null;
+  // Lazy mode (M5-E4): the page is long, so only the part around the reader is translated.
+  const restButton = job.lazy ? (
+    <button type="button" class="job__button" data-testid="translate-rest" title={`${job.lazy.rest} blocks are waiting; they are translated as you scroll to them`} onClick={actions.translateRest}>
+      Translate the rest
+    </button>
+  ) : null;
   const attrs = {
     class: `job job--${job.status}`,
     'data-testid': 'job',
@@ -124,6 +132,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
             {failed ? ` · ${failed} failed` : ''}
           </span>
           {cost}
+          {restButton}
           {showCancel ? (
             <button type="button" class="job__button" onClick={actions.cancel}>
               Cancel
@@ -139,10 +148,11 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
           <span class="job__text">
             {into} · {final} of {total}
             {failed ? ` · ${failed} failed` : ''}
-            {job.endedAt === undefined ? '' : ` · ${seconds(job.endedAt - job.startedAt)}`}
+            {job.lazy ? ' · the rest as you read' : job.endedAt === undefined ? '' : ` · ${seconds(job.endedAt - job.startedAt)}`}
           </span>
           {cost}
           {keptNote}
+          {restButton}
           {failed || job.kept ? (
             <button type="button" class="job__button" data-testid="retry-failed" onClick={actions.resume}>
               {failed ? 'Retry failed' : 'Retry'}
@@ -159,7 +169,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
           </span>
           {cost}
           {keptNote}
-          <button type="button" class="job__button" onClick={actions.resume}>
+          <button type="button" class="job__button" data-testid="translate-rest" onClick={job.lazy ? actions.translateRest : actions.resume}>
             Translate the rest
           </button>
         </div>

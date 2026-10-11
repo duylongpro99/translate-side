@@ -103,7 +103,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), ...deps });
   // No cache: a selection is a one-off, and its text is not kept beyond the session.
   // Single-pass: one request per chunk, never the contextual brief (analyze) call for a selection.
-  const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target), ...deps, strategy: 'single-pass', cache: undefined });
+  const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target), ...deps, strategy: 'single-pass', cache: undefined, lazyAbove: Infinity });
   const snippetStore = new SnippetStore();
   const viewports = new ViewportStore();
   const hovers = new HoverStore();
@@ -123,7 +123,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
    */
   const docFor = async ({ prefs, glossary }: Settings, url: string, title: string, pageLang: string | undefined, segments: JobDoc['segments']): Promise<{ doc: JobDoc; skip: boolean }> => {
     const detection = await detectSourceLanguage({ override: prefs.sourceLang === 'auto' ? undefined : prefs.sourceLang, sample: detectionSample(segments), pageLang }, detector);
-    const base = { url, title, ...(pageLang === undefined ? {} : { pageLang }), sourceLang: detection.lang, targetLang: prefs.targetLang, detection, segments, style: prefs.style, gloss: prefs.gloss, glossary, budgetTokens: prefs.budgetTokens };
+    const base = { url, title, ...(pageLang === undefined ? {} : { pageLang }), sourceLang: detection.lang, targetLang: prefs.targetLang, detection, segments, style: prefs.style, gloss: prefs.gloss, glossary, budgetTokens: prefs.budgetTokens, media: { captions: prefs.captions, altText: prefs.altText } };
     if (!mixed) return { doc: base, skip: sameLanguage(detection.lang, prefs.targetLang) };
     const keep = await segmentsInLanguage(segments, prefs.targetLang, detector);
     const left = segments.some((s) => s.translate && !keep.has(s.id));
@@ -172,7 +172,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   /** What differs between a job's document and one built from the current settings. */
   const changes = (doc: JobDoc, next: JobDoc) => ({
     languages: next.targetLang !== doc.targetLang || next.sourceLang !== doc.sourceLang,
-    output: next.style !== doc.style || next.gloss !== doc.gloss || JSON.stringify(next.glossary ?? []) !== JSON.stringify(doc.glossary ?? []),
+    output: next.style !== doc.style || next.gloss !== doc.gloss || next.media?.captions !== doc.media?.captions || next.media?.altText !== doc.media?.altText || JSON.stringify(next.glossary ?? []) !== JSON.stringify(doc.glossary ?? []),
   });
 
   /** The document each tab's session holds now: a job starts only for a page that is still there. */
@@ -493,6 +493,8 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   const actions = (tabId: number): JobActions => ({
     cancel: () => jobs.cancel(tabId),
     resume: () => resume(tabId),
+    // A long page translates around the reader (M5-E4); this does all of it.
+    translateRest: () => void jobs.translateRest(tabId),
     openOptions: () => void api.runtime.openOptionsPage(),
     retrySegment: (id) => void jobs.retrySegment(tabId, id),
     retranslateSegment: (id) => void jobs.retranslateSegment(tabId, id),

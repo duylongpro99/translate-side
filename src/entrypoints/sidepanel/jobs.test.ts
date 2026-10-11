@@ -3,7 +3,7 @@ import { BUDGET_MESSAGE, CHECK_MESSAGE, type EngineEvent, type Segment, type Tra
 import { translatorClient, wireLines, renderLines } from '@/engine/testing';
 import type { LLMClient, LLMError, NormalizedRequest } from '@/llm/types';
 import { GEMINI_PROFILE } from '@/shared/settings';
-import { applySegmentEvent, Gate, Jobs, type ClientResult, type JobDoc, type JobView, type SegState } from './jobs.ts';
+import { applySegmentEvent, Gate, Jobs, lazyWindow, withMedia, LAZY_MIN_AHEAD, type ClientResult, type JobDoc, type JobView, type SegState } from './jobs.ts';
 import { failureText } from './status.ts';
 
 const by = { strategy: 'single-pass', stage: 'translate', model: 'm' };
@@ -838,5 +838,139 @@ describe('Jobs: viewport first (plan M3-E1)', () => {
     await jobs.start(1, 'd', doc(2));
     expect(jobs.get(1)?.status).toBe('done');
     expect(jobs.get(1)?.screenDoneAt).toBeUndefined();
+  });
+});
+
+describe('Jobs: lazy mode for long pages (plan M5-E4)', () => {
+  const tr = (n: number): Segment[] => doc(n, 20).segments.filter((x) => x.translate);
+  const sentIds = (client: { requests: NormalizedRequest[] }) => client.requests.flatMap((r) => wireLines(r.messages.find((m) => m.role === 'user')?.content ?? '').map((l) => Number(/^P(\d+)/.exec(l.source)?.[1])));
+
+  it('lazyWindow: the screen and two screens after it, at least LAZY_MIN_AHEAD blocks; from the top without a screen', () => {
+    const segs = tr(500);
+    const ids = (w: Set<string>) => [...w].map((id) => Number(id.slice(1)));
+    const top = ids(lazyWindow(segs, []));
+    expect(top[0]).toBe(0);
+    expect(top.length).toBe(LAZY_MIN_AHEAD + 1);
+    const w = ids(lazyWindow(segs, Array.from({ length: 20 }, (_, i) => `s${100 + i}`)));
+    expect([Math.min(...w), Math.max(...w)]).toEqual([100, 119 + 40]);
+    // The end of the page clamps.
+    expect(Math.max(...ids(lazyWindow(segs, ['s498', 's499'])))).toBe(499);
+  });
+
+  it('a page over the threshold is translated around the screen only; the rest waits and is counted', async () => {
+    const client = translatorClient();
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client), lazyAbove: 50 });
+    jobs.setActive(1);
+    jobs.setViewport(1, 'd', ['s20', 's21', 's22', 's23', 's24']);
+    await jobs.start(1, 'd', doc(120, 20));
+    const v = jobs.get(1) as JobView;
+    expect(v.status).toBe('done');
+    const sent = sentIds(client);
+    expect(Math.min(...sent)).toBe(20);
+    expect(Math.max(...sent)).toBe(24 + LAZY_MIN_AHEAD);
+    expect(v.counts.total).toBe(120);
+    expect(v.counts.final).toBe(sent.length);
+    expect(v.lazy).toEqual({ rest: 120 - sent.length });
+  });
+
+  it('a page under the threshold is translated whole, with no lazy note', async () => {
+    const client = translatorClient();
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client), lazyAbove: 50 });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(40, 20));
+    expect(jobs.get(1)?.counts).toEqual({ total: 40, final: 40, failed: 0 });
+    expect(jobs.get(1)?.lazy).toBeUndefined();
+  });
+
+  it('scrolling to untranslated blocks starts the next round over the new screen; finals stay, cost adds up', async () => {
+    const client = translatorClient();
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client), lazyAbove: 50 });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(200, 20));
+    const first = jobs.get(1) as JobView;
+    const finalBefore = first.counts.final;
+    const costBefore = first.cost ?? 0;
+    jobs.setViewport(1, 'd', ['s100', 's101', 's102']);
+    await until(() => jobs.get(1)?.status === 'running');
+    await until(() => jobs.get(1)?.status === 'done');
+    const v = jobs.get(1) as JobView;
+    expect(v.counts.final).toBeGreaterThan(finalBefore);
+    expect(v.segs.get('s0')?.status).toBe('final');
+    expect(v.segs.get('s100')?.status).toBe('final');
+    expect(v.segs.get('s60')?.status).toBe('pending');
+    expect(v.cost ?? 0).toBeGreaterThan(costBefore);
+    // Back on a translated screen: nothing more is sent.
+    const requests = client.requests.length;
+    jobs.setViewport(1, 'd', ['s100']);
+    await settle(30);
+    expect(client.requests.length).toBe(requests);
+    expect(jobs.get(1)?.status).toBe('done');
+  });
+
+  it('Translate the rest translates everything and drops the lazy note', async () => {
+    const client = translatorClient();
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client), lazyAbove: 50 });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(120, 20));
+    expect(jobs.get(1)?.lazy?.rest).toBeGreaterThan(0);
+    await jobs.translateRest(1);
+    const v = jobs.get(1) as JobView;
+    expect(v.status).toBe('done');
+    expect(v.counts).toEqual({ total: 120, final: 120, failed: 0 });
+    expect(v.lazy).toBeUndefined();
+    // Each paragraph was sent once.
+    const sent = sentIds(client).sort((a, b) => a - b);
+    expect(sent).toEqual(Array.from({ length: 120 }, (_, i) => i));
+  });
+
+  it('Translate the rest pressed while a round runs follows that round, without aborting it', async () => {
+    const t = instrumented(translatorClient(), { hold: true });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(t.client), lazyAbove: 50 });
+    jobs.setActive(1);
+    const run = jobs.start(1, 'd', doc(120, 20));
+    await until(() => t.active > 0);
+    void jobs.translateRest(1);
+    expect(t.signals.some((s) => s.aborted)).toBe(false);
+    for (let i = 0; i < 200 && jobs.get(1)?.lazy !== undefined || jobs.get(1)?.status === 'running'; i++) {
+      t.releaseAll();
+      await settle(5);
+      if (jobs.get(1)?.status === 'done' && jobs.get(1)?.lazy === undefined) break;
+    }
+    await run;
+    expect(jobs.get(1)?.counts).toEqual({ total: 120, final: 120, failed: 0 });
+  });
+});
+
+describe('withMedia (plan M5-E5)', () => {
+  const p: Segment = { id: 'p', kind: 'p', text: 'Body text here', inlineMarkup: 'Body text here', domPath: '/p[1]', translate: true };
+  const cap: Segment = { id: 'c', kind: 'caption', text: 'Figure 1 is a bridge', inlineMarkup: 'Figure 1 is a bridge', domPath: '/figcaption[1]', translate: true };
+  const alt: Segment = { id: 'a', kind: 'caption', text: 'A red bridge at dusk', inlineMarkup: 'A red bridge at dusk', domPath: '/img[1]#alt', translate: true, alt: true };
+  it('defaults: captions translated, alt text left out of the page', () => {
+    expect(withMedia([p, alt, cap], undefined)).toEqual([p, cap]);
+  });
+  it('alt text on keeps the alt segments; captions off keeps captions as they are (not translated), alt text unaffected', () => {
+    expect(withMedia([p, alt, cap], { captions: true, altText: true })).toEqual([p, alt, cap]);
+    expect(withMedia([p, alt, cap], { captions: false, altText: true })).toEqual([p, alt, { ...cap, translate: false }]);
+  });
+  it('returns the same list when there is nothing to change', () => {
+    const list = [p, cap];
+    expect(withMedia(list, { captions: true, altText: false })).toBe(list);
+  });
+});
+
+describe('Jobs: alt text and captions under the settings (plan M5-E5, §8)', () => {
+  it('sends alt text to the model only when the setting is on', async () => {
+    const alt: Segment = { id: 'a', kind: 'caption', text: 'A red bridge at dusk', inlineMarkup: 'A red bridge at dusk', domPath: '/img[1]#alt', translate: true, alt: true };
+    const base = doc(2, 20);
+    const withAlt = { ...base, segments: [...base.segments, alt] };
+    for (const [altText, expected] of [[false, false], [true, true]] as const) {
+      const client = translatorClient();
+      const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client) });
+      jobs.setActive(1);
+      await jobs.start(1, 'd', { ...withAlt, media: { captions: true, altText } });
+      const sent = client.requests.some((r) => JSON.stringify(r.messages).includes('A red bridge at dusk'));
+      expect(sent).toBe(expected);
+      expect(jobs.get(1)?.segments.some((x) => x.alt)).toBe(expected);
+    }
   });
 });

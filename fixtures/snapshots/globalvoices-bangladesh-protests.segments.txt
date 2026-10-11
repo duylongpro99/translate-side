@@ -1,4 +1,4 @@
-# via walk · 40 segments
+# via walk · 43 segments
 10k6avgowwv heading [h2] /html[1]/body[1]/div[1]/main[1]/div[1]/div[1]/div[1]/h2[1]
   [link]Bangladesh: Protests can change governments, but can they strengthen democracy?[/link]
 18vrcoygwpb p /html[1]/body[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]
@@ -9,6 +9,8 @@
   Translated (English) by[link]Rezwan[/link]
 0fth7w58uz9 p /html[1]/body[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]#run[1]
   Translation posted [link]24 September 2026[/link]
+1n7fljdelkm caption [alt] /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/a[1]/img[1]#alt
+  People cheering in front of the Prime Minister's Office after Sheikh Hasina's resignation. Image via Wikipedia by Md Joni Hossain. CC BY-SA 4.0
 2bm4wydgd3a p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[1]
   People cheering in front of the Prime Minister's Office after Sheikh Hasina's resignation. [link]Image[/link] via Wikipedia by Md Joni Hossain. CC [link]BY-SA 4.0[/link].
 1v222cmt7yh p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[1]
@@ -63,6 +65,8 @@
   Cyber laws and the right to freedom of speech are a [link]newer fight[/link]. State [link]control over online speech[/link] marked the 2024 protests, including Facebook blackouts and internet shutdowns, according to the OHCHR [link]report[/link]. The government [link]defends[/link] its proposed amendments to the Cyber Security Act as necessary to fight online crime, misinformation, and AI-generated content. Critics hear something else: the old machinery for silencing dissent, rebuilt.
 206w333hgiu p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[17]
   The fate of [link]the July Charter[/link], signed by major political parties including the ruling [link]Bangladesh Nationalist Party[/link] (BNP), raises the same question. It promised structural reform across state institutions: checks and balances, judicial independence, the electoral system, the police, anti-corruption measures. Two years later, political parties [link]still disagree[/link] on how far those reforms should go, and how fast.
+2ag47544de8 caption [alt] /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/a[1]/img[1]#alt
+  A female protester holding sign reading মানবে না হার এই গণজোয়ার ("This mass wave won't give up"). Image via Wikipedia by Wasiul Bahar. CC BY-SA 4.0.
 23k46v7cuwc p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[3]/p[1]
   A female protester holding sign reading মানবে না হার এই গণজোয়ার (“This mass wave won't give up”). [link]Image[/link] via Wikipedia by Wasiul Bahar. [link]CC BY-SA 4.0[/link].
 0jrg051x0io heading [h3] /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/h3[3]
@@ -75,6 +79,8 @@
   Hasnat Abdullah’s question isn't just for the movement’s leaders. It belongs to the people who carried the injured to hospitals, who handed out food and water, who backed the protests from wherever they were.
 0ozf28s9k6s p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/p[21]
   The government changed. Anyone can see that. Whether July’s promises took root in the institutions and power structures underneath it, that [link]accounting isn’t finished[/link].
+1egg4n0cm47 caption [alt] /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[3]/div[1]/a[1]/img[1]#alt
+  Creative Commons License
 0tmdc4wvyxb p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[3]/div[2]/div[1]/div[2]
   Written (বাংলা) by[link]পান্থ রহমান রেজা (Pantha)[/link]
 21d10uykyrz p /html[1]/body[1]/div[1]/main[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[3]/div[2]/div[2]/div[2]

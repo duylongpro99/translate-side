@@ -8,6 +8,10 @@
 // - Viewport first (plan M3-E1): the content script reports what is on screen (setViewport); the
 //   engine reads it each time a chunk is about to start, so scrolling moves what is translated
 //   next. Chunks in flight are never aborted (M3-D3).
+// - Lazy mode (plan M5-E4, DESIGN §9 very long docs): a page with more than `lazyAbove` translatable
+//   segments is translated in rounds, each over the screen and ~2 screens after it
+//   (`lazyWindow`); when a round is done and the reader has moved to blocks not translated yet,
+//   the next round starts (`reach`). "Translate the rest" (`translateRest`) drops the window.
 // - Cache (plan M3-E2, DESIGN §7): before a run, segments found in the translation cache are shown
 //   as final and never sent; a cached brief seeds the run. What the run produces is stored as it
 //   arrives (highest revision only; a failure removes the entry), so a retry, a reload or a revisit
@@ -143,6 +147,12 @@ export interface JobView {
    */
   screenDoneAt?: number;
   endedAt?: number;
+  /**
+   * A long page runs in lazy mode (plan M5-E4): only the screen and a few after it are translated,
+   * the rest as the reader gets there, or all at once with Translate the rest. `rest` is how many
+   * translatable blocks are still untranslated (neither final nor failed); absent when none are.
+   */
+  lazy?: { rest: number };
 }
 
 /**
@@ -408,6 +418,43 @@ export interface JobDeps {
    * a page that is all cached costs nothing): reached → the run stops and says so. Absent: none.
    */
   spendLimit?: () => Promise<LimitReached | undefined>;
+  /** Lazy mode starts above this many translatable segments (default LAZY_SEGMENTS; Infinity: never). */
+  lazyAbove?: number;
+}
+
+/**
+ * Lazy mode (plan M5-E4, decision §5 "long-page threshold"): above this many translatable segments
+ * a page is translated around the reader instead of whole. ~400 segments is a long article or a
+ * full docs page (about 40–60k source tokens, 25+ requests); below it, translating everything
+ * costs little and the reader sees the whole page done. Tuned in the M5-C measurements
+ * (docs/progress/progress-m5.md).
+ */
+export const LAZY_SEGMENTS = 400;
+/** How many screens after the one on screen a round covers. */
+export const LAZY_AHEAD_SCREENS = 2;
+/** The least a round covers after the screen, when the screen holds few blocks (one tall block, no report yet). */
+export const LAZY_MIN_AHEAD = 24;
+
+/**
+ * The ids a lazy round covers: the segments on screen and `LAZY_AHEAD_SCREENS` screens after them
+ * (a screen's size is the number of blocks on it). With no screen reported yet, from the top.
+ */
+export function lazyWindow(translatable: readonly Segment[], screen: readonly string[]): Set<string> {
+  const onScreen = new Set(screen);
+  let lo = -1;
+  let hi = -1;
+  translatable.forEach((s, i) => {
+    if (!onScreen.has(s.id)) return;
+    if (lo < 0) lo = i;
+    hi = i;
+  });
+  if (lo < 0) {
+    lo = 0;
+    hi = -1;
+  }
+  const size = hi < lo ? 0 : hi - lo + 1;
+  const end = Math.min(translatable.length - 1, Math.max(hi, lo) + Math.max(LAZY_MIN_AHEAD, size * LAZY_AHEAD_SCREENS));
+  return new Set(translatable.slice(lo, end + 1).map((s) => s.id));
 }
 
 /** What a run stopped by the soft limit shows as its error. */
@@ -431,6 +478,11 @@ export interface JobDoc {
   glossary?: readonly GlossaryEntry[];
   /** The per-page token ceiling from the settings (plan M2-E7); absent or 0 = no limit. */
   budgetTokens?: number;
+  /**
+   * Mixed content (plan M5-E5, the preferences): captions off keep figure and table captions as
+   * they are; alt text off leaves image descriptions out of the page altogether. Absent: captions on, alt text off.
+   */
+  media?: { captions: boolean; altText: boolean };
 }
 
 interface Job {
@@ -439,6 +491,18 @@ interface Job {
    * its own options: a Retranslate page skips the cache) or one block's redo.
    */
   afterLimit?: () => Promise<void>;
+  /** Lazy mode is on for this job (a long page, Translate the rest not pressed): rounds over the reader's window. */
+  lazy: boolean;
+  /** Translate the rest was pressed while a round ran: it follows that round. */
+  wantRest?: boolean;
+  /** The translatable segments of the page (lazy mode asks on every viewport report). */
+  translatable?: readonly Segment[];
+  /** The ids this lazy round covered (its window). */
+  round?: ReadonlySet<string>;
+  /** Lazy mode was switched off by Translate the rest; kept by a resume. */
+  all: boolean;
+  /** The last round ended with blocks of its window still pending (budget, skips): no more rounds until the reader asks. */
+  stalled?: boolean;
   /** The document the job belongs to (content script `docId`). */
   docId: string;
   doc: JobDoc;
@@ -551,6 +615,8 @@ export class Jobs {
       const patch: Partial<JobView> = {};
       this.screenDone(tabId, job, patch);
       if (patch.screenDoneAt !== undefined) this.patch(tabId, job, patch);
+    } else if (job?.docId === docId && job.lazy) {
+      this.reach(tabId, job);
     }
   }
 
@@ -612,10 +678,11 @@ export class Jobs {
    * glossary): the brief doesn't depend on them, so no second analyze call. `fresh` ignores the
    * translation cache for this run (retranslate, M3 decision D2); results are still stored.
    */
-  async start(tabId: number, docId: string, doc: JobDoc, options: { resume?: boolean; keepCost?: boolean; keepBrief?: boolean; fresh?: boolean } = {}): Promise<void> {
+  async start(tabId: number, docId: string, doc: JobDoc, options: { resume?: boolean; keepCost?: boolean; keepBrief?: boolean; fresh?: boolean; all?: boolean } = {}): Promise<void> {
     const { resume = false, keepCost = false, keepBrief = false, fresh = false } = options;
     const prev = this.jobs.get(tabId);
     const keep = resume && prev?.docId === docId && prev.view.status !== 'running' ? prev : undefined;
+    const all = options.all ?? keep?.all ?? false;
     const costFrom = keep ?? (keepCost && prev?.docId === docId ? prev : undefined);
     const brief = keep?.view.brief ?? (keepBrief && prev?.docId === docId && prev.view.targetLang === doc.targetLang ? prev.view.brief : undefined);
     // A replaced run's requests in flight end without usage; they are this page's spend too.
@@ -624,7 +691,8 @@ export class Jobs {
     if (prev) this.stopRetries(prev);
 
     // Segments already in the target language (per-segment detection) are shown as is, like code.
-    const segments = doc.keep?.size ? doc.segments.map((s) => (s.translate && doc.keep?.has(s.id) ? { ...s, translate: false } : s)) : doc.segments;
+    const kept = doc.keep?.size ? doc.segments.map((s) => (s.translate && doc.keep?.has(s.id) ? { ...s, translate: false } : s)) : doc.segments;
+    const segments = withMedia(kept, doc.media);
     const translatable = segments.filter((s) => s.translate);
     const segs = new Map<string, SegState>();
     const earlier = new Map<string, SegState>();
@@ -649,6 +717,8 @@ export class Jobs {
     const gate = new Gate();
     gate.set(tabId === this.activeTabId);
     const job: Job = {
+      lazy: !all && translatable.length > (this.deps.lazyAbove ?? LAZY_SEGMENTS),
+      all,
       docId,
       doc,
       segs,
@@ -709,6 +779,12 @@ export class Jobs {
     this.patch(tabId, job, { model: client.model });
     await this.fromCache(tabId, job, { todo, translatable, model: client.model, fresh });
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
+    // Lazy mode: this round covers the screen and what follows it, the rest waits (M5-E4).
+    if (job.lazy) {
+      const window = lazyWindow(translatable, this.screenOf(tabId, docId));
+      for (const id of [...todo]) if (!window.has(id)) todo.delete(id);
+      job.round = window;
+    }
     // The analyze call sees only the segments still to translate. A brief stored under the key of
     // the whole page must come from the whole page, so a run that skips any segment stores none.
     if (todo.size !== translatable.length) job.briefKey = undefined;
@@ -788,6 +864,8 @@ export class Jobs {
     const keepCost = prev?.docId === docId ? prev : undefined;
     const now = this.now();
     const job: Job = {
+      lazy: false,
+      all: false,
       docId,
       doc,
       segs,
@@ -1324,7 +1402,41 @@ export class Jobs {
     for (const [id, s] of job.earlier) if (job.segs.get(id)?.status === 'pending' && !job.retrying.has(id)) job.segs.set(id, s);
     const kept = job.earlier.size > 0 ? { kept: job.earlier.size } : {};
     job.backoff.clear();
-    this.patch(tabId, job, { backoff: [], status, paused: false, counts: count(job.segs), endedAt: this.now(), ...kept, ...(stopError ? { stopError } : {}) });
+    // Lazy mode: what is still untranslated is the rest the reader has not reached (M5-E4).
+    let lazy: Partial<JobView> = {};
+    if (job.lazy) {
+      let rest = 0;
+      for (const s of job.segs.values()) if (s.status === 'pending') rest++;
+      if (rest > 0) lazy = { lazy: { rest } };
+      if (status === 'done' && job.round) job.stalled = [...job.round].some((id) => job.segs.get(id)?.status === 'pending');
+    }
+    this.patch(tabId, job, { backoff: [], status, paused: false, counts: count(job.segs), endedAt: this.now(), ...kept, ...lazy, ...(stopError ? { stopError } : {}) });
+    if (status === 'done') queueMicrotask(() => (job.wantRest ? void this.translateRest(tabId) : this.reach(tabId, job)));
+  }
+
+  /**
+   * Lazy mode (M5-E4): a finished round whose reader has since moved on to blocks nobody translated
+   * yet starts the next round, over the screen now. Failed blocks are left to Retry; a round that
+   * left part of its own window pending (a budget that ran out) is not repeated.
+   */
+  private reach(tabId: number, job: Job): void {
+    if (!job.lazy || job.stalled || this.jobs.get(tabId) !== job || job.view.status !== 'done' || job.view.limit) return;
+    const translatable = (job.translatable ??= job.view.segments.filter((s) => s.translate));
+    const window = lazyWindow(translatable, this.screenOf(tabId, job.docId));
+    if (![...window].some((id) => job.segs.get(id)?.status === 'pending')) return;
+    void this.resume(tabId);
+  }
+
+  /** "Translate the rest" (plan M5-E4): the whole page, no window; what is final stays. */
+  translateRest(tabId: number): Promise<void> {
+    const job = this.jobs.get(tabId);
+    if (!job) return Promise.resolve();
+    if (job.view.status === 'running') {
+      // A round is going: the rest follows it, without cutting what is in flight (M3-D3).
+      job.wantRest = true;
+      return Promise.resolve();
+    }
+    return this.start(tabId, job.docId, job.doc, { resume: true, all: true, ...(job.earlier.size ? { fresh: true, keepCost: true } : {}) });
   }
 
   private patch(tabId: number, job: Job, patch: Partial<JobView>): void {
@@ -1335,6 +1447,19 @@ export class Jobs {
   private emit(tabId: number, view: JobView | undefined): void {
     for (const fn of this.listeners) fn(tabId, view);
   }
+}
+
+/** The page's segments under the mixed-content settings (plan M5-E5). */
+export function withMedia(segments: readonly Segment[], media: JobDoc['media']): Segment[] {
+  const { captions = true, altText = false } = media ?? {};
+  if (captions && segments.every((s) => !s.alt)) return segments as Segment[];
+  const out: Segment[] = [];
+  for (const s of segments) {
+    if (s.alt) {
+      if (altText) out.push(s);
+    } else out.push(s.kind === 'caption' && !captions && s.translate ? { ...s, translate: false } : s);
+  }
+  return out;
 }
 
 function count(segs: ReadonlyMap<string, SegState>): JobView['counts'] {

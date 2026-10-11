@@ -251,6 +251,12 @@ export interface Preferences {
    * job, every call included. 0 = no limit. Segments left when it runs out are skipped.
    */
   budgetTokens: number;
+  /**
+   * Mixed content (DESIGN §9, plan M5-E5): figure and table captions are translated by default; an
+   * image's alt text only when asked (it is page content that goes to the provider, §8).
+   */
+  captions: boolean;
+  altText: boolean;
 }
 
 /**
@@ -273,7 +279,7 @@ export const GLOSS_MODES: readonly GlossMode[] = ['first', 'off'];
 
 /** The browser's language, the native-language guess until the user picks one (the onboarding's step 1, §4.3.3 C). */
 export function defaultPreferences(uiLanguage = 'en'): Preferences {
-  return { targetLang: uiLanguage.split('-')[0] || 'en', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: DEFAULT_BUDGET_TOKENS };
+  return { targetLang: uiLanguage.split('-')[0] || 'en', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: DEFAULT_BUDGET_TOKENS, captions: true, altText: false };
 }
 
 const oneOf = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T => (allowed.includes(value as T) ? (value as T) : fallback);
@@ -288,6 +294,8 @@ export async function readPreferences(api: Browser): Promise<Preferences> {
     style: oneOf(stored.style, STYLES, base.style),
     gloss: oneOf(stored.gloss, GLOSS_MODES, base.gloss),
     budgetTokens: cleanBudget(stored.budgetTokens),
+    captions: typeof stored.captions === 'boolean' ? stored.captions : base.captions,
+    altText: typeof stored.altText === 'boolean' ? stored.altText : base.altText,
   };
 }
 

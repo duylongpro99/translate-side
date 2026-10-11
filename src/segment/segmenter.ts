@@ -108,6 +108,23 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
     visitContainer(el, next);
   };
 
+  /** The alt text of the images in a run of inline content, each a caption segment placed at its image (plan M5-E5). */
+  const emitAlts = (run: readonly Node[], ctx: Context, parent: Element): void => {
+    for (const node of run) {
+      if (node.nodeType !== 1) continue;
+      const imgs = (node as Element).localName === 'img' ? [node as Element] : [...(node as Element).querySelectorAll('img')];
+      for (const img of imgs) {
+        const alt = usableAlt(img, parent);
+        if (alt === undefined) continue;
+        const path = `${opts.pathOf(img)}#alt`;
+        const seg: Segment = { id: hashId(`${path}\n${alt}`), kind: 'caption', text: alt, inlineMarkup: alt, domPath: path, translate: !optedOut(img, root), alt: true, ...(ctx.groupId ? { groupId: ctx.groupId } : {}) };
+        if (opts.isHidden?.(img)) seg.hidden = true;
+        out.push(seg);
+        opts.onSegment?.(seg, img);
+      }
+    }
+  };
+
   /** Loose inline content between blocks becomes segments of the context's kind. */
   const visitContainer = (el: Element, ctx: Context): void => {
     const parts: (Node[] | Element)[] = [];
@@ -130,10 +147,12 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
         continue;
       }
       const { text, markup } = inline(part);
-      if (!text) continue;
-      k++;
-      const path = onlyRun ? opts.pathOf(el) : `${opts.pathOf(el)}#run[${k}]`;
-      emit(el, ctx.kind ?? 'p', text, markup, path, ctx.groupId ? { groupId: ctx.groupId } : {}, onlyRun ? undefined : part);
+      if (text) {
+        k++;
+        const path = onlyRun ? opts.pathOf(el) : `${opts.pathOf(el)}#run[${k}]`;
+        emit(el, ctx.kind ?? 'p', text, markup, path, ctx.groupId ? { groupId: ctx.groupId } : {}, onlyRun ? undefined : part);
+      }
+      emitAlts(part, ctx, el);
     }
   };
 
@@ -146,6 +165,23 @@ export function segment(root: Element, opts: SegmentOptions): Segment[] {
     if (n > 1) s.id = `${s.id}~${n}`;
   }
   return out;
+}
+
+const IMAGE_FILE = /\.(?:jpe?g|png|gif|webp|avif|svg|bmp)\b/i;
+
+/**
+ * The alt text of an image when it says something to translate: at least two words (or a long
+ * CJK phrase) with letters, not a file name, and not the caption right beside it (a figure often
+ * repeats it). Undefined otherwise.
+ */
+function usableAlt(img: Element, parent: Element): string | undefined {
+  const alt = (img.getAttribute('alt') ?? '').replace(/\s+/g, ' ').trim();
+  if (alt.length < 4 || !/\p{L}/u.test(alt) || IMAGE_FILE.test(alt) || /^[\w-]+$/.test(alt)) return undefined;
+  if (!/\s/.test(alt) && !/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/u.test(alt)) return undefined;
+  const figure = img.closest('figure') ?? parent;
+  const cap = figure.querySelector('figcaption')?.textContent?.replace(/\s+/g, ' ').trim();
+  if (cap && cap.toLowerCase() === alt.toLowerCase()) return undefined;
+  return alt;
 }
 
 /**

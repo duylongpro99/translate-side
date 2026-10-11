@@ -216,6 +216,7 @@ describe('the bar at the limit (M4-E10)', () => {
   const actions = (calls: string[]): JobActions => ({
     cancel: () => calls.push('cancel'),
     resume: () => calls.push('resume'),
+    translateRest: () => calls.push('rest'),
     openOptions: () => calls.push('options'),
     retrySegment: () => calls.push('retry'),
     retranslateSegment: () => calls.push('retranslate'),

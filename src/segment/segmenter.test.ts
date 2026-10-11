@@ -231,3 +231,38 @@ describe('ids', () => {
     expect(new Set(ids).size).toBe(2);
   });
 });
+
+describe('image alt text (plan M5-E5)', () => {
+  it('makes a caption segment of a descriptive alt, at the image, flagged alt', () => {
+    const out = seg(`<p>Before</p><figure><img src="a.png" alt="A red bridge over a river at dusk"><figcaption>Figure 1</figcaption></figure><p>After</p>`);
+    expect(out.map((s) => [s.kind, s.text, s.alt === true])).toEqual([
+      ['p', 'Before', false],
+      ['caption', 'A red bridge over a river at dusk', true],
+      ['caption', 'Figure 1', false],
+      ['p', 'After', false],
+    ]);
+    expect(out[1]?.domPath.endsWith('/img[1]#alt')).toBe(true);
+    expect(out[1]?.translate).toBe(true);
+  });
+
+  it('puts an inline image alt after the paragraph it sits in', () => {
+    const out = seg(`<p>See <img alt="Graph of monthly sales"> here</p><p>Next</p>`);
+    expect(out.map((s) => [s.text, s.alt === true])).toEqual([
+      ['See here', false],
+      ['Graph of monthly sales', true],
+      ['Next', false],
+    ]);
+  });
+
+  it('skips empty alt, one word, file names, and an alt that repeats the figcaption', () => {
+    expect(seg(`<p><img alt=""><img alt="logo"><img alt="IMG_1234.jpg"><img alt="hero_banner"></p>`)).toEqual([]);
+    expect(seg(`<figure><img alt="Two people talking"><figcaption>two people talking</figcaption></figure>`).map((s) => [s.text, s.alt === true])).toEqual([['two people talking', false]]);
+  });
+
+  it('keeps an alt inside a table cell with the row', () => {
+    const out = seg(`<table><tr><th>Name</th><th>Photo</th></tr><tr><td>Ada</td><td><img alt="Portrait of Ada Lovelace"></td></tr><tr><td>Bo</td><td>x</td></tr></table>`);
+    const alt = out.find((s) => s.alt);
+    expect(alt?.groupId).toBeDefined();
+    expect(alt?.groupId).toBe(out.find((s) => s.text === 'Ada')?.groupId);
+  });
+});

@@ -183,6 +183,17 @@ function StyleSection({ api }: { api: Browser }) {
           }}
         />
       </div>
+      <div class="opt__row">
+        <input id="captions" type="checkbox" checked={prefs.captions} onChange={(e) => update({ captions: (e.target as HTMLInputElement).checked })} />
+        <label for="captions">Translate figure and table captions</label>
+      </div>
+      <div class="opt__row">
+        <input id="alt-text" type="checkbox" checked={prefs.altText} onChange={(e) => update({ altText: (e.target as HTMLInputElement).checked })} />
+        <label for="alt-text">Translate image descriptions (alt text)</label>
+      </div>
+      <p class="opt__hint" data-testid="media-hint">
+        Image descriptions are page text too: with this on they are sent to your provider with the rest of the page. Off, they are not shown in the panel and never sent.
+      </p>
       <p class="opt__hint" data-testid="budget-hint">
         Input and output tokens for one page, every model call included; 0 for no limit, empty for the default. What is left untranslated when it runs out is marked as skipped.
       </p>

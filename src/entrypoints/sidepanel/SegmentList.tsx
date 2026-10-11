@@ -275,6 +275,7 @@ class Block extends Component<Props> {
       default:
         return (
           <p {...common}>
+            {seg.alt ? <span class="seg__label seg__label--image">Image · </span> : null}
             <Text seg={seg} state={state} />
             <Notes {...props} />
           </p>
