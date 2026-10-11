@@ -397,10 +397,16 @@ async function baseline(cfg: GateConfig, n: number, timeoutMin: number): Promise
 
 /** Entry (scripts/eval-gate.mjs). Exit 0 green, 1 red, 2 refused before any call, 3 baseline below the M2 reference. */
 export async function main(argv: string[]): Promise<number> {
-  const { values: opt } = parseArgs({
-    args: argv.filter((a) => a !== '--'),
-    options: { baseline: { type: 'string' }, 'timeout-min': { type: 'string', default: '25' } },
-  });
+  let opt: { baseline?: string | undefined; 'timeout-min': string };
+  try {
+    ({ values: opt } = parseArgs({
+      args: argv.filter((a) => a !== '--'),
+      options: { baseline: { type: 'string' }, 'timeout-min': { type: 'string', default: '25' } },
+    }));
+  } catch (e) {
+    console.log(`eval gate refused: ${(e as Error).message}`);
+    return 2;
+  }
   const timeoutMin = Number(opt['timeout-min']);
   if (!(Number.isFinite(timeoutMin) && timeoutMin > 0)) {
     console.log(`eval gate refused: --timeout-min expects a number of minutes above 0, not "${opt['timeout-min']}"`);

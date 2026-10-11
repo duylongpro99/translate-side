@@ -162,6 +162,7 @@ describe('main', () => {
     [['--baseline', '4.5'], '--baseline expects'],
     [['--timeout-min', 'x'], '--timeout-min expects'],
     [['--timeout-min', '0'], '--timeout-min expects'],
+    [['--baselin', '5'], "Unknown option '--baselin'"],
   ])('refuses %j before any call', async (argv, message) => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
