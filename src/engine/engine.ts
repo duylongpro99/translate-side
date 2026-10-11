@@ -139,5 +139,6 @@ function createStageContext(deps: EngineDeps, job: TranslationJob, signal: Abort
     signal,
     priority: job.livePriority ?? (() => job.priority),
     ...(job.focus === undefined ? {} : { focus: job.focus }),
+    ...(job.within === undefined ? {} : { within: job.within }),
   };
 }

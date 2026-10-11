@@ -181,7 +181,9 @@ export function recutChunks(items: readonly (ChunkWork | undefined)[], pending: 
   const base = works[0];
   if (base === undefined) return undefined;
   const order = new Map(base.doc.segments.map((s, i) => [s.id, i]));
-  const segments = works.flatMap((w) => w.chunk.segments).sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  const within = ctx.within?.();
+  const segments = works.flatMap((w) => w.chunk.segments).filter((s) => within === undefined || within.has(s.id)).sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  if (segments.length === 0) return [];
   const next = Math.max(...items.map((w) => w?.chunk.index ?? -1)) + 1;
   const job = { doc: { ...base.doc, segments }, options: base.options } as TranslationJob;
   return chunkJob(job, ctx.priority?.() ?? []).map((chunk, k) => ({ chunk: { ...chunk, index: next + k }, doc: base.doc, options: base.options }));

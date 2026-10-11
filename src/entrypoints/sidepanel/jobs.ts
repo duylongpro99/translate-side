@@ -498,6 +498,8 @@ interface Job {
   wantRest?: boolean;
   /** The translatable segments of the page (lazy mode asks on every viewport report). */
   translatable?: readonly Segment[];
+  /** The reader left the round's window: chunks not started were cut again over this window (engine `within`). */
+  within?: ReadonlySet<string>;
   /** The ids this lazy round covered (its window). */
   round?: ReadonlySet<string>;
   /** Lazy mode was switched off by Translate the rest; kept by a resume. */
@@ -619,6 +621,7 @@ export class Jobs {
     } else if (job?.docId === docId && job.lazy) {
       this.reach(tabId, job);
     }
+    if (job?.docId === docId && job.lazy && job.view.status === 'running' && ids.length > 0) this.leave(tabId, job);
   }
 
   /**
@@ -831,6 +834,7 @@ export class Jobs {
       priority: [...this.screenOf(tabId, docId)],
       livePriority: () => this.screenOf(tabId, docId),
       focus: () => job.focus,
+      within: () => job.within,
       ...(job.lazy ? { briefFrom: segments } : {}),
       strategy: this.deps.strategy ?? PANEL_STRATEGY,
       options: {
@@ -1408,10 +1412,25 @@ export class Jobs {
     const kept = job.earlier.size > 0 ? { kept: job.earlier.size } : {};
     job.backoff.clear();
     if (job.lazy) {
-      if (status === 'done' && job.round) job.stalled = [...job.round].some((id) => job.segs.get(id)?.status === 'pending');
+      if (status === 'done' && job.round && !job.within) job.stalled = [...job.round].some((id) => job.segs.get(id)?.status === 'pending');
     }
     this.patch(tabId, job, { backoff: [], status, paused: false, counts: count(job.segs), endedAt: this.now(), ...kept, ...(stopError ? { stopError } : {}) });
     if (status === 'done') queueMicrotask(() => (job.wantRest ? void this.translateRest(tabId) : this.reach(tabId, job)));
+  }
+
+  /**
+   * Lazy mode (M5-E4): the reader scrolled clear of the window the running round covers. Its chunks
+   * not started yet are dropped (the engine cuts them again over `within`, the window around the
+   * screen now), so the round ends once what is in flight does and `reach` starts one at the reader.
+   * Requests in flight are never aborted (M3-D3).
+   */
+  private leave(tabId: number, job: Job): void {
+    const translatable = (job.translatable ??= job.view.segments.filter((s) => s.translate));
+    const screen = this.screenOf(tabId, job.docId);
+    const current = job.within ?? job.round;
+    if (!current || screen.some((id) => current.has(id))) return;
+    job.within = lazyWindow(translatable, screen);
+    job.focus++;
   }
 
   /**

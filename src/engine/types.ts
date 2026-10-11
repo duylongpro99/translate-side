@@ -116,6 +116,12 @@ export interface TranslationJob {
    * (§5.7 Step 1). Absent: `doc.segments`.
    */
   briefFrom?: readonly Segment[];
+  /**
+   * With `focus`: the ids the chunks not started yet may still cover when they are cut again (lazy
+   * mode, plan M5-E4: the reader left the window, so chunks nobody will look at are dropped; chunks
+   * in flight are never touched, M3-D3). Absent or undefined: every pending segment stays.
+   */
+  within?: () => ReadonlySet<string> | undefined;
   strategy: StrategyId;
   options: JobOptions;
 }
@@ -228,6 +234,8 @@ export interface StageContext {
   priority?: () => readonly string[];
   /** The job's `focus` counter (TranslationJob.focus). Absent: never re-cut. */
   focus?: () => number;
+  /** TranslationJob.within. */
+  within?: () => ReadonlySet<string> | undefined;
 }
 
 export interface Strategy {

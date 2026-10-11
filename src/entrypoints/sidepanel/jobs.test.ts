@@ -941,6 +941,31 @@ describe('Jobs: lazy mode for long pages (plan M5-E4)', () => {
     expect(jobs.get(1)?.brief).toBeDefined();
   });
 
+  it('scrolling clear of the window drops the chunks not started (in flight finish, none aborted) and the next round starts at the reader', async () => {
+    const inner = translatorClient(undefined, { model: GEMINI_PROFILE.model });
+    const t = instrumented(inner, { hold: true });
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(t.client), lazyAbove: 50 });
+    jobs.setActive(1);
+    const run = jobs.start(1, 'd', doc(300, 200));
+    await until(() => t.active === 2);
+    const started = t.signals.length;
+    jobs.setViewport(1, 'd', ['s200', 's201']);
+    for (let i = 0; i < 100 && jobs.get(1)?.segs.get('s200')?.status !== 'final'; i++) {
+      t.releaseAll();
+      await settle(5);
+    }
+    await run.catch(() => undefined);
+    // The first round started 2 requests and no more: the rest of its window was dropped, then s200 was translated.
+    expect(t.signals.slice(0, started).every((s) => !s.aborted)).toBe(true);
+    expect(jobs.get(1)?.segs.get('s200')?.status).toBe('final');
+    const v = jobs.get(1) as JobView;
+    const finals = [...v.segs.entries()].filter(([, s]) => s.status === 'final').length;
+    expect(finals).toBeLessThan(25 + 30 + 20);
+    // Nothing of the first window beyond what was in flight was ever sent.
+    const sent = inner.requests.flatMap((r) => wireLines(r.messages.find((m) => m.role === 'user')?.content ?? '').map((l) => Number(/^P(\d+)/.exec(l.source)?.[1])));
+    expect(sent.filter((n) => n >= 15 && n < 100)).toEqual([]);
+  });
+
   it('Translate the rest translates everything and drops the lazy note', async () => {
     const client = translatorClient();
     const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client), lazyAbove: 50 });
