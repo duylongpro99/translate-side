@@ -9,8 +9,10 @@ import {
   createClient,
   PROTOCOL_VERSION,
   ProtocolError,
+  sendCommand,
   type Client,
   type ContentApi,
+  type ContentCommands,
   type EventMessage,
   type ExtractResult,
   type PortLike,
@@ -111,6 +113,8 @@ export interface SessionHooks {
   active?(tabId: number | undefined): void;
   /** What is on screen in the document changed (plan M3-E1 priority, M3-E7 scroll follow). */
   viewport?(tabId: number, docId: string, viewport: Viewport): void;
+  /** The pointer moved onto a block of the page, or off every block (plan M5-E1, hover link). */
+  hover?(tabId: number, docId: string, id: string | undefined): void;
   /**
    * A new gesture (Alt+T, the toolbar icon) on a page whose document is live and shown (M3 dogfood
    * B5): the page is not read again, but a running job may re-cut around the screen now.
@@ -267,6 +271,12 @@ export class PanelController {
     }
   }
 
+  /** A one-way command to the tab's page (plan M5-E1: the hover highlight, the scroll). Dropped when no page is connected. */
+  send<K extends keyof ContentCommands & string>(tabId: number, name: K, body: ContentCommands[K]): void {
+    const s = this.sessions.get(tabId);
+    if (s?.port && s.docId !== undefined) sendCommand(s.port, name, body);
+  }
+
   private async connect(tabId: number): Promise<void> {
     const s = this.session(tabId);
     this.disconnect(tabId);
@@ -284,6 +294,7 @@ export class PanelController {
     const onEvent = (event: EventMessage) => {
       if (s.generation !== generation || s.docId === undefined) return;
       if (event.name === 'viewport') this.opts.hooks?.viewport?.(tabId, s.docId, event.body);
+      else if (event.name === 'hover') this.opts.hooks?.hover?.(tabId, s.docId, (event.body as { id?: string }).id);
       else if (event.name === 'changed') this.changed(tabId, s, event.body);
     };
     const client = createClient<ContentApi>(port, { onEvent, ...(this.opts.requestTimeoutMs ? { timeoutMs: this.opts.requestTimeoutMs } : {}) });

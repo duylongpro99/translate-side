@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createClient, emit, ProtocolError, serve, type PortLike } from './protocol.ts';
+import { createClient, emit, listen, ProtocolError, sendCommand, serve, type PortLike } from './protocol.ts';
 
 type Fn = (m: unknown) => void;
 
@@ -119,5 +119,38 @@ describe('Port protocol', () => {
     const [panel] = pair();
     panel.disconnect();
     expect(() => emit(panel, 'viewport', { visible: [] })).not.toThrow();
+  });
+});
+
+describe('commands (plan M5-E1)', () => {
+  it('reach the handler of the other side, with no response, and an unknown one is ignored', async () => {
+    const [panel, content] = pair();
+    const got: unknown[] = [];
+    listen(content, { highlight: (b) => got.push(['highlight', b]), scroll: (b) => got.push(['scroll', b]) });
+    sendCommand(panel, 'highlight', { id: 's1' });
+    sendCommand(panel, 'scroll', { id: 's2', offset: 0.5 });
+    panel.postMessage({ kind: 'cmd', name: 'from-the-future', body: {} });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(got).toEqual([
+      ['highlight', { id: 's1' }],
+      ['scroll', { id: 's2', offset: 0.5 }],
+    ]);
+  });
+
+  it('a handler that throws does not break the next command, and a dead port is ignored', async () => {
+    const [panel, content] = pair();
+    const got: unknown[] = [];
+    listen(content, {
+      highlight: () => {
+        throw new Error('gone');
+      },
+      scroll: (b) => got.push(b),
+    });
+    sendCommand(panel, 'highlight', {});
+    sendCommand(panel, 'scroll', { id: 'a', offset: 0 });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(got).toEqual([{ id: 'a', offset: 0 }]);
+    panel.disconnect();
+    expect(() => sendCommand(panel, 'highlight', {})).not.toThrow();
   });
 });

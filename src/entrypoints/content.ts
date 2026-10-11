@@ -6,12 +6,14 @@
 // the ids of unchanged blocks kept (stable.ts).
 import { browser } from 'wxt/browser';
 import { extractPage } from '@/extract';
-import { watchViewport, type ViewportWatch } from '@/extract/viewport';
+import { createHighlighter, scrollToSegment, watchHover, type HoverWatch } from '@/extract/link';
+import { watchViewport, type ViewportTarget, type ViewportWatch } from '@/extract/viewport';
 import { watchChanges, type ChangeWatch } from '@/extract/watch';
 import { keepIds, readSignature } from '@/segment/stable';
 import type { Segment } from '@/engine/types';
 import type { InjectOutcome } from '@/shared/inject';
-import { CONTENT_PORT_NAME, CONTENT_PORT_PREFIX, PROTOCOL_VERSION, ProtocolError, emit, serve, type ContentApi } from '@/shared/protocol';
+import { createGuard } from '@/shared/guard';
+import { CONTENT_PORT_NAME, CONTENT_PORT_PREFIX, PROTOCOL_VERSION, ProtocolError, emit, listen, serve, type ContentApi } from '@/shared/protocol';
 
 declare global {
   // Set by the first injection into this page's isolated world.
@@ -62,15 +64,35 @@ export default defineContentScript({
       let watch: ViewportWatch | undefined;
       // And one change watch: after the first `extract`, the page is read again when it changes.
       let changes: ChangeWatch | undefined;
+      // The link to the panel (plan M5-E1): the pointer over a block, the highlight the panel asks for,
+      // and the scrolls it asks for, whose echoes are tagged so the panel does not follow them back.
+      let hover: HoverWatch | undefined;
+      let found: Map<string, ViewportTarget> = new Map();
+      const highlighter = createHighlighter(window);
+      const scrolled = createGuard();
       port.onDisconnect.addListener(() => {
         watch?.stop();
         changes?.stop();
+        hover?.stop();
+        highlighter.clear();
       });
       const look = (targets: Map<string, Element | Range>, segments: readonly Segment[]) => {
         watch?.stop();
-        watch = watchViewport(window, targets, segments.map((s) => s.id), (v) => emit(port, 'viewport', v));
+        hover?.stop();
+        const order = segments.map((s) => s.id);
+        found = targets;
+        highlighter.clear();
+        watch = watchViewport(window, targets, order, (v) => emit(port, 'viewport', scrolled.active() ? { ...v, echo: true } : v));
+        hover = watchHover(window, targets, order, (id) => emit(port, 'hover', id === undefined ? {} : { id }));
         return watch.now();
       };
+      listen(port, {
+        highlight: ({ id }) => void highlighter.show(id === undefined ? undefined : found.get(id)),
+        scroll: ({ id, offset }) => {
+          // Marked after the scroll, which is synchronous: the event it causes comes with the next frame.
+          if (scrollToSegment(window, found.get(id), offset)) scrolled.mark();
+        },
+      });
       const reread = () => {
         const targets = new Map<string, Element | Range>();
         const { result, changed } = read(targets);
@@ -81,6 +103,9 @@ export default defineContentScript({
         if (!result.ok) {
           watch?.stop();
           watch = undefined;
+          hover?.stop();
+          hover = undefined;
+          highlighter.clear();
           emit(port, 'changed', result);
           return;
         }
@@ -97,6 +122,8 @@ export default defineContentScript({
         extract: () => {
           watch?.stop();
           watch = undefined;
+          hover?.stop();
+          hover = undefined;
           changes ??= watchChanges(window, reread);
           const targets = new Map<string, Element | Range>();
           const { result } = read(targets);

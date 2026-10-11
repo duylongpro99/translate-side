@@ -3,11 +3,13 @@
 // (`hello`), so the content script never pushes into a panel that isn't there yet (S5). Once the
 // panel has asked for the page (`extract`), the content script pushes what is on screen on the
 // same port (`viewport` events, plan M3-E1/E7) until the port closes, and the page read again
-// when it changes (`changed` events, plan M5-E2).
+// when it changes (`changed` events, plan M5-E2). Hover and scroll sync (plan M5-E1) go both ways:
+// the content script pushes `hover` events, and the panel sends one-way commands (`highlight`,
+// `scroll`) that need no answer.
 import type { Segment } from '@/engine/types';
 
 /** Bump on any incompatible change to the messages below. */
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 /** Every content port name starts with this; the version follows. */
 export const CONTENT_PORT_PREFIX = 'translate-side/content/';
 /**
@@ -59,11 +61,22 @@ export interface Viewport {
    * top of the window, 1 = its bottom is), for the panel's scroll follow. Absent when none is on screen.
    */
   anchor?: { id: string; offset: number };
+  /**
+   * Source tag (plan M5-E1, decision "source-tagged scroll events with a short suppression
+   * window"): this report is the echo of a scroll the panel asked for (`scroll` command), not the
+   * reader's own. The panel's scroll follow ignores it, so the two scrolls never feed each other.
+   */
+  echo?: true;
 }
 
 /** Events the content script pushes after `extract`, without a request. */
 export type ContentEvents = {
   viewport: Viewport;
+  /**
+   * The pointer moved onto the block of this segment on the page, or off every block (`id` absent):
+   * the panel highlights that block (plan M5-E1, hover link).
+   */
+  hover: { id?: string };
   /**
    * The document changed after it was read (plan M5-E2: an SPA route change, content rendered
    * late): the content script read it again by itself, after the DOM settled. Sent only when the
@@ -72,6 +85,46 @@ export type ContentEvents = {
    */
   changed: ExtractResult;
 };
+
+/**
+ * One-way commands the panel sends to the content script (plan M5-E1). No response: a hover
+ * highlight or a scroll that arrives late or not at all is not worth a timeout.
+ */
+export type ContentCommands = {
+  /** Highlight the original of this segment on the page (hover link); `id` absent clears it. */
+  highlight: { id?: string };
+  /** Scroll the page so that `offset` (0–1) of this segment's block is at the top of the window (scroll sync). */
+  scroll: { id: string; offset: number };
+};
+
+export type CommandMessage = {
+  [K in keyof ContentCommands & string]: { kind: 'cmd'; name: K; body: ContentCommands[K] };
+}[keyof ContentCommands & string];
+
+export function isCommandMessage(x: unknown): x is { kind: 'cmd'; name: string; body: unknown } {
+  return isObject(x) && x.kind === 'cmd' && typeof x.name === 'string';
+}
+
+/** Sends a command to the content script; a port that has gone away is ignored. */
+export function sendCommand<K extends keyof ContentCommands & string>(port: PortLike, name: K, body: ContentCommands[K]): void {
+  try {
+    port.postMessage({ kind: 'cmd', name, body });
+  } catch {
+    // The page went away; nothing to tell.
+  }
+}
+
+/** Handles the commands arriving on a Port. An unknown command is ignored (a newer panel). */
+export function listen(port: PortLike, handlers: { [K in keyof ContentCommands]: (body: ContentCommands[K]) => void }): void {
+  port.onMessage.addListener((msg) => {
+    if (!isCommandMessage(msg) || !Object.hasOwn(handlers, msg.name)) return;
+    try {
+      (handlers[msg.name as keyof ContentCommands] as (b: unknown) => void)(msg.body);
+    } catch {
+      // A command for something that is gone (a segment of an older read): nothing to do.
+    }
+  });
+}
 
 export type EventMessage<E extends Record<string, unknown> = ContentEvents> = {
   [K in keyof E & string]: { kind: 'evt'; name: K; body: E[K] };

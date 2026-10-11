@@ -4,7 +4,7 @@ import type { PanelController, PanelView } from './controller.ts';
 import { AboutDocument } from './AboutDocument.tsx';
 import { DevView } from './DevView.tsx';
 import { HeaderControls } from './HeaderControls.tsx';
-import { readFollow, useScrollFollow, writeFollow } from './follow.ts';
+import { readFollow, useHoverLink, useScrollFollow, writeFollow, type SendToPage } from './follow.ts';
 import { JobBar, type JobActions } from './JobBar.tsx';
 import type { Jobs, JobView } from './jobs.ts';
 import { SegmentList } from './SegmentList.tsx';
@@ -20,6 +20,7 @@ import { OfferBar } from './OfferBar.tsx';
 import type { OfferStore, PageOffer } from './offers.ts';
 import { StateMessage } from './StateMessage.tsx';
 import type { SnippetStore, SnippetView } from './snippet.ts';
+import type { HoverStore } from './hover.ts';
 import type { ViewportStore } from './viewport.ts';
 
 /** What the panel needs from the translation side (translator.ts). Absent: the original only (M0). */
@@ -28,6 +29,9 @@ export interface TranslatorProps {
   actions(tabId: number): JobActions;
   /** What is on screen per tab, for the scroll follow (plan M3-E7). */
   viewports?: ViewportStore;
+  /** Which block the pointer is over on the page, and the way to tell the page (plan M5-E1: hover link, scroll sync both ways). */
+  hovers?: HoverStore;
+  send?: SendToPage;
   /** Selection mode (plan M3-E4): the selection of each tab, and the job that translates it. */
   snippets?: { jobs: Jobs; store: SnippetStore; actions(tabId: number): JobActions; close(tabId: number): void };
   /** The first-run privacy notice (plan M3-E10). */
@@ -252,8 +256,10 @@ export function App({ controller, translator }: { controller: PanelController; t
   const snippetJob = useJob(translator?.snippets?.jobs, tabId, snippet?.docId);
   // A site on the denylist is never read, selection included (M3-D13): its own message wins.
   const selecting = snippet !== undefined && translator?.snippets !== undefined && !(view.kind === 'blocked' && view.reason === 'denylisted');
-  // One-way page → panel (M3-E7); not over the dev view, whose blocks are not the reading list.
-  useScrollFollow(translator?.viewports, tabId, view.kind === 'ready' ? view.docId : undefined, follow && !dev);
+  // Both ways (M3-E7, M5-E1); not over the dev view, whose blocks are not the reading list, nor a selection's.
+  const pageDoc = view.kind === 'ready' ? view.docId : undefined;
+  useScrollFollow(translator?.viewports, tabId, pageDoc, follow && !dev && !selecting, translator?.send);
+  useHoverLink(translator?.hovers, tabId, pageDoc, translator?.send, !dev && !selecting);
   const toggleFollow = () => {
     writeFollow(!follow);
     setFollow(!follow);

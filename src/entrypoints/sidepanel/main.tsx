@@ -25,4 +25,4 @@ controller.start().catch((err: unknown) => {
 });
 
 const root = document.getElementById('app');
-if (root) render(<App controller={controller} translator={translator} />, root);
+if (root) render(<App controller={controller} translator={{ ...translator, send: (tabId, name, body) => controller.send(tabId, name, body) }} />, root);
