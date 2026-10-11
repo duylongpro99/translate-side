@@ -14,7 +14,7 @@ const h = vi.hoisted(() => {
     setPanelBehavior: (() => Promise.resolve()) as () => Promise<void>,
   };
   const api = {
-    runtime: { onInstalled: { addListener: (fn: Listener) => state.installed.push(fn) } },
+    runtime: { onInstalled: { addListener: (fn: Listener) => state.installed.push(fn) }, sendMessage: () => Promise.reject(new Error('Receiving end does not exist.')) },
     sidePanel: {
       setPanelBehavior: () => state.setPanelBehavior(),
       open: (opts: { tabId: number }) => {
