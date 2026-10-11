@@ -1,7 +1,8 @@
 // Every fixture page translated against the mock provider, each with an explicit expectation:
 // - whole pages: every block the panel extracted shows a translation;
-// - lazy pages (over LAZY_SEGMENTS translatable segments: long-100-screens, and large-table's 609 cells): the blocks around the viewport are
-//   translated first, then "Translate the rest" translates every block.
+// - lazy pages (over LAZY_SEGMENTS translatable segments: long-100-screens, and large-table's 609
+//   cells): the blocks around the viewport are translated first, then "Translate the rest"
+//   translates every block.
 // Every page also passes with zero console errors from the worker, the panel and the page (fixtures.ts).
 import fs from 'node:fs';
 import path from 'node:path';

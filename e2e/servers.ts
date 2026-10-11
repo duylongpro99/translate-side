@@ -48,6 +48,8 @@ export interface MockCall {
   /** The <seg> texts sent, in order (translate calls). */
   segments: string[];
   status: number;
+  /** Answered with a malformed stream (`MockControl.malformed`). */
+  malformed?: true;
 }
 
 export interface MockControl {
@@ -110,6 +112,7 @@ export function mockServer(): { server: http.Server; control: MockControl } {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
       if (!analyze && pending.malformed > 0) {
         pending.malformed--;
+        call.malformed = true;
         res.end(`${chunk('<seg id="')}data: {not json\n\n`);
         return;
       }

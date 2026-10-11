@@ -1,6 +1,6 @@
 // User flows over the extension, the fixture pages and the mock provider: the first-run privacy
-// notice, an SPA route change, and a rate-limited provider. Zero console errors apply here too,
-// apart from what a flow provokes on purpose (fixtures.ts `allowedConsole`).
+// notice, an SPA route change, a rate-limited provider and a malformed stream. Zero console errors
+// apply here too, apart from what a flow provokes on purpose (fixtures.ts `allowedConsole`).
 import { blockStatuses, expect, jobSettled, test } from './fixtures.ts';
 
 test('the privacy notice blocks sending until it is acknowledged', async ({ extension, mock }) => {
@@ -68,4 +68,27 @@ test('a rate-limited provider shows the retry state, then recovers', async ({ ex
   await expect(backoff).toBeHidden();
   expect(mock.calls.filter((c) => c.status === 429)).toHaveLength(1);
   expect(Object.keys(await blockStatuses(panel)).filter((s) => s !== 'final' && s !== 'kept')).toEqual([]);
+});
+
+test('a malformed stream fails its blocks, and Retry failed translates them', async ({ extension, mock, allowedConsole }) => {
+  // The OpenAI SDK logs the chunk it could not parse; that is the provoked failure.
+  allowedConsole.push(/^Could not parse message into JSON/, /^From chunk:/);
+  await extension.seed();
+  mock.malformed(1);
+  // A one-chunk page: no brief and no revise pass, so the one call is the whole page.
+  const page = await extension.open('spa/docusaurus.html?p=intro');
+  const panel = await extension.panel();
+  await extension.translate(page);
+  expect(await jobSettled(panel)).toBe('done');
+  const failed = (await blockStatuses(panel)).failed ?? 0;
+  expect(failed).toBeGreaterThan(0);
+  expect(Object.keys(await blockStatuses(panel)).filter((s) => s !== 'failed' && s !== 'kept')).toEqual([]);
+  await expect(panel.getByTestId('job')).toContainText(`${failed} failed`);
+
+  await panel.getByTestId('retry-failed').click();
+  await expect.poll(async () => Object.keys(await blockStatuses(panel)).filter((s) => s !== 'final' && s !== 'kept')).toEqual([]);
+  expect(await jobSettled(panel)).toBe('done');
+  const calls = mock.calls.filter((c) => c.kind === 'translate');
+  expect(calls.map((c) => c.malformed ?? false)).toEqual([true, false]);
+  expect(calls[1]?.segments).toEqual(calls[0]?.segments);
 });
