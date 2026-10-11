@@ -5,7 +5,7 @@ import type { PageOffer } from './offers.ts';
 // navigation on a site that is not allowlisted, one click translates it, and another allowlists the
 // site (the browser asks for its permission once). On a never-translate site it says why nothing is sent.
 export function OfferBar({ offer, blocks, onTranslate, onAllow, onSettings }: { offer: PageOffer; blocks: number; onTranslate: () => void; onAllow: () => Promise<boolean>; onSettings: () => void }) {
-  const [refused, setRefused] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
   if (offer.reason === 'never')
     return (
       <section class="offer" data-testid="offer" data-reason="never" role="status">
@@ -31,11 +31,11 @@ export function OfferBar({ offer, blocks, onTranslate, onAllow, onSettings }: { 
             data-testid="allow-site"
             title={`Translate each page of ${offer.site} by itself while the panel is open. The browser asks for access to the site once.`}
             onClick={() => {
-              setRefused(false);
+              setNote(null);
               // First call in the handler: the permission prompt needs the click (S5).
               onAllow().then(
-                (granted) => setRefused(!granted),
-                () => setRefused(true),
+                (granted) => setNote(granted ? null : `Access to ${offer.site} was not granted, so pages there still wait for this click.`),
+                (e: unknown) => setNote(e instanceof Error ? e.message : String(e)),
               );
             }}
           >
@@ -43,7 +43,7 @@ export function OfferBar({ offer, blocks, onTranslate, onAllow, onSettings }: { 
           </button>
         ) : null}
       </div>
-      {refused ? <p class="state__hint">Access to {offer.site} was not granted, so pages there still wait for this click.</p> : null}
+      {note ? <p class="state__hint">{note}</p> : null}
     </section>
   );
 }

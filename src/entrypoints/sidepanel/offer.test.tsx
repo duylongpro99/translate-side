@@ -54,6 +54,14 @@ describe('Translate this page (plan M5-E3)', () => {
     expect(root.querySelector('[data-testid="offer"]')).toBeNull();
   });
 
+  it('a full allowlist says so', async () => {
+    const offers = new OfferStore();
+    offers.set(3, { docId: 'd1', url: 'https://docs.example.org/two', reason: 'ask', site: 'docs.example.org' });
+    const root = mount(offers, { allowSite: () => Promise.reject(new Error('At most 200 sites per list. Remove a site first.')) });
+    await act(async () => (root.querySelector('[data-testid="allow-site"]') as HTMLButtonElement).click());
+    expect(root.querySelector('[data-testid="offer"]')?.textContent).toContain('At most 200 sites');
+  });
+
   it('an offer for another document of the tab is not shown', () => {
     const offers = new OfferStore();
     offers.set(3, { docId: 'old', url: 'https://docs.example.org/one', reason: 'ask', site: 'docs.example.org' });

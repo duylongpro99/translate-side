@@ -103,6 +103,19 @@ describe('allowlist and never-translate storage (plan M5-E3/E6)', () => {
     expect((await readSiteLists(f.api)).allow).toEqual(['*.example.net']);
   });
 
+  it('a full list refuses the site and gives back the permission just granted (count and 8 KB sync item)', async () => {
+    const f = fakeApi(siteOrigins('new.example.org'));
+    f.sync[SITE_ALLOWLIST_KEY] = Array.from({ length: 200 }, (_, i) => `s${i}.example.com`);
+    await expect(addAllowlisted(f.api, 'new.example.org')).rejects.toThrow(/At most 200/);
+    expect(f.removed).toEqual([siteOrigins('new.example.org')]);
+    expect((await readSiteLists(f.api)).allow).toHaveLength(200);
+
+    const g = fakeApi(siteOrigins('new.example.org'));
+    g.sync[SITE_ALLOWLIST_KEY] = Array.from({ length: 120 }, (_, i) => `${'a'.repeat(60)}${i}.example.com`);
+    await expect(addAllowlisted(g.api, 'new.example.org')).rejects.toThrow(/full/);
+    expect(g.removed).toEqual([siteOrigins('new.example.org')]);
+  });
+
   it('a never-translate site leaves the allowlist; unreadable lists count as empty', async () => {
     const f = fakeApi(siteOrigins('bank.example.com'));
     await addAllowlisted(f.api, 'bank.example.com');

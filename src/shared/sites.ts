@@ -20,6 +20,8 @@ export { SITE_ALLOWLIST_KEY };
 export const SITE_NEVER_KEY = 'siteNever';
 /** Most entries per list: a list is one sync item (8 KB). */
 export const MAX_SITES = 200;
+/** chrome.storage.sync.QUOTA_BYTES_PER_ITEM. */
+const SYNC_ITEM_BYTES = 8192;
 
 export interface SiteLists {
   allow: string[];
@@ -135,8 +137,10 @@ async function editList(api: Browser, key: typeof SITE_ALLOWLIST_KEY | typeof SI
   return queued(async () => {
     const list = cleanSiteList((await api.storage.sync.get(key))[key]);
     const edited = edit(list);
-    if (edited.length > MAX_SITES && edited.length > list.length) throw new Error(`At most ${MAX_SITES} sites per list.`);
+    if (edited.length > MAX_SITES && edited.length > list.length) throw new Error(`At most ${MAX_SITES} sites per list. Remove a site first.`);
     const next = cleanSiteList(edited);
+    // storage.sync caps one item at 8 KB (key plus JSON), which long host names reach before MAX_SITES.
+    if (next.length > list.length && key.length + JSON.stringify(next).length > SYNC_ITEM_BYTES) throw new Error('This site list is full. Remove a site first.');
     await api.storage.sync.set({ [key]: next });
     return next;
   });
@@ -145,10 +149,15 @@ async function editList(api: Browser, key: typeof SITE_ALLOWLIST_KEY | typeof SI
 /**
  * Allowlists a site. Call `requestSitePermission` first, in the click handler (it needs the
  * gesture): a site whose permission was refused is not added. Adding it removes it from the
- * never-translate list.
+ * never-translate list. When the list is full it throws, and the permission just granted goes back.
  */
 export async function addAllowlisted(api: Browser, pattern: string): Promise<void> {
-  await editList(api, SITE_ALLOWLIST_KEY, (l) => (l.includes(pattern) ? l : [...l, pattern]));
+  try {
+    await editList(api, SITE_ALLOWLIST_KEY, (l) => (l.includes(pattern) ? l : [...l, pattern]));
+  } catch (e) {
+    await releaseSite(api, pattern, cleanSiteList((await api.storage.sync.get(SITE_ALLOWLIST_KEY).catch(() => ({})))[SITE_ALLOWLIST_KEY])).catch(() => undefined);
+    throw e;
+  }
   await editList(api, SITE_NEVER_KEY, (l) => l.filter((p) => p !== pattern));
 }
 
@@ -166,6 +175,11 @@ export function requestSitePermission(api: Browser, pattern: string): Promise<bo
  */
 export async function removeAllowlisted(api: Browser, pattern: string): Promise<{ revoked: boolean }> {
   const left = await editList(api, SITE_ALLOWLIST_KEY, (l) => l.filter((p) => p !== pattern));
+  return releaseSite(api, pattern, left);
+}
+
+/** Gives a site's host permission back, unless an entry left in `left` or a provider connection still needs it. */
+async function releaseSite(api: Browser, pattern: string, left: readonly string[]): Promise<{ revoked: boolean }> {
   // Another entry still covers it (`*.example.com` over `docs.example.com`).
   const host = pattern.replace(/^\*\./, '');
   if (left.some((p) => matchesSite(p, `https://${host}/`))) return { revoked: false };
