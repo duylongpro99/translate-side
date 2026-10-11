@@ -155,7 +155,7 @@ export async function addAllowlisted(api: Browser, pattern: string): Promise<voi
   try {
     await editList(api, SITE_ALLOWLIST_KEY, (l) => (l.includes(pattern) ? l : [...l, pattern]));
   } catch (e) {
-    await releaseSite(api, pattern, cleanSiteList((await api.storage.sync.get(SITE_ALLOWLIST_KEY).catch(() => ({})))[SITE_ALLOWLIST_KEY])).catch(() => undefined);
+    await releaseSite(api, pattern, cleanSiteList((await api.storage.sync.get(SITE_ALLOWLIST_KEY).catch((): Record<string, unknown> => ({})))[SITE_ALLOWLIST_KEY])).catch(() => undefined);
     throw e;
   }
   await editList(api, SITE_NEVER_KEY, (l) => l.filter((p) => p !== pattern));
