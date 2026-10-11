@@ -154,7 +154,9 @@ interface BasicSwitch {
 const createSwitch = (): BasicSwitch => ({});
 
 async function* withBasicSwitch(events: AsyncIterable<EngineEvent>, state: BasicSwitch, job: TranslationJob, ctx: StageContext): AsyncGenerator<EngineEvent> {
-  const queue: Segment[] = [];
+  // Each block with the provider error it was taken over on: a probe may end the switch (and
+  // clear `state.error`) before the worker gets to it, and that error stays the block's cause.
+  const queue: { segment: Segment; cause: LLMError }[] = [];
   const byId = new Map(job.doc.segments.map((s) => [s.id, s]));
   let wake: (() => void) | undefined;
   let strategyDone = false;
@@ -169,7 +171,14 @@ async function* withBasicSwitch(events: AsyncIterable<EngineEvent>, state: Basic
         await new Promise<void>((resolve) => (wake = resolve));
         continue;
       }
-      yield* basicTranslate(queue.splice(0), job, ctx, state.error);
+      // In runs of one cause (a job that switched again has a newer one), in queue order.
+      const runs: { cause: LLMError; segments: Segment[] }[] = [];
+      for (const { segment, cause } of queue.splice(0)) {
+        const last = runs.at(-1);
+        if (last?.cause === cause) last.segments.push(segment);
+        else runs.push({ cause, segments: [segment] });
+      }
+      for (const run of runs) yield* basicTranslate(run.segments, job, ctx, run.cause);
     }
   }
   async function* strategy(): AsyncGenerator<EngineEvent> {
@@ -187,7 +196,7 @@ async function* withBasicSwitch(events: AsyncIterable<EngineEvent>, state: Basic
           state.announced = { from: ctx.llm('translate').model, ...(ctx.mt ? { to: ctx.mt.model } : {}), error: state.error };
           yield { type: 'stage', stage: BASIC_SWITCH_STAGE, status: 'start', info: state.announced };
         }
-        queue.push(segment);
+        queue.push({ segment, cause: state.announced.error });
         poke();
       }
     } finally {

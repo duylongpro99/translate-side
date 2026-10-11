@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { CHROME_TRANSLATOR_MODEL, chromeTranslator, unavailableMessage } from './chrome-translator.ts';
+import { describe, expect, it, vi } from 'vitest';
+import { CHROME_TRANSLATOR_MODEL, CREATE_TIMEOUT_MS, chromeTranslator, unavailableMessage } from './chrome-translator.ts';
 import { NANO_MODEL, createChromeBuiltinAdapter } from './chrome-builtin.ts';
-import type { MTAvailability, NormalizedEvent, NormalizedRequest, ResolvedConnection } from './types.ts';
+import type { MTAvailability, MTResult, NormalizedEvent, NormalizedRequest, ResolvedConnection } from './types.ts';
 
 const named = (name: string, message = name) => Object.assign(new Error(message), { name });
 
@@ -70,16 +70,22 @@ describe('chromeTranslator (MTClient over Chrome Translator)', () => {
 
   it('a create that never settles (Chrome for Testing: no download) is answered after the timeout; later blocks are answered at once', async () => {
     const { scope, log } = translatorScope({ state: 'downloadable', create: () => new Promise(() => {}) });
-    const mt = chromeTranslator(scope, { createTimeoutMs: 20 });
-    if (mt === undefined) throw new Error('no Translator');
-    const t0 = Date.now();
-    const first = await mt.translate('Hello.', 'en', 'vi', signal());
-    expect(first).toMatchObject({ ok: false, error: { message: unavailableMessage('en', 'vi', 'downloadable') } });
-    expect(Date.now() - t0).toBeGreaterThanOrEqual(15);
-    const t1 = Date.now();
-    expect(await mt.translate('Bye.', 'en', 'vi', signal())).toMatchObject({ ok: false });
-    expect(Date.now() - t1).toBeLessThan(15);
-    expect(log.filter((l) => l.startsWith('create'))).toHaveLength(1);
+    // Fake timers, not the wall clock (a loaded machine made the timing flaky).
+    vi.useFakeTimers();
+    try {
+      const mt = mtOf(scope);
+      let first: MTResult | undefined;
+      void mt.translate('Hello.', 'en', 'vi', signal()).then((r) => (first = r));
+      await vi.advanceTimersByTimeAsync(CREATE_TIMEOUT_MS - 1);
+      expect(first).toBeUndefined();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(first).toMatchObject({ ok: false, error: { message: unavailableMessage('en', 'vi', 'downloadable') } });
+      // While that create is still pending, the next block is answered without waiting (no timer runs).
+      expect(await mt.translate('Bye.', 'en', 'vi', signal())).toMatchObject({ ok: false });
+      expect(log.filter((l) => l.startsWith('create'))).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('a translate that throws is a failure that names the error', async () => {

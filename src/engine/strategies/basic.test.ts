@@ -209,6 +209,48 @@ describe('the terminal basic entry: every provider down switches the job to basi
     expect(events.findIndex((e) => e.type === 'stage' && e.status === 'done')).toBeLessThan(events.findIndex((e) => e.type === 'segment.final' && e.id === 'b'));
   });
 
+  it('a block queued before a probe ends the switch keeps the provider error as its cause (review D round 2 M1)', async () => {
+    // a's attempts fail (the switch), b's probe fails too and b waits in the queue while the
+    // translator is busy with a; c's probe gets through and ends the switch. Then the translator
+    // finishes a and finds it can't do the pair for b.
+    const up = translatorClient(undefined, { model: 'qwen3.8-flash' });
+    let n = 0;
+    const primary: LLMClient = {
+      model: 'qwen3.8-flash',
+      reasoningReserveTokens: () => 0,
+      async *stream(req) {
+        if (n++ < 5) yield { type: 'error', error: err('network', { message: "Can't reach api.example.com." }) };
+        else yield* up.stream(req);
+      },
+    };
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    let asked = 0;
+    const mt: MTClient = {
+      model: 'Chrome Translator',
+      availability: async () => (asked++ === 0 ? 'available' : 'unavailable'),
+      translate: async (text) => {
+        await gate;
+        return { ok: true, text: `vi:${text}` };
+      },
+    };
+    const segments = [seg('a', 'One. '.repeat(30)), seg('b', 'Two. '.repeat(30)), seg('c', 'Three. '.repeat(30))];
+    const events: EngineEvent[] = [];
+    for await (const e of createEngine(deps(primary, mt)).translate(job(segments, 'single-pass', { basicFallback: true }, 40), new AbortController().signal)) {
+      events.push(e);
+      // The provider is back (c translated): now let the translator go on.
+      if (e.type === 'segment.final' && e.id === 'c') release();
+    }
+    expect(finals(events).map((f) => [f.id, f.producedBy.strategy])).toEqual([
+      ['c', 'single-pass'],
+      ['a', 'basic'],
+    ]);
+    const [f] = failures(events);
+    expect(f?.id).toBe('b');
+    expect(f?.error.kind).toBe('network');
+    expect(f?.error.message).toMatch(/^Can't reach api\.example\.com\. Chrome Translator can't translate en → vi/);
+  });
+
   it('a provider that fails again after it came back switches the job again', async () => {
     // Down (a: 4 attempts), up (b), down again (c: its attempts, then basic).
     const up = translatorClient(undefined, { model: 'qwen3.8-flash' });

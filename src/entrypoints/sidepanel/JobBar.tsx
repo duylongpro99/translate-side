@@ -80,7 +80,10 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
         // it did for a while, until a provider answered again (recovered).
         job.fallback.recovered ? (
           <>
-            {job.fallback.from} {fallbackWhy(job.fallback.error).replace(/^is /, 'was ')} for a while; {job.fallback.to} translated the blocks in between, marked “basic translation”, and{' '}
+            {job.fallback.from} {fallbackWhy(job.fallback.error).replace(/^is /, 'was ')} for a while;{' '}
+            {[...job.segs.values()].some((s) => s.basic)
+              ? `${job.fallback.to} translated the blocks in between, marked “basic translation”, and`
+              : `${job.fallback.to} could not translate the blocks in between, and`}{' '}
             {job.fallback.from} {job.status === 'running' ? 'is translating again' : 'translated the rest'}.
           </>
         ) : (

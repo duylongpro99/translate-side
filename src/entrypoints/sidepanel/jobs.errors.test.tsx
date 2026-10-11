@@ -486,6 +486,9 @@ describe('the fallback note (plan M4-E9)', () => {
     expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('claude-haiku-4-5 was unreachable for a while; Chrome Translator translated the blocks in between, marked “basic translation”, and claude-haiku-4-5 is translating again.');
     act(() => render(<JobBar job={{ ...base, status: 'done', fallback: { ...fallback, recovered: true }, segs }} actions={actions([])} />, root));
     expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('claude-haiku-4-5 was unreachable for a while; Chrome Translator translated the blocks in between, marked “basic translation”, and claude-haiku-4-5 translated the rest.');
+    // Basic translated none of them (no translator, pair unavailable: review D round 2 M2): not claimed.
+    act(() => render(<JobBar job={{ ...base, status: 'done', fallback: { ...fallback, recovered: true } }} actions={actions([])} />, root));
+    expect(root.querySelector('[data-testid="job-fallback"]')?.textContent).toBe('claude-haiku-4-5 was unreachable for a while; Chrome Translator could not translate the blocks in between, and claude-haiku-4-5 translated the rest.');
   });
 
   it('a local-only page that stops names the local provider and the rule that kept it off the cloud (M4-D tester O1)', () => {
