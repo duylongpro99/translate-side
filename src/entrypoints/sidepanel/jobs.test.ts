@@ -863,6 +863,17 @@ describe('Jobs: lazy mode for long pages (plan M5-E4)', () => {
     expect(Math.max(...ids(lazyWindow(segs, ['s498', 's499'])))).toBe(499);
   });
 
+  it('lazyWindow: a fixed header on screen from anywhere does not stretch the window to the top of the page', () => {
+    const ids = (w: Set<string>) => [...w].map((id) => Number(id.slice(1)));
+    const long = tr(500).map((x) => ({ ...x, inlineMarkup: words(200) }));
+    const screen = ['s0', 's1', ...Array.from({ length: 9 }, (_, i) => `s${300 + i}`)];
+    const w = ids(lazyWindow(long, screen));
+    // The reader's block cluster gets the reach ahead; the header counts as on screen, nothing more.
+    expect(w.filter((n) => n > 1 && n < 300)).toEqual([]);
+    expect(w).toEqual(expect.arrayContaining([0, 1, 300, 308]));
+    expect(Math.max(...w)).toBe(308 + LAZY_MIN_AHEAD);
+  });
+
   it('a page over the threshold is translated around the screen only; the rest waits and is counted', async () => {
     const client = translatorClient();
     const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client), lazyAbove: 50 });

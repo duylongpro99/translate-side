@@ -442,6 +442,8 @@ export const LAZY_MIN_AHEAD = 24;
  * big rather than one screen at a time.
  */
 export const LAZY_MIN_TOKENS = 3000;
+/** On-screen blocks further apart than this (in page order) belong to different clusters (see `lazyWindow`). */
+export const LAZY_CLUSTER_GAP = 12;
 export const LAZY_LOW_WATER = { screens: 1, minAhead: 8, minTokens: 0 } as const;
 
 /**
@@ -451,17 +453,23 @@ export const LAZY_LOW_WATER = { screens: 1, minAhead: 8, minTokens: 0 } as const
 export function lazyWindow(translatable: readonly Segment[], screen: readonly string[], reach: { screens?: number; minAhead?: number; minTokens?: number } = {}): Set<string> {
   const { screens = LAZY_AHEAD_SCREENS, minAhead = LAZY_MIN_AHEAD, minTokens = LAZY_MIN_TOKENS } = reach;
   const onScreen = new Set(screen);
-  let lo = -1;
-  let hi = -1;
+  // A fixed or sticky element (header, TOC, cookie bar) is on screen from anywhere on the page: the
+  // on-screen blocks form clusters in page order, and the reader's is the biggest one (the last of
+  // equals). The window reaches ahead of that cluster only; the others count for what is on screen.
+  const clusters: { lo: number; hi: number; n: number }[] = [];
   translatable.forEach((s, i) => {
     if (!onScreen.has(s.id)) return;
-    if (lo < 0) lo = i;
-    hi = i;
+    const c = clusters[clusters.length - 1];
+    if (c !== undefined && i - c.hi <= LAZY_CLUSTER_GAP) {
+      c.hi = i;
+      c.n++;
+    } else clusters.push({ lo: i, hi: i, n: 1 });
   });
-  if (lo < 0) {
-    lo = 0;
-    hi = -1;
-  }
+  let main = clusters[0];
+  for (const c of clusters) if (main === undefined || c.n >= main.n) main = c;
+  let lo = main?.lo ?? 0;
+  const hi = main?.hi ?? -1;
+  const others = translatable.filter((s, i) => onScreen.has(s.id) && main !== undefined && (i < main.lo || i > main.hi)).map((s) => s.id);
   const size = hi < lo ? 0 : hi - lo + 1;
   let end = Math.min(translatable.length - 1, Math.max(hi, lo) + Math.max(minAhead, Math.ceil(size * screens)));
   // Enough text for every request slot to get a chunk (two chunks of the profile's size): short blocks on a long page.
@@ -472,7 +480,7 @@ export function lazyWindow(translatable: readonly Segment[], screen: readonly st
   const row = (i: number) => translatable[i]?.groupId;
   while (lo > 0 && row(lo) !== undefined && row(lo - 1) === row(lo)) lo--;
   while (end < translatable.length - 1 && row(end) !== undefined && row(end + 1) === row(end)) end++;
-  return new Set(translatable.slice(lo, end + 1).map((s) => s.id));
+  return new Set([...translatable.slice(lo, end + 1).map((s) => s.id), ...others]);
 }
 
 /** What a run stopped by the soft limit shows as its error. */
