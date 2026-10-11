@@ -25,7 +25,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS, createClient, GEMINI_OPENAI_BASE_URL } from '@/llm';
+import { createClient } from '@/llm';
 import type { LLMClient, Quirks, ResolvedConnection, StopReason } from '@/llm/types';
 import { ANALYZE_PROMPT_ID, chunkLimits, chunkSegments, createContextual, CONTEXTUAL_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, TRANSLATE_V2_PROMPT_ID, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, SINGLE_PASS_ID, toWire, renderSystemPrompt, renderSystemPromptV2, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, checkDuplicates, checkSegment, codeSpans, type CheckKind, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type Segment, type StyleMode, type TranslationJob } from '@/engine/index';
 import type { ModelRole } from '@/llm/types';
@@ -33,6 +33,7 @@ import { costUsd, priceFor } from './pricing.ts';
 import { EVAL_SLUGS } from './docs.ts';
 import { listPassageIds, loadPassage } from './passages.ts';
 import { parseGlossaryArg } from './runs.ts';
+import { harnessQuirks, PROVIDERS } from './providers.ts';
 
 const ROOT = path.resolve(process.cwd());
 const DOCS = path.join(ROOT, 'fixtures/docs');
@@ -132,7 +133,7 @@ function connection(): { client: LLMClient; label: string; translateClient?: LLM
   if (!key) throw new Error(`${preset.keyName} is not set (.env or the environment)`);
   const model = opt.model ?? preset.model;
   // The model's quirks over the connection's, as the app's profile does (settings.ts withProfileQuirks).
-  const conn: ResolvedConnection = { id: `eval-${opt.provider}`, ...preset.conn, quirks: { ...preset.conn.quirks, ...preset.modelQuirks?.[model] }, apiKey: key, hasHostPermission: async () => true };
+  const conn: ResolvedConnection = { id: `eval-${opt.provider}`, ...preset.conn, quirks: harnessQuirks(preset, model), apiKey: key, hasHostPermission: async () => true };
   const translateConn = REASONING === undefined ? conn : { ...conn, quirks: { ...conn.quirks, reasoning: REASONING } };
   return {
     client: createClient(conn, model),
@@ -141,17 +142,6 @@ function connection(): { client: LLMClient; label: string; translateClient?: LLM
     thinking: { reasoning: translateConn.quirks.reasoning, maxTokensParam: translateConn.quirks.maxTokensParam },
   };
 }
-
-/** The live providers: where the key is read, the connection, the default model (M2-D11, M2-D14). */
-const PROVIDERS: Record<string, { keyName: string; conn: Pick<ResolvedConnection, 'protocol' | 'baseUrl' | 'auth' | 'quirks'>; model: string; modelQuirks?: Record<string, Quirks> }> = {
-  apibox: { keyName: 'AIBOX_API_KEY', conn: { protocol: 'openai-chat', baseUrl: APIBOX_BASE_URL, auth: { style: 'bearer' }, quirks: APIBOX_DEEPSEEK_QUIRKS }, model: 'qwen3.8-flash', modelQuirks: { 'qwen3.8-flash': APIBOX_QWEN_QUIRKS } },
-  gemini: { keyName: 'GEMINI_API_KEY', conn: { protocol: 'openai-chat', baseUrl: GEMINI_OPENAI_BASE_URL, auth: { style: 'bearer' }, quirks: {} }, model: 'gemini-3.5-flash-lite' },
-  // M4-F (G5): Ollama cloud replaces the local runs; no Qwen is hosted, gemma4:31b is the multilingual pick.
-  'ollama-cloud': { keyName: 'OLLAMA_API_KEY', conn: { protocol: 'openai-chat', baseUrl: 'https://ollama.com/v1', auth: { style: 'bearer' }, quirks: {} }, model: 'gemma4:31b' },
-  openrouter: { keyName: 'OPENROUTER_API_KEY', conn: { protocol: 'openai-chat', baseUrl: 'https://openrouter.ai/api/v1', auth: { style: 'bearer' }, quirks: {} }, model: 'anthropic/claude-haiku-4.5' },
-  'openrouter-anthropic': { keyName: 'OPENROUTER_API_KEY', conn: { protocol: 'anthropic-messages', baseUrl: 'https://openrouter.ai/api', auth: { style: 'bearer' }, quirks: {} }, model: 'anthropic/claude-haiku-4.5' },
-  anthropic: { keyName: 'ANTHROPIC_API_KEY', conn: { protocol: 'anthropic-messages', baseUrl: 'https://api.anthropic.com', auth: { style: 'x-api-key' }, quirks: {} }, model: 'claude-haiku-4-5-20251001' },
-};
 
 /** Records every call of the wrapped client, so the nonce rate and the repairs can be read back. */
 function recording(inner: LLMClient, calls: CallRecord[], doc: () => string, role?: ModelRole): LLMClient {

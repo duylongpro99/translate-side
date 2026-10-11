@@ -1,6 +1,6 @@
 // The comparison report (plan M2 §2): one column per run (strategy / prompt / model), so `contextual` and
 // `translate@2` runs join the table later with no change here. The first run is the baseline: later columns show the change.
-import { DIMENSIONS } from './rubric.ts';
+import { DIMENSIONS, type Dimension } from './rubric.ts';
 import { agreement, aggregate, type Aggregate, type ScoreSet } from './scores.ts';
 import { runLabel, type Run, type RunSummary } from './runs.ts';
 
@@ -19,6 +19,12 @@ function cell(value: number | undefined, base: number | undefined, first: boolea
   if (value === undefined) return '–';
   const delta = !first && base !== undefined ? ` (${sgn(value - base)})` : '';
   return `${f2(value)}${delta}${n === undefined ? '' : ` n=${n}`}`;
+}
+
+/** Per-dimension means of a score set (the report's rows; the regression gate compares these). */
+export function dimensionMeans(set: ScoreSet): Record<Dimension, number | undefined> {
+  const a = aggregate(set);
+  return Object.fromEntries(DIMENSIONS.map((d) => [d, a.perDimension[d].mean])) as Record<Dimension, number | undefined>;
 }
 
 function scoreRows(title: string, sets: (ScoreSet | undefined)[]): string[] {
