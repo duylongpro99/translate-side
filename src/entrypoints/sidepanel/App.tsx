@@ -4,6 +4,7 @@ import type { PanelController, PanelView } from './controller.ts';
 import { AboutDocument } from './AboutDocument.tsx';
 import { DevView } from './DevView.tsx';
 import { closePanel } from './toggle.ts';
+import { ShortcutList } from './ShortcutList.tsx';
 import { HeaderControls } from './HeaderControls.tsx';
 import { readFollow, useHoverLink, useScrollFollow, writeFollow, type SendToPage } from './follow.ts';
 import { JobBar, type JobActions } from './JobBar.tsx';
@@ -289,8 +290,14 @@ export function App({ controller, translator }: { controller: PanelController; t
     void browser.runtime.openOptionsPage();
   };
   const closeThisPanel = () => void closePanel(browser);
+  const [help, setHelp] = useState(false);
+  const helpButton = useRef<HTMLButtonElement>(null);
+  const closeHelp = () => {
+    setHelp(false);
+    helpButton.current?.focus();
+  };
   return (
-    <main class="panel">
+    <main class="panel" onKeyDown={(e) => help && e.key === 'Escape' && closeHelp()}>
       <header class="panel__header" ref={headerRef}>
         <div class="panel__row">
           <h1 title={view.kind === 'ready' ? view.result.title : undefined}>{view.kind === 'ready' ? view.result.title || 'Translate Side' : 'Translate Side'}</h1>
@@ -312,6 +319,9 @@ export function App({ controller, translator }: { controller: PanelController; t
               ⇅
             </button>
           ) : null}
+          <button type="button" class="panel__icon" ref={helpButton} data-testid="shortcuts-button" title="Keyboard shortcuts" aria-label="Keyboard shortcuts" aria-expanded={help} aria-controls="shortcuts" onClick={() => setHelp(!help)}>
+            ?
+          </button>
           <button type="button" class="panel__icon" title="Settings" aria-label="Settings" onClick={openOptions}>
             ⚙
           </button>
@@ -321,6 +331,7 @@ export function App({ controller, translator }: { controller: PanelController; t
         </div>
         {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} routedModel={routed?.model} switcher={switcherActions} actions={job ? pageActions : undefined} onPrefs={switchPrefs} error={prefsError ? "Couldn't save that setting. Try again, or change it in settings." : undefined} /> : null}
       </header>
+      {help ? <ShortcutList id="shortcuts" onClose={closeHelp} /> : null}
       {offerSetup ? (
         <section class="setup-offer" data-testid="setup-offer">
           <p>New here? Set up a translation provider to start translating.</p>
@@ -348,7 +359,7 @@ export function App({ controller, translator }: { controller: PanelController; t
             </p>
           )}
           {job?.brief ? <AboutDocument brief={job.brief} sourceLang={job.sourceLang} /> : null}
-          <SegmentList segments={job?.segments ?? view.result.segments} states={job?.segs} {...(job?.model ? { model: job.model } : {})} {...(job && pageActions ? { actions: { retry: pageActions.retrySegment, retranslate: pageActions.retranslateSegment, explain: pageActions.explainSegment } } : {})} />
+          <SegmentList segments={job?.segments ?? view.result.segments} states={job?.segs} busy={job?.status === 'running'} {...(job ? { targetLang: job.targetLang, ...(job.sourceLang ? { sourceLang: job.sourceLang } : {}) } : {})} {...(job?.model ? { model: job.model } : {})} {...(job && pageActions ? { actions: { retry: pageActions.retrySegment, retranslate: pageActions.retranslateSegment, explain: pageActions.explainSegment } } : {})} />
         </>
       )}
     </main>

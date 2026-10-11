@@ -1,9 +1,10 @@
-import { Component, type ComponentChildren } from 'preact';
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { Component, createContext, type ComponentChildren } from 'preact';
+import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Segment } from '@/engine/types';
 import type { JobView, SegState } from './jobs.ts';
 import { markerKinds, parseMarkup, plainText, type MarkupNode } from './markup.ts';
 import { failureText } from './status.ts';
+import { handleBlockKey, rove } from './blocks-nav.ts';
 
 /** Per-segment actions (M3-E8, M3-E5); absent for a list with nothing to act on. */
 export interface SegmentActions {
@@ -46,10 +47,15 @@ function Markup({ nodes }: { nodes: MarkupNode[] }) {
   );
 }
 
+/** The job's languages, so a screen reader speaks the translation in the target language and the original in the source's. */
+const Langs = createContext<{ target?: string | undefined; source?: string | undefined }>({});
+
 /** The translation if there is one, else the original; formatting only where the source has it (NB6). */
 function Text({ seg, state }: { seg: Segment; state: SegState | undefined }) {
+  const { target } = useContext(Langs);
   const src = state?.text ?? seg.inlineMarkup;
-  return <Markup nodes={parseMarkup(src, markerKinds(seg))} />;
+  const nodes = <Markup nodes={parseMarkup(src, markerKinds(seg))} />;
+  return state?.text !== undefined && target ? <span lang={target}>{nodes}</span> : nodes;
 }
 
 type Props = {
@@ -105,7 +111,7 @@ function BlockActions({ seg, state, actions, original, onOriginal }: Props) {
   return (
     <span class="seg__actions" role="group" aria-label={`Actions for "${name}"`}>
       {done && onOriginal ? (
-        <button type="button" class="seg__action" data-testid="seg-original" aria-pressed={original === true} aria-label={`${original ? 'Hide original' : 'Show original'}: "${name}"`} onClick={() => onOriginal(seg.id)}>
+        <button type="button" class="seg__action" data-testid="seg-original" aria-keyshortcuts="O" aria-pressed={original === true} aria-label={`${original ? 'Hide original' : 'Show original'}: "${name}"`} onClick={() => onOriginal(seg.id)}>
           {original ? 'Hide original' : 'Original'}
         </button>
       ) : null}
@@ -114,6 +120,7 @@ function BlockActions({ seg, state, actions, original, onOriginal }: Props) {
           type="button"
           class="seg__action"
           data-testid="seg-retranslate"
+          aria-keyshortcuts="R"
           aria-label={`Retranslate: "${name}"`}
           title="Translate this block again, skipping the saved translation"
           onClick={() => actions.retranslate?.(seg.id)}
@@ -126,6 +133,7 @@ function BlockActions({ seg, state, actions, original, onOriginal }: Props) {
           type="button"
           class="seg__action"
           data-testid="seg-explain"
+          aria-keyshortcuts="E"
           aria-label={`Explain this: "${name}"`}
           title="A short note on idioms or cultural references in this block"
           disabled={state?.explain?.status === 'loading'}
@@ -134,7 +142,7 @@ function BlockActions({ seg, state, actions, original, onOriginal }: Props) {
           {state?.explain?.status === 'loading' ? 'Explaining…' : state?.explain ? 'Explain again' : 'Explain this'}
         </button>
       ) : null}
-      <button type="button" class="seg__action" data-testid="seg-copy" aria-label={`Copy: "${name}"`} onClick={copy}>
+      <button type="button" class="seg__action" data-testid="seg-copy" aria-keyshortcuts="C" aria-label={`Copy: "${name}"`} onClick={copy}>
         {copied === 'ok' ? 'Copied' : copied === 'failed' ? "Couldn't copy" : 'Copy'}
       </button>
     </span>
@@ -143,9 +151,10 @@ function BlockActions({ seg, state, actions, original, onOriginal }: Props) {
 
 /** The original under its translation, as text like the rest (§5.6). */
 function Original({ seg, state, original }: Props) {
+  const { source } = useContext(Langs);
   if (!original || !translated(state)) return null;
   return (
-    <span class="seg__original" data-testid="seg-original-text">
+    <span class="seg__original" data-testid="seg-original-text" {...(source ? { lang: source } : {})}>
       <Markup nodes={parseMarkup(seg.inlineMarkup, markerKinds(seg))} />
     </span>
   );
@@ -157,6 +166,9 @@ function statusAttrs(seg: Segment, state: SegState | undefined, extra = '') {
     'data-id': seg.id,
     'data-kind': seg.kind,
     'data-status': status,
+    // Focusable for the keyboard (src/entrypoints/sidepanel/blocks-nav.ts roves the one Tab stop); a block still arriving says so.
+    tabIndex: -1,
+    ...(status === 'streaming' || status === 'pending' ? { 'aria-busy': true } : {}),
     class: `seg seg--${seg.kind} seg--${status}${seg.hidden ? ' seg--hidden' : ''}${extra}`,
   };
 }
@@ -343,7 +355,12 @@ function Table({ cells, states, actions, originals, onOriginal, model }: { cells
   );
 }
 
-export function SegmentList({ segments, states, actions, model }: { segments: readonly Segment[]; states?: States; actions?: SegmentActions; model?: string }) {
+export function SegmentList({ segments, states, actions, model, targetLang, sourceLang, busy }: { segments: readonly Segment[]; states?: States; actions?: SegmentActions; model?: string; targetLang?: string; sourceLang?: string; busy?: boolean }) {
+  const root = useRef<HTMLDivElement>(null);
+  // One Tab stop for the list, whatever re-rendered (a block that arrived, a button that appeared).
+  useEffect(() => {
+    if (root.current) rove(root.current);
+  });
   // Which blocks show their original (Original, M3-E5): per block, for as long as the list lives.
   const [originals, setOriginals] = useState<ReadonlySet<string>>(() => new Set());
   const onOriginal = useMemo(
@@ -366,10 +383,28 @@ export function SegmentList({ segments, states, actions, model }: { segments: re
       while (j < segments.length && tableOf(segments[j] as Segment) === table) j++;
       out.push(<Table key={seg.id} cells={segments.slice(i, j)} states={states} actions={actions} originals={originals} onOriginal={toggle} model={model} />);
       i = j;
+    } else if (seg.kind === 'li') {
+      // List items sit in a list, so a screen reader announces "list, 3 items".
+      let j = i;
+      while (j < segments.length && (segments[j] as Segment).kind === 'li' && tableOf(segments[j] as Segment) === undefined) j++;
+      out.push(
+        <div class="seg-list" role="list" key={seg.id}>
+          {segments.slice(i, j).map((li) => (
+            <Block key={li.id} seg={li} state={states?.get(li.id)} actions={actions} original={originals.has(li.id)} onOriginal={toggle} model={model} />
+          ))}
+        </div>,
+      );
+      i = j;
     } else {
       out.push(<Block key={seg.id} seg={seg} state={states?.get(seg.id)} actions={actions} original={originals.has(seg.id)} onOriginal={toggle} model={model} />);
       i++;
     }
   }
-  return <div class="segments">{out}</div>;
+  return (
+    <Langs.Provider value={{ target: targetLang, source: sourceLang }}>
+      <div class="segments" ref={root} role="region" aria-label="Translation" aria-busy={busy === true} onKeyDown={(e) => root.current && handleBlockKey(e, root.current)} onFocusIn={(e) => root.current && rove(root.current, (e.target as Element).closest<HTMLElement>('[data-id]') ?? undefined)}>
+        {out}
+      </div>
+    </Langs.Provider>
+  );
 }

@@ -518,3 +518,15 @@ describe('options: site rules (plan M5-E6)', () => {
     expect(f.granted.has('https://wiki.intranet/*')).toBe(true);
   });
 });
+
+describe('options: keyboard shortcuts (plan M5-E10)', () => {
+  it('lists Alt+T and the panel shortcuts', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    const table = root.querySelector('[data-testid="shortcuts-table"]');
+    expect(table?.textContent).toContain('Alt+T');
+    expect(table?.textContent).toContain('Close the shortcut list');
+    expect(table?.getAttribute('aria-labelledby')).toBe('shortcuts-h');
+  });
+});

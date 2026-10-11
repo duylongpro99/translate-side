@@ -58,7 +58,7 @@ Translate Side gives the model the **whole document's context** before it transl
 
 | | |
 |---|---|
-| 🪟 **Side-by-side reading** | Click the toolbar icon or press <kbd>Alt</kbd>+<kbd>T</kbd>. The panel opens for that tab and starts translating right away. |
+| 🪟 **Side-by-side reading** | Click the toolbar icon or press <kbd>Alt</kbd>+<kbd>T</kbd>. The panel opens for that tab and starts translating right away; the same key closes it again. |
 | ⚡ **Streaming output** | Segments appear as they're translated. The first one usually shows up in under 2 seconds. |
 | 🧠 **"About this document"** | Before translating, the model writes a short brief covering genre, audience, purpose, tone and key terms. You can read it in the panel, and every chunk is translated with it. |
 | 🎨 **Style modes** | **Natural** reads as if it was written in your language. **Faithful** stays closer to the original wording. **Simplified** uses short sentences and plain words. |
@@ -66,6 +66,8 @@ Translate Side gives the model the **whole document's context** before it transl
 | 🛡️ **Checked output** | Every segment is checked for lost code spans, URLs, numbers and formatting. A segment that fails is re-requested once, so you never get a broken one without a warning. |
 | 🌐 **Language aware** | Detects the page's language, and skips a page that is already in your target language. |
 | 💸 **Cost you can see** | The panel shows the token cost of each page. A per-page token budget keeps a runaway job in check. |
+| ⌨️ **Keyboard and screen readers** | The panel is one Tab stop; the arrows (or <kbd>J</kbd>/<kbd>K</kbd>) move between blocks, and <kbd>O</kbd>, <kbd>R</kbd>, <kbd>E</kbd>, <kbd>C</kbd> show the original, retranslate, explain and copy the focused block. The translation is marked with its language. See [Keyboard shortcuts](#keyboard-shortcuts). |
+| 📦 **Portable settings** | Export your connections, models, routing, preferences, glossary and site lists to a JSON file and import it in another browser (Options › Export and import settings). API keys stay out of the file unless you tick "include keys" and confirm. |
 | 🔒 **Minimal permissions** | No blanket access to every site. The extension runs only on the tab where you open it (`activeTab`), and asks for host access per provider. |
 
 ## 🔍 How it works
@@ -117,6 +119,25 @@ pnpm build            # writes the extension to .output/chrome-mv3
    `chrome://extensions/shortcuts`.
 
 For live reloading while you work, run `pnpm dev`.
+
+### Keyboard shortcuts
+
+<!-- Generated from src/shared/shortcuts.ts: keep the two in step (src/shared/shortcuts.test.ts checks it). -->
+| Keys | What it does |
+|---|---|
+| <kbd>Alt</kbd>+<kbd>T</kbd> | Open the panel, or close it when it is open (rebind it at `chrome://extensions/shortcuts`) |
+| <kbd>↓</kbd> or <kbd>J</kbd> | Next block |
+| <kbd>↑</kbd> or <kbd>K</kbd> | Previous block |
+| <kbd>Home</kbd> / <kbd>End</kbd> | First / last block |
+| <kbd>O</kbd> | Show or hide the original under this block |
+| <kbd>R</kbd> | Retranslate this block |
+| <kbd>E</kbd> | Explain this block |
+| <kbd>C</kbd> | Copy this block as plain text |
+| <kbd>Esc</kbd> | Close the shortcut list |
+
+The block keys work while a block or one of its buttons has keyboard focus, so they never clash
+with a page's or Chrome's own shortcuts. The panel's **?** button lists them too, and so does
+the options page.
 
 ### Useful scripts
 

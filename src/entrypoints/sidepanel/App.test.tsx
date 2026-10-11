@@ -318,3 +318,20 @@ describe('translation in the panel (plan M1-E10)', () => {
     expect(f.calls).toEqual(['options', 'grant']);
   });
 });
+
+describe('shortcut list (M5-E10)', () => {
+  it('the ? button opens and closes the list; Esc closes it and returns focus to the button', async () => {
+    mount({ kind: 'idle' } as PanelView);
+    const button = root.querySelector<HTMLButtonElement>('[data-testid="shortcuts-button"]') as HTMLButtonElement;
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(root.querySelector('[data-testid="shortcuts"]')).toBeNull();
+    await act(() => button.click());
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(root.querySelector('[data-testid="shortcuts"]')?.textContent).toContain('Alt+T');
+    expect(root.querySelector('[data-testid="shortcuts"]')?.textContent).toContain('Retranslate this block');
+    await act(() => void root.querySelector('[data-testid="shortcuts"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    expect(root.querySelector('[data-testid="shortcuts"]')).toBeNull();
+    expect(document.activeElement).toBe(button);
+  });
+});
+

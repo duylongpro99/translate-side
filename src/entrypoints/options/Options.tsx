@@ -26,6 +26,7 @@ import { isProviderKey, readProviderSettings, resolveRoute, type ProviderSetting
 import { openOnboarding } from '@/shared/onboarding';
 import { ProvidersSection, type AdapterFor } from './Providers.tsx';
 import { TransferSection } from './Transfer.tsx';
+import { SHORTCUTS } from '@/shared/shortcuts';
 import { openTranslationCache, type CacheStats, type TranslationCache } from '@/shared/cache';
 import { formatUsd } from '@/shared/cost';
 import { pricingFor } from '@/shared/pricing';
@@ -490,6 +491,34 @@ function SitesSection({ api }: { api: Browser }) {
 const mb = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(0, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`);
 
 /** The translation cache (plan M3-E2): what it holds, and a way to empty it. */
+/** The panel's keyboard shortcuts (plan M5-E10): the same list the panel's ? button and the README show. */
+function ShortcutsSection() {
+  return (
+    <section class="opt__section" id="shortcuts" aria-labelledby="shortcuts-h">
+      <h2 id="shortcuts-h">Keyboard shortcuts</h2>
+      <table class="opt__table" data-testid="shortcuts-table" aria-labelledby="shortcuts-h">
+        <thead>
+          <tr>
+            <th scope="col">Keys</th>
+            <th scope="col">What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+          {SHORTCUTS.map((s) => (
+            <tr key={s.keys}>
+              <th scope="row">
+                <kbd>{s.keys}</kbd>
+              </th>
+              <td>{s.what}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="opt__hint">The letters and arrows work while a block in the panel, or one of its buttons, has keyboard focus, so they do not clash with a page's or Chrome's shortcuts.</p>
+    </section>
+  );
+}
+
 function CacheSection({ cache }: { cache: TranslationCache | undefined }) {
   const [stats, setStats] = useState<CacheStats | undefined | null>();
   const load = () =>
@@ -695,6 +724,7 @@ export function Options({ api, cache = openTranslationCache(), adapterFor }: { a
       <StyleSection api={api} />
       <GlossarySection api={api} />
       <SitesSection api={api} />
+      <ShortcutsSection />
       <SpendSection api={api} />
       <CacheSection cache={cache} />
       <TransferSection api={api} />

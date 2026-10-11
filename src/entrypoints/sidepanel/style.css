@@ -585,3 +585,53 @@ body {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Keyboard (plan M5-E10): a visible focus on everything the keyboard reaches, a block's ring in the panel's accent. */
+.panel button:focus-visible,
+.panel select:focus-visible,
+.panel a:focus-visible,
+.panel summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.seg:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.shortcuts {
+  margin: 0.5rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+}
+.shortcuts h2 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+.shortcuts dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 0.75rem;
+}
+.shortcuts dl > div {
+  display: contents;
+}
+.shortcuts dt,
+.shortcuts dd {
+  margin: 0;
+}
+.shortcuts kbd {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+}
+@media (prefers-reduced-motion: reduce) {
+  .seg__actions {
+    transition: none;
+  }
+}
