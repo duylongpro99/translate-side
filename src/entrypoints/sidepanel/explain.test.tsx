@@ -95,9 +95,29 @@ describe('Jobs.explainSegment', () => {
     const empty = await ready(explainer(success('   ')).client);
     await empty.explainSegment(1, 's0');
     expect(empty.get(1)?.segs.get('s0')?.explain?.status).toBe('failed');
-    const cut = await ready(explainer([{ type: 'text', delta: 'Half a no' }, { type: 'done', stopReason: 'max_tokens' }]).client);
+  });
+
+  it('keeps a note cut by the token limit, with an ellipsis', async () => {
+    const cut = await ready(explainer([{ type: 'text', delta: 'Half a note ' }, { type: 'done', stopReason: 'max_tokens' }]).client);
     await cut.explainSegment(1, 's0');
-    expect(cut.get(1)?.segs.get('s0')?.explain?.status).toBe('failed');
+    expect(cut.get(1)?.segs.get('s0')?.explain).toEqual({ status: 'ready', text: 'Half a note…' });
+  });
+
+  it('on a spend limit offers Continue anyway, which asks for the note again', async () => {
+    const { client, explains } = explainer('Note.');
+    let limited = true;
+    const jobs = new Jobs({ translateClient: ok(client), cache: newCache(), strategy: 'single-pass', spendLimit: () => Promise.resolve(limited ? { limitUsd: 5, monthUsd: 5.25 } : undefined) });
+    jobs.setActive(1);
+    limited = false;
+    await jobs.start(1, 'd1', doc());
+    limited = true;
+    await jobs.explainSegment(1, 's0');
+    expect(jobs.get(1)?.limit).toBeDefined();
+    expect(jobs.get(1)?.segs.get('s0')?.explain?.status).toBe('failed');
+    expect(explains).toHaveLength(0);
+    limited = false;
+    await jobs.takeAfterLimit(1)?.();
+    expect(jobs.get(1)?.segs.get('s0')?.explain?.status).toBe('ready');
   });
 
   it('is dropped by a Retranslate of the block, and asked once at a time', async () => {

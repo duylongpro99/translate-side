@@ -3,7 +3,7 @@
 // `explain` strategy) for one block. The note comes back as the `segment.final`'s `notes`; its
 // `text` repeats it, so the event stays a well-formed final. Nothing is cached, nothing is
 // retried beyond what the client's own policy does, and a failure is a `segment.failed` for the
-// block (§5.6): the translation the reader has stays.
+// block (§5.6): the translation the reader has stays. A note cut by the token limit is kept.
 import type { LLMClient, NormalizedRequest } from '../../llm/types.ts';
 import { servedOf } from '../served.ts';
 import { EXPLAIN_PROMPT_ID } from '../prompts/explain.ts';
@@ -17,7 +17,6 @@ export const EXPLAIN_TEMPERATURE = 0.3;
 /** A note is cut here, whatever the model wrote. */
 export const EXPLAIN_NOTE_MAX_CHARS = 800;
 export const EXPLAIN_EMPTY_MESSAGE = 'The model returned no explanation';
-export const EXPLAIN_CUT_MESSAGE = 'The explanation was cut short';
 
 /** The `<passage>` block the call sends: the block's text as data, its own tags made harmless. */
 export function explainInput(segment: Pick<Segment, 'text'>): string {
@@ -74,11 +73,9 @@ export const explainStage = defineStage<TranslationJob, never>({
       yield { type: 'segment.failed', id: segment.id, error: { kind: 'unknown', message: EXPLAIN_EMPTY_MESSAGE } };
       return;
     }
-    if (stopReason === 'max_tokens') {
-      yield { type: 'segment.failed', id: segment.id, error: { kind: 'unknown', message: EXPLAIN_CUT_MESSAGE } };
-      return;
-    }
+    // A note cut by the token limit is still a useful note: it is kept, with an ellipsis.
+    const shown = stopReason === 'max_tokens' ? `${note.replace(/[…\s]+$/, '')}…` : note;
     const by = servedOf(client, req);
-    yield { type: 'segment.final', id: segment.id, text: note, revision: 1, producedBy: { strategy: 'explain', stage: 'explain', model: by.model }, notes: [note] };
+    yield { type: 'segment.final', id: segment.id, text: shown, revision: 1, producedBy: { strategy: 'explain', stage: 'explain', model: by.model }, notes: [shown] };
   },
 });

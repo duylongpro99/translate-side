@@ -216,7 +216,8 @@ function ExplainNote({ state }: Props) {
   }
   if (explain.status === 'loading' && !explain.text) return null;
   return (
-    <span class="seg__explain" role="note" data-testid="seg-explain-note" aria-live="polite">
+    // Hidden from screen readers while it streams, so each delta is not announced; read once it is whole.
+    <span class="seg__explain" role="note" data-testid="seg-explain-note" {...(explain.status === 'loading' ? { 'aria-hidden': true } : {})}>
       <span class="seg__explain-label">Explanation</span> {explain.text}
     </span>
   );

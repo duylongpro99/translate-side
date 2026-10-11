@@ -21,7 +21,7 @@ export { codeTerms, fitGlossary, glossaryHash, glossaryProvider, keepsTerm, ment
 export { CONTEXT_TAIL_MAX_TOKENS, CONTEXT_TAIL_PARAGRAPHS, CONTEXT_TAIL_PROVIDER_ID, contextTailProvider } from './context/tail.ts';
 export { ANALYZE_EXCERPT_TOKENS, ANALYZE_OUTLINE_MAX, ANALYZE_PROMPT_ID, analyzeExcerpt, analyzeInput, analyzeV1, neutralizeDelimiters } from './prompts/analyze.ts';
 export { EXPLAIN_PROMPT_ID, explainV1 } from './prompts/explain.ts';
-export { EXPLAIN_CUT_MESSAGE, EXPLAIN_EMPTY_MESSAGE, EXPLAIN_MAX_OUTPUT_TOKENS, EXPLAIN_NOTE_MAX_CHARS, EXPLAIN_TEMPERATURE, explainInput, explainRequest, explainStage, tidyNote } from './stages/explain.ts';
+export { EXPLAIN_EMPTY_MESSAGE, EXPLAIN_MAX_OUTPUT_TOKENS, EXPLAIN_NOTE_MAX_CHARS, EXPLAIN_TEMPERATURE, explainInput, explainRequest, explainStage, tidyNote } from './stages/explain.ts';
 export { EXPLAIN_ID, EXPLAIN_VERSION, explain } from './strategies/explain.ts';
 export { ANALYZE_MAX_OUTPUT_TOKENS, ANALYZE_TEMPERATURE, analyzeRequest, analyzeStage, briefCacheKey } from './stages/analyze.ts';
 export { BRIEF_FIELD_MAX, BRIEF_GLOSSARY_MAX, normalizeBrief, parseBrief } from './parsing/brief.ts';

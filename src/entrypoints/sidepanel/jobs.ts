@@ -938,8 +938,15 @@ export class Jobs {
       if (signal.aborted) return set(undefined);
       const limit = await this.deps.spendLimit?.().catch(() => undefined);
       if (signal.aborted) return set(undefined);
-      if (limit) return set({ status: 'failed', error: limitError(limit) });
+      if (limit) {
+        // The bar offers "Continue anyway", which asks for this note again (M4-E10).
+        job.afterLimit = () => this.explainSegment(tabId, id);
+        this.patch(tabId, job, { limit });
+        return set({ status: 'failed', error: limitError(limit) });
+      }
       if (!resolved.ok) return set({ status: 'failed', error: resolved.error });
+      // Usage from a fallback link is priced with its own profile (as in redoSegment).
+      job.fallbackProfiles = resolved.fallback?.map((l) => l.profile) ?? [];
       const { doc } = job;
       const request: SnippetRequest = {
         doc: { url: doc.url, title: doc.title, sourceLang: doc.sourceLang, targetLang: doc.targetLang, outline: [] },
