@@ -161,6 +161,12 @@ describe('chunkSegments', () => {
     checkInvariants(input, chunks);
   });
 
+  it('a row with an alt-text segment (a caption of its own) stays whole too', () => {
+    const input = [seg(1400), seg(100, { kind: 'table-cell', groupId: 'r' }), seg(100, { kind: 'caption', groupId: 'r', alt: true }), seg(100, { kind: 'table-cell', groupId: 'r' })];
+    const chunks = chunkSegments(input);
+    expect(chunks.map((c) => c.segments.map((x) => x.groupId ?? '-').join(','))).toEqual(['-', 'r,r,r']);
+  });
+
   it('a group interrupted by a non-translated cell stays one unit', () => {
     const input = [seg(1400), seg(100, { groupId: 'r' }), seg(1, { groupId: 'r', translate: false }), seg(100, { groupId: 'r' })];
     const chunks = chunkSegments(input);

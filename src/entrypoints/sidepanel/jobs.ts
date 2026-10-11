@@ -426,8 +426,9 @@ export interface JobDeps {
  * Lazy mode (plan M5-E4, decision §5 "long-page threshold"): above this many translatable segments
  * a page is translated around the reader instead of whole. ~400 segments is a long article or a
  * full docs page (about 40–60k source tokens, 25+ requests); below it, translating everything
- * costs little and the reader sees the whole page done. Tuned in the M5-C measurements
- * (docs/progress/progress-m5.md).
+ * costs little and the reader sees the whole page done. The fixtures: fixtures/long/long-100-screens
+ * has 767 segments (~87 screens at 800 px: the target page), large-table 121 rows × 5 cells; the
+ * docs and article fixtures of fixtures/sites run 40–340 segments and stay whole.
  */
 export const LAZY_SEGMENTS = 400;
 /** How many screens after the one on screen a round covers. */
@@ -716,8 +717,9 @@ export class Jobs {
     const todo = new Set(translatable.filter((s) => segs.get(s.id)?.status !== 'final').map((s) => s.id));
     const gate = new Gate();
     gate.set(tabId === this.activeTabId);
+    const lazy = !all && translatable.length > (this.deps.lazyAbove ?? LAZY_SEGMENTS);
     const job: Job = {
-      lazy: !all && translatable.length > (this.deps.lazyAbove ?? LAZY_SEGMENTS),
+      lazy,
       all,
       docId,
       doc,
@@ -744,6 +746,7 @@ export class Jobs {
       apart: costFrom ? { usage: { ...costFrom.apart.usage }, usd: costFrom.apart.usd } : { usage: { input: 0, cachedInput: 0, output: 0 }, usd: undefined },
       fresh,
       view: {
+        ...(lazy && todo.size > 0 ? { lazy: { rest: todo.size } } : {}),
         status: 'running',
         paused: !gate.open,
         model: keep?.view.model ?? '',
@@ -787,7 +790,8 @@ export class Jobs {
     }
     // The analyze call sees only the segments still to translate. A brief stored under the key of
     // the whole page must come from the whole page, so a run that skips any segment stores none.
-    if (todo.size !== translatable.length) job.briefKey = undefined;
+    // A lazy round's analyze call reads the whole page (`briefFrom`), so its brief is stored.
+    if (todo.size !== translatable.length && !job.lazy) job.briefKey = undefined;
     if (todo.size === 0) {
       this.finish(tabId, job, 'done');
       return;
@@ -827,6 +831,7 @@ export class Jobs {
       priority: [...this.screenOf(tabId, docId)],
       livePriority: () => this.screenOf(tabId, docId),
       focus: () => job.focus,
+      ...(job.lazy ? { briefFrom: segments } : {}),
       strategy: this.deps.strategy ?? PANEL_STRATEGY,
       options: {
         style: doc.style ?? 'natural',
@@ -1402,15 +1407,10 @@ export class Jobs {
     for (const [id, s] of job.earlier) if (job.segs.get(id)?.status === 'pending' && !job.retrying.has(id)) job.segs.set(id, s);
     const kept = job.earlier.size > 0 ? { kept: job.earlier.size } : {};
     job.backoff.clear();
-    // Lazy mode: what is still untranslated is the rest the reader has not reached (M5-E4).
-    let lazy: Partial<JobView> = {};
     if (job.lazy) {
-      let rest = 0;
-      for (const s of job.segs.values()) if (s.status === 'pending') rest++;
-      if (rest > 0) lazy = { lazy: { rest } };
       if (status === 'done' && job.round) job.stalled = [...job.round].some((id) => job.segs.get(id)?.status === 'pending');
     }
-    this.patch(tabId, job, { backoff: [], status, paused: false, counts: count(job.segs), endedAt: this.now(), ...kept, ...lazy, ...(stopError ? { stopError } : {}) });
+    this.patch(tabId, job, { backoff: [], status, paused: false, counts: count(job.segs), endedAt: this.now(), ...kept, ...(stopError ? { stopError } : {}) });
     if (status === 'done') queueMicrotask(() => (job.wantRest ? void this.translateRest(tabId) : this.reach(tabId, job)));
   }
 
@@ -1441,6 +1441,14 @@ export class Jobs {
 
   private patch(tabId: number, job: Job, patch: Partial<JobView>): void {
     job.view = { ...job.view, ...patch };
+    // Lazy mode: the Translate the rest button is there from the first round on, with the blocks still waiting.
+    if (job.lazy && (patch.counts !== undefined || patch.status !== undefined)) {
+      let rest = 0;
+      for (const s of job.segs.values()) if (s.status === 'pending') rest++;
+      const next: JobView = { ...job.view };
+      delete next.lazy;
+      job.view = rest > 0 ? { ...next, lazy: { rest } } : next;
+    }
     if (this.jobs.get(tabId) === job) this.emit(tabId, job.view);
   }
 

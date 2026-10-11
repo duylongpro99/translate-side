@@ -110,6 +110,12 @@ export interface TranslationJob {
    * are never touched. Absent: the chunks stay as first cut.
    */
   focus?: () => number;
+  /**
+   * The segments the analyze call reads its excerpt from, when the job sends only part of the page
+   * (lazy mode, plan M5-E4): the whole page, so the brief is the same as for a page translated whole
+   * (§5.7 Step 1). Absent: `doc.segments`.
+   */
+  briefFrom?: readonly Segment[];
   strategy: StrategyId;
   options: JobOptions;
 }

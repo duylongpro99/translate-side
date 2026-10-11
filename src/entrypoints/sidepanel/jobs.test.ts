@@ -907,6 +907,40 @@ describe('Jobs: lazy mode for long pages (plan M5-E4)', () => {
     expect(jobs.get(1)?.status).toBe('done');
   });
 
+  it('the Translate the rest note is on the view from the start, through every round, until nothing waits', async () => {
+    const client = translatorClient();
+    const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client), lazyAbove: 50 });
+    jobs.setActive(1);
+    const seen: (JobView['status'] | string)[] = [];
+    jobs.subscribe((_, v) => {
+      if (v) seen.push(`${v.status}:${v.lazy ? 'lazy' : '-'}`);
+    });
+    await jobs.start(1, 'd', doc(120, 20));
+    jobs.setViewport(1, 'd', ['s100']);
+    await until(() => jobs.get(1)?.status === 'running');
+    expect(jobs.get(1)?.lazy?.rest).toBeGreaterThan(0);
+    await until(() => jobs.get(1)?.status === 'done');
+    // Every state of the running rounds carried it.
+    expect(seen.filter((x) => x.startsWith('running:')).every((x) => x === 'running:lazy')).toBe(true);
+    await jobs.translateRest(1);
+    expect(jobs.get(1)?.lazy).toBeUndefined();
+  });
+
+  it('a lazy round reads the whole page for its brief, whatever the screen; the brief is cached for the page', async () => {
+    const isAnalyze = (req: NormalizedRequest) => req.system.startsWith('You prepare a translator');
+    const BRIEF = { language: 'en', genre: 'report', audience: 'general', purpose: 'inform', tone: 'dry', glossary: [] };
+    const client = translatorClient((lines, _n, req) => (isAnalyze(req) ? JSON.stringify(BRIEF) : renderLines(lines, (src) => `vi:${src}`)), { model: GEMINI_PROFILE.model });
+    const jobs = new Jobs({ translateClient: ok(client), lazyAbove: 50 });
+    jobs.setActive(1);
+    jobs.setViewport(1, 'd', ['s90', 's91']);
+    await jobs.start(1, 'd', doc(120, 200));
+    const asked = client.requests.filter(isAnalyze);
+    expect(asked).toHaveLength(1);
+    expect(JSON.stringify(asked[0]?.messages)).toContain('P0 word0');
+    expect(JSON.stringify(asked[0]?.messages)).not.toContain('P95 ');
+    expect(jobs.get(1)?.brief).toBeDefined();
+  });
+
   it('Translate the rest translates everything and drops the lazy note', async () => {
     const client = translatorClient();
     const jobs = new Jobs({ strategy: 'single-pass', translateClient: ok(client), lazyAbove: 50 });
