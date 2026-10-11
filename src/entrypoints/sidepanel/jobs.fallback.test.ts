@@ -284,6 +284,47 @@ describe('Jobs with the terminal basic entry (plan M5-E7, §3 #4: all providers 
     }
   });
 
+  it('contextual (the panel default), down from the start: the failed analyze call does not stop the job; every block ends in basic (review D N5)', async () => {
+    const translator = mt();
+    const jobs = new Jobs({ strategy: 'contextual', translateClient: allDown(true), sleep: instant, mt: translator });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(6));
+    const view = jobs.get(1);
+    expect(view).toMatchObject({ status: 'done', counts: { total: 6, final: 6, failed: 0 } });
+    expect(view?.stopError).toBeUndefined();
+    expect([...(view?.segs.values() ?? [])].every((s) => s.basic)).toBe(true);
+    expect(view?.fallback).toMatchObject({ basic: true, error: { kind: 'network' } });
+  });
+
+  it('a provider that answers again ends the switch: its later blocks are its own, and the note says so (review D N1)', async () => {
+    // Down for the first chunk's attempts on both links (4 + 4), then up.
+    let n = 0;
+    const up = translatorClient(undefined, { model: CLOUD.model });
+    const back: LLMClient = {
+      model: CLOUD.model,
+      reasoningReserveTokens: () => 0,
+      async *stream(req) {
+        if (n++ < 4) yield { type: 'error', error: { kind: 'network', message: "Can't reach api.anthropic.com" } };
+        else yield* up.stream(req);
+      },
+    };
+    const translator = mt();
+    const jobs = new Jobs({
+      strategy: 'single-pass',
+      translateClient: () => Promise.resolve({ ok: true, client: stoppable(0), profile: LOCAL, connection: { id: 'ollama', label: 'Home Ollama' }, fallback: [{ client: back, profile: CLOUD, connection: { id: 'anthropic', label: 'My Anthropic' } }], basic: true }),
+      sleep: instant,
+      mt: translator,
+    });
+    jobs.setActive(1);
+    await jobs.start(1, 'd', doc(4));
+    const view = jobs.get(1);
+    expect(view).toMatchObject({ status: 'done', counts: { total: 4, final: 4, failed: 0 } });
+    const segs = [...(view?.segs.values() ?? [])];
+    expect(segs[0]?.basic).toBe(true);
+    expect(segs.slice(1).map((s) => [s.basic, s.model])).toEqual(Array.from({ length: 3 }, () => [undefined, CLOUD.model]));
+    expect(view?.fallback).toMatchObject({ basic: true, recovered: true, to: 'Chrome Translator' });
+  });
+
   it('Retranslate on one block while every provider is down: basic answers it too', async () => {
     const translator = mt();
     const jobs = new Jobs({ strategy: 'single-pass', translateClient: allDown(true), sleep: instant, mt: translator });

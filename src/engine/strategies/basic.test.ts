@@ -66,7 +66,12 @@ type Final = Extract<EngineEvent, { type: 'segment.final' }>;
 type Failed = Extract<EngineEvent, { type: 'segment.failed' }>;
 const finals = (events: EngineEvent[]) => events.filter((e): e is Final => e.type === 'segment.final');
 const failures = (events: EngineEvent[]) => events.filter((e): e is Failed => e.type === 'segment.failed');
-const switches = (events: EngineEvent[]) => events.filter((e) => e.type === 'stage' && e.stage === BASIC_SWITCH_STAGE);
+type Stage = Extract<EngineEvent, { type: 'stage' }>;
+const switchEvents = (events: EngineEvent[]) => events.filter((e): e is Stage => e.type === 'stage' && e.stage === BASIC_SWITCH_STAGE);
+/** The switches' `start` events. */
+const switches = (events: EngineEvent[]) => switchEvents(events).filter((e) => e.status === 'start');
+/** The switch events as `status` (+ `recovered`), in order. */
+const switchTrail = (events: EngineEvent[]) => switchEvents(events).map((e) => `${e.status}${(e.info as BasicSwitchInfo).recovered ? ' recovered' : ''}`);
 
 describe('the basic strategy (DESIGN §5.3, plan M5-E7)', () => {
   it('translates each block on its own with the MTClient, plain text in, labeled by producedBy', async () => {
@@ -144,14 +149,22 @@ describe('the terminal basic entry: every provider down switches the job to basi
     const sw = switches(events);
     expect(sw).toHaveLength(1);
     expect((sw[0] as { info: BasicSwitchInfo }).info).toEqual({ from: 'qwen3.8-flash', to: 'Chrome Translator', error: err(kind, { message: "Can't reach api.example.com." }) });
+    // Paired (review D N2): the switch is over when the job is, the providers never came back.
+    expect(switchTrail(events)).toEqual(['start', 'done']);
+    expect(events.at(-2)).toMatchObject({ type: 'stage', stage: BASIC_SWITCH_STAGE, status: 'done' });
     // The switch comes before the first block it took over.
     expect(events.findIndex((e) => e.type === 'stage' && e.stage === BASIC_SWITCH_STAGE)).toBeLessThan(events.findIndex((e) => e.type === 'segment.final'));
   });
 
-  it('contextual (the panel strategy): the analyze call fails too, and every block still ends in basic', async () => {
+  it('contextual (the panel strategy), down from the start: the analyze call (the first) fails retryably, the job goes on, and every block still ends in basic (review D N5)', async () => {
     const mt = fakeMT();
+    const analyzer = down();
+    const translator = down();
     const segments = [seg('a', 'One. '.repeat(30)), seg('b', 'Two. '.repeat(30))];
-    const events = await collect(createEngine(deps(down(), mt)).translate(job(segments, 'contextual', { basicFallback: true }, 40), new AbortController().signal));
+    const events = await collect(createEngine({ ...deps(translator, mt), llm: (role) => (role === 'analyze' ? analyzer : translator) }).translate(job(segments, 'contextual', { basicFallback: true }, 40), new AbortController().signal));
+    expect(analyzer.requests.length).toBeGreaterThan(0);
+    expect(events.some((e) => e.type === 'artifact')).toBe(false);
+    expect(switches(events)).toHaveLength(1);
     expect(failures(events)).toEqual([]);
     expect(finals(events).map((f) => [f.id, f.producedBy.strategy])).toEqual([
       ['a', 'basic'],
@@ -159,14 +172,64 @@ describe('the terminal basic entry: every provider down switches the job to basi
     ]);
   });
 
-  it('after the switch, chunks not started yet are not sent to the provider again', async () => {
+  it('after the switch, a later chunk tries the provider once (the probe), without backing off', async () => {
     const primary = down();
+    const d = deps(primary, fakeMT());
     const segments = [seg('a', 'One. '.repeat(30)), seg('b', 'Two. '.repeat(30)), seg('c', 'Three. '.repeat(30))];
-    await collect(createEngine(deps(primary, fakeMT())).translate(job(segments, 'single-pass', { basicFallback: true }, 40), new AbortController().signal));
-    // The first chunk's attempts only (retry policy), none for b and c.
-    const firstChunk = primary.requests.length;
-    expect(new Set(primary.requests.map((r) => r.messages.at(-1)?.content.includes('One.')))).toEqual(new Set([true]));
-    expect(firstChunk).toBeGreaterThan(0);
+    await collect(createEngine(d).translate(job(segments, 'single-pass', { basicFallback: true }, 40), new AbortController().signal));
+    const sent = (word: string) => primary.requests.filter((r) => r.messages.at(-1)?.content.includes(word)).length;
+    // The first chunk's attempts (1 + DEFAULT_RETRY_POLICY.maxRetries), then one each.
+    expect([sent('One.'), sent('Two.'), sent('Three.')]).toEqual([4, 1, 1]);
+    expect((d.sleep as ReturnType<typeof fakeSleep>).delays).toHaveLength(3);
+  });
+
+  it('a provider that answers again ends the switch: the later blocks are its own again (review D N1)', async () => {
+    // Down for the first chunk's attempts (4), then up.
+    const up = translatorClient(undefined, { model: 'qwen3.8-flash' });
+    let n = 0;
+    const primary: LLMClient = {
+      model: 'qwen3.8-flash',
+      reasoningReserveTokens: () => 0,
+      async *stream(req) {
+        if (n++ < 4) yield { type: 'error', error: err('network') };
+        else yield* up.stream(req);
+      },
+    };
+    const segments = [seg('a', 'One. '.repeat(30)), seg('b', 'Two. '.repeat(30)), seg('c', 'Three. '.repeat(30))];
+    const mt = fakeMT();
+    const events = await collect(createEngine(deps(primary, mt)).translate(job(segments, 'single-pass', { basicFallback: true }, 40), new AbortController().signal));
+    expect(finals(events).map((f) => [f.id, f.producedBy.strategy])).toEqual([
+      ['a', 'basic'],
+      ['b', 'single-pass'],
+      ['c', 'single-pass'],
+    ]);
+    expect(mt.calls).toHaveLength(1);
+    expect(switchTrail(events)).toEqual(['start', 'done recovered']);
+    // The recovery is told before the first block the provider translated again.
+    expect(events.findIndex((e) => e.type === 'stage' && e.status === 'done')).toBeLessThan(events.findIndex((e) => e.type === 'segment.final' && e.id === 'b'));
+  });
+
+  it('a provider that fails again after it came back switches the job again', async () => {
+    // Down (a: 4 attempts), up (b), down again (c: its attempts, then basic).
+    const up = translatorClient(undefined, { model: 'qwen3.8-flash' });
+    let n = 0;
+    const primary: LLMClient = {
+      model: 'qwen3.8-flash',
+      reasoningReserveTokens: () => 0,
+      async *stream(req) {
+        if (n++ === 4) yield* up.stream(req);
+        else yield { type: 'error', error: err('network') };
+      },
+    };
+    const segments = [seg('a', 'One. '.repeat(30)), seg('b', 'Two. '.repeat(30)), seg('c', 'Three. '.repeat(30))];
+    const events = await collect(createEngine(deps(primary, fakeMT())).translate(job(segments, 'single-pass', { basicFallback: true }, 40), new AbortController().signal));
+    expect(finals(events).map((f) => [f.id, f.producedBy.strategy])).toEqual([
+      ['a', 'basic'],
+      ['b', 'single-pass'],
+      ['c', 'basic'],
+    ]);
+    expect(failures(events)).toEqual([]);
+    expect(switchTrail(events)).toEqual(['start', 'done recovered', 'start', 'done']);
   });
 
   it('the fallback profiles are tried first; basic only after the last one gave up', async () => {

@@ -140,7 +140,7 @@ export interface JobView {
    * The latest hand-over to a fallback profile in this run (M4-E9): `from` gave up on `error`
    * (rate limit, overloaded, network) and the job goes on with `to`. Absent when none.
    */
-  fallback?: { from: string; to: string; error: LLMError; basic?: true };
+  fallback?: { from: string; to: string; error: LLMError; basic?: true; recovered?: true };
   /** The page is under a local-only site rule (its pattern): a stop says why nothing fell back to the cloud (M4-D tester O1). */
   localOnly?: string;
   /** Epoch ms: when this run started, when its first text became visible, when it ended. */
@@ -1324,10 +1324,12 @@ export class Jobs {
         return;
       }
       case 'stage': {
-        // Every provider gave up and the job switched to Chrome's Translator (M5-E7).
-        if (event.stage !== BASIC_SWITCH_STAGE || event.status !== 'start' || job.view.status !== 'running') return;
+        // Every provider gave up and the job switched to Chrome's Translator (M5-E7); `done` with
+        // `recovered`: a provider answered again and the job went back to it.
+        if (event.stage !== BASIC_SWITCH_STAGE || job.view.status !== 'running') return;
         const info = event.info as BasicSwitchInfo;
-        this.patch(tabId, job, { fallback: { from: info.from, to: info.to ?? 'basic translation', error: info.error, basic: true } });
+        if (event.status === 'start') this.patch(tabId, job, { fallback: { from: info.from, to: info.to ?? 'basic translation', error: info.error, basic: true } });
+        else if (event.status === 'done' && info.recovered && job.view.fallback?.basic) this.patch(tabId, job, { fallback: { ...job.view.fallback, recovered: true } });
         return;
       }
       case 'artifact': {

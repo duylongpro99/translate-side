@@ -52,8 +52,10 @@ export interface EngineDeps {
 }
 
 /**
- * The `stage` event that says a job switched to the `basic` strategy (plan M5-E7): every provider
- * gave up; `info` is `BasicSwitchInfo`. Sent once, before the first block the switch takes over.
+ * The `stage` events of the switch to the `basic` strategy (plan M5-E7), `info` = `BasicSwitchInfo`:
+ * `start` when every provider gave up, before the first block the switch takes over; `done` when
+ * it ends, because a provider answered again (`recovered`) or the job ended. A job can switch
+ * again after a recovery (another start/done pair).
  */
 export const BASIC_SWITCH_STAGE = 'basic-fallback';
 
@@ -63,6 +65,8 @@ export interface BasicSwitchInfo {
   /** The translator that takes over (`MTClient.model`), absent when there is none. */
   to?: string;
   error: LLMError;
+  /** On `done`: a provider answered again, so the blocks after it are the model's again. */
+  recovered?: true;
 }
 
 /** Shown for segments left untranslated when a strategy fails unexpectedly. */
@@ -128,6 +132,10 @@ export function createEngine(deps: EngineDeps): TranslationEngine {
 // - From then on every role's client answers at once with that error, without sending anything,
 //   so the chunks not started yet come straight to the switch instead of backing off again on
 //   providers that are down. Chunks already streaming finish (their text is not taken back).
+// - Except one request at a time, the probe: it goes to the chain once (its last link is always
+//   tried again, fallback.ts), without backing off. When it gets text or ends well, the provider
+//   is back: the switch ends and later requests go to the providers again (a job switches again
+//   if they fail again). One chunk that ran out of retries does not hand a long page to basic.
 // - The blocks taken over are translated by `basicTranslate` as they arrive, alongside the
 //   strategy, and marked by `producedBy.strategy` = `basic`. A device without a translator for the
 //   pair answers each block with why (never a silent failure).
@@ -135,8 +143,12 @@ export function createEngine(deps: EngineDeps): TranslationEngine {
 // them (§4.3.5), as they never fall back to another provider either.
 
 interface BasicSwitch {
-  /** The error the last provider gave up on; set once. */
+  /** While switched: the error the last provider gave up on. */
   error?: LLMError;
+  /** A request is trying the providers again (see above). */
+  probing?: boolean;
+  /** The switch's `start` was sent and its `done` not yet. */
+  announced?: BasicSwitchInfo;
 }
 
 const createSwitch = (): BasicSwitch => ({});
@@ -164,14 +176,16 @@ async function* withBasicSwitch(events: AsyncIterable<EngineEvent>, state: Basic
     try {
       for await (const event of events) {
         const segment = event.type === 'segment.failed' && event.revision === undefined && isRetryable(event.error) && !ctx.memory.translated.has(event.id) ? byId.get(event.id) : undefined;
+        // The providers answered again (a probe got through): the switch ends.
+        if (state.announced && state.error === undefined) yield* ended(true);
         if (segment === undefined || event.type !== 'segment.failed') {
           yield event;
           continue;
         }
-        if (state.error === undefined) {
-          state.error = event.error;
-          const info: BasicSwitchInfo = { from: ctx.llm('translate').model, ...(ctx.mt ? { to: ctx.mt.model } : {}), error: event.error };
-          yield { type: 'stage', stage: BASIC_SWITCH_STAGE, status: 'start', info };
+        state.error ??= event.error;
+        if (!state.announced) {
+          state.announced = { from: ctx.llm('translate').model, ...(ctx.mt ? { to: ctx.mt.model } : {}), error: state.error };
+          yield { type: 'stage', stage: BASIC_SWITCH_STAGE, status: 'start', info: state.announced };
         }
         queue.push(segment);
         poke();
@@ -181,7 +195,14 @@ async function* withBasicSwitch(events: AsyncIterable<EngineEvent>, state: Basic
       poke();
     }
   }
+  function* ended(recovered: boolean): Generator<EngineEvent> {
+    if (!state.announced) return;
+    const info: BasicSwitchInfo = { ...state.announced, ...(recovered ? { recovered: true } : {}) };
+    delete state.announced;
+    yield { type: 'stage', stage: BASIC_SWITCH_STAGE, status: 'done', info };
+  }
   yield* merge(strategy(), worker());
+  yield* ended(false);
 }
 
 /** The events of `a` and `b` as they come. Either throwing stops both (the other is returned). */
@@ -216,12 +237,25 @@ function switchable(client: LLMClient, state: BasicSwitch): LLMClient {
     reasoningReserveTokens: (req) => client.reasoningReserveTokens(req),
     servedBy: (req) => client.servedBy?.(req),
     async *stream(req: NormalizedRequest): AsyncGenerator<NormalizedEvent> {
-      if (state.error !== undefined) {
+      if (state.error === undefined) {
+        yield* client.stream(req);
+        return;
+      }
+      if (state.probing) {
         req.signal.throwIfAborted();
         yield { type: 'error', error: state.error };
         return;
       }
-      yield* client.stream(req);
+      // The probe: this request tries the providers again.
+      state.probing = true;
+      try {
+        for await (const event of client.stream(req)) {
+          if ((event.type === 'text' && event.delta !== '') || event.type === 'done') delete state.error;
+          yield event;
+        }
+      } finally {
+        state.probing = false;
+      }
     },
   };
 }
@@ -243,8 +277,9 @@ function createStageContext(deps: EngineDeps, job: TranslationJob, signal: Abort
   const retried = (raw: LLMClient): LLMClient => {
     let client = retrying.get(raw);
     if (client === undefined) {
-      // A request still backing off on a link the chain has given up on stops waiting.
-      const own: LLMClient = withRetry(withLatch(raw, latched), { ...retry, abandon: () => dead.has(own) });
+      // A request still backing off on a link the chain has given up on stops waiting, and so does
+      // one while the job is switched to `basic`: a probe is one attempt, never a backoff.
+      const own: LLMClient = withRetry(withLatch(raw, latched), { ...retry, abandon: () => dead.has(own) || toBasic?.error !== undefined });
       client = own;
       retrying.set(raw, client);
     }
