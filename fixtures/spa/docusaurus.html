@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- SPA fixture (plan M5-E2): Docusaurus-shaped layout, original filler text, MIT (this repository). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="generator" content="Docusaurus v3.5.2">
+<title>Quillmark docs</title>
+<style>body{font-family:system-ui;margin:0}.navbar{padding:8px 16px;border-bottom:1px solid #ddd}.main-wrapper{display:flex}aside{width:220px;padding:16px;border-right:1px solid #ddd}main{flex:1;padding:16px 32px;max-width:760px}a.active{font-weight:bold}.admonition{border-left:4px solid #4a8;padding:4px 12px;background:#f3fbf6}.banner{background:#ffd;padding:8px}</style>
+</head>
+<body>
+<div id="__docusaurus">
+<nav class="navbar"><a href="?p=intro" data-p="intro">Quillmark</a> · Docs · Blog</nav>
+<div class="main-wrapper">
+<aside class="theme-doc-sidebar-container"><nav class="menu"><ul data-spa-nav></ul></nav></aside>
+<main class="docMainContainer"><div class="container" id="mount"></div></main>
+</div>
+<footer class="footer">Copyright © 2026 Quillmark contributors.</footer>
+</div>
+<script>
+window.SPA = {
+  site: 'Quillmark docs',
+  mount: '#mount',
+  mode: 'swap',
+  wrap: function (p) {
+    return '<nav class="breadcrumbs" aria-label="Breadcrumbs"><a href="?p=intro" data-p="intro">Home</a> › ' + p.title + '</nav>' +
+      '<article><div class="theme-doc-markdown markdown">' + p.body + '</div></article>' +
+      '<nav class="pagination-nav" aria-label="Docs pages"><a href="?p=intro" data-p="intro">Previous</a> <a href="?p=config" data-p="config">Next</a></nav>';
+  }
+};
+</script>
+<script src="spa.js"></script>
+</body>
+</html>

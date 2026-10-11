@@ -1,0 +1,31 @@
+<!doctype html>
+<!-- SPA fixture (plan M5-E2): MkDocs Material shaped layout (instant navigation), original filler text, MIT (this repository). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.30">
+<title>Quillmark docs</title>
+<style>body{font-family:system-ui;margin:0}.md-header{padding:8px 16px;background:#3f51b5;color:#fff}.md-main__inner{display:flex}.md-sidebar{width:220px;padding:16px}.md-content{flex:1;padding:16px 32px;max-width:760px}a.active{font-weight:bold}.admonition{border-left:4px solid #448aff;padding:4px 12px}.banner{background:#ffd;padding:8px}</style>
+</head>
+<body>
+<header class="md-header">Quillmark</header>
+<div class="md-container">
+<main class="md-main"><div class="md-main__inner md-grid">
+<div class="md-sidebar md-sidebar--primary"><nav class="md-nav"><ul data-spa-nav></ul></nav></div>
+<div class="md-content" id="mount" data-md-component="content"></div>
+</div></main>
+<footer class="md-footer">Made with Material for MkDocs</footer>
+</div>
+<script>
+window.SPA = {
+  site: 'Quillmark docs',
+  mount: '#mount',
+  mode: 'swap',
+  wrap: function (p) {
+    return '<article class="md-content__inner md-typeset">' + p.body + '</article>';
+  }
+};
+</script>
+<script src="spa.js"></script>
+</body>
+</html>

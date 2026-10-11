@@ -1,10 +1,15 @@
 // Content script (plan M0-E3/E4). Injected by the worker with scripting.executeScript under
 // activeTab, never declared in the manifest. It answers the panel over a Port and pushes nothing
 // on its own: the panel connects and says hello first (decision S5). After `extract`, it pushes
-// what is on screen on that port (viewport.ts, plan M3-E1/E7) until the port closes.
+// what is on screen on that port (viewport.ts, plan M3-E1/E7) until the port closes, and the page
+// read again whenever it changes (an SPA route change, late content; watch.ts, plan M5-E2), with
+// the ids of unchanged blocks kept (stable.ts).
 import { browser } from 'wxt/browser';
 import { extractPage } from '@/extract';
 import { watchViewport, type ViewportWatch } from '@/extract/viewport';
+import { watchChanges, type ChangeWatch } from '@/extract/watch';
+import { keepIds, readSignature } from '@/segment/stable';
+import type { Segment } from '@/engine/types';
 import type { InjectOutcome } from '@/shared/inject';
 import { CONTENT_PORT_NAME, CONTENT_PORT_PREFIX, PROTOCOL_VERSION, ProtocolError, emit, serve, type ContentApi } from '@/shared/protocol';
 
@@ -24,6 +29,20 @@ export default defineContentScript({
     globalThis.__translateSide = { alive: isRuntimeAlive };
 
     const docId = crypto.randomUUID();
+    // The last read of this document, for stable ids and for telling a real change (plan M5-E2).
+    let last: { segments: Segment[]; signature: string } | undefined;
+    /** Reads the page, keeping the ids of blocks that did not change since the last read. */
+    const read = (targets: Map<string, Element | Range>) => {
+      const fresh = new Map<string, Element | Range>();
+      const result = extractPage(document, fresh);
+      if (!result.ok) return { result, changed: false };
+      const renames = keepIds(last?.segments ?? [], result.segments);
+      for (const [id, target] of fresh) targets.set(renames.get(id) ?? id, target);
+      const signature = readSignature(result.url, result.segments);
+      const changed = signature !== last?.signature;
+      last = { segments: result.segments, signature };
+      return { result, changed };
+    };
     browser.runtime.onConnect.addListener((port) => {
       if (port.name !== CONTENT_PORT_NAME) {
         // A panel of another version: hang up so it fails fast (it can't speak our messages).
@@ -32,7 +51,26 @@ export default defineContentScript({
       }
       // One watch per connection, over the segments of its latest read.
       let watch: ViewportWatch | undefined;
-      port.onDisconnect.addListener(() => watch?.stop());
+      // And one change watch: after the first `extract`, the page is read again when it changes.
+      let changes: ChangeWatch | undefined;
+      port.onDisconnect.addListener(() => {
+        watch?.stop();
+        changes?.stop();
+      });
+      const look = (targets: Map<string, Element | Range>, segments: readonly Segment[]) => {
+        watch?.stop();
+        watch = watchViewport(window, targets, segments.map((s) => s.id), (v) => emit(port, 'viewport', v));
+        return watch.now();
+      };
+      const reread = () => {
+        const targets = new Map<string, Element | Range>();
+        const { result, changed } = read(targets);
+        changes?.reported(changed);
+        // An unreadable moment (a password field has focus, the content is mid-render) sends nothing.
+        if (!result.ok || !changed) return;
+        const { visible, anchor } = look(targets, result.segments);
+        emit(port, 'changed', { ...result, visible, ...(anchor ? { anchor } : {}) });
+      };
       serve<ContentApi>(port, {
         hello: ({ v }) => {
           if (v !== PROTOCOL_VERSION) {
@@ -43,11 +81,11 @@ export default defineContentScript({
         extract: () => {
           watch?.stop();
           watch = undefined;
+          changes ??= watchChanges(window, reread);
           const targets = new Map<string, Element | Range>();
-          const result = extractPage(document, targets);
+          const { result } = read(targets);
           if (!result.ok) return result;
-          watch = watchViewport(window, targets, result.segments.map((s) => s.id), (v) => emit(port, 'viewport', v));
-          const { visible, anchor } = watch.now();
+          const { visible, anchor } = look(targets, result.segments);
           return { ...result, visible, ...(anchor ? { anchor } : {}) };
         },
       });
