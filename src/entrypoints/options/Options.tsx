@@ -330,8 +330,13 @@ function GlossarySection({ api }: { api: Browser }) {
  */
 function SitesSection({ api }: { api: Browser }) {
   const [lists, setLists] = useState<SiteLists | undefined>();
-  /** Allowlisted sites whose permission is missing (refused, or removed in chrome://extensions). */
-  const [noAccess, setNoAccess] = useState<string[]>([]);
+  /**
+   * Allowlisted sites missing a permission (refused, or removed in chrome://extensions), and which:
+   * both schemes, or only one. A page is checked against its own scheme (sites.ts
+   * hasSitePermission), so a site with only http granted does not translate its https pages by
+   * itself, and says so here (review R3).
+   */
+  const [noAccess, setNoAccess] = useState<Record<string, 'all' | 'https' | 'http'>>({});
   const [allowInput, setAllowInput] = useState('');
   const [neverInput, setNeverInput] = useState('');
   const [note, setNote] = useState<{ text: string; warn: boolean } | undefined>();
@@ -339,10 +344,14 @@ function SitesSection({ api }: { api: Browser }) {
     readSiteLists(api).then(
       async (l) => {
         setLists(l);
-        // Either scheme will do: a page is checked against its own (sites.ts hasSitePermission).
         const held = (origin: string) => api.permissions.contains({ origins: [origin] }).catch(() => false);
-        const missing = await Promise.all(l.allow.map(async (p) => ((await Promise.all(siteOrigins(p).map(held))).some(Boolean) ? null : p)));
-        setNoAccess(missing.filter((p): p is string => p !== null));
+        const missing = await Promise.all(
+          l.allow.map(async (p) => {
+            const [https, http] = await Promise.all(siteOrigins(p).map(held));
+            return [p, https && http ? null : !https && !http ? 'all' : https ? 'http' : 'https'] as const;
+          }),
+        );
+        setNoAccess(Object.fromEntries(missing.filter((m): m is [string, 'all' | 'https' | 'http'] => m[1] !== null)));
       },
       () => setLists({ allow: [], never: [] }),
     );
@@ -397,9 +406,11 @@ function SitesSection({ api }: { api: Browser }) {
         {sites.map((p) => (
           <li key={p} data-testid="site-entry">
             <span class="opt__term">{p}</span>{' '}
-            {kind === 'allow' && noAccess.includes(p) ? (
+            {kind === 'allow' && noAccess[p] ? (
               <>
-                <span class="opt__status--warn">no access · </span>
+                <span class="opt__status--warn" data-testid="site-no-access">
+                  {noAccess[p] === 'all' ? 'no access' : `no ${noAccess[p]} access: its ${noAccess[p]} pages wait for a click`} ·{' '}
+                </span>
                 <button type="button" class="opt__link" onClick={() => void allow(p)} aria-label={`Grant access to ${p}`}>
                   Grant access
                 </button>{' '}

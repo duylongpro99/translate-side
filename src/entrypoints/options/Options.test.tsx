@@ -487,13 +487,19 @@ describe('options: site rules (plan M5-E6)', () => {
     expect(f.granted.has('https://docs.example.org/*')).toBe(true);
   });
 
-  it('access to one scheme counts as access (an http-only intranet site)', async () => {
+  it('access to one scheme only says which pages wait for a click, as hasSitePermission checks the page scheme (review R3)', async () => {
     const f = fakeApi();
-    f.sync.set('siteAllowlist', ['wiki.intranet']);
+    f.sync.set('siteAllowlist', ['wiki.intranet', 'docs.example.org']);
     f.granted.add('http://wiki.intranet/*');
+    f.granted.add('https://docs.example.org/*');
+    f.granted.add('http://docs.example.org/*');
     act(() => render(<Options api={f.api} />, root));
-    await waitFor(() => sites('allow').length === 1);
-    await flush();
-    expect(root.querySelector('[aria-label="Grant access to wiki.intranet"]')).toBeNull();
+    await waitFor(() => root.querySelector('[data-testid=site-no-access]') !== null);
+    const warnings = [...root.querySelectorAll('[data-testid=site-no-access]')].map((e) => e.textContent);
+    expect(warnings).toEqual(['no https access: its https pages wait for a click · ']);
+    expect(root.querySelector('[aria-label="Grant access to docs.example.org"]')).toBeNull();
+    act(() => void (root.querySelector('[aria-label="Grant access to wiki.intranet"]') as HTMLElement).click());
+    await waitFor(() => root.querySelector('[data-testid=site-no-access]') === null);
+    expect(f.granted.has('https://wiki.intranet/*')).toBe(true);
   });
 });
