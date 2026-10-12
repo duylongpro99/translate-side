@@ -167,3 +167,20 @@ test('the diagnostics log records a failed job without the page text the provide
   for (const text of sent) expect(stored).not.toContain(text.slice(0, 40));
   console.log(`diagnostics export:\n${file}`);
 });
+
+test.describe('Vietnamese UI', () => {
+  test.use({ uiLang: 'vi' });
+
+  test('Chrome in Vietnamese shows the panel and the privacy notice in Vietnamese', async ({ extension }) => {
+    await extension.seed({ privacy: false });
+    const page = await extension.open('sites/goblog-pipelines.html');
+    const panel = await extension.panel();
+    await extension.translate(page);
+    await expect(panel.locator('html')).toHaveAttribute('lang', 'vi');
+    await expect(panel.getByTestId('privacy-notice')).toBeVisible();
+    await expect(panel.locator('#privacy-title')).toHaveText('Trước khi dịch');
+    await expect(panel.getByRole('button', { name: 'Cài đặt' })).toBeVisible();
+    expect(await extension.worker.evaluate(() => chrome.i18n.getUILanguage())).toMatch(/^vi/);
+    expect(await extension.worker.evaluate(() => chrome.i18n.getMessage('actionTitle'))).toBe('Mở Translate Side');
+  });
+});

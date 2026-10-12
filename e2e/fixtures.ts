@@ -10,6 +10,7 @@
 //   (src/shared/inject.ts): marks the tab's access, injects the content script, marks it ready.
 // - Console errors from the worker, the panel and the page (content scripts included) fail the test.
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { test as base, chromium, expect, type ConsoleMessage, type Page, type Worker } from '@playwright/test';
 import { CHROMIUM_ARGS } from './playwright.config.ts';
@@ -39,6 +40,21 @@ const SYNC = {
   'profile:mock-model': { id: 'mock-model', connectionId: 'mock', model: 'mock-model', maxConcurrency: 4, chunkTokens: 1200 },
   routing: { translate: 'mock-model' },
 };
+
+/**
+ * What starts Chromium in `lang`. On Linux the launch env's `LANGUAGE` decides. On macOS the application
+ * locale (the one the extension's messages resolve in) is the system's, which `-AppleLanguages` overrides for
+ * one process. Playwright refuses that argument (its value reads as a second page to open), so a wrapper adds
+ * it in place of the `about:blank` Playwright passes.
+ */
+function localeLaunch(lang: string): { env: Record<string, string>; executablePath?: string } {
+  const env = { ...process.env, LANGUAGE: lang } as Record<string, string>;
+  if (process.platform !== 'darwin') return { env };
+  const file = path.join(os.tmpdir(), `e2e-chromium-${lang}.sh`);
+  const script = `#!/bin/sh\nfor a in "$@"; do shift; [ "$a" = about:blank ] || set -- "$@" "$a"; done\nexec "${chromium.executablePath()}" "$@" -AppleLanguages "(${lang})"\n`;
+  fs.writeFileSync(file, script, { mode: 0o755 });
+  return { env, executablePath: file };
+}
 
 export interface Extension {
   id: string;
@@ -121,6 +137,8 @@ export const test = base.extend<Fixtures & Options, { servers: MockControl; extP
       channel: 'chromium',
       headless: true,
       args: [`--disable-extensions-except=${extPath}`, `--load-extension=${extPath}`, ...CHROMIUM_ARGS, ...(uiLang ? [`--lang=${uiLang}`] : [])],
+      // Playwright passes its own --lang (en-US) unless `locale` says otherwise.
+      ...(uiLang ? { locale: uiLang, ...localeLaunch(uiLang) } : {}),
       viewport: { width: 1100, height: 800 },
     });
     // The site fixtures keep their <base href> (fixtures/sites/README.md): stylesheets, fonts and images
