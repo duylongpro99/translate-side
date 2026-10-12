@@ -1,13 +1,14 @@
 // How a language is named on screen. The prompt's wording is the engine's English `languageLabel` and stays so;
 // this is only for what the reader sees: in a non-English interface the name comes from the browser's own
 // language names (Intl.DisplayNames) in the interface language. Codes and the models' input are untouched.
+import { browser } from 'wxt/browser';
 import { languageLabel } from '@/engine/index';
 import { LANGUAGES } from './settings.ts';
 
 /** The interface language Chrome resolved for the extension (`en` when it cannot be read). */
 function uiLocale(): string {
   try {
-    return globalThis.chrome?.i18n?.getUILanguage?.() || 'en';
+    return browser.i18n.getUILanguage() || 'en';
   } catch {
     return 'en';
   }
