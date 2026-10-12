@@ -33,7 +33,7 @@ panel:
     style:
       natural: Tự nhiên
       faithful: Sát nghĩa
-      simplified: Đơn giản
+      simplified: Đơn giản hóa
     styleTitle:
       natural: Đọc như thể được viết bằng ngôn ngữ của bạn
       faithful: Sát với cách diễn đạt của bản gốc
@@ -53,22 +53,22 @@ panel:
     tabOnly: Chỉ thẻ này
     makeDefault: Đặt làm mặc định
     makeDefaultTitle: Dùng mô hình này cho mọi trang từ giờ trở đi
-    rule: quy tắc trang $1 (ưu tiên hơn lựa chọn của thẻ)
-    ruleLocal: quy tắc trang $1 (chỉ cục bộ) (ưu tiên hơn lựa chọn của thẻ)
-    ruleTitle: Quy tắc trang cho $1 đã chọn mô hình, nên lựa chọn theo thẻ sẽ không có tác dụng
+    rule: quy tắc trang web $1 (ưu tiên hơn lựa chọn của thẻ)
+    ruleLocal: quy tắc trang web $1 (chỉ cục bộ) (ưu tiên hơn lựa chọn của thẻ)
+    ruleTitle: Quy tắc trang web cho $1 đã chọn mô hình, nên lựa chọn theo thẻ sẽ không có tác dụng
     announceTab: Thẻ này hiện dịch bằng $1, chỉ riêng thẻ này.
     announceDefault: Thẻ này dịch bằng $1, tức mô hình mặc định.
   offer:
     ask:
       n: Văn bản gốc · $1 đoạn. Chưa có gì được gửi đi.
     never:
-      n: Bạn đã chọn không bao giờ dịch trang này. Không có gì được gửi đi. · $1 đoạn
+      n: Bạn đã chọn không bao giờ dịch trang web này. Không có gì được gửi đi. · $1 đoạn
     neverSite:
       n: Bạn đã chọn không bao giờ dịch $1. Không có gì được gửi đi. · $2 đoạn
-    siteRules: Quy tắc trang
+    siteRules: Quy tắc trang web
     translate: Dịch trang này
     allow: Luôn dịch $1
-    allowTitle: Tự dịch từng trang của $1 khi bảng đang mở. Trình duyệt sẽ hỏi quyền truy cập trang này một lần.
+    allowTitle: Tự dịch từng trang của $1 khi bảng đang mở. Trình duyệt sẽ hỏi quyền truy cập trang web này một lần.
     notGranted: Quyền truy cập $1 chưa được cấp, nên các trang ở đó vẫn chờ bạn nhấn nút này.
   privacy:
     title: Trước khi dịch
@@ -90,7 +90,7 @@ panel:
     passwordHint: Hãy nhấp ra ngoài ô mật khẩu, rồi nhấn Alt+T hoặc nhấp biểu tượng trên thanh công cụ lần nữa.
     blockedTitle: Không đọc được trang này
     denylisted: Translate Side không bao giờ đọc trang này (trang thư và trang đăng nhập nằm trong danh sách chặn có sẵn).
-    never: Bạn đã chọn không bao giờ dịch trang này. Translate Side không đọc trang. Bạn có thể đổi trong Cài đặt › Quy tắc trang.
+    never: Bạn đã chọn không bao giờ dịch trang web này. Translate Side không đọc trang web đó. Bạn có thể đổi trong Cài đặt › Quy tắc theo trang web.
     browserPage: Chrome không cho tiện ích đọc trang này (trang của trình duyệt, Web Store và các trang tương tự).
     lostTitle: Dịch trang này
     lostText: Translate Side chưa biết trang này. Nhấn Alt+T hoặc nhấp biểu tượng trên thanh công cụ để đọc.
@@ -193,8 +193,8 @@ panel:
     localModel: Mô hình cục bộ
     localUnreachable: Không kết nối được $1 · đã dịch $2/$3, phần còn lại đang chờ
     localBusy: $1 $2 · đã dịch $3/$4
-    localOnly: Quy tắc chỉ-cục-bộ cho $1 giữ trang này không đi qua nhà cung cấp đám mây, nên không chuyển sang nhà cung cấp đám mây.
-    skipped: Trang này đã bằng ngôn ngữ $1 nên không được dịch ($2).
+    localOnly: Quy tắc chỉ dùng cục bộ cho $1 giữ trang này không đi qua nhà cung cấp đám mây, nên không chuyển sang nhà cung cấp đám mây.
+    skipped: Trang này đã ở dạng $1 nên không được dịch ($2).
     how:
       override: theo thiết lập ngôn ngữ nguồn của bạn
       htmlLang: theo thẻ ngôn ngữ của trang
@@ -231,7 +231,7 @@ errors:
   syncItems: "Các cài đặt đồng bộ sẽ vượt giới hạn $1 mục của Chrome. Hãy bớt một số kết nối, mô hình hoặc quy tắc theo trang web."
   syncTotal: "Các cài đặt đồng bộ sẽ vượt giới hạn $1 byte của Chrome. Hãy bớt một số kết nối, mô hình, quy tắc theo trang web hoặc mục thuật ngữ."
   spendAmount: "Giới hạn phải là một số tiền lớn hơn $$0"
-  tooManySites: "Mỗi danh sách tối đa $1 trang web. Hãy xóa bớt một trang trước."
+  tooManySites: "Mỗi danh sách tối đa $1 trang web. Hãy xóa bớt một trang web trước."
   modelInUse: "Mô hình này đang được dùng để dịch. Hãy chọn mô hình khác trong phần Định tuyến trước."
   glossaryNearLimit: "Bảng thuật ngữ đã dùng $1% dung lượng mà Chrome dành để đồng bộ nó."
   routeGone: "Tuyến $1 trỏ tới một mô hình không còn tồn tại. Hãy chọn một mô hình trong phần cài đặt."
@@ -239,7 +239,7 @@ errors:
   roleAnalyze: "tóm tắt tài liệu"
   roleReview: "rà soát"
   noConnection: "Mô hình $1 không có kết nối. Hãy thiết lập lại trong phần cài đặt."
-  localOnly: "Trang này được đặt là chỉ dùng mô hình cục bộ, nhưng mô hình $1 của nó không nằm trên thiết bị này. Không có gì được gửi đi. Hãy chọn một mô hình cục bộ cho trang trong phần cài đặt."
+  localOnly: "Trang web này được đặt là chỉ dùng mô hình cục bộ, nhưng mô hình $1 của nó không nằm trên thiết bị này. Không có gì được gửi đi. Hãy chọn một mô hình cục bộ cho trang trong phần cài đặt."
   auth: API key không hợp lệ hoặc bị thiếu
   authCharacters: API key có ký tự không thể gửi đi
   noKey: Hãy thêm API key của $1 trong cài đặt
@@ -308,8 +308,8 @@ options:
     tooLong: "Bảng thuật ngữ của bạn dài hơn mức một yêu cầu dịch có thể chứa (khoảng $1 trên $2 token): các mục ở cuối danh sách sẽ bị bỏ qua. Hãy đặt những mục quan trọng nhất ở gần đầu danh sách."
   sites:
     enterAllow: "Nhập một trang web, ví dụ docs.example.com hoặc *.example.com."
-    full: "Mỗi danh sách tối đa $1 trang web. Hãy xóa bớt một trang trước."
-    notGranted: "Quyền truy cập $1 chưa được cấp nên trang này không được thêm."
+    full: "Mỗi danh sách tối đa $1 trang web. Hãy xóa bớt một trang web trước."
+    notGranted: "Quyền truy cập $1 chưa được cấp nên trang web này không được thêm."
     addedOffNever: "Đã thêm $1 và đã gỡ khỏi danh sách không bao giờ dịch."
     added: "Đã thêm $1."
     enterNever: "Nhập một trang web, ví dụ mail.example.com hoặc *.example.com."
@@ -321,7 +321,7 @@ options:
     removeAria: "Xóa $1"
     removed: "Đã xóa $1."
     remove: "Xóa"
-    none: "Chưa có trang nào."
+    none: "Chưa có trang web nào."
     title: "Quy tắc theo trang web"
     allowTitle: "Tự động dịch khi bảng đang mở"
     allowHint: "Trên các trang web này, mỗi trang bạn mở được dịch mà không cần bấm khi bảng đang mở. Chrome sẽ hỏi quyền truy cập một lần cho từng trang web. Trên các trang web khác, trang bạn mở qua một liên kết sẽ chờ bạn bấm “Dịch trang này”."
@@ -329,7 +329,7 @@ options:
     allowPlaceholder: "docs.example.com hoặc *.example.com"
     add: "Thêm"
     neverTitle: "Không bao giờ dịch"
-    neverHint: "Translate Side không bao giờ đọc các trang web này và không gửi gì từ chúng, giống như danh sách có sẵn gồm các trang thư và trang đăng nhập: không gửi trang, không gửi phần bôi chọn, kể cả khi bạn bấm nút trên thanh công cụ. Trang đang mở trên các trang web này sẽ được thả ra ngay."
+    neverHint: "Translate Side không bao giờ đọc các trang web này và không gửi gì từ chúng, giống như danh sách có sẵn gồm các trang thư và trang đăng nhập: không gửi trang, không gửi phần bôi chọn, kể cả khi bạn bấm nút trên thanh công cụ. Trang đang mở trên các trang web này sẽ được ngừng đọc ngay."
     neverAria: "Trang web không bao giờ dịch"
     neverPlaceholder: "mail.example.com hoặc *.example.com"
     modelHint: "Mô hình riêng cho từng trang web và chế độ “chỉ dùng cục bộ” được đặt trong Nhà cung cấp › Định tuyến › Mô hình theo trang web."
@@ -337,13 +337,13 @@ options:
     rowToggle: "Mở bảng, hoặc đóng bảng khi đang mở (đổi phím tại chrome://extensions/shortcuts)"
     keysNext: "↓ hoặc J"
     keysPrevious: "↑ hoặc K"
-    rowNext: "Khối tiếp theo"
-    rowPrevious: "Khối trước đó"
-    rowEnds: "Khối đầu / khối cuối"
-    rowOriginal: "Hiện hoặc ẩn bản gốc bên dưới khối này"
-    rowRetranslate: "Dịch lại khối này"
-    rowExplain: "Giải thích khối này"
-    rowCopy: "Sao chép khối này dưới dạng văn bản thuần"
+    rowNext: "Đoạn tiếp theo"
+    rowPrevious: "Đoạn trước đó"
+    rowEnds: "Đoạn đầu / đoạn cuối"
+    rowOriginal: "Hiện hoặc ẩn bản gốc bên dưới đoạn này"
+    rowRetranslate: "Dịch lại đoạn này"
+    rowExplain: "Giải thích đoạn này"
+    rowCopy: "Sao chép đoạn này dưới dạng văn bản thuần"
     rowEscape: "Đóng danh sách phím tắt trong bảng"
     screenReader: "Với trình đọc màn hình, các phím tắt bằng chữ cái và phím mũi tên cần bật chế độ tập trung (chế độ biểu mẫu hoặc chế độ ứng dụng); mọi thao tác cũng có thể truy cập bằng Tab và bấm Enter."
     notSet: "Chưa đặt"
@@ -352,12 +352,12 @@ options:
     title: "Phím tắt"
     keys: "Phím"
     what: "Chức năng"
-    focusHint: "Các phím chữ và phím mũi tên chỉ hoạt động khi một khối trong bảng, hoặc một nút của khối đó, đang có tiêu điểm bàn phím, nên không xung đột với phím tắt của trang hay của Chrome."
+    focusHint: "Các phím chữ và phím mũi tên chỉ hoạt động khi một đoạn trong bảng, hoặc một nút của đoạn đó, đang có tiêu điểm bàn phím, nên không xung đột với phím tắt của trang hay của Chrome."
     change: "Đổi phím mở/đóng bảng"
     changeHint: "Chrome quản lý phím tắt trên trang riêng của nó, chrome://extensions/shortcuts. Nút này sẽ mở trang đó; nếu không mở được, hãy dán địa chỉ này vào một thẻ mới."
   cache:
     title: "Bộ nhớ đệm bản dịch"
-    stats: "$1 khối đã dịch và $2 bản tóm tắt tài liệu, $3 trên $4."
+    stats: "$1 đoạn đã dịch và $2 bản tóm tắt tài liệu, $3 trên $4."
     hint: "Các trang bạn dịch lại sẽ được mở từ bộ nhớ đệm này mà không mất phí. Khi đầy, các mục cũ nhất sẽ bị xóa trước. Dữ liệu chỉ nằm trên thiết bị này."
     clear: "Xóa bộ nhớ đệm"
   reading: "Đang đọc…"
