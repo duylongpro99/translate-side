@@ -112,7 +112,7 @@ The migration only adds items.
 
 ## Deviations and findings
 
-1. **Import caps (pending the user).** `MAX_GLOSSARY` went from 500 to 5000 and `MAX_SITE_RULES` from 200 to 1000
+1. **Import caps (accepted by the user on 2026-10-12).** `MAX_GLOSSARY` went from 500 to 5000 and `MAX_SITE_RULES` from 200 to 1000
    in `portable.ts`. Otherwise an import truncates a large export, so the 1,000-entry glossary would not
    round-trip.
 2. **The plan's claim that M2 equals M3 is false.** The plan says there is no storage change in
@@ -141,4 +141,4 @@ The migration only adds items.
 
 ## Unresolved questions
 
-- Should the import caps stay at 5000 and 1000 (deviation 1)? This is the user's decision.
+None. The import caps (deviation 1) were accepted by the user on 2026-10-12.
