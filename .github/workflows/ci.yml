@@ -27,6 +27,8 @@ jobs:
         run: pnpm run test:coverage
       - name: Build
         run: pnpm run build
+      - name: Bundle budget (gzip per file and in all, scripts/bundle-budget.json)
+        run: pnpm run check:bundle
       - name: Check built manifest
         run: pnpm run check:manifest
 
