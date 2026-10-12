@@ -25,9 +25,9 @@ export interface RouteTarget {
 /** The connection as a job names it; `origin` only for a base URL that parses. */
 function jobConnection(c: ProviderConnection): JobConnection {
   try {
-    return { id: c.id, label: c.label, origin: originPattern(c.baseUrl) };
+    return { id: c.id, label: c.label, presetId: c.presetId, origin: originPattern(c.baseUrl) };
   } catch {
-    return { id: c.id, label: c.label };
+    return { id: c.id, label: c.label, presetId: c.presetId };
   }
 }
 

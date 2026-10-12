@@ -27,7 +27,7 @@ function fakeApi() {
         onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) },
       },
       // The first-run privacy notice was acknowledged (M3-E10).
-      local: { get: () => Promise.resolve({ privacyNotice: { version: 1, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
+      local: { get: () => Promise.resolve({ privacyNotice: { version: 2, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
       session: { onChanged: listeners(), get: () => Promise.resolve({}), remove: () => Promise.resolve() },
     },
     permissions: { onAdded: listeners() },
@@ -76,6 +76,20 @@ describe('translator wiring (plan M1-E8)', () => {
     f.answer();
     await settle();
     expect(t.jobs.docOf(1)).toBe('d2');
+  });
+
+  it('logs page jobs for diagnostics, never a selection’s', async () => {
+    const f = fakeApi();
+    const logged: string[] = [];
+    const t = createTranslator(f.api, { translateClient: client(), onJobRecord: (r) => logged.push(r.outcome) });
+    const doc = { url: 'https://x/', title: 'Page', sourceLang: 'en', targetLang: 'vi', segments };
+    t.snippets.jobs.setActive(1);
+    await t.snippets.jobs.start(1, 'snippet', doc);
+    expect(t.snippets.jobs.get(1)?.status).toBe('done');
+    expect(logged).toEqual([]);
+    t.jobs.setActive(1);
+    await t.jobs.start(1, 'd', doc);
+    expect(logged).toEqual(['started', 'done']);
   });
 
   it('a language change restarts the active page and keeps what the earlier run cost (review E-R3)', async () => {
@@ -730,7 +744,7 @@ describe('a refused key stops once (M4-D tester F1)', () => {
           set,
           onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) },
         },
-        local: { get: () => Promise.resolve({ privacyNotice: { version: 1, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
+        local: { get: () => Promise.resolve({ privacyNotice: { version: 2, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
         session: { onChanged: listeners(), get: () => Promise.resolve({}), remove: () => Promise.resolve() },
       },
       permissions: { onAdded: listeners() },

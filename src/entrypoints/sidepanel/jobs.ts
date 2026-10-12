@@ -28,6 +28,7 @@ import type { LLMClient, LLMError, LLMErrorKind, MTClient, NormalizedRequest } f
 import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
 import { costUsd, formatUsd, type UsageTotals } from '@/shared/cost';
 import type { Detection } from '@/shared/language';
+import { entryId, type JobRecord } from '@/shared/diagnostics';
 import type { LimitReached, SpendDelta } from '@/shared/spend';
 import type { ModelProfile } from '@/shared/settings';
 
@@ -330,6 +331,8 @@ export interface JobConnection {
   id: string;
   label: string;
   origin?: string;
+  /** The connection's preset (`openai`, `custom-openai`…), for the diagnostics log. */
+  presetId?: string;
 }
 
 /** A fallback profile's client (§4.3.5 `Routing.fallback`, M4-E9), already filtered by the privacy rule. */
@@ -430,6 +433,8 @@ export interface JobDeps {
   spendLimit?: () => Promise<LimitReached | undefined>;
   /** Lazy mode starts above this many translatable segments (default LAZY_SEGMENTS; Infinity: never). */
   lazyAbove?: number;
+  /** Each run, when it starts and again when it ends, for the local diagnostics log (src/shared/diagnostics.ts). */
+  onJobRecord?: ((record: JobRecord) => void) | undefined;
 }
 
 /**
@@ -609,6 +614,8 @@ interface Job {
   retrying: Map<string, AbortController>;
   /** Counts segment retries, for their backoff keys. */
   retrySeq: number;
+  /** What this run's diagnostics record counts as it goes (`onJobRecord`). */
+  log: { id: string; promptIds: Set<string>; chunks: Set<number>; calls: number; tokens: UsageTotals };
 }
 
 export type JobsListener = (tabId: number, view: JobView | undefined) => void;
@@ -745,7 +752,10 @@ export class Jobs {
     const brief = keep?.view.brief ?? (keepBrief && prev?.docId === docId && prev.view.targetLang === doc.targetLang ? prev.view.brief : undefined);
     // A replaced run's requests in flight end without usage; they are this page's spend too.
     const abandoned = costFrom && costFrom.view.status === 'running' ? costFrom.inflight : 0;
-    if (prev?.view.status === 'running') prev.controller.abort(new DOMException('replaced', 'AbortError'));
+    if (prev?.view.status === 'running') {
+      this.record(prev, 'replaced');
+      prev.controller.abort(new DOMException('replaced', 'AbortError'));
+    }
     if (prev) this.stopRetries(prev);
 
     // Segments already in the target language (per-segment detection) are shown as is, like code.
@@ -801,6 +811,7 @@ export class Jobs {
       scopes: new Map(),
       retrying: new Map(),
       retrySeq: 0,
+      log: { id: entryId(this.now()), promptIds: new Set(), chunks: new Set(), calls: 0, tokens: { input: 0, cachedInput: 0, output: 0 } },
       replaceKeys: new Set(),
       earlier,
       ...(keep?.view.fallback?.basic ? { basicCarried: true } : {}),
@@ -833,6 +844,7 @@ export class Jobs {
     };
     this.jobs.set(tabId, job);
     this.emit(tabId, job.view);
+    this.record(job, 'started');
 
     const signal = job.controller.signal;
     const resolved = await this.deps.translateClient({ tabId, url: doc.url, analyze: (this.deps.strategy ?? PANEL_STRATEGY) !== 'single-pass' });
@@ -932,7 +944,10 @@ export class Jobs {
    */
   skip(tabId: number, docId: string, doc: JobDoc): void {
     const prev = this.jobs.get(tabId);
-    if (prev?.view.status === 'running') prev.controller.abort(new DOMException('replaced', 'AbortError'));
+    if (prev?.view.status === 'running') {
+      this.record(prev, 'replaced');
+      prev.controller.abort(new DOMException('replaced', 'AbortError'));
+    }
     if (prev) this.stopRetries(prev);
     const segs = new Map<string, SegState>();
     const keepCost = prev?.docId === docId ? prev : undefined;
@@ -960,6 +975,7 @@ export class Jobs {
       scopes: new Map(),
       retrying: new Map(),
       retrySeq: 0,
+      log: { id: entryId(this.now()), promptIds: new Set(), chunks: new Set(), calls: 0, tokens: { input: 0, cachedInput: 0, output: 0 } },
       replaceKeys: new Set(),
       earlier: new Map(),
       apart: keepCost ? { usage: { ...keepCost.apart.usage }, usd: keepCost.apart.usd } : { usage: { input: 0, cachedInput: 0, output: 0 }, usd: undefined },
@@ -1222,7 +1238,10 @@ export class Jobs {
   private engineFor(tabId: number, job: Job, primary: FallbackLink, retryKey?: number, analyze?: FallbackLink, fallback: readonly FallbackLink[] = []): TranslationEngine {
     const { profile } = primary;
     const meter = {
-      start: () => void job.inflight++,
+      start: () => {
+        job.inflight++;
+        job.log.calls++;
+      },
       end: (unmetered: boolean) => {
         job.inflight--;
         if (unmetered) this.patch(tabId, job, { unmetered: job.view.unmetered + 1, cost: pageCost(job, profile, job.view.usage) });
@@ -1340,6 +1359,8 @@ export class Jobs {
         return;
       }
       case 'stage': {
+        const promptId = (event.info as { promptId?: unknown } | undefined)?.promptId;
+        if (event.status === 'start' && typeof promptId === 'string') job.log.promptIds.add(promptId);
         // Every provider gave up and the job switched to Chrome's Translator (M5-E7); `done` with
         // `recovered`: a provider answered again and the job went back to it.
         if (event.stage !== BASIC_SWITCH_STAGE || job.view.status !== 'running') return;
@@ -1361,8 +1382,12 @@ export class Jobs {
         if (job.briefKey !== undefined) void this.deps.cache?.putBrief(job.briefKey, brief).catch(() => {});
         return;
       }
+      case 'chunk':
+        if (!event.revise) job.log.chunks.add(event.index);
+        return;
       case 'usage': {
         const spent = { input: event.input, cachedInput: event.cachedInput ?? 0, output: event.output };
+        job.log.tokens = addUsage(job.log.tokens, spent);
         // Priced with the profile that answered (§4.3.5 usage meter): the analyze call's own
         // profile, or a fallback's (M4-E9); the rest is the translate profile's.
         const by = spendingProfile(job, event, profile);
@@ -1500,6 +1525,7 @@ export class Jobs {
       if (status === 'done' && job.round && !job.within) job.stalled = [...job.round].some((id) => job.segs.get(id)?.status === 'pending');
     }
     this.patch(tabId, job, { backoff: [], status, paused: false, counts: count(job.segs), endedAt: this.now(), ...kept, ...(stopError ? { stopError } : {}) });
+    this.record(job, status);
     if (status === 'done') queueMicrotask(() => (job.wantRest ? void this.translateRest(tabId) : this.reach(tabId, job)));
   }
 
@@ -1543,6 +1569,51 @@ export class Jobs {
       return Promise.resolve();
     }
     return this.start(tabId, job.docId, job.doc, { resume: true, all: true, ...(job.earlier.size || job.redo ? { fresh: true, keepCost: true } : {}) });
+  }
+
+  /**
+   * Reports the run to the diagnostics log: facts the extension owns, never text or addresses (the
+   * log drops the origin unless the user asked for site names).
+   */
+  private record(job: Job, outcome: JobRecord['outcome']): void {
+    const report = this.deps.onJobRecord;
+    if (!report) return;
+    const errors = new Map<string, { kind: LLMErrorKind; status?: number; count: number }>();
+    const add = (e: LLMError) => {
+      const key = `${e.kind}:${e.status ?? ''}`;
+      const seen = errors.get(key);
+      if (seen) seen.count++;
+      else errors.set(key, { kind: e.kind, ...(e.status === undefined ? {} : { status: e.status }), count: 1 });
+    };
+    if (job.view.stopError) add(job.view.stopError);
+    for (const s of job.segs.values()) if (s.status === 'failed' && s.error) add(s.error);
+    let origin: string | undefined;
+    try {
+      origin = new URL(job.doc.url).origin;
+    } catch {
+      origin = undefined;
+    }
+    const v = job.view;
+    report({
+      id: job.log.id,
+      startedAt: v.startedAt,
+      ...(outcome === 'started' ? {} : { endedAt: v.endedAt ?? this.now() }),
+      outcome,
+      strategy: this.deps.strategy ?? PANEL_STRATEGY,
+      promptIds: [...job.log.promptIds],
+      ...(v.connection?.presetId === undefined ? {} : { presetId: v.connection.presetId }),
+      ...(v.model ? { model: v.model } : {}),
+      lazy: job.lazy,
+      segments: job.owed.size,
+      cached: v.cached ?? 0,
+      chunks: job.log.chunks.size,
+      calls: job.log.calls,
+      tokens: { ...job.log.tokens },
+      ...(v.firstVisibleAt === undefined ? {} : { firstTextAt: v.firstVisibleAt }),
+      failed: v.counts.failed,
+      errors: [...errors.values()],
+      ...(origin === undefined || origin === 'null' ? {} : { origin }),
+    });
   }
 
   private patch(tabId: number, job: Job, patch: Partial<JobView>): void {

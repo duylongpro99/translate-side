@@ -15,6 +15,7 @@ import { OfferStore } from './offers.ts';
 import type { JobActions } from './JobBar.tsx';
 import { openTranslationCache } from '@/shared/cache';
 import { checkSpendLimit, continuePastLimit, SpendLedger } from '@/shared/spend';
+import { createDiagnosticsLog } from '@/shared/diagnostics';
 import { anyDenylisted, clearSnippet, readSnippet, tabIdFromSnippetKey, type SnippetRecord } from '@/shared/snippet';
 import { chromeTranslator } from '@/llm/chrome-translator';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
@@ -92,8 +93,11 @@ const limitFailure = (err: unknown) => `Could not save “Continue anyway” (${
 export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, options: TranslatorOptions = {}): Translator {
   // The running total in settings (M3-E9): pages and selections alike.
   const ledger = new SpendLedger(api);
+  // The local diagnostics log (Settings exports it): page jobs only, never a selection's.
+  const diagnostics = createDiagnosticsLog(api);
   deps = {
     onSpend: (delta) => void ledger.add(delta),
+    onJobRecord: (record) => void diagnostics.record(record),
     // §4.3.5: a key the provider refused marks its connection `error` in settings ("Fix key" there too).
     onAuthError: (connectionId, error) =>
       void saveConnectionStatus(api, connectionId, { status: 'error', lastError: error.message, lastErrorKind: 'auth' }).catch((err: unknown) => {
@@ -107,7 +111,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), ...deps, mt });
   // No cache: a selection is a one-off, and its text is not kept beyond the session.
   // Single-pass: one request per chunk, never the contextual brief (analyze) call for a selection.
-  const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target), ...deps, mt, strategy: 'single-pass', cache: undefined, lazyAbove: Infinity });
+  const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target), ...deps, mt, strategy: 'single-pass', cache: undefined, lazyAbove: Infinity, onJobRecord: undefined });
   const snippetStore = new SnippetStore();
   const viewports = new ViewportStore();
   const hovers = new HoverStore();
