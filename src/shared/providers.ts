@@ -492,7 +492,9 @@ const ROUTING_FIELDS = new Set(['translate', 'analyze', 'review', 'fallback', BA
 /**
  * Routing and its site rules. Without site rules their list is set to an empty one rather than
  * removed, so an old one is never read in again. Returns whether the site rules are kept on this
- * device (too large to sync, sync-quota.ts).
+ * device (too large to sync, sync-quota.ts). Two writes, the site rules first: the routing's quota
+ * check counts the new rules, and a failure in between (the routing refused) leaves the new site
+ * rules saved next to the old routing.
  */
 export function saveRouting(api: Browser, routing: Routing): Promise<{ siteRulesLocal: boolean }> {
   return queued(async () => {
@@ -501,9 +503,9 @@ export function saveRouting(api: Browser, routing: Routing): Promise<{ siteRules
     if (!clean) throw new Error('routing needs a translate profile');
     // `basicMigrated`: the user saw `basic` in the chain (it is read in when missing), so what they save stays as it is.
     const item = { [ROUTING_KEY]: { ...keepUnknown(await storedItem(api, ROUTING_KEY), ROUTING_FIELDS, clean), [BASIC_MIGRATED_FIELD]: true } };
-    await assertFits(api, item);
     // The site rules first: too large to sync they stay on this device, and the routing still syncs.
     const { overflow } = await saveListWithOverflow(api, SITE_RULES_KEY, cleanSiteRules(routing.siteOverrides));
+    await assertFits(api, item);
     await api.storage.sync.set(item);
     return { siteRulesLocal: overflow };
   });

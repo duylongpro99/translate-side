@@ -180,7 +180,7 @@ describe('token budget per page (plan M2-E7)', () => {
   });
 });
 
-describe('personal glossary (plan M2-E6): storage.sync, kept on this device when too large to sync', () => {
+describe('personal glossary: storage.sync, kept on this device when too large to sync', () => {
   const withBytes = (inUse: number) => {
     const f = fakeApi();
     const sync = f.api.storage.sync as unknown as Record<string, unknown>;
@@ -243,9 +243,13 @@ describe('personal glossary (plan M2-E6): storage.sync, kept on this device when
     expect(await saveGlossary(fine.api, [{ term: 'deploy', rendering: 'deploy' }])).toMatchObject({ ok: true, overflow: false });
   });
 
-  it('a sync write Chrome refuses anyway keeps the glossary on this device; a local failure is reported, not thrown', async () => {
+  it('a sync write Chrome refuses for space keeps the glossary on this device; any other failure is reported, not thrown', async () => {
     const { api, local } = fakeApi();
-    (api.storage.sync as unknown as Record<string, unknown>).set = () => Promise.reject(new Error('MAX_WRITE_OPERATIONS_PER_MINUTE quota exceeded'));
+    const sync = api.storage.sync as unknown as Record<string, unknown>;
+    sync.set = () => Promise.reject(new Error('MAX_WRITE_OPERATIONS_PER_MINUTE quota exceeded'));
+    expect(await saveGlossary(api, [{ term: 'w', rendering: 'w' }])).toEqual({ ok: false, reason: 'error', message: 'MAX_WRITE_OPERATIONS_PER_MINUTE quota exceeded' });
+    expect(local.data.glossary).toBeUndefined();
+    sync.set = () => Promise.reject(new Error('QUOTA_BYTES quota exceeded'));
     expect(await saveGlossary(api, [{ term: 'x', rendering: 'x' }])).toMatchObject({ ok: true, overflow: true });
     expect(local.data.glossary).toEqual([{ term: 'x', rendering: 'x' }]);
     (api.storage.local as unknown as Record<string, unknown>).set = () => Promise.reject(new Error('QUOTA_BYTES quota exceeded'));

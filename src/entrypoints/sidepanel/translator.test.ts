@@ -22,7 +22,7 @@ function fakeApi() {
   const api = {
     storage: {
       sync: {
-        // The site lists (plan M5-E3) answer at once: none are set.
+        // The site lists answer at once: none are set.
         get: (k: string | string[]) => (Array.isArray(k) || SITE_LIST_KEYS.includes(k) ? Promise.resolve({}) : new Promise((resolve) => gets.push(() => resolve(sync.has(k) ? { [k]: sync.get(k) } : {})))),
         onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) },
       },

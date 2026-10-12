@@ -106,7 +106,7 @@ test('a 1,000-entry glossary saves through the options page, stays on this devic
   await expect(options.getByTestId('import-note')).toBeVisible();
   await options.reload();
   await expect(options.getByTestId('glossary-entry')).toHaveCount(999);
-  await expect(options.getByTestId('glossary-overflow')).toHaveText('Too large to sync. Changes stay on this device; other devices keep the last synced version.');
+  await expect(options.getByTestId('glossary-overflow')).toHaveText('Too large to sync. Changes stay on this device; other devices keep the last synced version, and their edits no longer reach this device.');
   await options.locator('#g-term').fill('the thousandth term');
   await options.locator('#g-keep').uncheck();
   await options.locator('#g-rendering').fill('thuật ngữ thứ một nghìn');

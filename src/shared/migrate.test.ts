@@ -136,6 +136,19 @@ describe('migration runs one at a time and writes compare-and-set', () => {
     expect(out[SCHEMA_KEY]).toBe(1);
   });
 
+  it('steps that both write land in one run, each on what the step before wrote', async () => {
+    const d = fakeDevice({ sync: { prefs: { targetLang: 'vi' } } });
+    const steps: MigrationStep[] = [
+      { version: 1, patch: async (_api, items) => ({ prefs: { ...(items.prefs as object), style: 'natural' } }) },
+      { version: 2, patch: async (_api, items) => ({ prefs: { ...(items.prefs as object), gloss: 'first' } }) },
+    ];
+    const out = await migrateSync(d.api, SCHEMA_KEY, steps);
+    expect(d.sync.data.get('prefs')).toEqual({ targetLang: 'vi', style: 'natural', gloss: 'first' });
+    expect(d.sync.data.get(SCHEMA_KEY)).toBe(2);
+    expect(out).toEqual({ prefs: { targetLang: 'vi', style: 'natural', gloss: 'first' }, [SCHEMA_KEY]: 2 });
+    expect(d.sync.sets).toHaveLength(2);
+  });
+
   it('another runner moved the version on meanwhile: nothing is written, its storage is returned', async () => {
     const d = fakeDevice();
     const steps: MigrationStep[] = [

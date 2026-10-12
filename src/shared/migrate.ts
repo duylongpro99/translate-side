@@ -1,4 +1,4 @@
-// Settings schema migrations (DESIGN.md §4.3.1, plan M6-E6). storage.sync carries one version,
+// Settings schema migrations (DESIGN.md §4.3.1). storage.sync carries one version,
 // `schemaVersion` (providers.ts); each step brings it one version on, in order, and exists only
 // where a stored shape changes. Per-device state (storage.local) has no version of its own: the
 // provider migration's `migratedRoute` marker says this device was migrated (providers.ts).
@@ -78,7 +78,8 @@ export async function migrateSync(api: Browser, versionKey: string, steps: reado
         console.warn('[translate-side] could not save the migrated settings', err);
       }
     }
-    items = { ...items, ...patch };
+    // The version goes with the step: the next step's guard expects what this one wrote.
+    items = { ...items, ...patch, ...(Object.keys(patch).length > 0 ? { [versionKey]: step.version } : {}) };
     version = step.version;
   }
   return { ...items, [versionKey]: version };

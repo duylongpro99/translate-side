@@ -70,13 +70,26 @@ describe('a list too large to sync stays on this device', () => {
     expect(await readList(d.api, 'glossary')).toEqual(['c']);
   });
 
-  it('a list that fits its item but not the total stays here too; a sync write Chrome refuses anyway as well', async () => {
+  it('a list that fits its item but not the total stays here too; a sync write Chrome refuses for space as well', async () => {
     const d = fakeDevice({ sync: Object.fromEntries(Array.from({ length: 13 }, (_, i) => [`k${i}`, 'x'.repeat(7800)])) });
     expect(await saveListWithOverflow(d.api, 'siteRules', strings(100))).toEqual({ overflow: true });
     const e = fakeDevice();
-    e.sync.set = () => Promise.reject(new Error('MAX_WRITE_OPERATIONS_PER_MINUTE quota exceeded'));
+    e.sync.set = () => Promise.reject(new Error('QUOTA_BYTES quota exceeded'));
     expect(await saveListWithOverflow(e.api, 'siteNever', ['a.com'])).toEqual({ overflow: true });
     expect(await readList(e.api, 'siteNever')).toEqual(['a.com']);
+  });
+
+  it('any other sync error (the write-rate limit) fails the save and leaves this device as it was', async () => {
+    const d = fakeDevice({ sync: { siteNever: ['old.com'] } });
+    d.sync.set = () => Promise.reject(new Error('MAX_WRITE_OPERATIONS_PER_MINUTE quota exceeded'));
+    await expect(saveListWithOverflow(d.api, 'siteNever', ['a.com'])).rejects.toThrow(/MAX_WRITE_OPERATIONS_PER_MINUTE/);
+    expect(d.local.data.size).toBe(0);
+    expect(await readList(d.api, 'siteNever')).toEqual(['old.com']);
+    // Already overflowed: the marker and the local copy stay.
+    const o = fakeDevice({ sync: { siteNever: ['old.com'] }, local: { siteNever: ['big.com'], 'overflow:siteNever': true } });
+    o.sync.set = () => Promise.reject(new Error('MAX_WRITE_OPERATIONS_PER_HOUR quota exceeded'));
+    await expect(saveListWithOverflow(o.api, 'siteNever', ['a.com'])).rejects.toThrow();
+    expect(Object.fromEntries(o.local.data)).toEqual({ siteNever: ['big.com'], 'overflow:siteNever': true });
   });
 
   it('onListChanged follows the list where this device keeps it, and ignores sync edits from elsewhere while it overflows', async () => {

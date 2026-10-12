@@ -1,4 +1,4 @@
-// chrome.storage.sync quota (DESIGN.md §4.3.1, plan M6-E6): the one place that counts sync bytes,
+// chrome.storage.sync quota (DESIGN.md §4.3.1): the one place that counts sync bytes,
 // and the overflow of a list that no longer fits.
 //
 // A list (the glossary, the site rules, the site allow and never lists) stays one sync item under
@@ -24,7 +24,7 @@ export const OVERFLOW_PREFIX = 'overflow:';
 export const overflowKey = (key: string) => `${OVERFLOW_PREFIX}${key}`;
 
 /** What Options shows for a list kept on this device. */
-export const OVERFLOW_NOTICE = 'Too large to sync. Changes stay on this device; other devices keep the last synced version.';
+export const OVERFLOW_NOTICE = 'Too large to sync. Changes stay on this device; other devices keep the last synced version, and their edits no longer reach this device.';
 
 /** Bytes chrome.storage.sync counts for one item: the key plus the value's JSON, in UTF-8. */
 export function syncItemBytes(key: string, value: unknown): number {
@@ -79,10 +79,14 @@ export async function readList(api: Browser, key: string): Promise<unknown> {
   return local ? (await api.storage.local.get(key))[key] : synced[key];
 }
 
+/** Chrome's errors for a write over the sync space (bytes per item, bytes in all, items); not the write-rate limits. */
+const SPACE_ERROR = /\b(QUOTA_BYTES|QUOTA_BYTES_PER_ITEM|MAX_ITEMS)\b/;
+
 /**
  * Saves a list: to its sync item when it fits, else to this device (see the header). A sync write
- * that fails anyway (Chrome's own quota or write-rate errors) falls back to this device too, so a
- * save never fails for want of sync space. Returns whether the list is now kept on this device.
+ * Chrome refuses for space anyway goes to this device too, so a save never fails for want of sync
+ * space. Any other sync error (the write-rate limits, sync off) is thrown and changes nothing here.
+ * Returns whether the list is now kept on this device.
  */
 export async function saveListWithOverflow(api: Browser, key: string, value: unknown): Promise<{ overflow: boolean }> {
   if ((await fits(api, { [key]: value })).ok) {
@@ -91,6 +95,7 @@ export async function saveListWithOverflow(api: Browser, key: string, value: unk
       if (await isOverflowed(api, key)) await api.storage.local.remove([key, overflowKey(key)]);
       return { overflow: false };
     } catch (err) {
+      if (!SPACE_ERROR.test(err instanceof Error ? err.message : String(err))) throw err;
       console.warn(`[translate-side] could not sync ${key}; keeping it on this device`, err);
     }
   }

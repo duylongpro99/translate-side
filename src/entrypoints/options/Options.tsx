@@ -61,8 +61,7 @@ function useTranslateRoute(api: Browser): TranslateRoute {
       );
     void load();
     // A route chosen or a key saved in Providers shows here at once (tester C1 #8).
-    // A read already in flight is shared (providers.ts migrateProviders) and may predate the
-    // change: wait for it, then read again.
+    // A read already in flight may predate the change: wait for it, then read again.
     // Only provider records and keys: not the usage ledger or other settings (review C3 #3).
     const reload = () => void resolveRoute(api, 'translate').finally(load);
     const onLocal = (changes: Record<string, unknown>) => {
