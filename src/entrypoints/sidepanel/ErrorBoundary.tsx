@@ -20,11 +20,15 @@ interface State {
   copied?: boolean;
 }
 
+/** `name` is writable and could carry data: only a short identifier (`TypeError`) is kept, else `Error`. */
+const KIND = /^[A-Za-z][\w$]{0,63}$/;
+const errorKind = (error: unknown) => (error instanceof Error && KIND.test(error.name) ? error.name : 'Error');
+
 export class ErrorBoundary extends Component<Props, State> {
   override state: State = {};
 
   override componentDidCatch(error: unknown): void {
-    const kind = error instanceof Error ? error.name || 'Error' : typeof error;
+    const kind = errorKind(error);
     console.error('[translate-side] the panel crashed', error);
     void this.props.log.crash(this.props.name, kind);
     this.setState({ kind });

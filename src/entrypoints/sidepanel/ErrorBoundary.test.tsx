@@ -39,6 +39,29 @@ describe('the panel error boundary', () => {
     root.remove();
   });
 
+  it('logs "Error" for an error whose name is not a short identifier, or for a thrown non-error', async () => {
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    for (const thrown of [Object.assign(new Error('x'), { name: 'Failed for https://intranet.example.com/q3' }), 'a plain string']) {
+      const crash = vi.fn(() => Promise.resolve());
+      const Throws = (): never => {
+        throw thrown;
+      };
+      const root = document.createElement('div');
+      act(() =>
+        render(
+          <ErrorBoundary name="App" log={{ crash }}>
+            <Throws />
+          </ErrorBoundary>,
+          root,
+        ),
+      );
+      await act(() => Promise.resolve());
+      expect(crash).toHaveBeenCalledWith('App', 'Error');
+      expect(root.querySelector('[data-testid=panel-crash-details]')?.textContent).toBe('Translate Side: Error in App');
+    }
+    quiet.mockRestore();
+  });
+
   it('renders its children while nothing throws', () => {
     const root = document.createElement('div');
     act(() =>
