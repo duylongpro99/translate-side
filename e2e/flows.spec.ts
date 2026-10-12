@@ -92,3 +92,43 @@ test('a malformed stream fails its blocks, and Retry failed translates them', as
   expect(calls.map((c) => c.malformed ?? false)).toEqual([true, false]);
   expect(calls[1]?.segments).toEqual(calls[0]?.segments);
 });
+
+test('a 1,000-entry glossary saves through the options page, stays on this device with the notice, and the next translation uses it', async ({ extension, mock, context }) => {
+  await extension.seed();
+  // 999 entries from a settings file (the import in Options), the 1,000th typed in the glossary form.
+  const probe = { term: 'quota-probe-term', rendering: 'quota-probe-term' };
+  const entries = [probe, ...Array.from({ length: 998 }, (_, i) => ({ term: `glossary term ${i}`, rendering: `bản dịch của thuật ngữ số ${i}` }))];
+  const file = { format: 'translate-side-settings', formatVersion: 1, exportedAt: new Date(0).toISOString(), keysIncluded: false, settings: { glossary: entries } };
+  const options = await context.newPage();
+  await options.goto(`chrome-extension://${extension.id}/options.html`);
+  await options.getByTestId('import-file').setInputFiles({ name: 'glossary.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+  await options.getByTestId('import-apply').click();
+  await expect(options.getByTestId('import-note')).toBeVisible();
+  await options.reload();
+  await expect(options.getByTestId('glossary-entry')).toHaveCount(999);
+  await expect(options.getByTestId('glossary-overflow')).toHaveText('Too large to sync. Changes stay on this device; other devices keep the last synced version.');
+  await options.locator('#g-term').fill('the thousandth term');
+  await options.locator('#g-keep').uncheck();
+  await options.locator('#g-rendering').fill('thuật ngữ thứ một nghìn');
+  await options.getByTestId('glossary-form').getByRole('button', { name: 'Add' }).click();
+  await expect(options.getByTestId('glossary-entry')).toHaveCount(1000);
+  await expect(options.getByTestId('glossary-note')).toBeHidden();
+  await expect(options.getByTestId('glossary-overflow')).toBeVisible();
+  // Real Chrome storage: sync keeps the seeded (empty) glossary, this device holds all 1,000.
+  const stored = await extension.worker.evaluate(async () => ({
+    sync: (await chrome.storage.sync.get('glossary')).glossary as unknown[],
+    local: (await chrome.storage.local.get(['glossary', 'overflow:glossary'])) as { glossary: unknown[]; 'overflow:glossary': boolean },
+  }));
+  expect(stored.sync).toEqual([]);
+  expect(stored.local.glossary).toHaveLength(1000);
+  expect(stored.local['overflow:glossary']).toBe(true);
+  await options.close();
+
+  const page = await extension.open('sites/goblog-pipelines.html');
+  const panel = await extension.panel();
+  await extension.translate(page);
+  expect(await jobSettled(panel)).toBe('done');
+  const translate = mock.calls.filter((c) => c.kind === 'translate');
+  expect(translate.length).toBeGreaterThan(0);
+  for (const call of translate) expect(call.prompt).toContain('quota-probe-term');
+});

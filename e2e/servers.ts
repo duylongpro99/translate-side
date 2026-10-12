@@ -48,6 +48,8 @@ export interface MockCall {
   /** The <seg> texts sent, in order (translate calls). */
   segments: string[];
   status: number;
+  /** Every message of the request, system included (the glossary and brief the panel sent). */
+  prompt: string;
   /** Answered with a malformed stream (`MockControl.malformed`). */
   malformed?: true;
 }
@@ -101,7 +103,7 @@ export function mockServer(): { server: http.Server; control: MockControl } {
         .join('\n');
       const analyze = user.startsWith('<document>');
       const segs = analyze ? '' : user.slice(user.indexOf('<seg id='));
-      const call: MockCall = { kind: analyze ? 'analyze' : 'translate', segments: [...segs.matchAll(SEG)].map((m) => m[3] ?? ''), status: 200 };
+      const call: MockCall = { kind: analyze ? 'analyze' : 'translate', segments: [...segs.matchAll(SEG)].map((m) => m[3] ?? ''), status: 200, prompt: messages.map((m) => m.content).join('\n') };
       control.calls.push(call);
       if (!analyze && pending.rateLimit > 0) {
         pending.rateLimit--;
