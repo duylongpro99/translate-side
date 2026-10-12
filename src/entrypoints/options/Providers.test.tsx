@@ -7,6 +7,7 @@ import { createOpenAIAdapter } from '@/llm/openai';
 import { anthropicStream, openaiStream } from '@/llm/testing';
 import type { Protocol } from '@/llm/types';
 import { ProvidersSection } from './Providers.tsx';
+import { OVERFLOW_NOTICE } from '@/shared/sync-quota';
 
 type Api = Parameters<typeof ProvidersSection>[0]['api'];
 
@@ -434,6 +435,23 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     click(rule().querySelector('[aria-label^="Remove the rule"]'));
     await waitFor(() => rule() === null);
     expect(f.sync.get('siteRules')).toEqual([]);
+  });
+
+  it('site rules kept on this device (too large to sync): listed from there, with the notice', async () => {
+    const f = fakeApi({
+      sync: {
+        schemaVersion: 1,
+        'conn:c9': { id: 'c9', label: 'Work gateway', presetId: 'custom-openai', protocol: 'openai-chat', baseUrl: 'https://gw.example.com/v1', auth: { style: 'bearer' }, quirks: {}, status: 'ok' },
+        'profile:w': { id: 'w', connectionId: 'c9', model: 'gpt-5-mini', maxConcurrency: 1, chunkTokens: 600 },
+        routing: { translate: 'w' },
+        siteRules: [{ pattern: 'old.example.com', translate: 'w' }],
+      },
+      local: { 'secret:c9': 'sk-work-0123456789wxyz', siteRules: [{ pattern: 'here.example.com', translate: 'w' }], 'overflow:siteRules': true },
+    });
+    await mount(f, server(() => openaiList()));
+    await waitFor(() => $('[data-testid=site-rules-overflow]') !== null);
+    expect($('[data-testid=site-rules-overflow]')?.textContent).toBe(OVERFLOW_NOTICE);
+    expect([...document.querySelectorAll('[data-testid=site-rule]')].map((e) => e.textContent)).toEqual([expect.stringContaining('here.example.com')]);
   });
 
   it('routing: with no local model, Local only cannot be saved; a stored local-only rule on a cloud model says nothing is sent (review R2)', async () => {

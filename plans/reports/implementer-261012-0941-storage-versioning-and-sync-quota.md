@@ -135,8 +135,8 @@ The migration only adds items.
 ## Open
 
 - The phase 1 eval gate (local, paid) for the `settings.ts` change is for the tester.
-- There is no `Providers.test.tsx` case for the `site-rules-overflow` notice. The overflow path of the site rules
-  is covered in `migrate.test.ts`: 300 rules save and read back, and the result reports `siteRulesLocal`.
+- The `site-rules-overflow` notice has a `Providers.test.tsx` case (added after the report was sent): site rules kept on
+  this device are listed from there, with the notice.
 - Older code still has plan IDs in comments and test names. Only those added in this phase were removed.
 
 ## Unresolved questions
