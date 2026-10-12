@@ -65,6 +65,8 @@ export interface Extension {
   open(fixture: string): Promise<Page>;
   /** Opens the panel in a tab of the same window; it stays in the background. */
   panel(): Promise<Page>;
+  /** Opens the settings page in a tab of the same window, 1280×800. */
+  options(): Promise<Page>;
   /** Makes `page` the active tab and does what Alt+T does: inject the content script, mark access ready. */
   translate(page: Page): Promise<void>;
 }
@@ -187,6 +189,12 @@ export const test = base.extend<Fixtures & Options, { servers: MockControl; extP
         await panel.goto(`chrome-extension://${id}/sidepanel.html`);
         await expect(panel.locator('.state, [data-testid=job]').first()).toBeVisible();
         return panel;
+      },
+      async options() {
+        const options = await context.newPage();
+        await options.setViewportSize({ width: 1280, height: 800 });
+        await options.goto(`chrome-extension://${id}/options.html`);
+        return options;
       },
       async translate(page) {
         await worker.evaluate(async (url) => {

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!-- Original text written for the store screenshots; MIT, like the rest of the repository. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keeping a small team's docs alive</title>
+<style>
+  body { margin: 0; background: #fbfaf7; color: #2a2a2a; font: 18px/1.65 Georgia, 'Times New Roman', serif; }
+  header { border-bottom: 1px solid #e4e0d6; padding: 18px 48px; font: 600 15px/1 system-ui, sans-serif; letter-spacing: .04em; color: #6b6558; }
+  main { max-width: 700px; margin: 0 auto; padding: 36px 32px 64px; }
+  h1 { font-size: 36px; line-height: 1.2; margin: 0 0 8px; }
+  .by { color: #7a7466; font: 14px/1.4 system-ui, sans-serif; margin: 0 0 28px; }
+  h2 { font-size: 23px; margin: 34px 0 8px; }
+  a { color: #1a5fb4; }
+  code { font: 15px ui-monospace, Menlo, monospace; background: #efece4; padding: 1px 5px; border-radius: 4px; }
+  pre { background: #1f2430; color: #e7e9ee; padding: 14px 16px; border-radius: 8px; font: 14px/1.5 ui-monospace, Menlo, monospace; overflow: auto; }
+  blockquote { margin: 20px 0; padding: 4px 18px; border-left: 4px solid #cfc8b6; color: #54503f; }
+</style>
+</head>
+<body>
+<header>FIELD NOTES</header>
+<main>
+<article>
+<h1>Keeping a small team's docs alive</h1>
+<p class="by">A short guide for teams of five or fewer</p>
+<p>Most documentation does not fail because nobody wrote it. It fails because nobody noticed when it stopped being true. A page that was right in March is quietly wrong by June, and the people who trust it find out at the worst possible moment.</p>
+<h2>Make the docs part of the change</h2>
+<p>The cheapest fix is to put the docs in the same repository as the code and review them in the same pull request. When a change alters behaviour, the reviewer asks one question: <em>which page does this make wrong?</em> If the answer is "none", the change ships. If not, the page is updated first.</p>
+<blockquote>A doc that is not reviewed with the code will be reviewed by your users.</blockquote>
+<h2>Give every page an owner</h2>
+<p>An owner is not the person who writes every word. It is the person who gets the message when the page is reported as wrong. Keep the list short and visible, and see the <a href="https://example.com/handbook/owners">owners handbook</a> for a template.</p>
+<ul>
+<li>Pick one owner per page, never a group.</li>
+<li>Show the owner and the last review date at the top of the page.</li>
+<li>Rotate owners when someone changes teams.</li>
+</ul>
+<h2>Check the examples, not just the prose</h2>
+<p>Examples rot fastest. Run them in your test suite, so a command that no longer works fails the build instead of a reader's afternoon.</p>
+<pre><code>npm run docs:check -- --examples</code></pre>
+<p>Teams that do this report fewer questions in chat and shorter onboarding. The habit costs about ten minutes a week.</p>
+</article>
+</main>
+</body>
+</html>
