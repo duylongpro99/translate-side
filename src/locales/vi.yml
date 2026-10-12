@@ -691,7 +691,7 @@ options:
     invalidUrlStatus: "URL gốc không hợp lệ"
     invalidUrl: "Hãy nhập URL gốc bắt đầu bằng https:// (hoặc http:// với máy chủ cục bộ)."
     httpsOnlyStatus: "Cần HTTPS"
-    httpsOnly: "http:// thường chỉ được dùng cho máy tính này và mạng cục bộ của bạn (localhost, 127.x, 10.x, 172.16–31.x, 192.168.x và tên .local). Với mọi địa chỉ khác, hãy dùng địa chỉ https://."
+    httpsOnly: "Địa chỉ http:// (không mã hóa) chỉ được dùng cho máy tính này và mạng cục bộ của bạn (localhost, 127.x, 10.x, 172.16–31.x, 192.168.x và tên .local). Với mọi địa chỉ khác, hãy dùng địa chỉ https://."
     failedStatus: "Thử nghiệm thất bại"
     guideGenericTitle: "Cho phép Translate Side dùng máy chủ này"
     guideGenericText: "Máy chủ trả về 403 cho yêu cầu từ tiện ích. Trong phần cài đặt CORS hoặc origin được phép của nó, hãy cho phép {origin} (hoặc origin riêng của tiện ích này), rồi khởi động lại."

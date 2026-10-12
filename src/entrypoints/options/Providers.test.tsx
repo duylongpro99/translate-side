@@ -298,6 +298,15 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     expect($('[data-testid=unencrypted-note]')).toBeNull();
   });
 
+  it('a saved connection on a private-network http address carries the unencrypted note on its row; loopback and https do not', async () => {
+    const mk = (id: string, baseUrl: string) => ({ id, label: id, presetId: 'custom-openai', protocol: 'openai-chat', baseUrl, auth: { style: 'none' }, quirks: {}, status: 'ok' });
+    const f = fakeApi({ sync: { schemaVersion: 1, 'conn:lan': mk('lan', 'http://192.168.1.20:8000/v1'), 'conn:me': mk('me', 'http://localhost:11434/v1'), 'conn:web': mk('web', 'https://gw.example.com/v1') } });
+    await mount(f, server(() => openaiList()));
+    expect(rowOf('lan')?.querySelector('[data-testid=connection-unencrypted]')?.textContent).toBe('Unencrypted: only use this on a network you trust.');
+    expect(rowOf('me')?.querySelector('[data-testid=connection-unencrypted]')).toBeNull();
+    expect(rowOf('web')?.querySelector('[data-testid=connection-unencrypted]')).toBeNull();
+  });
+
   it('editing shows that connection’s own saved key, masked (carry-over B3)', async () => {
     const conn = { id: 'c9', label: 'Work gateway', presetId: 'custom-openai', protocol: 'openai-chat', baseUrl: 'https://gw.example.com/v1', auth: { style: 'bearer' }, quirks: {}, status: 'ok' };
     const f = fakeApi({ sync: { schemaVersion: 1, 'conn:c9': conn }, local: { 'secret:c9': 'sk-work-0123456789wxyz', 'secret:apibox': 'sk-apibox-0123456789' } });

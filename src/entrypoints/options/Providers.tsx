@@ -215,6 +215,11 @@ function Connections({ api, loaded, onAdd, onEdit, onNote }: { api: Browser; loa
               </span>
               <span class="prov__name">{c.label}</span>
               <span class="prov__where">{where}</span>
+              {isUnencryptedPrivate(c.baseUrl) ? (
+                <span class="prov__status prov__status--warn" data-testid="connection-unencrypted">
+                  {i18n.t('options.providers.unencrypted')}
+                </span>
+              ) : null}
               <span class={`prov__status prov__status--${status.tone}`} data-testid="connection-status">
                 {status.text}
               </span>
