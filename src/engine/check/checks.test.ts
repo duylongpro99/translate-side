@@ -225,6 +225,13 @@ describe('checks: wrong script (M2-D19)', () => {
     expect(checkScript('Hello', `${filler}你好 Привет`, 'vi')?.detail).toBe('Han text (你)');
     expect(checkScript('Hello', `\`ми\` ${filler}`, 'vi')).toBeUndefined();
   });
+
+  it('finds a letter outside the Basic Multilingual Plane, and passes empty text', () => {
+    expect(checkScript('Hello', 'Xin chào 𠀀 bạn', 'vi')?.detail).toBe('Han text (𠀀)');
+    expect(checkScript('Hello', 'Xin chào 𠀀 bạn', 'zh')).toBeUndefined();
+    expect(checkScript('', '', 'vi')).toBeUndefined();
+    expect(checkScript('你好', '', 'vi')).toBeUndefined();
+  });
 });
 
 describe('checks: neighbour duplicates (document level, M2-D19)', () => {
