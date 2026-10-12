@@ -32,6 +32,7 @@ export default defineConfig({
           include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}', 'scripts/eval/**/*.test.ts'],
           exclude: [ENGINE_TESTS],
           environment: 'node',
+          setupFiles: ['tests/setup/i18n.ts'],
         },
       },
     ],

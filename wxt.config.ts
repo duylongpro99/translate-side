@@ -4,12 +4,15 @@ import { defineConfig } from 'wxt';
 // See DESIGN.md §8 (minimal permissions) and ROADMAP §8 items 18–20.
 export default defineConfig({
   srcDir: 'src',
+  modules: ['@wxt-dev/i18n/module'],
   vite: () => ({
     plugins: [preact()],
   }),
   manifest: {
-    name: 'Translate Side',
-    description: 'Translate the current page in the side panel.',
+    // Text the browser shows comes from src/locales (en is the default; vi follows Chrome's language).
+    default_locale: 'en',
+    name: '__MSG_extName__',
+    description: '__MSG_extDescription__',
     // 138: built-in AI baseline. Newer features are gated by availability checks, not version.
     minimum_chrome_version: '138',
     permissions: ['sidePanel', 'storage', 'activeTab', 'scripting', 'contextMenus'],
@@ -17,7 +20,7 @@ export default defineConfig({
     // http://*/* covers LAN gateways and plain-HTTP sites (decision S5, ROADMAP §8 item 19).
     optional_host_permissions: ['https://*/*', 'http://*/*', 'http://localhost/*', 'http://127.0.0.1/*'],
     action: {
-      default_title: 'Open Translate Side',
+      default_title: '__MSG_actionTitle__',
     },
     commands: {
       // Fires action.onClicked: it opens the side panel and injects (decision S5), or closes the panel
@@ -25,7 +28,7 @@ export default defineConfig({
       // Rebindable at chrome://extensions/shortcuts (ROADMAP §8 item 20).
       _execute_action: {
         suggested_key: { default: 'Alt+T' },
-        description: 'Open or close the Translate Side panel',
+        description: '__MSG_commandToggle__',
       },
     },
   },

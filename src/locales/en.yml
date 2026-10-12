@@ -1,0 +1,4 @@
+extName: Translate Side
+extDescription: Translate the current page in the side panel.
+actionTitle: Open Translate Side
+commandToggle: Open or close the Translate Side panel
