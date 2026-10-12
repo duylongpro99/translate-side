@@ -1,0 +1,5 @@
+{
+  "note": "long-100-screens, the fixture in front, the mock provider, the production build. Long tasks: the plan's fixed 100 ms per renderer (measured: page 50 ms, the content script's read; panel none over 50 ms). Heap: JSHeapUsedSize after a forced GC once every block is translated, the measured value plus 25% (measured 2026-10-12, max of 5 runs: page 2,859,680, panel 13,466,680).",
+  "longTaskMs": { "page": 100, "panel": 100 },
+  "heapBytes": { "page": 3574600, "panel": 16833350 }
+}
