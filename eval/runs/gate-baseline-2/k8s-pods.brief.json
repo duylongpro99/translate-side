@@ -1,0 +1,69 @@
+{
+ "genre": "technical documentation",
+ "audience": "software engineers and DevOps practitioners using Kubernetes",
+ "purpose": "define the concept of a Pod in Kubernetes and explain its structure and usage patterns",
+ "tone": "informative, precise, professional, uses second person 'you'",
+ "glossary": [
+  {
+   "term": "Pod",
+   "rendering": "Pod",
+   "note": "core Kubernetes concept, keep English"
+  },
+  {
+   "term": "Kubernetes",
+   "rendering": "Kubernetes",
+   "note": "proper noun, keep English"
+  },
+  {
+   "term": "container",
+   "rendering": "container",
+   "note": "standard tech term, often kept or translated as 'bộ chứa', but 'container' is common in VN IT docs"
+  },
+  {
+   "term": "init container",
+   "rendering": "init container",
+   "note": "specific type of container, keep English"
+  },
+  {
+   "term": "ephemeral container",
+   "rendering": "ephemeral container",
+   "note": "specific type of container for debugging, keep English"
+  },
+  {
+   "term": "Linux namespaces",
+   "rendering": "Linux namespaces",
+   "note": "technical OS concept, keep English"
+  },
+  {
+   "term": "cgroups",
+   "rendering": "cgroups",
+   "note": "technical OS concept, keep English"
+  },
+  {
+   "term": "logical host",
+   "rendering": "máy chủ logic",
+   "note": "conceptual analogy, translate for clarity"
+  },
+  {
+   "term": "co-located",
+   "rendering": "đồng vị trí",
+   "note": "key characteristic of Pods"
+  },
+  {
+   "term": "co-scheduled",
+   "rendering": "được lập lịch chung",
+   "note": "key characteristic of Pods"
+  },
+  {
+   "term": "tightly coupled",
+   "rendering": "liên kết chặt chẽ",
+   "note": "describes relationship between containers"
+  },
+  {
+   "term": "one-container-per-Pod",
+   "rendering": "một container mỗi Pod",
+   "note": "common pattern name"
+  }
+ ],
+ "language": "en"
+}

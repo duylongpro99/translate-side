@@ -1,0 +1,59 @@
+{
+ "genre": "technical blog post",
+ "audience": "Rust developers and programmers familiar with async concepts",
+ "purpose": "Explain the syntax, behavior, and performance characteristics of Rust's async-await feature",
+ "tone": "informative, clear, uses 'we' for collective developer perspective",
+ "glossary": [
+  {
+   "term": "async-await",
+   "rendering": "async-await",
+   "note": "Core language feature name, keep English"
+  },
+  {
+   "term": "runtime",
+   "rendering": "runtime",
+   "note": "Technical term in systems programming, usually kept English"
+  },
+  {
+   "term": "I/O",
+   "rendering": "I/O",
+   "note": "Standard abbreviation, keep English"
+  },
+  {
+   "term": "Future",
+   "rendering": "Future",
+   "note": "Specific Rust trait/type name, capitalize as in code"
+  },
+  {
+   "term": ".await",
+   "rendering": ".await",
+   "note": "Operator syntax, keep exact formatting"
+  },
+  {
+   "term": "? operator",
+   "rendering": "toán tử ?",
+   "note": "Refers to the specific error propagation operator"
+  },
+  {
+   "term": "zero-cost",
+   "rendering": "zero-cost",
+   "note": "Key concept phrase, often kept or translated as 'chi phí bằng không'"
+  },
+  {
+   "term": "poll model",
+   "rendering": "mô hình poll",
+   "note": "Technical implementation detail"
+  },
+  {
+   "term": "scheduling",
+   "rendering": "lập lịch",
+   "note": "Action performed by the runtime"
+  },
+  {
+   "term": "lazy",
+   "rendering": "lazy",
+   "note": "Programming paradigm term, often kept English in VN tech context"
+  }
+ ],
+ "language": "en"
+}

@@ -1,0 +1,69 @@
+{
+ "genre": "Wikipedia policy guideline",
+ "audience": "Experienced Wikipedia editors and administrators",
+ "purpose": "To advise against using generic warning templates for regular users, emphasizing the need for personalized communication to avoid appearing patronizing.",
+ "tone": "Advisory, formal yet community-focused, uses 'we' to denote collective responsibility",
+ "glossary": [
+  {
+   "term": "user talk templates",
+   "rendering": "mẫu tin nhắn trên trang thảo luận người dùng",
+   "note": "Specific UI feature on Wikipedia"
+  },
+  {
+   "term": "vandalism",
+   "rendering": "phá hoại",
+   "note": "Core Wikipedia concept"
+  },
+  {
+   "term": "three-revert rule",
+   "rendering": "quy tắc ba lần hoàn tác",
+   "note": "Standard translation for this specific policy"
+  },
+  {
+   "term": "policies and guidelines",
+   "rendering": "chính sách và hướng dẫn",
+   "note": "Distinct categories in Wikipedia governance"
+  },
+  {
+   "term": "new editors",
+   "rendering": "biên tập viên mới",
+   "note": "Refers to novice contributors"
+  },
+  {
+   "term": "assume good faith",
+   "rendering": "giả định thiện chí",
+   "note": "Fundamental Wikipedia principle (AGF)"
+  },
+  {
+   "term": "regulars",
+   "rendering": "người dùng thường xuyên",
+   "note": "Refers to experienced, long-term editors"
+  },
+  {
+   "term": "patronising",
+   "rendering": "trịch thượng",
+   "note": "Captures the negative connotation of being condescending"
+  },
+  {
+   "term": "uncivil",
+   "rendering": "thiếu văn minh",
+   "note": "Violation of civility policy"
+  },
+  {
+   "term": "Ignore All Rules",
+   "rendering": "Bỏ qua mọi quy tắc",
+   "note": "Official name of a specific Wikipedia policy (IAR)"
+  },
+  {
+   "term": "clear-cut",
+   "rendering": "rõ ràng",
+   "note": "Used to describe unambiguous violations"
+  },
+  {
+   "term": "amicable resolution",
+   "rendering": "giải quyết hòa nhã",
+   "note": "Preferred outcome in dispute resolution"
+  }
+ ],
+ "language": "en"
+}

@@ -1,0 +1,69 @@
+{
+ "genre": "Wikipedia policy guideline",
+ "audience": "Wikipedia editors and contributors",
+ "purpose": "To advise against using generic warning templates for experienced users and to encourage human explanation for complex or ambiguous policy issues.",
+ "tone": "Informative, cautionary, community-focused, uses 'we' and 'you'",
+ "glossary": [
+  {
+   "term": "user talk templates",
+   "rendering": "bản mẫu trang thảo luận người dùng",
+   "note": "Core concept: pre-written messages on user pages"
+  },
+  {
+   "term": "vandalism",
+   "rendering": "phá hoại",
+   "note": "Standard Wikipedia term"
+  },
+  {
+   "term": "three-revert rule",
+   "rendering": "quy tắc ba lần hoàn tác",
+   "note": "Specific policy name"
+  },
+  {
+   "term": "policies and guidelines",
+   "rendering": "chính sách và hướng dẫn",
+   "note": "Distinction between mandatory rules and advice"
+  },
+  {
+   "term": "assume good faith",
+   "rendering": "giả định thiện chí",
+   "note": "Key Wikipedia principle (AGF)"
+  },
+  {
+   "term": "novice editors",
+   "rendering": "biên tập viên mới",
+   "note": "Refers to new users"
+  },
+  {
+   "term": "breach policies",
+   "rendering": "vi phạm chính sách",
+   "note": "Action of breaking rules"
+  },
+  {
+   "term": "patronising",
+   "rendering": "trịch thượng",
+   "note": "Negative tone descriptor"
+  },
+  {
+   "term": "uncivil",
+   "rendering": "thiếu văn minh",
+   "note": "Violation of civility policy"
+  },
+  {
+   "term": "Ignore All Rules",
+   "rendering": "Bỏ qua mọi quy tắc",
+   "note": "Specific meta-policy (IAR)"
+  },
+  {
+   "term": "contradictory",
+   "rendering": "mâu thuẫn",
+   "note": "Describes conflicting policies"
+  },
+  {
+   "term": "clear-cut",
+   "rendering": "rõ ràng",
+   "note": "Describes unambiguous violations"
+  }
+ ],
+ "language": "en"
+}

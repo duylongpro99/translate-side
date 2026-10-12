@@ -1,0 +1,69 @@
+{
+ "genre": "Wikipedia policy guideline",
+ "audience": "Experienced Wikipedia editors and administrators",
+ "purpose": "To advise against using generic warning templates for established users, advocating for personalized communication instead.",
+ "tone": "Advisory, community-focused, uses 'we' to refer to the editor community",
+ "glossary": [
+  {
+   "term": "user talk templates",
+   "rendering": "bản mẫu trang thảo luận người dùng",
+   "note": "Core concept; standard translation for this feature"
+  },
+  {
+   "term": "vandalism",
+   "rendering": "phá hoại",
+   "note": "Standard term for malicious editing"
+  },
+  {
+   "term": "three-revert rule",
+   "rendering": "quy tắc hoàn tác ba lần",
+   "note": "Specific Wikipedia policy name"
+  },
+  {
+   "term": "policies and guidelines",
+   "rendering": "chính sách và hướng dẫn",
+   "note": "Distinct categories in Wikipedia governance"
+  },
+  {
+   "term": "new editors",
+   "rendering": "biên tập viên mới",
+   "note": "Refers to novice users"
+  },
+  {
+   "term": "assume good faith",
+   "rendering": "giả định thiện chí",
+   "note": "Key Wikipedia principle (AGF)"
+  },
+  {
+   "term": "patronising",
+   "rendering": "trịch thượng",
+   "note": "Describes the negative tone of templated warnings"
+  },
+  {
+   "term": "uncivil",
+   "rendering": "thiếu văn minh",
+   "note": "Violation of civility policy"
+  },
+  {
+   "term": "Ignore All Rules",
+   "rendering": "Bỏ qua mọi quy tắc",
+   "note": "Official name of a specific Wikipedia essay/policy"
+  },
+  {
+   "term": "contradictory",
+   "rendering": "mâu thuẫn",
+   "note": "Describes conflicting policies"
+  },
+  {
+   "term": "clear-cut",
+   "rendering": "rõ ràng",
+   "note": "Used to describe unambiguous violations"
+  },
+  {
+   "term": "amicable resolution",
+   "rendering": "giải quyết hòa bình",
+   "note": "Preferred outcome for disputes"
+  }
+ ],
+ "language": "en"
+}

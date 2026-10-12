@@ -1,0 +1,59 @@
+{
+ "genre": "technical blog post",
+ "audience": "Rust developers and programmers familiar with async concepts",
+ "purpose": "Explain the syntax and zero-cost abstraction model of Rust's async-await feature",
+ "tone": "Informative, conversational, uses 'we' to guide the reader",
+ "glossary": [
+  {
+   "term": "async-await",
+   "rendering": "async-await",
+   "note": "Core language feature name, keep English"
+  },
+  {
+   "term": "runtime",
+   "rendering": "runtime",
+   "note": "Technical term for execution environment, usually kept in English"
+  },
+  {
+   "term": "Future",
+   "rendering": "Future",
+   "note": "Specific Rust type/trait name, capitalize as in code"
+  },
+  {
+   "term": ".await",
+   "rendering": ".await",
+   "note": "Operator syntax, keep exact formatting"
+  },
+  {
+   "term": "zero-cost",
+   "rendering": "zero-cost",
+   "note": "Key concept phrase, often translated as 'chi phí bằng không' but 'zero-cost' is common in tech contexts; use 'zero-cost' or 'không chi phí' consistently. Given the title 'Zero-cost futures', keeping 'zero-cost' or translating to 'không chi phí' is acceptable. I will suggest 'zero-cost' as it is a s…"
+  },
+  {
+   "term": "poll model",
+   "rendering": "mô hình poll",
+   "note": "'Poll' is a technical verb/noun here, keep English part"
+  },
+  {
+   "term": "I/O",
+   "rendering": "I/O",
+   "note": "Standard abbreviation, keep English"
+  },
+  {
+   "term": "? operator",
+   "rendering": "toán tử ?",
+   "note": "Refers to the error propagation operator"
+  },
+  {
+   "term": "method chaining",
+   "rendering": "chuỗi phương thức",
+   "note": "Common programming concept translation"
+  },
+  {
+   "term": "suspended computation",
+   "rendering": "tính toán bị tạm dừng",
+   "note": "Descriptive term for Future state"
+  }
+ ],
+ "language": "en"
+}

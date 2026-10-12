@@ -1,0 +1,59 @@
+{
+ "genre": "technical documentation",
+ "audience": "JavaScript developers and learners",
+ "purpose": "explain the concept of closures and lexical scoping in JavaScript with examples",
+ "tone": "educational, clear, formal but accessible",
+ "glossary": [
+  {
+   "term": "Closures",
+   "rendering": "Closures",
+   "note": "Core concept, often kept in English or translated as 'Đóng' (but Closures is preferred in tech docs)"
+  },
+  {
+   "term": "lexical environment",
+   "rendering": "môi trường từ vựng",
+   "note": "Standard translation for this technical term"
+  },
+  {
+   "term": "outer scope",
+   "rendering": "phạm vi bên ngoài",
+   "note": "Descriptive translation of scope hierarchy"
+  },
+  {
+   "term": "Lexical scoping",
+   "rendering": "Phạm vi từ vựng",
+   "note": "Key concept title, standard translation"
+  },
+  {
+   "term": "inner function",
+   "rendering": "hàm lồng trong",
+   "note": "Clear description of nested functions"
+  },
+  {
+   "term": "parent function",
+   "rendering": "hàm cha",
+   "note": "Common terminology for enclosing functions"
+  },
+  {
+   "term": "local variable",
+   "rendering": "biến cục bộ",
+   "note": "Standard programming term"
+  },
+  {
+   "term": "source code",
+   "rendering": "mã nguồn",
+   "note": "Standard term"
+  },
+  {
+   "term": "parser",
+   "rendering": "trình phân tích cú pháp",
+   "note": "Technical term for code parsing component"
+  },
+  {
+   "term": "nested functions",
+   "rendering": "các hàm lồng nhau",
+   "note": "Descriptive translation"
+  }
+ ],
+ "language": "en"
+}

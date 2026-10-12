@@ -1,0 +1,59 @@
+{
+ "genre": "technical blog post",
+ "audience": "Go programmers, especially beginners",
+ "purpose": "to explain that errors in Go are values and should be treated as such to improve code flow",
+ "tone": "informative, persuasive, uses 'we' and direct address",
+ "glossary": [
+  {
+   "term": "Errors are values",
+   "rendering": "Lỗi là giá trị",
+   "note": "core concept/title"
+  },
+  {
+   "term": "if err != nil",
+   "rendering": "if err != nil",
+   "note": "code snippet, keep English"
+  },
+  {
+   "term": "try-catch",
+   "rendering": "try-catch",
+   "note": "programming construct, keep English"
+  },
+  {
+   "term": "bufio package",
+   "rendering": "gói bufio",
+   "note": "standard library package"
+  },
+  {
+   "term": "Scanner",
+   "rendering": "Scanner",
+   "note": "type name, keep English"
+  },
+  {
+   "term": "Scan method",
+   "rendering": "phương thức Scan",
+   "note": "method name"
+  },
+  {
+   "term": "I/O",
+   "rendering": "I/O",
+   "note": "Input/Output, keep English"
+  },
+  {
+   "term": "boolean",
+   "rendering": "boolean",
+   "note": "data type, often kept or translated as 'kiểu boolean'"
+  },
+  {
+   "term": "flow of control",
+   "rendering": "luồng điều khiển",
+   "note": "technical term"
+  },
+  {
+   "term": "nil check",
+   "rendering": "kiểm tra nil",
+   "note": "common phrase in Go context"
+  }
+ ],
+ "language": "en"
+}

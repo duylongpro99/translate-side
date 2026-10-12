@@ -1,0 +1,179 @@
+{
+ "judgeModel": "ds/deepseek-v4-pro",
+ "prompt": "judge@1",
+ "at": "2026-10-11T14:44:59.431Z",
+ "scores": {
+  "bierce-devils-dictionary": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "Segment [1] mistranslates 'when you wish him to listen' as 'when you only want to listen,' reversing the joke. Some renderings, especially 'tòa nhà siêu cấu trúc...' in [7], are clumsy translationese."
+  },
+  "docker-multistage": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch trung thành và giữ đúng thuật ngữ kỹ thuật, nhưng còn vài cụm hơi dịch máy như 'giai đoạn còn lại nơi binary được sao chép' và 'artifact đã build'."
+  },
+  "go-errors-are-values": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is accurate and readable; minor fidelity/naturalness issues come from added parenthetical glosses and a few awkward technical renderings like 'mã của client' and 'lập trình hóa'."
+  },
+  "go-gofmt": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The translation is largely accurate, but some informal nuance is lost (e.g., 'hacking away' becomes neutral 'đang code', and 'mentally convert' drops 'mentally'); segment [6] is slightly ambiguous about 'unrelated changes to the file's formatting'."
+  },
+  "go-share-memory": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Bản dịch trung thành và giữ đúng giọng kỹ thuật, nhưng một số thuật ngữ còn gượng như 'nguyên thủy đồng thời', 'phần mềm đồng thời' và 'an toàn cho luồng', chưa hoàn toàn theo cách dùng quen thuộc trong tiếng Việt."
+  },
+  "go2-here-we-come": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Điểm yếu chính là độ tự nhiên: một số cụm từ dịch sát từng chữ như 'khởi động quá trình suy nghĩ', 'cú nổ lớn' và 'sự ảnh hưởng bên ngoài khiêm tốn' khiến văn bản có chút translationese."
+  },
+  "k8s-pods": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The translation is largely faithful, but adds explanatory parentheticals not present in the source (e.g. 'nhóm chứa', 'hệ thống điều phối container') and has a few slightly literal spots such as 'tiêm' for inject and 'chặt chẽ tương đối'."
+  },
+  "mdn-closures": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "The translation is accurate and consistent, but a few terms like 'Hàm đóng' for 'closure' and 'môi trường từ vựng' are slightly literal or less standard for Vietnamese technical writing; naturalness is otherwise high."
+  },
+  "mdn-using-promises": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "The translation adds redundant explanatory parentheticals, especially in segment [2], where 'final result' duplicates and slightly shifts the definition; the heading 'Chuỗi (promise)' also inserts information not in the source."
+  },
+  "pep20-zen": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "A few technical nuances are shifted: 'explicit' is rendered as 'rõ ràng' rather than the usual 'tường minh', and 'nested' as 'lồng ghép' rather than programming-standard 'lồng nhau'; the title also drops the 'Zen' nuance."
+  },
+  "rust-async-await-primer": {
+   "fidelity": 3,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 3,
+   "comment": "The heading 'Async-await (đồng bộ bất đồng bộ)' mistranslates the term as 'synchronous asynchronous', which is the main clarity issue; the rest is mostly fluent and faithful."
+  },
+  "rust-async-ecosystem": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The main weakness is naturalness: a few phrases are translated literally or awkwardly, such as 'trong câu chuyện của Rust' and 'cầu nối giữa Rust Futures với JavaScript promises'."
+  },
+  "rust-async-executor": {
+   "fidelity": 5,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Bản dịch trung thành, nhưng còn vài chỗ dịch từng từ như “Cho ví dụ này”, “là lười biếng” và thuật ngữ “task” được dịch không nhất quán: lúc là “tác vụ”, lúc giữ nguyên “task”."
+  },
+  "rust-book-ownership": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The main weakness is an awkward rendering of 'the easier you’ll find it to naturally develop code' as 'bạn càng dễ dàng tự nhiên viết ra' and the slight narrowing of 'code' to 'mã nguồn'."
+  },
+  "rust-book-panic": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 3,
+   "terminology": 5,
+   "comment": "The translation adds explanatory parentheticals not in the source (e.g., for Result, Err, unwrap), and the wordplay in the title is not recreated; a few phrases such as 'chỗ để tạm thời' are awkward."
+  },
+  "so-branch-prediction": {
+   "fidelity": 3,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "Main weakness is the untranslated 'appropriately' in [4], which breaks the Vietnamese text; a few phrases like 'việc dự đoán nhánh thất bại' and 'lùi xe' for a train are also slightly awkward."
+  },
+  "so-regex-html": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 5,
+   "comment": "The main message and hyperbolic imagery are preserved, but some phrasing is literal or translationese ('Lực lượng', 'làm tôi bẻ gãy'), and slang like 'pwn' is normalized, slightly weakening tone and naturalness."
+  },
+  "swift-modest-proposal": {
+   "fidelity": 3,
+   "naturalness": 4,
+   "tone": 4,
+   "terminology": 3,
+   "comment": "Main weakness is 'temperance' rendered as 'độ lượng' (generosity) rather than 'sự tiết chế/điều độ'; 'there will ever be' rendered as 'sẽ luôn có' also shifts the sense from 'at any time' to 'always'."
+  },
+  "wodehouse-jeeves": {
+   "fidelity": 4,
+   "naturalness": 3,
+   "tone": 4,
+   "terminology": 4,
+   "comment": "Bản dịch trung thành với nội dung chính nhưng còn vài chỗ dịch sát và giữ từ tiếng Anh trong ngoặc đơn, tạo cảm giác translationese; một số thành ngữ như 'soft snap', 'go to par' chỉ được chuyển ngữ tương đối."
+  },
+  "wp-beans": {
+   "fidelity": 4,
+   "naturalness": 5,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "The only notable shift is temporal: 'on previous market days' is rendered as 'before the days mother went to market', slightly changing when the boy's misdeeds happened. Otherwise the translation is faithful, natural, and keeps the story's tone."
+  },
+  "wp-dont-bite-newcomers": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "Một vài chỗ dịch lệch nghĩa nhẹ: 'regular editors' thành 'biên tập viên kỳ cựu' và 'valuable contributors' thành 'đóng góp giá trị', khiến câu nói về đóng góp rời bỏ thay vì người đóng góp."
+  },
+  "wp-not-a-dictionary": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 5,
+   "comment": "Bản dịch trôi chảy và nhất quán; chỉ có vài chỗ dịch hơi thoát như 'It is...' thành 'Được xem là...' và 'good definition' thành 'định nghĩa rõ ràng'."
+  },
+  "wp-template-regulars": {
+   "fidelity": 4,
+   "naturalness": 4,
+   "tone": 5,
+   "terminology": 4,
+   "comment": "The translation is clear and largely accurate, but it slightly expands source phrases like “templated messages” and “Template warnings” into longer Vietnamese phrases, and a few terms are rendered descriptively rather than by standard Vietnamese wiki terms."
+  }
+ },
+ "failed": [],
+ "usage": {
+  "input": 37229,
+  "cachedInput": 16256,
+  "output": 104588
+ },
+ "costUsd": 0.1475216176,
+ "reasoning": {
+  "effort": "medium",
+  "reserveTokens": 16000
+ }
+}

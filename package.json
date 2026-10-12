@@ -29,6 +29,7 @@
     "eval:detect": "node scripts/eval-detect.mjs",
     "eval:judge": "node scripts/eval-judge.mjs",
     "eval:report": "node scripts/eval-report.mjs",
+    "eval:gate": "node scripts/eval-gate.mjs",
     "latency": "node scripts/latency.mjs",
     "faults": "node scripts/faults.mjs",
     "migration": "node scripts/migration.mjs",

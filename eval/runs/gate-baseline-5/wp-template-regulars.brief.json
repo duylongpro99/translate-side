@@ -1,0 +1,59 @@
+{
+ "genre": "Wikipedia policy guideline",
+ "audience": "Experienced Wikipedia editors and administrators",
+ "purpose": "To advise against using generic warning templates for regular users, advocating for personalized human communication instead.",
+ "tone": "Advisory, formal yet conversational, uses 'we' to refer to the community",
+ "glossary": [
+  {
+   "term": "user talk templates",
+   "rendering": "mẫu tin nhắn trên trang thảo luận người dùng",
+   "note": "Core concept: standardized messages sent to user talk pages"
+  },
+  {
+   "term": "vandalism",
+   "rendering": "phá hoại",
+   "note": "Standard Wikipedia term"
+  },
+  {
+   "term": "three-revert rule",
+   "rendering": "quy tắc hoàn tác ba lần",
+   "note": "Specific policy name, often translated descriptively"
+  },
+  {
+   "term": "assume good faith",
+   "rendering": "giả định thiện chí",
+   "note": "Key Wikipedia principle (AGF)"
+  },
+  {
+   "term": "novice editors",
+   "rendering": "biên tập viên mới",
+   "note": "Refers to new users"
+  },
+  {
+   "term": "regulars",
+   "rendering": "người dùng thường xuyên",
+   "note": "Refers to experienced, long-term contributors"
+  },
+  {
+   "term": "patronising",
+   "rendering": "trịch thượng",
+   "note": "Describes the negative tone of generic warnings"
+  },
+  {
+   "term": "uncivil",
+   "rendering": "thiếu văn minh",
+   "note": "Violation of civility policy"
+  },
+  {
+   "term": "Ignore All Rules",
+   "rendering": "Bỏ qua mọi quy tắc",
+   "note": "Official Wikipedia policy name (IAR)"
+  },
+  {
+   "term": "clear-cut",
+   "rendering": "rõ ràng",
+   "note": "Used to describe unambiguous violations"
+  }
+ ],
+ "language": "en"
+}

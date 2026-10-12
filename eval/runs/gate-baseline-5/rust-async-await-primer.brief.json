@@ -1,0 +1,59 @@
+{
+ "genre": "technical blog post",
+ "audience": "Rust developers and programmers familiar with async concepts",
+ "purpose": "explain the syntax and zero-cost abstraction model of Rust's async-await feature",
+ "tone": "informative, conversational, uses 'we' for collective developer experience",
+ "glossary": [
+  {
+   "term": "async-await",
+   "rendering": "async-await",
+   "note": "core concept, keep English"
+  },
+  {
+   "term": "runtime",
+   "rendering": "runtime",
+   "note": "standard tech term, keep English"
+  },
+  {
+   "term": "I/O",
+   "rendering": "I/O",
+   "note": "abbreviation, keep English"
+  },
+  {
+   "term": "Future",
+   "rendering": "Future",
+   "note": "Rust type name, keep English"
+  },
+  {
+   "term": ".await",
+   "rendering": ".await",
+   "note": "operator syntax, keep English"
+  },
+  {
+   "term": "zero-cost",
+   "rendering": "zero-cost",
+   "note": "key performance concept, keep English or translate as 'chi phí bằng không' if context allows, but usually kept in tech docs"
+  },
+  {
+   "term": "poll model",
+   "rendering": "mô hình poll",
+   "note": "technical mechanism, 'poll' often kept"
+  },
+  {
+   "term": "scheduling",
+   "rendering": "lập lịch",
+   "note": "standard translation for task scheduling"
+  },
+  {
+   "term": "lazy",
+   "rendering": "lazy",
+   "note": "programming paradigm term, often kept or translated as 'lười' (evaluation)"
+  },
+  {
+   "term": "? operator",
+   "rendering": "toán tử ?",
+   "note": "specific Rust error propagation syntax"
+  }
+ ],
+ "language": "en"
+}

@@ -1,0 +1,69 @@
+{
+ "genre": "comic fiction short story",
+ "audience": "general readers of British humor literature",
+ "purpose": "entertain through witty narration and character quirks",
+ "tone": "conversational, humorous, upper-class British slang, first-person narrator",
+ "glossary": [
+  {
+   "term": "chappie",
+   "rendering": "anh chàng",
+   "note": "British slang for a man; keep informal tone"
+  },
+  {
+   "term": "cove",
+   "rendering": "gã",
+   "note": "slang for a fellow/man; slightly derogatory or familiar"
+  },
+  {
+   "term": "soft snap",
+   "rendering": "việc nhẹ lương cao",
+   "note": "idiom meaning an easy job with good pay"
+  },
+  {
+   "term": "go to par",
+   "rendering": "sống lâu trăm tuổi",
+   "note": "idiom implying living a long life (golf metaphor)"
+  },
+  {
+   "term": "harry him",
+   "rendering": "làm phiền anh ấy",
+   "note": "to pester or annoy repeatedly"
+  },
+  {
+   "term": "jute business",
+   "rendering": "nghề buôn đay",
+   "note": "specific industry mentioned; 'đay' is jute"
+  },
+  {
+   "term": "captain of industry",
+   "rendering": "ông trùm công nghiệp",
+   "note": "standard translation for this idiom"
+  },
+  {
+   "term": "ornithologist",
+   "rendering": "nhà điểu học",
+   "note": "scientific term for bird expert"
+  },
+  {
+   "term": "American Birds",
+   "rendering": "Các loài chim Mỹ",
+   "note": "book title; translate descriptively"
+  },
+  {
+   "term": "More American Birds",
+   "rendering": "Thêm các loài chim Mỹ",
+   "note": "sequel book title"
+  },
+  {
+   "term": "portrait-painting",
+   "rendering": "vẽ chân dung",
+   "note": "core activity discussed"
+  },
+  {
+   "term": "Mr. Worple",
+   "rendering": "Ông Worple",
+   "note": "character name; keep English"
+  }
+ ],
+ "language": "en"
+}

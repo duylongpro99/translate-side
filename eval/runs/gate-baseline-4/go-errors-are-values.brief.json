@@ -1,0 +1,69 @@
+{
+ "genre": "technical blog post",
+ "audience": "Go programmers, especially beginners",
+ "purpose": "To explain that errors in Go are values and can be handled programmatically, countering the misconception that error handling is clumsy.",
+ "tone": "Informative, persuasive, uses 'we' for the authors/community",
+ "glossary": [
+  {
+   "term": "Errors are values",
+   "rendering": "Lỗi là giá trị",
+   "note": "Core concept/title of the article"
+  },
+  {
+   "term": "if err != nil",
+   "rendering": "if err != nil",
+   "note": "Code snippet, keep as-is"
+  },
+  {
+   "term": "try-catch",
+   "rendering": "try-catch",
+   "note": "Programming construct from other languages, usually kept in English"
+  },
+  {
+   "term": "bufio",
+   "rendering": "bufio",
+   "note": "Package name, keep as-is"
+  },
+  {
+   "term": "Scanner",
+   "rendering": "Scanner",
+   "note": "Type name, keep as-is"
+  },
+  {
+   "term": "Scan method",
+   "rendering": "phương thức Scan",
+   "note": "Method name kept in English"
+  },
+  {
+   "term": "I/O",
+   "rendering": "I/O",
+   "note": "Input/Output, standard abbreviation"
+  },
+  {
+   "term": "boolean",
+   "rendering": "boolean",
+   "note": "Data type, often kept in English or translated as 'kiểu logic', but boolean is common in tech docs"
+  },
+  {
+   "term": "nil check",
+   "rendering": "kiểm tra nil",
+   "note": "'nil' is a specific Go keyword, keep it"
+  },
+  {
+   "term": "flow of control",
+   "rendering": "luồng điều khiển",
+   "note": "Standard CS term"
+  },
+  {
+   "term": "open source projects",
+   "rendering": "dự án mã nguồn mở",
+   "note": "Common phrase"
+  },
+  {
+   "term": "client code",
+   "rendering": "mã phía client",
+   "note": "Refers to the code using the library/API"
+  }
+ ],
+ "language": "en"
+}

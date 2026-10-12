@@ -1,0 +1,59 @@
+{
+ "genre": "technical Q&A / Stack Overflow answer",
+ "audience": "software developers and computer science students",
+ "purpose": "explain the concept of branch prediction and why sorted data improves performance by reducing mispredictions",
+ "tone": "informal, educational, uses analogies and second-person perspective ('you')",
+ "glossary": [
+  {
+   "term": "Branch Prediction",
+   "rendering": "Dự đoán nhánh",
+   "note": "Core technical concept; standard translation in Vietnamese CS literature"
+  },
+  {
+   "term": "branch instruction",
+   "rendering": "lệnh rẽ nhánh",
+   "note": "Technical term for assembly/CPU level operation"
+  },
+  {
+   "term": "if-statement",
+   "rendering": "câu lệnh if",
+   "note": "Commonly kept as 'if' or translated as 'câu lệnh if'; avoid overly formal 'câu điều kiện' to match informal tone"
+  },
+  {
+   "term": "processor",
+   "rendering": "bộ xử lý",
+   "note": "Standard hardware term"
+  },
+  {
+   "term": "execution",
+   "rendering": "thực thi",
+   "note": "Standard computing term"
+  },
+  {
+   "term": "inertia",
+   "rendering": "quán tính",
+   "note": "Physics analogy used in text"
+  },
+  {
+   "term": "misprediction",
+   "rendering": "dự đoán sai",
+   "note": "Implied concept from 'guess wrong'; key to understanding performance cost"
+  },
+  {
+   "term": "sorted array",
+   "rendering": "mảng đã sắp xếp",
+   "note": "Data structure context"
+  },
+  {
+   "term": "unsorted array",
+   "rendering": "mảng chưa sắp xếp",
+   "note": "Data structure context"
+  },
+  {
+   "term": "data is evenly distributed",
+   "rendering": "dữ liệu được phân bố đều",
+   "note": "Statistical context relevant to the example"
+  }
+ ],
+ "language": "en"
+}

@@ -20,6 +20,45 @@ The human sheet is the source of truth: fill in `fidelity`, `naturalness`, `tone
 
 A column is named `strategy / prompt / model` from the run's `summary.json`, so `contextual` and `translate@2` runs join the report without changing it.
 
+## Regression gate
+
+```
+pnpm run eval:gate                          # one translate + judge pass against eval/gate.json; once more if it fails
+pnpm run eval:gate -- --baseline 5          # re-baseline: eval/runs/gate-baseline-<n>/ and eval/gate.json
+pnpm run eval:gate -- --timeout-min 25      # the per-pass timeout (default 25)
+```
+
+**What it checks.** The gate translates the 23 passages with the configuration the extension ships:
+- the model and quirks of `DEFAULT_PROFILE` over `DEFAULT_CONNECTION` (`src/shared/settings.ts`);
+- the panel's strategy (`PANEL_STRATEGY`) with its translate prompt;
+- the profile's concurrency.
+
+It uses chunk 400, not the profile's 1200, so that the longer passages (about 10 of the 23; the M2 c400 run had 34 chunks, 11 of them briefed) split into several chunks and run the brief, the briefed chunks and the chunk-0 revision. The other passages fit one chunk and skip them, as they would in the extension. The pinned judge (`scripts/eval/judge-core.ts`) then scores the translations. For each dimension, the 23-passage judge mean must reach the baseline mean minus that dimension's margin (`eval/gate.json`).
+
+A pass fails in any of these cases:
+- a dimension is below its floor;
+- the judge did not score every passage;
+- no chunk carried the brief, or no segment was revised;
+- a segment was lost;
+- the pass reported no priced calls (a mock or an empty run is never green);
+- it hit the timeout or the spend cap.
+
+A failed pass is run once more, and the gate is red (exit 1) only when both passes fail. Each pass prints a per-dimension table and its spend, however it ended. The gate refuses with exit 2, before any call, in three cases: the key is missing, `eval/gate.json` is missing, or `gate.json`'s judge differs from the pinned one: the model or prompt id in `judge-core.ts`, or the thinking effort `judge.ts` sends. A gate run stops at $0.50 at the nominal prices in `scripts/eval/pricing.ts`. The APIBOX prices there are unverified. One pass costs about $0.16 and takes about 15 minutes, most of it in the judge.
+
+**When to run it.** CI does not run the gate: it needs paid live calls, and CI holds no key. Run it locally with the keys in `.env`, and record the output (the tables and the spend) in the PR or phase report:
+- before merging any change to `src/engine/**`, `src/llm/**`, `src/shared/settings.ts`, `src/shared/presets.ts`, `src/entrypoints/sidepanel/jobs.ts`, `scripts/eval/**` or `eval/**`;
+- in every test pass over a diff that touches those paths;
+- in the release-candidate check.
+
+**Margins.** The baseline is 5 runs of the gate configuration at the same commit. For each dimension, the margin is the larger of 2 × the sample standard deviation of the 5 runs' judge means and 0.20. The minimum is 0.20 because the judge scores whole points: one point less on 4 or 5 of the 23 passages moves a mean by about 0.2. With a 0.10 minimum, terminology's margin was 0.137, and the unchanged shipped default went red at 4.30 on two passes. That score is below all five baseline runs (4.39–4.57), yet nothing had changed: the net loss was 4 points over 23 passages. `gate.json` records the margins, the SDs, the per-run and baseline means, the judge, the configuration, and the M2 c400 reference (`eval/runs/baseline-contextual-translate2-qwen3.8-flash-c400`). The baseline is refused (exit 3, no `gate.json`) if any dimension's baseline mean is below the M2 c400 judge mean minus its margin.
+
+**Re-baselining.** Re-baseline only on purpose, in its own commit, which holds `eval/gate.json` and the `eval/runs/gate-baseline-*` runs together:
+1. Delete the old `eval/runs/gate-baseline-*`.
+2. Run `pnpm run eval:gate -- --baseline 5` (at least 3 runs). A run that already finished is kept, so the command resumes after an interruption.
+3. Commit the new `gate.json` with the runs.
+
+Re-baseline when the judge changes (a new judge model, prompt id or thinking effort is refused until you do), or when a quality change is accepted. Never re-baseline to turn a red gate green. When the shipped model, quirks or strategy differ from the baseline's, the gate prints a note and compares against the baseline all the same. The baseline stays the quality bar.
+
 ## Passages
 
 | id | category | source | author | license | code |

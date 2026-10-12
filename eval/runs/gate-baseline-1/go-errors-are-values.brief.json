@@ -1,0 +1,69 @@
+{
+ "genre": "technical blog post",
+ "audience": "Go programmers, especially beginners",
+ "purpose": "Explain that Go errors are values and demonstrate how this leads to cleaner code than repetitive if-err checks",
+ "tone": "Informative, persuasive, uses 'we' for the Go team",
+ "glossary": [
+  {
+   "term": "Errors are values",
+   "rendering": "Lỗi là giá trị",
+   "note": "Core concept/title of the article"
+  },
+  {
+   "term": "if err != nil",
+   "rendering": "if err != nil",
+   "note": "Code snippet, keep as is"
+  },
+  {
+   "term": "try-catch",
+   "rendering": "try-catch",
+   "note": "Common programming term, usually kept in English"
+  },
+  {
+   "term": "bufio package",
+   "rendering": "gói bufio",
+   "note": "Standard library package name"
+  },
+  {
+   "term": "Scanner",
+   "rendering": "Scanner",
+   "note": "Type name, keep in English"
+  },
+  {
+   "term": "Scan method",
+   "rendering": "phương thức Scan",
+   "note": "Method name, keep in English"
+  },
+  {
+   "term": "I/O",
+   "rendering": "I/O",
+   "note": "Input/Output, standard abbreviation"
+  },
+  {
+   "term": "boolean",
+   "rendering": "boolean",
+   "note": "Data type, often kept in English or translated as 'logic'/'kiểu logic', but boolean is common in tech docs"
+  },
+  {
+   "term": "Client code",
+   "rendering": "mã phía client",
+   "note": "Code written by the user of the API"
+  },
+  {
+   "term": "flow of control",
+   "rendering": "luồng điều khiển",
+   "note": "Programming concept"
+  },
+  {
+   "term": "nil check",
+   "rendering": "kiểm tra nil",
+   "note": "Checking for null value"
+  },
+  {
+   "term": "open source projects",
+   "rendering": "dự án mã nguồn mở",
+   "note": "Common term"
+  }
+ ],
+ "language": "en"
+}

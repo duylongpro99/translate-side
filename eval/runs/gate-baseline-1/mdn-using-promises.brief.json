@@ -1,0 +1,69 @@
+{
+ "genre": "technical documentation",
+ "audience": "JavaScript developers learning asynchronous programming",
+ "purpose": "explain the concept of Promises, how to consume them, and the benefits of chaining over callback hell",
+ "tone": "educational, clear, uses 'we' for collective guidance",
+ "glossary": [
+  {
+   "term": "Promise",
+   "rendering": "Promise",
+   "note": "core JavaScript object, keep English"
+  },
+  {
+   "term": "asynchronous operation",
+   "rendering": "thao tác bất đồng bộ",
+   "note": "standard technical term"
+  },
+  {
+   "term": "callback",
+   "rendering": "callback",
+   "note": "commonly kept in English in VN dev community"
+  },
+  {
+   "term": "chaining",
+   "rendering": "chuỗi hóa",
+   "note": "or 'nối chuỗi', refers to .then() sequence"
+  },
+  {
+   "term": "callback hell",
+   "rendering": "địa ngục callback",
+   "note": "widely used metaphorical term"
+  },
+  {
+   "term": "consumers",
+   "rendering": "người dùng",
+   "note": "context: those who use returned promises"
+  },
+  {
+   "term": "returned object",
+   "rendering": "đối tượng trả về",
+   "note": "literal translation"
+  },
+  {
+   "term": "configuration record",
+   "rendering": "bản ghi cấu hình",
+   "note": "data structure context"
+  },
+  {
+   "term": "successCallback",
+   "rendering": "successCallback",
+   "note": "function name, keep as is"
+  },
+  {
+   "term": "failureCallback",
+   "rendering": "failureCallback",
+   "note": "function name, keep as is"
+  },
+  {
+   "term": "createAudioFileAsync",
+   "rendering": "createAudioFileAsync",
+   "note": "function name, keep as is"
+  },
+  {
+   "term": ".then()",
+   "rendering": ".then()",
+   "note": "method name, keep as is"
+  }
+ ],
+ "language": "en"
+}
