@@ -26,8 +26,11 @@ import { loadRun, type RunSummary } from './runs.ts';
  * (contextual.ts), so the gate checks that some chunks were briefed and some segments revised.
  */
 export const GATE_CHUNK_TOKENS = 400;
-/** A margin never below this: the judge scores whole points, so a smaller one turns noise red. */
-export const MIN_MARGIN = 0.1;
+/**
+ * A margin never below this. The judge scores whole points, so one point less on 4 or 5 of the 23 passages
+ * (about 0.2) is noise: at 0.137, unchanged shipped code went red on terminology alone.
+ */
+export const MIN_MARGIN = 0.2;
 /** USD at the nominal prices of pricing.ts (the APIBOX ones are unverified); a gate run stops above it. */
 export const SPEND_CAP_USD = 0.5;
 export const GATE_FILE = 'eval/gate.json';

@@ -30,7 +30,7 @@
   "set": "eval",
   "target": "vi"
  },
- "marginRule": "max(2 × sample SD of the 5 run means, 0.1)",
+ "marginRule": "max(2 × sample SD of the 5 run means, 0.2)",
  "dimensions": {
   "fidelity": {
    "baseline": 4.226086956521739,
@@ -48,7 +48,7 @@
   "naturalness": {
    "baseline": 3.904347826086956,
    "sd": 0.09425862342903828,
-   "margin": 0.18851724685807655,
+   "margin": 0.2,
    "m2c400": 3.9130434782608696,
    "runs": [
     3.8260869565217392,
@@ -74,7 +74,7 @@
   "terminology": {
    "baseline": 4.478260869565217,
    "sd": 0.06874516652539944,
-   "margin": 0.13749033305079889,
+   "margin": 0.2,
    "m2c400": 4.434782608695652,
    "runs": [
     4.478260869565218,

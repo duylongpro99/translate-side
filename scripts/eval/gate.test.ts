@@ -135,12 +135,16 @@ describe('margins', () => {
   it('uses the sample SD, twice of it, never below the minimum', () => {
     expect(sampleSd([4, 4, 4])).toBe(0);
     expect(sampleSd([1, 2, 3, 4, 5])).toBeCloseTo(Math.sqrt(2.5));
-    const runs = [4.3, 4.4, 4.5, 4.4, 4.4].map((f) => ({ fidelity: f, naturalness: 4, tone: 4, terminology: 4 }));
-    const d = computeDimensions(runs, { fidelity: 4.5, naturalness: 4.2, tone: 4, terminology: 3.9 });
+    const fid = [4.2, 4.4, 4.6, 4.4, 4.4];
+    const runs = fid.map((f) => ({ fidelity: f, naturalness: 4, tone: 4, terminology: 4.3 + (f - 4.4) / 2 }));
+    const d = computeDimensions(runs, { fidelity: 4.6, naturalness: 4.3, tone: 4, terminology: 3.9 });
     expect(d.fidelity.baseline).toBeCloseTo(4.4);
-    expect(d.fidelity.margin).toBeCloseTo(2 * sampleSd([4.3, 4.4, 4.5, 4.4, 4.4]));
+    expect(d.fidelity.margin).toBeCloseTo(2 * sampleSd(fid));
     expect(d.naturalness.margin).toBe(MIN_MARGIN);
-    // naturalness 4.00 < 4.20 − 0.10; fidelity 4.40 ≥ 4.50 − 0.14.
+    // 2 × SD 0.141 is below the minimum: one point on 3 of 23 passages must not turn the gate red.
+    expect(d.terminology.margin).toBe(MIN_MARGIN);
+    expect(MIN_MARGIN).toBe(0.2);
+    // naturalness 4.00 < 4.30 − 0.20; fidelity 4.40 ≥ 4.60 − 0.28.
     expect(belowM2(d)).toEqual(['naturalness']);
   });
 });

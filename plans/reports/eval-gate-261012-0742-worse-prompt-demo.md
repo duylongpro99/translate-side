@@ -48,3 +48,7 @@ spend: translate $0.0056 + judge $0.1476 = $0.1532
 ```
 
 Pass 2, the gate's re-run, did not produce a result. APIBOX did not answer two calls, for `so-regex-html` and `swift-modest-proposal`, and translation hit the 25-minute timeout. It spent $0.0027. The gate exited 1 (RED, 2 passes, $0.1559 at nominal prices; the APIBOX prices are unverified).
+
+## Under the 0.20 minimum margin
+
+The minimum margin was later raised from 0.10 to 0.20, with `gate.json` recomputed from the same five baseline runs. Naturalness's floor moved to 3.70 and terminology's to 4.28; fidelity and tone are unchanged. The demo's pass 1 is still red on three dimensions: fidelity 3.87 < 3.96, naturalness 3.52 < 3.70 and terminology 3.83 < 4.28. Tone, at 4.35, still clears its 4.34 floor.
