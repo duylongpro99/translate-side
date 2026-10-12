@@ -5,6 +5,8 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: '.',
   testMatch: '*.spec.ts',
+  // The upgrade test builds an earlier version first: only `pnpm run e2e:upgrade` runs it.
+  testIgnore: process.env.UPGRADE_FROM ? [] : ['upgrade.spec.ts'],
   workers: 1,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
