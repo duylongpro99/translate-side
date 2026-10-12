@@ -14,9 +14,9 @@ so it reads like a native writer wrote it.
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-34A853)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow)
-![Status: developer preview](https://img.shields.io/badge/status-developer%20preview-orange)
+![Version 1.0](https://img.shields.io/badge/version-1.0.0-blue)
 
-[Features](#-features) · [How it works](#-how-it-works) · [Getting started](#-getting-started) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
+[Features](#-features) · [How it works](#-how-it-works) · [Getting started](#-getting-started) · [Providers](#-providers-and-local-models) · [Privacy](#-privacy) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 
 </div>
 
@@ -60,16 +60,20 @@ Translate Side gives the model the **whole document's context** before it transl
 |---|---|
 | 🪟 **Side-by-side reading** | Click the toolbar icon or press <kbd>Alt</kbd>+<kbd>T</kbd>. The panel opens for that tab and starts translating right away; the same key closes it again. |
 | ⚡ **Streaming output** | Segments appear as they're translated. The first one usually shows up in under 2 seconds. |
+| 🗂️ **Any provider, or none online** | Bring your own key for Anthropic, OpenAI, Google Gemini, OpenRouter or any OpenAI- or Anthropic-compatible service, or run a model on your own computer with Ollama or LM Studio. Route pages to different models per site, with fallbacks. See [Providers and local models](#-providers-and-local-models). |
 | 🧠 **"About this document"** | Before translating, the model writes a short brief covering genre, audience, purpose, tone and key terms. You can read it in the panel, and every chunk is translated with it. |
 | 🎨 **Style modes** | **Natural** reads as if it was written in your language. **Faithful** stays closer to the original wording. **Simplified** uses short sentences and plain words. |
 | 📖 **Personal glossary** | Pick how a term is always rendered, or keep it as is (for example, "deploy" stays in English). It syncs to other devices signed in to the same Chrome profile. |
 | 🛡️ **Checked output** | Every segment is checked for lost code spans, URLs, numbers and formatting. A segment that fails is re-requested once, so you never get a broken one without a warning. |
-| 🌐 **Language aware** | Detects the page's language, and skips a page that is already in your target language. |
+| 🌐 **Language aware** | Detects the page's language, and skips a page that is already in your target language. The interface is in English and Vietnamese and follows Chrome's language. |
+| 🔗 **Hover link and scroll sync** | Point at a block in the panel and the matching block on the page is marked, and the other way round. The panel can follow the page as you scroll. |
+| 📌 **Selection and sites** | Select text and choose "Translate in side panel" to translate just that. Allow a site and each page you open there is translated while the panel is open; mail and sign-in sites are never read. |
+| 🗃️ **Cache and long pages** | Translations are cached on your device and resume after a reload. Long pages translate what you are looking at first, and single-page apps are followed as they change routes. |
 | 💸 **Cost you can see** | The panel shows the token cost of each page. A per-page token budget keeps a runaway job in check. |
 | ⌨️ **Keyboard and screen readers** | The panel is one Tab stop; the arrows (or <kbd>J</kbd>/<kbd>K</kbd>) move between blocks, and <kbd>O</kbd>, <kbd>R</kbd>, <kbd>E</kbd>, <kbd>C</kbd> show the original, retranslate, explain and copy the focused block. The translation is marked with its language. See [Keyboard shortcuts](#keyboard-shortcuts). |
 | 📦 **Portable settings** | Export your connections, models, routing, preferences, glossary and site lists to a JSON file and import it in another browser (Options › Export and import settings). API keys stay out of the file unless you tick "include keys" and confirm. |
 | 🩺 **Local diagnostics** | The last 50 translations (versions, model, counts, tokens, timings, error kinds; never page text or page addresses, and site names only if you turn them on) are logged on this device only. Options › Diagnostics shows the whole file before you save it to attach to a bug report. Nothing is sent automatically. |
-| 🔒 **Minimal permissions** | No blanket access to every site. The extension runs only on the tab where you open it (`activeTab`), and asks for host access per provider. |
+| 🔒 **Minimal permissions** | No blanket access to every site. The extension runs only on the tab where you open it (`activeTab`), and asks for access one provider or one allowlisted site at a time, on your click. Every permission is explained in [`docs/store/permission-justifications.md`](docs/store/permission-justifications.md). |
 
 ## 🔍 How it works
 
@@ -101,25 +105,33 @@ imports. It runs the same way in the panel and in Node, which is how the eval ha
 
 ## 🚀 Getting started
 
-> **Developer preview.** Translate Side isn't on the Chrome Web Store yet. You build it from
-> source and load it unpacked.
+**You'll need:** Chrome 138+ on desktop, and either an API key for a provider or a local model.
 
-**You'll need:** Node.js 22+, [pnpm](https://pnpm.io) 10, Chrome 138+ on desktop, and an API key
-for the configured OpenAI-compatible provider.
+### Install
 
-```bash
-pnpm install
-pnpm build            # writes the extension to .output/chrome-mv3
-```
+- **Chrome Web Store:** *link to be added when the listing is published.*
+- **From source:** needs Node.js 22+ and [pnpm](https://pnpm.io) 10.
 
-1. Open `chrome://extensions` and turn on **Developer mode**.
-2. Click **Load unpacked** and choose `.output/chrome-mv3`.
-3. Open the extension's **Options** and paste your API key. You can also set your target
-   language, style and glossary there.
-4. Go to any article and press <kbd>Alt</kbd>+<kbd>T</kbd>. You can change the shortcut at
-   `chrome://extensions/shortcuts`.
+  ```bash
+  pnpm install
+  pnpm build            # writes the extension to .output/chrome-mv3
+  ```
 
-For live reloading while you work, run `pnpm dev`.
+  Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose
+  `.output/chrome-mv3`. For live reloading while you work, run `pnpm dev`.
+
+### First run
+
+1. A setup guide opens on install (you can reopen it from Settings). Pick a provider, paste its API key, and press
+   **Test connection**; Chrome asks for access to that provider only. For a local model, follow
+   [`docs/local-models.md`](docs/local-models.md) instead.
+2. Go to any article and press <kbd>Alt</kbd>+<kbd>T</kbd> (or click the toolbar icon). The first time, the panel
+   says where the text will go and waits for you to confirm.
+3. Set your target language, style and glossary in Settings (the gear in the panel).
+
+<kbd>Alt</kbd>+<kbd>T</kbd> is the default on every system, macOS included (<kbd>Option</kbd>+<kbd>T</kbd> there).
+To use another key, open `chrome://extensions/shortcuts`, find Translate Side and set one; the same key then opens
+and closes the panel.
 
 ### Keyboard shortcuts
 
@@ -149,6 +161,9 @@ With a screen reader, the letter and arrow shortcuts need focus mode (forms or a
 | `pnpm dev` | Runs the extension with hot reload |
 | `pnpm check` | Runs lint, typecheck, the engine boundary check, tests, the build, the bundle size budget and the manifest check (the same as CI) |
 | `pnpm test` | Runs the unit, snapshot and boundary tests (Vitest) |
+| `pnpm run e2e` | Runs the end-to-end tests: the built extension in Chromium against a mock provider (build first) |
+| `pnpm run zip` | Builds the Chrome Web Store package (see [`docs/store/submission.md`](docs/store/submission.md)) |
+| `pnpm run store:screenshots` | Regenerates the store screenshots and tile in `docs/store/assets/` |
 | `pnpm engine:node` | Runs the translation engine in plain Node |
 | `pnpm eval -- --set eval` | Translates the eval set with the current strategy and prompt |
 | `pnpm eval:report -- <runs…>` | Compares runs side by side on fidelity, naturalness, tone, terminology and cost |
@@ -167,8 +182,33 @@ At the end of M2:
 - The contextual strategy costs **1.17×** single-pass, against a ceiling of 1.3×
 - A broken brief never fails a job. The job just continues without one.
 
+The [provider matrix](docs/provider-matrix.md) compares Gemini, APIBOX and Ollama cloud on the same set. Two of its
+rows were not measured: Anthropic direct (no key) and OpenRouter with Claude Haiku, so **no Haiku cost figure is
+claimed**. The matrix also says why local Ollama and LM Studio numbers are yours to measure.
+
 We're honest about the open gap too. Contextual translation doesn't beat single-pass on every
 rubric yet, especially tone and terminology. Closing that gap is planned for a later milestone.
+
+## 🔌 Providers and local models
+
+Add connections in **Settings › Providers**: Anthropic, OpenAI, Google Gemini, OpenRouter, Ollama (local or cloud),
+LM Studio, or a custom OpenAI- or Anthropic-compatible endpoint. A connection tests itself and says what is wrong
+in plain words. Choose which model translates, which writes the document brief, what to fall back to, and a model
+per site (with a "local only" switch that never falls back to the cloud).
+
+- **Run a model on your computer:** [`docs/local-models.md`](docs/local-models.md) covers Ollama and LM Studio:
+  install, pulling a model, the `OLLAMA_ORIGINS` setting Chrome needs, and troubleshooting.
+- **Compare providers:** [`docs/provider-matrix.md`](docs/provider-matrix.md) has quality, cost and speed on the same
+  eval set.
+- Plain `http://` addresses are accepted only for this computer and your local network; everything else needs
+  `https://`.
+
+## 🔐 Privacy
+
+Page text goes only to the provider you chose, directly from your browser, when you start a translation, and on
+sites you allowlist. There is no Translate Side server, no analytics and no telemetry. Keys stay on your device.
+Mail and sign-in pages, browser pages and form fields are never read. The full policy, with what is stored where and
+how to delete it, is in [`docs/privacy.md`](docs/privacy.md).
 
 ## 🗺️ Roadmap
 
@@ -177,11 +217,11 @@ rubric yet, especially tone and terminology. Closing that gap is planned for a l
 | ✅ | **M0** Skeleton and spikes | The panel opens, and pages are extracted and segmented |
 | ✅ | **M1** Translate end to end | Engine, streaming output, parser, repair, cost readout |
 | ✅ | **M2** Contextual quality | Brief, glossary, style modes, check stage, eval set |
-| ⏳ | **M3** Reading UX core → **MVP** | Viewport-first translation, cache and resume, selection mode, better error messages |
-| 🔜 | **M4** Providers | Claude, OpenAI, Gemini, OpenRouter, Ollama and LM Studio, with connection test and fallback |
-| 🔜 | **M5** Reading UX complete | Hover linking, scroll sync, SPA support, long docs, Chrome built-in AI |
-| 🔜 | **M6** Release hardening → **v1.0** | Chrome Web Store, end-to-end tests, beta |
-| 🔭 | **M7–M8** Beyond | Refine strategy, translation memory, Firefox |
+| ✅ | **M3** Reading UX core | Viewport-first translation, cache and resume, selection mode, better error messages |
+| ✅ | **M4** Providers | Claude, OpenAI, Gemini, OpenRouter, Ollama and LM Studio, with connection test and fallback |
+| ✅ | **M5** Reading UX complete | Hover link, scroll sync, single-page apps, long documents, keyboard and screen readers |
+| ⏳ | **M6** Release hardening → **v1.0** | Eval gate, end-to-end tests, storage migration, performance, Vietnamese interface, store package and docs |
+| 🔭 | **M7–M8** Beyond | Stronger translation strategies, translation memory, Firefox |
 
 The full plan is in [`ROADMAP.md`](ROADMAP.md) and [`docs/plans/`](docs/plans/). The design and its
 reasoning are in [`DESIGN.md`](DESIGN.md).
@@ -196,8 +236,9 @@ src/
   segment/       segmenter and inline markers
   llm/           provider adapters, error classifier, presets
   shared/        settings, protocol, language detection, cost
+e2e/             end-to-end tests: the built extension, fixture pages and a mock provider
 eval/            eval passages and scored runs
-docs/            plans, decisions, progress logs
+docs/            privacy policy, local-model guide, provider matrix, store listing; plans, decisions, progress logs
 ```
 
 ## 🤝 Contributing
