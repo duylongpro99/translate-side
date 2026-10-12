@@ -1,6 +1,6 @@
 # Phase 1 report: eval regression gate and Haiku cost
 
-Status: the eval regression gate is done and recorded green. The Haiku cost measurement (step 8) is blocked: OpenRouter has no credit (the user's decision, 2026-10-12).
+Status: the eval regression gate is done and recorded green. The Haiku cost measurement (step 8) was skipped by the user's decision (2026-10-12): OpenRouter has no credit.
 
 Branch `m6-p1`, from e749530, not pushed. The merge into `m6` waits for acceptance.
 
@@ -28,13 +28,15 @@ Branch `m6-p1`, from e749530, not pushed. The merge into `m6` waits for acceptan
 | c7ed294 | fix(eval): raise the gate's minimum margin to 0.20 |
 | f1a9849 | docs(eval): record the 0.20 margin floor decision and correct the noise wording |
 | a8c71fa | docs(eval): record a green gate run on the shipped default |
-| (this commit) | docs(eval): report on the regression gate and the blocked cost measurement |
+| 8df9299 | docs(eval): report on the regression gate and the blocked cost measurement |
+| 7ede48f | docs(eval): add the tester's green pass to the gate run history and flag tone's spread |
+| (this commit) | docs: record that the Haiku cost measurement is skipped |
 
 ## Changed files
 
-- New: `scripts/eval/gate.ts`, `scripts/eval/gate.test.ts`, `scripts/eval/providers.ts` (the provider table, moved out of `run.ts`), `scripts/eval-gate.mjs`, `eval/gate.json`, `eval/runs/gate-baseline-1..5/` and `fixtures/docs/mdbook-rust-book-ownership.json` (4,558 words, for step 8).
+- New: `scripts/eval/gate.ts`, `scripts/eval/gate.test.ts`, `scripts/eval/providers.ts` (the provider table, moved out of `run.ts`), `scripts/eval-gate.mjs`, `eval/gate.json`, `eval/runs/gate-baseline-1..5/` and `fixtures/docs/mdbook-rust-book-ownership.json` (4,558 words, captured for step 8 before it was skipped).
 - Changed: `scripts/eval/run.ts` (it imports the providers and their quirks), `scripts/eval/report-core.ts` (`dimensionMeans`), `package.json` (`eval:gate`) and `eval/README.md` (the "Regression gate" section).
-- Plan: phase 1 step 3 now says 0.20, and `plan.md` has Validation Session 3.
+- Plan: phase 1 step 3 now says 0.20 and step 8 is marked skipped, and `plan.md` has Validation Session 3 (the margin floor and the skipped Haiku cost).
 - Reports: `plans/reports/eval-gate-261012-0742-worse-prompt-demo.md` and `plans/reports/eval-gate-261012-0910-green-run-at-head.md`.
 
 ## Baseline (eval/gate.json)
@@ -103,17 +105,9 @@ Five passes ended without a verdict because APIBOX stopped answering chat reques
 
 ## Step 8: cost per long article on Haiku 4.5 (§3 #4)
 
-**Blocked: no OpenRouter credit (user, 2026-10-12).** The cost was not run and not estimated, as the phase file's risk note requires. `docs/provider-matrix.md` ("Cost per long article") and the README "Measured" table are unwritten. The third long article is captured and committed (1e64625).
+**Skipped by user decision (2026-10-12): no OpenRouter credit; not measured, not estimated.** `docs/provider-matrix.md` ("Cost per long article") and the README "Measured" table are not written. The third long article is captured and committed (1e64625), and success criterion #4 is marked skipped in `plan.md` (Validation Session 3).
 
-<!-- Fill in once the user decides on step 8. -->
-
-| article | words | calls | input tokens | output tokens | wall time | list-price cost | OpenRouter billed |
-|---|---|---|---|---|---|---|---|
-| goblog-pipelines | – | – | – | – | – | – | – |
-| docusaurus-code-blocks | – | – | – | – | – | – | – |
-| mdbook-rust-book-ownership | 4,558 | – | – | – | – | – | – |
-
-Command, once there is credit: `pnpm run eval -- --provider openrouter --strategy contextual --chunk-tokens 1200 --docs goblog-pipelines,docusaurus-code-blocks,mdbook-rust-book-ownership --price 1,0.1,5`. The target is ≈ $0.04 per long article (DESIGN §6).
+For a later run, once there is credit: `pnpm run eval -- --provider openrouter --strategy contextual --chunk-tokens 1200 --docs goblog-pipelines,docusaurus-code-blocks,mdbook-rust-book-ownership --price 1,0.1,5`. The target is ≈ $0.04 per long article (DESIGN §6).
 
 ## When to run the gate
 
@@ -130,4 +124,4 @@ One pass takes about 15 minutes and costs about $0.15. A gate run stops at $0.50
 1. **No per-call timeout in the harness.** One hung call uses up the whole 25-minute pass, and the pass ends without a verdict. The gate handles this correctly (never green), but an outage costs a pass. By the supervisor's ruling, this is out of scope for this phase.
 2. **The harness writes no commit.** `summary.json` has no `gitCommit` field, and never had one. The baseline runs' provenance is recorded in this report and in `gate.json`'s `createdAt`.
 3. **Tone cleared its floor by 0.01 on the green run** (4.35 against 4.34), and its scores spread widely across the scored passes of the shipped default: 4.70, 4.61, 4.48 and 4.35. That is within the measured judge noise (pooled SD 0.10), but tone is the dimension to watch in the next gate runs.
-4. **Step 8 is blocked** on OpenRouter credit (above).
+4. **Step 8 is skipped** by the user's decision; nothing was measured or estimated (above).

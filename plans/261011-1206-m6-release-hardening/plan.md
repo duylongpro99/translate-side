@@ -21,7 +21,8 @@ directory is its execution plan. The brainstorm contract
 
 1. the eval gate runs in CI using a GitHub Actions secret. Validation Session 2 superseded this: the gate is local
    only, and CI holds no secret;
-2. the Haiku 4.5 cost is measured through OpenRouter;
+2. the Haiku 4.5 cost is measured through OpenRouter. Validation Session 3 dropped this: the user skipped the
+   measurement;
 3. M6 prepares the store package and the user publishes it and runs the beta;
 4. the UI ships in English and Vietnamese.
 
@@ -59,7 +60,7 @@ screenshots and zip wait for phase 5.
 - [ ] #1 v1.0 is published. Agent part: the package is submission-ready (phase 6). User part: unlisted, then listed (phase 7).
 - [ ] #2 E2E on 20 fixture pages with the mock provider: 20/20 pass with no console errors (phase 2).
 - [ ] #3 Eval scores of the shipped default (model, quirks, strategy) at chunk 400 stay within the margin of the M2 c400 baseline. A local `pnpm run eval:gate` run with real calls is green and recorded; CI has no eval job (phase 1, Validation Session 2).
-- [ ] #4 The cost per long article on Haiku 4.5 is measured through OpenRouter and documented against ≈ $0.04 (phase 1).
+- [ ] #4 ~~The cost per long article on Haiku 4.5 is measured through OpenRouter and documented against ≈ $0.04 (phase 1).~~ Skipped by the user (Validation Session 3).
 - [ ] #5 Memory and responsiveness on a 100-screen page stay within the set budget (phase 4).
 - [ ] #6 The bundle stays within budget, which is set in phase 4 because S7 recorded no number (phase 4).
 - [ ] #7 Settings and cache migrate from every earlier schema version, and this is tested (phase 3).
@@ -188,6 +189,7 @@ files finds only this log and the Updated markers.
 | # | Question | Answer | Propagated to |
 |---|---|---|---|
 | 1 | What should the margin floor be? A shipped-default gate pass went red on terminology alone, 4.30 against a 0.137 margin, with no change to the code. | Raise `MIN_MARGIN` to 0.20, and recompute `eval/gate.json` from the existing 5 baseline runs with no new calls. Naturalness and terminology margins become 0.20; fidelity and tone stay at 0.26. | Phase 1 step 3, `scripts/eval/gate.ts`, `eval/gate.json`, `eval/README.md` |
+| 2 | OpenRouter has no credit. Should the Haiku 4.5 cost per long article (§3 #4) still be measured? | No. Skip it: it is not measured and not estimated. The run command stays in the phase 1 report for later use. | plan.md (decision 2, success criterion #4), Phase 1 step 8 and risk note, the phase 1 report |
 
 The reviewer judged the two terminology scores of 4.30 to be judge noise, not drift: a different set of passages lost
 a point each time, and the pooled SD over 8 passes is 0.10, which fits a 0.20 margin.

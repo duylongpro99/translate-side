@@ -12,7 +12,9 @@ dependencies: []
 <!-- Updated: Red Team 2026-10-11. The gate runs the shipped default at chunk 400 (multi-chunk, briefed), with
      5 baseline runs, a 60 min timeout, a failing run when the secret is missing, a step-level secret, and wider
      paths. The rubric hash is dropped.
-     Updated: Validation Session 2. The gate is local only; no CI job and no Actions secret. -->
+     Updated: Validation Session 2. The gate is local only; no CI job and no Actions secret.
+     Updated: Validation Session 3. The minimum margin is 0.20, and the Haiku cost (step 8, §3 #4) is skipped by the
+     user: OpenRouter has no credit. -->
 
 ## Goal
 
@@ -103,7 +105,8 @@ Spec: DESIGN.md §6 (cost); `eval/README.md` (eval workflow).
 7. **Demo 2.** On a throwaway branch, make a deliberately worse `translate@2` variant, run `pnpm run eval:gate`, and
    record the red output, which shows the failing dimension and the drop. Then delete the branch, and record the
    output in the phase report.
-8. **Haiku cost.**
+8. **Haiku cost.** Skipped by the user (Validation Session 3, 2026-10-12): OpenRouter has no credit, so it is not
+   measured and not estimated. The steps below stay for a later run.
    - **Articles:** three articles of at least 2,500 words, the "long article" of DESIGN §6. `fixtures/docs` has two
      (`goblog-pipelines` 3,331 words, `docusaurus-code-blocks` 2,566); capture a third prose-heavy page with
      `eval:capture`.
@@ -135,6 +138,7 @@ Spec: DESIGN.md §6 (cost); `eval/README.md` (eval workflow).
 
 - **The judge model changes behind APIBOX.** The gate turns red without any quality change. The model id in
   `gate.json` makes the cause visible, and re-baselining is a deliberate commit.
-- **OpenRouter has no credit.** Step 8 fails. Report it and ask the user; do not estimate.
+- **OpenRouter has no credit.** Step 8 fails. Report it and ask the user; do not estimate. This happened, and the
+  user skipped step 8 (Validation Session 3).
 - **Someone forgets to run the gate.** CI won't catch it. This is accepted for CI simplicity (Validation Session 2).
   The rule in `eval/README.md` and the tester's per-phase run are the mitigation.
