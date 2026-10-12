@@ -77,6 +77,7 @@ panel:
     fallback: ", và nếu nhà cung cấp đó bận hoặc ngừng hoạt động thì dùng {list}"
     then: ", rồi"
     never: Trang thư và trang đăng nhập, trang của trình duyệt và Chrome Web Store không bao giờ được đọc hay gửi đi.
+    auto: Các trang web bạn cho phép trong Cài đặt › Quy tắc theo trang web được dịch tự động mỗi lần bạn mở một trang của chúng khi bảng đang mở, nên văn bản của chúng được gửi đến nhà cung cấp mà không cần bạn nhấn.
     fields: Ô mật khẩu, các ô biểu mẫu khác và mọi nơi bạn có thể gõ chữ đều không bao giờ được đọc. Trang đang có ô mật khẩu được sử dụng sẽ bị bỏ qua.
     local: Với các trang nhạy cảm, đừng dịch bằng nhà cung cấp đám mây. Một mô hình cục bộ trên máy tính này (Ollama hoặc LM Studio, thiết lập trong Nhà cung cấp) giữ văn bản ngay trên thiết bị.
     diagnostics: Nhật ký chẩn đoán về các lần dịch gần đây (số lượng, thời gian, loại lỗi; không có nội dung trang) được lưu trên thiết bị này. Nó chỉ rời khỏi máy khi bạn xuất ra trong Cài đặt.
@@ -470,6 +471,7 @@ options:
     accessHint: "Chrome chỉ xin quyền truy cập $1."
     accessHintPorts: "Chrome chỉ xin quyền truy cập $1 (mọi cổng của nó, không riêng cổng $2)."
     accessHintServer: "Chrome chỉ xin quyền truy cập máy chủ này."
+    unencrypted: "Không mã hóa: chỉ dùng trên mạng bạn tin cậy."
     builtInNoKey: "Có sẵn, chưa có khóa"
     builtInKey: "Có sẵn · đã lưu khóa"
     noKey: "Chưa có khóa"
@@ -688,6 +690,8 @@ options:
     neitherFormat: "Cả hai định dạng đều không phản hồi như mong đợi; hãy kiểm tra URL gốc."
     invalidUrlStatus: "URL gốc không hợp lệ"
     invalidUrl: "Hãy nhập URL gốc bắt đầu bằng https:// (hoặc http:// với máy chủ cục bộ)."
+    httpsOnlyStatus: "Cần HTTPS"
+    httpsOnly: "http:// thường chỉ được dùng cho máy tính này và mạng cục bộ của bạn (localhost, 127.x, 10.x, 172.16–31.x, 192.168.x và tên .local). Với mọi địa chỉ khác, hãy dùng địa chỉ https://."
     failedStatus: "Thử nghiệm thất bại"
     guideGenericTitle: "Cho phép Translate Side dùng máy chủ này"
     guideGenericText: "Máy chủ trả về 403 cho yêu cầu từ tiện ích. Trong phần cài đặt CORS hoặc origin được phép của nó, hãy cho phép {origin} (hoặc origin riêng của tiện ích này), rồi khởi động lại."

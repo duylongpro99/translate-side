@@ -146,6 +146,15 @@ describe('settings v0 (plan M1-E9, decision M1-D13)', () => {
     await expect(resolveConnection(api, { ...GEMINI_CONNECTION, protocol: 'auto' })).rejects.toThrow(/no protocol/);
   });
 
+  it('refuses a stored connection on plain HTTP to the internet, and resolves loopback and private-network ones', async () => {
+    const { api } = fakeApi();
+    await saveApiKey(api, GEMINI_CONNECTION.id, 'AIzaSyExampleKey1234');
+    await expect(resolveConnection(api, { ...GEMINI_CONNECTION, baseUrl: 'http://api.example.com/v1' })).rejects.toThrow(/https/i);
+    for (const baseUrl of ['http://localhost:11434/v1', 'http://192.168.1.20:8000/v1', 'http://gateway.local/v1']) {
+      expect(await resolveConnection(api, { ...GEMINI_CONNECTION, baseUrl }), baseUrl).toMatchObject({ baseUrl });
+    }
+  });
+
   it('defaults the target to the browser language and the source to auto; a saved override is read back', async () => {
     const { api, sync } = fakeApi({ ui: 'vi-VN' });
     expect(await readPreferences(api)).toEqual({ targetLang: 'vi', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: 400000, captions: true, altText: false });

@@ -80,6 +80,7 @@ panel:
     fallback: ", and if it is busy or down, {list}"
     then: ", then"
     never: Mail and sign-in pages, browser pages and the Chrome Web Store are never read or sent.
+    auto: Sites you allow in Settings › Site rules are translated automatically each time you open one of their pages while the panel is open, so their text goes to your provider without a click.
     fields: Password and other form fields, and anything you can type into, are never read. A page with a password field in use is skipped.
     local: For sensitive pages, don't translate them with a cloud provider. A local model on this computer (Ollama or LM Studio, set up in Providers) keeps the text on this device.
     diagnostics: A diagnostics log of recent translations (counts, timings, error kinds; no page text) is kept on this device. It leaves only if you export it in Settings.
@@ -483,6 +484,7 @@ options:
     accessHint: "Chrome asks for access to $1 only."
     accessHintPorts: "Chrome asks for access to $1 only (all its ports, not just $2)."
     accessHintServer: "Chrome asks for access to this server only."
+    unencrypted: "Unencrypted: only use this on a network you trust."
     builtInNoKey: "Built-in, no key"
     builtInKey: "Built-in · key saved"
     noKey: "No key"
@@ -703,6 +705,8 @@ options:
     neitherFormat: "Neither format answered as expected; check the base URL."
     invalidUrlStatus: "Invalid base URL"
     invalidUrl: "Enter a base URL that starts with https:// (or http:// for a local server)."
+    httpsOnlyStatus: "HTTPS needed"
+    httpsOnly: "Plain http:// is only allowed for this computer and your local network (localhost, 127.x, 10.x, 172.16–31.x, 192.168.x and .local names). Use an https:// address for anything else."
     failedStatus: "Test failed"
     guideGenericTitle: "Let Translate Side use this server"
     guideGenericText: "The server answers 403 to requests from the extension. In its CORS or allowed-origins setting, allow {origin} (or this extension's own origin), then restart it."

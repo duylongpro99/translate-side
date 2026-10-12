@@ -15,6 +15,7 @@ import { pricingFor } from '@/shared/pricing';
 import { overflowNotice } from '@/shared/sync-quota';
 import { BASIC_FALLBACK, isLocalConnection, onProviderSettingsChanged, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnectionStatus, saveProfile, saveRouting, saveSetup, type ProviderSettings, type SiteRule } from '@/shared/providers';
 import { sitePattern } from '@/shared/sites';
+import { isPlainHttpRefused, isUnencryptedPrivate } from '@/llm/endpoint';
 import { BUILTIN_CONNECTIONS, hasHostPermission, maskKey, originPattern, readApiKey, resolveConnection, SECRET_PREFIX, type ModelProfile, type ProviderConnection } from '@/shared/settings';
 import { draftFromConnection, draftFromPreset, fieldsFor, originMoved, testInputOf, toConnection, toProfile, usableStoredKey, type ConnectionDraft, type TestStatus } from './form.ts';
 
@@ -590,7 +591,7 @@ function ModelForm({ api, adapterFor, loaded, onDone }: { api: Browser; adapterF
       const message = connectMessage(result.error, { preset: presetFor(connection.presetId, connection.protocol), baseUrl: connection.baseUrl, model });
       setError(message.text);
       setNeedsAccess(message.action === 'grant');
-    })().catch((err: unknown) => setError(String(err)));
+    })().catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
   };
   useEffect(discover, [connId]);
   const grant = () => {
@@ -802,6 +803,11 @@ export function ConnectionForm({
     // step 3, §8): for this connection's origin only. `contains`, sent just before it, tells
     // whether the grant is new (given back on Cancel).
     const fixed = fixBaseUrl(draft.baseUrl).url;
+    // Plain HTTP to the internet is refused with its message and no permission prompt (Test says why).
+    if (isPlainHttpRefused(fixed)) {
+      void runTest(draft);
+      return;
+    }
     const origin = safeOrigin(fixed);
     const held = origin ? api.permissions.contains({ origins: [origin] }).catch(() => true) : Promise.resolve(true);
     const asked = origin ? api.permissions.request({ origins: [origin] }).catch(() => false) : Promise.resolve(false);
@@ -822,6 +828,10 @@ export function ConnectionForm({
     if (keyMissing) {
       setError(i18n.t('options.providers.keyAgain'));
       keyInput.current?.focus();
+      return;
+    }
+    if (isPlainHttpRefused(fixBaseUrl(draft.baseUrl).url)) {
+      setError(i18n.t('options.connect.httpsOnly'));
       return;
     }
     const id = editing?.id ?? newId();
@@ -937,6 +947,9 @@ export function ConnectionForm({
         </button>
         <span class="opt__hint" data-testid="access-hint">{accessHint(fixBaseUrl(draft.baseUrl).url)}</span>
       </div>
+      {isUnencryptedPrivate(fixBaseUrl(draft.baseUrl).url) ? (
+        <p class="opt__hint" data-testid="unencrypted-note">{i18n.t('options.providers.unencrypted')}</p>
+      ) : null}
       {test.kind === 'done' ? <TestOutcome draft={draft} protocol={protocol} test={test} onFixKey={() => keyInput.current?.focus()} onRetry={onTest} onUseUrl={(url) => set({ baseUrl: url })} onGuide={() => setGuide(true)} /> : null}
       {guide ? <CorsGuide local={preset.local ?? 'generic'} onClose={() => setGuide(false)} /> : null}
       <ModelPicker id="c-model" model={draft.model} models={models} onModel={(m) => set({ model: m })} />

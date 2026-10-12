@@ -38,6 +38,7 @@ export function PrivacyNotice({ to, onAcknowledge }: { to?: { label: string; hos
       </p>
       <ul class="privacy__list">
         <li>{i18n.t('panel.privacy.never')}</li>
+        <li data-testid="privacy-auto">{i18n.t('panel.privacy.auto')}</li>
         <li>{i18n.t('panel.privacy.fields')}</li>
         <li>{i18n.t('panel.privacy.local')}</li>
         <li data-testid="privacy-diagnostics">{i18n.t('panel.privacy.diagnostics')}</li>

@@ -6,6 +6,7 @@
 // 404 is JSON labelled text/html). The message is `error.message` when `error` is an object,
 // else `error` when it is a string; both forms occur.
 
+import { isPlainHttpRefused } from './endpoint.ts';
 import type { AuthStyle, LLMError } from './types.ts';
 
 /** Anything with `get(name)`, like fetch `Headers`, or a plain lower-case header map. */
@@ -13,7 +14,10 @@ export type HeaderSource = { get(name: string): string | null } | Record<string,
 
 // ---- Checks before fetch (S4 rows 0a, 0b) -----------------------------------------------------
 
-/** Row 0a: `new URL(base)` throws, the scheme is not http(s), or the host is empty. */
+/** The message of a plain-HTTP endpoint outside this computer and the local network (connect.ts maps it to the reader's language). */
+export const HTTPS_REQUIRED = 'Use an https:// address: plain HTTP is only allowed for this computer and your local network';
+
+/** Row 0a: `new URL(base)` throws, the scheme is not http(s), or the host is empty; or it is plain HTTP to the internet. */
 export function checkBaseUrl(base: string): LLMError | null {
   let url: URL;
   try {
@@ -24,6 +28,7 @@ export function checkBaseUrl(base: string): LLMError | null {
   if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.hostname === '') {
     return { kind: 'bad_request', message: 'Invalid base URL' };
   }
+  if (isPlainHttpRefused(base)) return { kind: 'bad_request', message: HTTPS_REQUIRED };
   return null;
 }
 

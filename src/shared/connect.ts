@@ -4,7 +4,7 @@
 // network. The permission request itself is the caller's (it must be the first call in the click).
 import { i18n } from '#i18n';
 import type { AuthStyle, LLMError, ModelInfo, NormalizedRequest, Protocol, ProtocolAdapter, Quirks, ResolvedConnection } from '@/llm/types';
-import { checkBaseUrl } from '@/llm/errors';
+import { checkBaseUrl, HTTPS_REQUIRED } from '@/llm/errors';
 import type { ConnectionPreset } from './presets.ts';
 
 // ---- Base URL fixes (§4.2.5 last paragraph) --------------------------------------------------
@@ -381,6 +381,7 @@ export function connectMessage(error: LLMError, ctx: MessageContext): ConnectMes
         return ctx.suggestion ? { status, text: i18n.t('options.connect.wrongUrlSuggest', { text, suggestion: ctx.suggestion }), action: 'use-url', suggestion: ctx.suggestion } : { status, text };
       }
       if (error.message === NEITHER_FORMAT) return { status: i18n.t('options.connect.wrongUrlStatus'), text: i18n.t('options.connect.neitherFormat') };
+      if (error.message === HTTPS_REQUIRED) return { status: i18n.t('options.connect.httpsOnlyStatus'), text: i18n.t('options.connect.httpsOnly') };
       if (error.status === undefined && /base URL/i.test(error.message)) return { status: i18n.t('options.connect.invalidUrlStatus'), text: i18n.t('options.connect.invalidUrl') };
       return { status: i18n.t('options.connect.failedStatus'), text: error.message };
     default:

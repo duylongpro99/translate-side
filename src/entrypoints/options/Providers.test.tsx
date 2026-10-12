@@ -277,6 +277,27 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     expect($('[data-testid=test-status]').textContent).toBe('Wrong base URL');
   });
 
+  it('plain HTTP: public hosts are refused with no permission prompt and no save; a private network shows the unencrypted note', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1 } });
+    const srv = server(() => openaiList());
+    await mount(f, srv);
+    await startAdd('custom-openai');
+    type('#c-base', 'http://gw.example.com/v1');
+    type('#c-key', 'k-0123456789');
+    expect($('[data-testid=unencrypted-note]')).toBeNull();
+    click($('[data-testid=test-connection]'));
+    await waitFor(() => $('[data-testid=test-status]') !== null);
+    expect($('[data-testid=test-status]').textContent).toBe('HTTPS needed');
+    expect(f.log.some((l) => l.startsWith('request '))).toBe(false);
+    click($('[data-testid=save-connection]'));
+    expect(root.textContent).toContain('Plain http:// is only allowed for this computer and your local network');
+    expect(f.log.some((l) => l.includes('conn:'))).toBe(false);
+    type('#c-base', 'http://192.168.1.20:8000/v1');
+    expect($('[data-testid=unencrypted-note]').textContent).toBe('Unencrypted: only use this on a network you trust.');
+    type('#c-base', 'http://localhost:8000/v1');
+    expect($('[data-testid=unencrypted-note]')).toBeNull();
+  });
+
   it('editing shows that connection’s own saved key, masked (carry-over B3)', async () => {
     const conn = { id: 'c9', label: 'Work gateway', presetId: 'custom-openai', protocol: 'openai-chat', baseUrl: 'https://gw.example.com/v1', auth: { style: 'bearer' }, quirks: {}, status: 'ok' };
     const f = fakeApi({ sync: { schemaVersion: 1, 'conn:c9': conn }, local: { 'secret:c9': 'sk-work-0123456789wxyz', 'secret:apibox': 'sk-apibox-0123456789' } });

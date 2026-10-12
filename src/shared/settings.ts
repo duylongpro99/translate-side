@@ -6,6 +6,7 @@
 import type { browser } from 'wxt/browser';
 import { i18n } from '#i18n';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
+import { isPlainHttpRefused } from '@/llm/endpoint';
 import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS, GEMINI_OPENAI_BASE_URL } from '@/llm/presets';
 import type { Protocol, AuthStyle, LLMErrorKind, Quirks, ResolvedConnection } from '@/llm/types';
 import { endpointBase } from './connect.ts';
@@ -220,6 +221,8 @@ export function hasHostPermission(api: Browser, baseUrl: string): Promise<boolea
 export async function resolveConnection(api: Browser, connection: ProviderConnection, profile?: ModelProfile): Promise<ResolvedConnection | null> {
   const protocol = protocolOf(connection, profile);
   if (protocol === undefined) throw new Error(`${connection.label} has no protocol yet`);
+  // An imported or synced connection that breaks the plain-HTTP rule is refused here, before its key is read.
+  if (isPlainHttpRefused(connection.baseUrl)) throw new Error(i18n.t('options.connect.httpsOnly'));
   const apiKey = await readApiKey(api, connection.id);
   if (apiKey === undefined && connection.auth.style !== 'none') return null;
   return {

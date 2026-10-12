@@ -209,6 +209,15 @@ describe('auto-detect (§4.2.5, plan M4-E6)', () => {
     expect(connectMessage(result.error, { preset: presetFor('custom-auto'), baseUrl: result.baseUrl })).toEqual({ status: 'Wrong base URL', text: 'Neither format answered as expected; check the base URL.' });
   });
 
+  it('refuses plain HTTP to the internet before any request and says why', async () => {
+    const s = server(() => ({ status: 200, body: { data: [] } }));
+    const result = await testConnection(input('custom-auto', { baseUrl: 'http://llm.example.com/v1' }), ports(s.fetch));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(s.hits).toHaveLength(0);
+    expect(connectMessage(result.error, { preset: presetFor('custom-auto'), baseUrl: result.baseUrl })).toMatchObject({ status: 'HTTPS needed', text: expect.stringContaining('https://') });
+  });
+
   it('probes the Anthropic path with x-api-key + anthropic-version and the OpenAI path with Bearer (review C2 N2, §4.2.5 step 1)', async () => {
     const s = server((h) => {
       const p = path(h.url);

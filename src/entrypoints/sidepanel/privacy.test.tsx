@@ -221,6 +221,13 @@ describe('the notice names the fallback providers too (plan M4-E9)', () => {
     expect(text).not.toContain('later version');
   });
 
+  it('says allowlisted sites are translated automatically while the panel is open', () => {
+    const root = document.createElement('div');
+    document.body.replaceChildren(root);
+    act(() => render(<PrivacyNotice onAcknowledge={() => {}} />, root));
+    expect(root.querySelector('[data-testid=privacy-auto]')?.textContent).toBe('Sites you allow in Settings › Site rules are translated automatically each time you open one of their pages while the panel is open, so their text goes to your provider without a click.');
+  });
+
   it('says the diagnostics log stays on this device unless exported', () => {
     const root = document.createElement('div');
     document.body.replaceChildren(root);
