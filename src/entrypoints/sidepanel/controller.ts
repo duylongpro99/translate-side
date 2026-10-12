@@ -4,6 +4,7 @@
 import type { browser } from 'wxt/browser';
 import { readAccess, tabIdFromKey, type AccessReason, type TabAccess } from '@/shared/access';
 import { cleanSiteList, listedFor, SITE_NEVER_KEY } from '@/shared/sites';
+import { onListChanged } from '@/shared/sync-quota';
 import {
   CONTENT_PORT_NAME,
   createClient,
@@ -173,10 +174,8 @@ export class PanelController {
         if (tabId !== null && tabId === this.activeTabId) void this.refresh(tabId);
       }
     });
-    this.api.storage.sync.onChanged.addListener((changes) => {
-      const never = changes[SITE_NEVER_KEY];
-      if (never) this.neverChanged(cleanSiteList(never.newValue));
-    });
+    // The never list as this device keeps it: in sync, or here when too large to sync.
+    onListChanged(this.api, [SITE_NEVER_KEY], (_key, never) => this.neverChanged(cleanSiteList(never)));
     const [tab] = await this.api.tabs.query({ active: true, windowId: this.windowId });
     if (tab?.id !== undefined) this.setActive(tab.id);
   }

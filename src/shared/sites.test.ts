@@ -7,10 +7,13 @@ vi.mock('./providers.ts', async (importOriginal) => ({
 
 const { addAllowlisted, addNever, autoTranslates, cleanSiteList, isNeverTranslate, readSiteLists, removeAllowlisted, removeNever, siteMode, siteOf, siteOrigins, sitePattern, SITE_ALLOWLIST_KEY, SITE_NEVER_KEY } = await import('./sites.ts');
 
+const { syncItemBytes } = await import('./sync-quota.ts');
+
 type Api = Parameters<typeof readSiteLists>[0];
 
 function fakeApi(granted: string[] = []) {
   const sync: Record<string, unknown> = {};
+  const local = new Map<string, unknown>();
   const perms = new Set(granted);
   const removed: string[][] = [];
   const api = {
@@ -19,6 +22,11 @@ function fakeApi(granted: string[] = []) {
         get: (keys: string | string[]) => Promise.resolve(Object.fromEntries((Array.isArray(keys) ? keys : [keys]).filter((k) => k in sync).map((k) => [k, sync[k]]))),
         set: (o: Record<string, unknown>) => (Object.assign(sync, o), Promise.resolve()),
       },
+      local: {
+        get: (keys: string | string[]) => Promise.resolve(Object.fromEntries((Array.isArray(keys) ? keys : [keys]).filter((k) => local.has(k)).map((k) => [k, local.get(k)]))),
+        set: (o: Record<string, unknown>) => (Object.entries(o).forEach(([k, v]) => local.set(k, v)), Promise.resolve()),
+        remove: (keys: string | string[]) => ((Array.isArray(keys) ? keys : [keys]).forEach((k) => local.delete(k)), Promise.resolve()),
+      },
     },
     permissions: {
       contains: ({ origins }: { origins: string[] }) => Promise.resolve(origins.every((o) => perms.has(o))),
@@ -26,7 +34,7 @@ function fakeApi(granted: string[] = []) {
       request: ({ origins }: { origins: string[] }) => (origins.forEach((o) => perms.add(o)), Promise.resolve(true)),
     },
   } as unknown as Api;
-  return { api, sync, perms, removed };
+  return { api, sync, local, perms, removed };
 }
 
 describe('site patterns (plan M5-E6)', () => {
@@ -103,17 +111,28 @@ describe('allowlist and never-translate storage (plan M5-E3/E6)', () => {
     expect((await readSiteLists(f.api)).allow).toEqual(['*.example.net']);
   });
 
-  it('a full list refuses the site and gives back the permission just granted (count and 8 KB sync item)', async () => {
+  it('a full list refuses the site and gives back the permission just granted; one too large to sync stays on this device', async () => {
     const f = fakeApi(siteOrigins('new.example.org'));
     f.sync[SITE_ALLOWLIST_KEY] = Array.from({ length: 200 }, (_, i) => `s${i}.example.com`);
     await expect(addAllowlisted(f.api, 'new.example.org')).rejects.toThrow(/At most 200/);
     expect(f.removed).toEqual([siteOrigins('new.example.org')]);
     expect((await readSiteLists(f.api)).allow).toHaveLength(200);
 
-    const g = fakeApi(siteOrigins('new.example.org'));
-    g.sync[SITE_ALLOWLIST_KEY] = Array.from({ length: 120 }, (_, i) => `${'a'.repeat(60)}${i}.example.com`);
-    await expect(addAllowlisted(g.api, 'new.example.org')).rejects.toThrow(/full/);
-    expect(g.removed).toEqual([siteOrigins('new.example.org')]);
+    // Long host names pass the 8 KB sync item before the count: the list is kept here, sync keeps the last one that fit.
+    const site = `${'b'.repeat(80)}.example.org`;
+    const g = fakeApi(siteOrigins(site));
+    const long: string[] = [];
+    for (let next = 'a'.repeat(60) + '0.example.com'; syncItemBytes(SITE_ALLOWLIST_KEY, [...long, next]) <= 8192; next = `${'a'.repeat(60)}${long.length}.example.com`) long.push(next);
+    g.sync[SITE_ALLOWLIST_KEY] = long;
+    await addAllowlisted(g.api, site);
+    expect(g.removed).toEqual([]);
+    expect((await readSiteLists(g.api)).allow).toEqual([...long, site]);
+    expect(g.sync[SITE_ALLOWLIST_KEY]).toEqual(long);
+    expect(g.local.get('overflow:siteAllowlist')).toBe(true);
+    // Shorter again: back to sync, and the copy here goes.
+    await removeAllowlisted(g.api, site);
+    expect(g.local.size).toBe(0);
+    expect(g.sync[SITE_ALLOWLIST_KEY]).toEqual(long);
   });
 
   it('a never-translate site leaves the allowlist; unreadable lists count as empty', async () => {

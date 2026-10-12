@@ -73,6 +73,8 @@ function fakeWorld() {
     },
     storage: {
       sync: { onChanged: on('syncChanged') },
+      // No list kept on this device (src/shared/sync-quota.ts): the never list is read from sync.
+      local: { get: () => Promise.resolve({}), onChanged: on('localChanged') },
       session: {
         get: (k: string) => Promise.resolve(k in store ? { [k]: store[k] } : {}),
         onChanged: on('changed'),

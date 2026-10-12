@@ -10,7 +10,8 @@ import type { ModelInfo, Protocol, ProtocolAdapter } from '@/llm/types';
 import { connectMessage, corsGuide, displayModels, fixBaseUrl, isClaudeModel, preferredProtocol, testConnection, URL_FIX_TEXT, type ConnectMessage, type GuideKind, type GuideStep, type TestResult } from '@/shared/connect';
 import { AUTH_LABELS, PICKER_GROUPS, presetFor, PROTOCOL_LABELS, ROLE_LABELS, type PresetId } from '@/shared/presets';
 import { pricingFor } from '@/shared/pricing';
-import { BASIC_FALLBACK, isLocalConnection, isProviderKey, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnectionStatus, saveProfile, saveRouting, saveSetup, type ProviderSettings, type SiteRule } from '@/shared/providers';
+import { OVERFLOW_NOTICE } from '@/shared/sync-quota';
+import { BASIC_FALLBACK, isLocalConnection, onProviderSettingsChanged, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnectionStatus, saveProfile, saveRouting, saveSetup, type ProviderSettings, type SiteRule } from '@/shared/providers';
 import { sitePattern } from '@/shared/sites';
 import { BUILTIN_CONNECTIONS, hasHostPermission, maskKey, originPattern, readApiKey, resolveConnection, SECRET_PREFIX, type ModelProfile, type ProviderConnection } from '@/shared/settings';
 import { draftFromConnection, draftFromPreset, fieldsFor, originMoved, testInputOf, toConnection, toProfile, usableStoredKey, type ConnectionDraft, type TestStatus } from './form.ts';
@@ -108,16 +109,13 @@ export function ProvidersSection({ api, adapterFor = createAdapter, retestMs = R
   const reload = () => load(api).then(setLoaded, (err: unknown) => setNote({ text: `Could not read the provider settings (${String(err)})`, warn: true }));
   useEffect(() => {
     void reload();
-    const onSync = (changes: Record<string, unknown>) => {
-      if (Object.keys(changes).some(isProviderKey)) void reload();
-    };
     const onLocal = (changes: Record<string, unknown>) => {
       if (Object.keys(changes).some((k) => k.startsWith(SECRET_PREFIX))) void reload();
     };
-    api.storage.sync.onChanged.addListener(onSync);
+    const stopProviders = onProviderSettingsChanged(api, () => void reload());
     api.storage.local.onChanged.addListener(onLocal);
     return () => {
-      api.storage.sync.onChanged.removeListener(onSync);
+      stopProviders();
       api.storage.local.onChanged.removeListener(onLocal);
     };
   }, [api]);
@@ -441,6 +439,11 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
   return (
     <div class="prov__sites" data-testid="site-rules">
       <h4>Model per site</h4>
+      {settings.siteRulesLocal ? (
+        <p class="opt__status opt__status--warn" role="status" data-testid="site-rules-overflow">
+          {OVERFLOW_NOTICE}
+        </p>
+      ) : null}
       {rules.length ? (
         <ul class="prov__list">
           {rules.map((r) => (

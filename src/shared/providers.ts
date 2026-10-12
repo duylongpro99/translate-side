@@ -9,6 +9,7 @@
 //   profile:<id>           ModelProfile
 //   routing                { translate, analyze?, review?, fallback?, basicMigrated? }
 //   siteRules              [{ pattern, translate, localOnly? }]  (Routing.siteOverrides; UI in M5-E6)
+//                          too large to sync, it stays on this device (src/shared/sync-quota.ts)
 // `routing` is only ever written by the user (saveRouting), never by the migration: a fresh device
 // migrates before sync has pulled the other devices' items, and a default it wrote could win
 // last-write-wins over the user's routing. Without `routing`, this device's `migratedRoute`
@@ -36,12 +37,11 @@ import {
   readApiKey,
   removeApiKey,
   saveApiKey,
-  SYNC_QUOTA_BYTES,
-  SYNC_QUOTA_BYTES_PER_ITEM,
-  syncItemBytes,
   type ModelProfile,
   type ProviderConnection,
 } from './settings.ts';
+import { compareAndSet, migrateSync, withMigrationLock, type MigrationStep } from './migrate.ts';
+import { assertFits, isOverflowed, onListChanged, readList, saveListWithOverflow } from './sync-quota.ts';
 
 type Browser = typeof browser;
 
@@ -59,12 +59,30 @@ export const MIGRATED_ROUTE_KEY = 'migratedRoute';
  * `*.example.com`). A provider's origin that an allowlisted site shares is never revoked.
  */
 export const SITE_ALLOWLIST_KEY = 'siteAllowlist';
-/** chrome.storage.sync.MAX_ITEMS (fixed by Chrome). */
-export const SYNC_MAX_ITEMS = 512;
 export const TAB_ROUTE_PREFIX = 'tabRoute:';
 
-/** Is `key` one of the sync items this module owns? */
+/** Is `key` one of the sync items this module owns? `siteRules` may live on this device instead: watch with onProviderSettingsChanged. */
 export const isProviderKey = (key: string) => key === SCHEMA_KEY || key === ROUTING_KEY || key === SITE_RULES_KEY || key.startsWith(CONNECTION_PREFIX) || key.startsWith(PROFILE_PREFIX);
+
+type Changes = Record<string, { oldValue?: unknown; newValue?: unknown }>;
+
+/**
+ * Calls `cb` with the provider settings that changed: sync records, and the site rules wherever
+ * this device keeps them (sync-quota.ts onListChanged; their change then carries only `newValue`).
+ * Returns the unsubscribe.
+ */
+export function onProviderSettingsChanged(api: Browser, cb: (changes: Changes) => void): () => void {
+  const onSync = (changes: Changes) => {
+    const own = Object.entries(changes).filter(([k]) => k !== SITE_RULES_KEY && isProviderKey(k));
+    if (own.length > 0) cb(Object.fromEntries(own));
+  };
+  api.storage.sync.onChanged.addListener(onSync);
+  const stopRules = onListChanged(api, [SITE_RULES_KEY], (key, value) => cb({ [key]: { newValue: value } }));
+  return () => {
+    api.storage.sync.onChanged.removeListener(onSync);
+    stopRules();
+  };
+}
 const STATUS_FIELDS = new Set(['status', 'lastError', 'lastErrorKind']);
 
 /**
@@ -122,6 +140,8 @@ export interface ProviderSettings {
   implicit?: { connections: string[]; profiles: string[] };
   /** Is `routing` stored (the user chose a route), rather than migrated or the default? */
   routingStored?: boolean;
+  /** Are the site rules kept on this device, too large to sync (sync-quota.ts)? */
+  siteRulesLocal?: boolean;
 }
 
 // ---- Cleaning what storage holds (another device or a later version may have written it) ----
@@ -335,49 +355,53 @@ export async function migratedRouteFromM1(api: Browser): Promise<{ translate?: s
   return route ? { translate: route } : {};
 }
 
-const migrations = new WeakMap<object, Promise<ProviderSettings>>();
+/**
+ * The schema steps (src/shared/migrate.ts). 1: M1–M3 storage held no connections (see seedFromM1);
+ * only a device with a built-in key has anything to seed, so a fresh one writes nothing.
+ */
+export const MIGRATIONS: readonly MigrationStep[] = [
+  {
+    version: 1,
+    async patch(api, items) {
+      return Object.fromEntries(Object.entries(await seedFromM1(api)).filter(([k]) => k !== SCHEMA_KEY && !(k in items)));
+    },
+  },
+];
 
 /**
- * Brings storage.sync to the current schema and returns the settings. Idempotent: storage that
- * already has a schema version is read, not rewritten. Items already stored (another device
- * synced them before the version) are never overwritten, and `routing` is never written here. A
- * version newer than this build knows is read as it is, never downgraded. Each device derives its
- * own `migratedRoute` once (storage.local), even when another device migrated sync first. One
- * migration at a time per `api` in this context.
+ * This device's `migratedRoute`, derived once from its keys (migratedRouteFromM1) and written only
+ * while still absent. A failed write applies anyway and is derived again on the next read.
+ */
+async function deviceRoute(api: Browser): Promise<unknown> {
+  const local = await api.storage.local.get(MIGRATED_ROUTE_KEY);
+  if (MIGRATED_ROUTE_KEY in local) return local[MIGRATED_ROUTE_KEY];
+  const route = await migratedRouteFromM1(api);
+  try {
+    const written = await compareAndSet(api.storage.local, local, { [MIGRATED_ROUTE_KEY]: route });
+    if (!(MIGRATED_ROUTE_KEY in written)) return (await api.storage.local.get(MIGRATED_ROUTE_KEY))[MIGRATED_ROUTE_KEY];
+  } catch (err) {
+    console.warn('[translate-side] could not save the migrated route', err);
+  }
+  return route;
+}
+
+/**
+ * Brings storage.sync to the current schema (MIGRATIONS, in the migration lock shared by every
+ * context) and returns the settings. Idempotent: storage at the current version is read, not
+ * rewritten. Items already stored (another device synced them before the version) are never
+ * overwritten, and `routing` is never written here. A version newer than this build knows is read
+ * as it is, never downgraded. Each device derives its own `migratedRoute` once (storage.local),
+ * even when another device migrated sync first. Calls run one at a time, each after the last.
  */
 export function migrateProviders(api: Browser): Promise<ProviderSettings> {
-  const running = migrations.get(api);
-  if (running) return running;
-  const run = (async () => {
-    const [items, local] = await Promise.all([api.storage.sync.get(null), api.storage.local.get(MIGRATED_ROUTE_KEY)]);
-    let route: unknown = local[MIGRATED_ROUTE_KEY];
-    if (!(MIGRATED_ROUTE_KEY in local)) {
-      route = await migratedRouteFromM1(api);
-      // A failed write applies anyway and is derived again on the next read.
-      try {
-        await api.storage.local.set({ [MIGRATED_ROUTE_KEY]: route });
-      } catch (err) {
-        console.warn('[translate-side] could not save the migrated route', err);
-      }
-    }
-    const stored = parseStored(items, route);
-    if (stored) return stored;
-    const seed = Object.fromEntries(Object.entries(await seedFromM1(api)).filter(([k]) => !(k in items)));
-    // One set call: the schema version is written with the records it describes. A failed write
-    // (quota, sync off) leaves storage as it was: the settings still apply, and the next read migrates again.
-    try {
-      await api.storage.sync.set(seed);
-    } catch (err) {
-      console.warn('[translate-side] could not save the migrated provider settings', err);
-    }
-    return parseStored({ ...items, ...seed }, route) as ProviderSettings;
-  })();
-  migrations.set(api, run);
-  const clear = () => {
-    if (migrations.get(api) === run) migrations.delete(api);
-  };
-  run.then(clear, clear);
-  return run;
+  return withMigrationLock(async () => {
+    const route = await deviceRoute(api);
+    const items = await migrateSync(api, SCHEMA_KEY, MIGRATIONS);
+    const siteRulesLocal = await isOverflowed(api, SITE_RULES_KEY);
+    const rules = siteRulesLocal ? { [SITE_RULES_KEY]: await readList(api, SITE_RULES_KEY) } : {};
+    const settings = parseStored({ ...items, ...rules }, route) as ProviderSettings;
+    return siteRulesLocal ? { ...settings, siteRulesLocal } : settings;
+  });
 }
 
 /** The stored provider settings, migrated first if needed. */
@@ -392,32 +416,6 @@ export function queued<T>(task: () => Promise<T>): Promise<T> {
   const run = writes.then(task);
   writes = run.catch(() => undefined);
   return run;
-}
-
-/**
- * Refuses a write that would not fit chrome.storage.sync (it would fail anyway, with a raw
- * error), like the glossary's guard (settings.ts saveGlossary): an item over the per-item quota,
- * the total over the sync quota, or more items than Chrome keeps. `items` are the keys to set,
- * `removed` the keys the same write drops.
- */
-export async function checkQuota(api: Browser, items: Record<string, unknown>, removed: readonly string[] = []): Promise<void> {
-  for (const [key, value] of Object.entries(items)) {
-    const bytes = syncItemBytes(key, value);
-    if (bytes > SYNC_QUOTA_BYTES_PER_ITEM) throw new Error(`This setting would take ${bytes} bytes, over Chrome's sync limit of ${SYNC_QUOTA_BYTES_PER_ITEM} bytes for one setting. Shorten it (fewer extra headers or a shorter label).`);
-  }
-  const stored = await api.storage.sync.get(null);
-  const replaced = [...Object.keys(items), ...removed].filter((k) => k in stored);
-  const added = Object.keys(items).filter((k) => !(k in stored)).length;
-  if (Object.keys(stored).length + added - removed.filter((k) => k in stored).length > SYNC_MAX_ITEMS) {
-    throw new Error(`Synced settings would exceed Chrome's limit of ${SYNC_MAX_ITEMS} items. Remove some connections, models or site rules.`);
-  }
-  const sync = api.storage.sync as { getBytesInUse?: (keys?: string | string[] | null) => Promise<number> };
-  if (typeof sync.getBytesInUse !== 'function') return;
-  const [total, current] = await Promise.all([sync.getBytesInUse(null), replaced.length > 0 ? sync.getBytesInUse(replaced) : 0]);
-  const next = Object.entries(items).reduce((n, [k, v]) => n + syncItemBytes(k, v), 0);
-  if (total - current + next > SYNC_QUOTA_BYTES) {
-    throw new Error(`Synced settings would exceed Chrome's ${SYNC_QUOTA_BYTES}-byte limit. Remove some connections, models, site rules or glossary entries.`);
-  }
 }
 
 const CONNECTION_FIELDS = new Set(['id', 'label', 'presetId', 'protocol', 'baseUrl', 'auth', 'extraHeaders', 'queryParams', 'quirks', 'detectedProtocols', 'authByProtocol', 'status', 'lastError', 'lastErrorKind']);
@@ -445,7 +443,7 @@ export function saveConnection(api: Browser, connection: ProviderConnection): Pr
     if (!clean) throw new Error('not a valid connection');
     const key = connectionKey(clean.id);
     const value = keepUnknown(await storedItem(api, key), CONNECTION_FIELDS, clean);
-    await checkQuota(api, { [key]: value });
+    await assertFits(api, { [key]: value });
     await api.storage.sync.set({ [key]: value });
   });
 }
@@ -457,7 +455,7 @@ export function saveProfile(api: Browser, profile: ModelProfile): Promise<void> 
     if (!clean) throw new Error('not a valid model profile');
     const key = profileKey(clean.id);
     const value = keepUnknown(await storedItem(api, key), PROFILE_FIELDS, clean);
-    await checkQuota(api, { [key]: value });
+    await assertFits(api, { [key]: value });
     await api.storage.sync.set({ [key]: value });
   });
 }
@@ -483,7 +481,7 @@ export function saveConnectionStatus(api: Browser, id: string, status: Connectio
     const value: Record<string, unknown> = { ...structuredClone(raw), ...next };
     if (next.lastError === undefined) delete value.lastError;
     if (next.lastErrorKind === undefined) delete value.lastErrorKind;
-    await checkQuota(api, { [key]: value });
+    await assertFits(api, { [key]: value });
     await api.storage.sync.set({ [key]: value });
     return true;
   });
@@ -492,18 +490,22 @@ export function saveConnectionStatus(api: Browser, id: string, status: Connectio
 const ROUTING_FIELDS = new Set(['translate', 'analyze', 'review', 'fallback', BASIC_MIGRATED_FIELD]);
 
 /**
- * Routing and its site rules, in one write. Without site rules their item is set to an empty
- * list rather than removed, so the two never disagree after a failure half way.
+ * Routing and its site rules. Without site rules their list is set to an empty one rather than
+ * removed, so an old one is never read in again. Returns whether the site rules are kept on this
+ * device (too large to sync, sync-quota.ts).
  */
-export function saveRouting(api: Browser, routing: Routing): Promise<void> {
+export function saveRouting(api: Browser, routing: Routing): Promise<{ siteRulesLocal: boolean }> {
   return queued(async () => {
     await migrateProviders(api);
     const clean = cleanRouting(routing);
     if (!clean) throw new Error('routing needs a translate profile');
     // `basicMigrated`: the user saw `basic` in the chain (it is read in when missing), so what they save stays as it is.
-    const items = { [ROUTING_KEY]: { ...keepUnknown(await storedItem(api, ROUTING_KEY), ROUTING_FIELDS, clean), [BASIC_MIGRATED_FIELD]: true }, [SITE_RULES_KEY]: cleanSiteRules(routing.siteOverrides) };
-    await checkQuota(api, items);
-    await api.storage.sync.set(items);
+    const item = { [ROUTING_KEY]: { ...keepUnknown(await storedItem(api, ROUTING_KEY), ROUTING_FIELDS, clean), [BASIC_MIGRATED_FIELD]: true } };
+    await assertFits(api, item);
+    // The site rules first: too large to sync they stay on this device, and the routing still syncs.
+    const { overflow } = await saveListWithOverflow(api, SITE_RULES_KEY, cleanSiteRules(routing.siteOverrides));
+    await api.storage.sync.set(item);
+    return { siteRulesLocal: overflow };
   });
 }
 
@@ -521,7 +523,7 @@ export function saveLearnedQuirk(api: Browser, at: { connectionId: string; profi
     const update = async (key: string, raw: unknown) => {
       const record = raw as { quirks?: Quirks };
       const next = { ...record, quirks: { ...(isRecord(record.quirks) ? record.quirks : {}), [learned]: value } };
-      await checkQuota(api, { [key]: next });
+      await assertFits(api, { [key]: next });
       await api.storage.sync.set({ [key]: next });
     };
     if (at.profileId !== undefined) {
@@ -627,7 +629,7 @@ export async function removeConnection(api: Browser, id: string): Promise<{ revo
 
 /** Does an allowlisted site (SITE_ALLOWLIST_KEY) use `baseUrl`'s host? Entries may also be origins or URLs. */
 async function allowlistedHost(api: Browser, baseUrl: string): Promise<boolean> {
-  const list = (await api.storage.sync.get(SITE_ALLOWLIST_KEY))[SITE_ALLOWLIST_KEY];
+  const list = await readList(api, SITE_ALLOWLIST_KEY);
   if (!Array.isArray(list)) return false;
   const host = new URL(baseUrl).hostname.toLowerCase();
   return list.some((entry) => {

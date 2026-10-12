@@ -14,6 +14,7 @@ import {
   SECRET_PREFIX,
   STYLES,
   cleanBudget,
+  GLOSSARY_KEY,
   readGlossary,
   readPreferences,
   saveGlossary,
@@ -22,7 +23,8 @@ import {
   type Preferences,
   type ProviderConnection,
 } from '@/shared/settings';
-import { isProviderKey, readProviderSettings, resolveRoute, type ProviderSettings } from '@/shared/providers';
+import { onProviderSettingsChanged, readProviderSettings, resolveRoute, type ProviderSettings } from '@/shared/providers';
+import { isOverflowed, onListChanged, OVERFLOW_NOTICE } from '@/shared/sync-quota';
 import { openOnboarding } from '@/shared/onboarding';
 import { ProvidersSection, type AdapterFor } from './Providers.tsx';
 import { TransferSection } from './Transfer.tsx';
@@ -63,16 +65,13 @@ function useTranslateRoute(api: Browser): TranslateRoute {
     // change: wait for it, then read again.
     // Only provider records and keys: not the usage ledger or other settings (review C3 #3).
     const reload = () => void resolveRoute(api, 'translate').finally(load);
-    const onSync = (changes: Record<string, unknown>) => {
-      if (Object.keys(changes).some(isProviderKey)) reload();
-    };
     const onLocal = (changes: Record<string, unknown>) => {
       if (Object.keys(changes).some((k) => k.startsWith(SECRET_PREFIX))) reload();
     };
-    api.storage.sync.onChanged.addListener(onSync);
+    const stopProviders = onProviderSettingsChanged(api, reload);
     api.storage.local.onChanged.addListener(onLocal);
     return () => {
-      api.storage.sync.onChanged.removeListener(onSync);
+      stopProviders();
       api.storage.local.onChanged.removeListener(onLocal);
     };
   }, [api]);
@@ -225,8 +224,11 @@ function GlossarySection({ api }: { api: Browser }) {
   /** Index of the entry being edited; undefined while adding. */
   const [editing, setEditing] = useState<number | undefined>();
   const [note, setNote] = useState<{ text: string; warn: boolean } | undefined>();
+  /** Kept on this device: too large to sync (sync-quota.ts). */
+  const [local, setLocal] = useState(false);
   useEffect(() => {
     void readGlossary(api).then(setEntries);
+    void isOverflowed(api, GLOSSARY_KEY).then(setLocal, () => {});
   }, []);
   if (!entries) return null;
 
@@ -237,6 +239,7 @@ function GlossarySection({ api }: { api: Browser }) {
       return false;
     }
     setEntries(result.entries);
+    setLocal(result.overflow);
     setNote(result.warning ? { text: result.warning, warn: true } : undefined);
     return true;
   };
@@ -298,6 +301,11 @@ function GlossarySection({ api }: { api: Browser }) {
           No entries yet.
         </p>
       )}
+      {local ? (
+        <p class="opt__status opt__status--warn" role="status" data-testid="glossary-overflow">
+          {OVERFLOW_NOTICE}
+        </p>
+      ) : null}
       <form onSubmit={onSubmit} class="opt__row" data-testid="glossary-form">
         <label for="g-term">Term</label>
         <input id="g-term" value={draft.term} maxLength={120} onInput={(e) => setDraft({ ...draft, term: (e.target as HTMLInputElement).value })} />
@@ -354,10 +362,13 @@ function SitesSection({ api }: { api: Browser }) {
   const [allowInput, setAllowInput] = useState('');
   const [neverInput, setNeverInput] = useState('');
   const [note, setNote] = useState<{ text: string; warn: boolean } | undefined>();
+  /** Lists kept on this device: too large to sync (sync-quota.ts). */
+  const [local, setLocal] = useState(false);
   const load = () =>
     readSiteLists(api).then(
       async (l) => {
         setLists(l);
+        void Promise.all([SITE_ALLOWLIST_KEY, SITE_NEVER_KEY].map((k) => isOverflowed(api, k))).then((o) => setLocal(o.includes(true)), () => {});
         const held = (origin: string) => api.permissions.contains({ origins: [origin] }).catch(() => false);
         const missing = await Promise.all(
           l.allow.map(async (p) => {
@@ -371,11 +382,7 @@ function SitesSection({ api }: { api: Browser }) {
     );
   useEffect(() => {
     void load();
-    const onChanged = (changes: Record<string, unknown>) => {
-      if (SITE_ALLOWLIST_KEY in changes || SITE_NEVER_KEY in changes) void load();
-    };
-    api.storage.sync.onChanged.addListener(onChanged);
-    return () => api.storage.sync.onChanged.removeListener(onChanged);
+    return onListChanged(api, [SITE_ALLOWLIST_KEY, SITE_NEVER_KEY], () => void load());
   }, []);
   if (!lists) return null;
 
@@ -442,6 +449,11 @@ function SitesSection({ api }: { api: Browser }) {
   return (
     <section class="opt__section" id="sites" aria-labelledby="sites-h">
       <h2 id="sites-h">Site rules</h2>
+      {local ? (
+        <p class="opt__status opt__status--warn" role="status" data-testid="sites-overflow">
+          {OVERFLOW_NOTICE}
+        </p>
+      ) : null}
       <h3>Translate by itself while the panel is open</h3>
       <p class="opt__hint">
         On these sites, each page you open is translated without a click while the panel is open. Chrome asks once for access to each site. On other sites, a page you reach by a link waits for “Translate this page”.
@@ -577,14 +589,11 @@ function SpendSection({ api, now = Date.now }: { api: Browser; now?: () => numbe
       if (SPEND_KEY in changes) load();
       if (SPEND_LIMIT_KEY in changes) loadLimit();
     };
-    const onSync = (changes: Record<string, unknown>) => {
-      if (Object.keys(changes).some(isProviderKey)) loadProviders();
-    };
+    const stopProviders = onProviderSettingsChanged(api, loadProviders);
     api.storage.local.onChanged.addListener(onLocal);
-    api.storage.sync.onChanged.addListener(onSync);
     return () => {
       api.storage.local.onChanged.removeListener(onLocal);
-      api.storage.sync.onChanged.removeListener(onSync);
+      stopProviders();
     };
   }, [api]);
   const { profile, connection } = useTranslateRoute(api);

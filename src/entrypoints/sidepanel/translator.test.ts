@@ -9,6 +9,8 @@ import { createTranslator } from './translator.ts';
 import type { TranslationJob } from '@/engine/types';
 
 type Api = Parameters<typeof createTranslator>[0];
+/** The site list keys (src/shared/sites.ts), each read on its own. */
+const SITE_LIST_KEYS: unknown[] = ['siteAllowlist', 'siteNever'];
 type Ready = Parameters<Required<SessionHooks>['ready']>[2];
 
 /** Storage whose `sync.get` answers only when the test says so, plus change listeners. */
@@ -20,8 +22,8 @@ function fakeApi() {
   const api = {
     storage: {
       sync: {
-        // The site lists (plan M5-E3, read as a list of keys) answer at once: none are set.
-        get: (k: string | string[]) => (Array.isArray(k) ? Promise.resolve({}) : new Promise((resolve) => gets.push(() => resolve(sync.has(k) ? { [k]: sync.get(k) } : {})))),
+        // The site lists (plan M5-E3) answer at once: none are set.
+        get: (k: string | string[]) => (Array.isArray(k) || SITE_LIST_KEYS.includes(k) ? Promise.resolve({}) : new Promise((resolve) => gets.push(() => resolve(sync.has(k) ? { [k]: sync.get(k) } : {})))),
         onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) },
       },
       // The first-run privacy notice was acknowledged (M3-E10).
@@ -284,6 +286,8 @@ describe('translator wiring (plan M1-E8)', () => {
       const cost = t.jobs.get(1)?.cost ?? 0;
 
       f.setGlossary([{ term: 'deploy', rendering: 'deploy' }]);
+      // The glossary's change reaches the panel once its local overflow marker is read (sync-quota.ts).
+      await settle(5);
       f.answer();
       await settle(80);
       const after = r.translateCalls().slice(before);

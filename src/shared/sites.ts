@@ -13,15 +13,14 @@
 // its subdomains (providers.ts matchesSite).
 import type { browser } from 'wxt/browser';
 import { matchesSite, readProviderSettings, SITE_ALLOWLIST_KEY } from './providers.ts';
+import { readList, saveListWithOverflow } from './sync-quota.ts';
 
 type Browser = typeof browser;
 
 export { SITE_ALLOWLIST_KEY };
 export const SITE_NEVER_KEY = 'siteNever';
-/** Most entries per list: a list is one sync item (8 KB). */
+/** Most entries per list. A list too large for its sync item stays on this device (src/shared/sync-quota.ts). */
 export const MAX_SITES = 200;
-/** chrome.storage.sync.QUOTA_BYTES_PER_ITEM. */
-const SYNC_ITEM_BYTES = 8192;
 
 export interface SiteLists {
   allow: string[];
@@ -75,8 +74,8 @@ export function cleanSiteList(raw: unknown): string[] {
 }
 
 export async function readSiteLists(api: Browser): Promise<SiteLists> {
-  const got = await api.storage.sync.get([SITE_ALLOWLIST_KEY, SITE_NEVER_KEY]);
-  return { allow: cleanSiteList(got[SITE_ALLOWLIST_KEY]), never: cleanSiteList(got[SITE_NEVER_KEY]) };
+  const [allow, never] = await Promise.all([readList(api, SITE_ALLOWLIST_KEY), readList(api, SITE_NEVER_KEY)]);
+  return { allow: cleanSiteList(allow), never: cleanSiteList(never) };
 }
 
 export const listedFor = (list: readonly string[], url: string | undefined): string | undefined => (url === undefined ? undefined : list.find((p) => matchesSite(p, url)));
@@ -135,13 +134,11 @@ const queued = <T>(fn: () => Promise<T>): Promise<T> => {
 
 async function editList(api: Browser, key: typeof SITE_ALLOWLIST_KEY | typeof SITE_NEVER_KEY, edit: (list: string[]) => string[]): Promise<string[]> {
   return queued(async () => {
-    const list = cleanSiteList((await api.storage.sync.get(key))[key]);
+    const list = cleanSiteList(await readList(api, key));
     const edited = edit(list);
     if (edited.length > MAX_SITES && edited.length > list.length) throw new Error(`At most ${MAX_SITES} sites per list. Remove a site first.`);
     const next = cleanSiteList(edited);
-    // storage.sync caps one item at 8 KB (key plus JSON), which long host names reach before MAX_SITES.
-    if (next.length > list.length && key.length + JSON.stringify(next).length > SYNC_ITEM_BYTES) throw new Error('This site list is full. Remove a site first.');
-    await api.storage.sync.set({ [key]: next });
+    await saveListWithOverflow(api, key, next);
     return next;
   });
 }
@@ -155,7 +152,7 @@ export async function addAllowlisted(api: Browser, pattern: string): Promise<voi
   try {
     await editList(api, SITE_ALLOWLIST_KEY, (l) => (l.includes(pattern) ? l : [...l, pattern]));
   } catch (e) {
-    await releaseSite(api, pattern, cleanSiteList((await api.storage.sync.get(SITE_ALLOWLIST_KEY).catch((): Record<string, unknown> => ({})))[SITE_ALLOWLIST_KEY])).catch(() => undefined);
+    await releaseSite(api, pattern, cleanSiteList(await readList(api, SITE_ALLOWLIST_KEY).catch(() => undefined))).catch(() => undefined);
     throw e;
   }
   await editList(api, SITE_NEVER_KEY, (l) => l.filter((p) => p !== pattern));

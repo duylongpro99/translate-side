@@ -20,7 +20,8 @@ import { chromeTranslator } from '@/llm/chrome-translator';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
 import { snippetDocId, snippetView, SnippetStore } from './snippet.ts';
 import { chooseForTab, makeDefault, readSwitcher, type SwitcherState } from './switcher.ts';
-import { isErrorStatusWrite, isProviderKey, saveConnectionStatus } from '@/shared/providers';
+import { isErrorStatusWrite, onProviderSettingsChanged, saveConnectionStatus } from '@/shared/providers';
+import { onListChanged } from '@/shared/sync-quota';
 import { routedSummary, translateClient, type Routed, type RouteTarget } from './route.ts';
 import { ViewportStore } from './viewport.ts';
 import { HoverStore } from './hover.ts';
@@ -572,23 +573,29 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     const onLocal = (changes: Record<string, unknown>) => {
       if (Object.keys(changes).some((k) => k.startsWith(SECRET_PREFIX))) retryStopped();
     };
+    // A connection, model or route changed (src/shared/providers.ts): a job stopped on it runs
+    // again. Not the panel's own mark of a refused key (onAuthError): that changes nothing.
+    const onProviders = (changes: Record<string, { oldValue?: unknown; newValue?: unknown }>) => {
+      if (Object.entries(changes).some(([k, c]) => !isErrorStatusWrite(k, c))) retryStopped();
+    };
     /** Settings changed: the active tab's page is translated again if they concern it (refresh). */
-    const onSync = (changes: Record<string, { oldValue?: unknown; newValue?: unknown }>) => {
-      // A connection, model or route changed (src/shared/providers.ts): a job stopped on it runs
-      // again. Not the panel's own mark of a refused key (onAuthError): that changes nothing.
-      if (Object.entries(changes).some(([k, c]) => isProviderKey(k) && !isErrorStatusWrite(k, c))) retryStopped();
-      // A site put on the never-translate list (review N1, D23): a selection from it stops at once.
-      // The page itself is let go by the controller, which closes its connection (`gone`).
-      if (SITE_NEVER_KEY in changes) {
-        const never = cleanSiteList(changes[SITE_NEVER_KEY]?.newValue);
-        for (const tabId of snippetStore.tabs()) {
-          const view = snippetStore.get(tabId);
-          if (view && !view.blocked && listedFor(never, view.url) !== undefined) closeSnippet(tabId);
-        }
-      }
-      if (!(PREFS_KEY in changes) && !(GLOSSARY_KEY in changes)) return;
+    const refreshActive = () => {
       const tabId = activeTab();
       if (tabId !== undefined) refresh(tabId);
+    };
+    const onSync = (changes: Record<string, unknown>) => {
+      if (PREFS_KEY in changes) refreshActive();
+    };
+    // The lists as this device keeps them: in sync, or here when too large to sync (sync-quota.ts).
+    const onList = (key: string, value: unknown) => {
+      if (key === GLOSSARY_KEY) return refreshActive();
+      // A site put on the never-translate list (review N1, D23): a selection from it stops at once.
+      // The page itself is let go by the controller, which closes its connection (`gone`).
+      const never = cleanSiteList(value);
+      for (const tabId of snippetStore.tabs()) {
+        const view = snippetStore.get(tabId);
+        if (view && !view.blocked && listedFor(never, view.url) !== undefined) closeSnippet(tabId);
+      }
     };
     const onPagehide = () => {
       jobs.cancelAll();
@@ -598,12 +605,16 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     };
     api.storage.local.onChanged.addListener(onLocal);
     api.storage.sync.onChanged.addListener(onSync);
+    const stopProviders = onProviderSettingsChanged(api, onProviders);
+    const stopLists = onListChanged(api, [GLOSSARY_KEY, SITE_NEVER_KEY], onList);
     api.permissions.onAdded.addListener(retryStopped);
     api.storage.session.onChanged.addListener(onSession);
     addEventListener('pagehide', onPagehide);
     return () => {
       api.storage.local.onChanged.removeListener(onLocal);
       api.storage.sync.onChanged.removeListener(onSync);
+      stopProviders();
+      stopLists();
       api.permissions.onAdded.removeListener(retryStopped);
       api.storage.session.onChanged.removeListener(onSession);
       removeEventListener('pagehide', onPagehide);

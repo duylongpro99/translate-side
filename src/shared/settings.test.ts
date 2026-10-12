@@ -14,8 +14,6 @@ import {
   GEMINI_ORIGIN,
   GEMINI_PROFILE,
   GLOSSARY_KEY,
-  SYNC_QUOTA_BYTES,
-  SYNC_QUOTA_BYTES_PER_ITEM,
   cleanGlossary,
   maskKey,
   originPattern,
@@ -29,7 +27,6 @@ import {
   saveGlossary,
   savePreferences,
   secretKey,
-  syncItemBytes,
   withProfileQuirks,
   DEFAULT_BUDGET_TOKENS,
   MAX_BUDGET_TOKENS,
@@ -37,6 +34,7 @@ import {
   defaultPreferences,
   LANGUAGES,
 } from './settings.ts';
+import { OVERFLOW_NOTICE, SYNC_QUOTA_BYTES, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from './sync-quota.ts';
 
 type Api = Parameters<typeof readApiKey>[0];
 
@@ -47,9 +45,12 @@ function fakeApi({ granted = [] as string[], ui = 'vi-VN' } = {}) {
       get data() {
         return Object.fromEntries(data);
       },
-      get: (k: string) => Promise.resolve(data.has(k) ? { [k]: structuredClone(data.get(k)) } : {}),
+      get: (k: string | string[] | null) => {
+        const keys = k === null ? [...data.keys()] : typeof k === 'string' ? [k] : k;
+        return Promise.resolve(structuredClone(Object.fromEntries(keys.filter((x) => data.has(x)).map((x) => [x, data.get(x)]))));
+      },
       set: (o: Record<string, unknown>) => Promise.resolve(void Object.entries(structuredClone(o)).forEach(([k, v]) => data.set(k, v))),
-      remove: (k: string) => Promise.resolve(void data.delete(k)),
+      remove: (k: string | string[]) => Promise.resolve(void (typeof k === 'string' ? [k] : k).forEach((x) => data.delete(x))),
     };
   };
   const local = area();
@@ -179,7 +180,7 @@ describe('token budget per page (plan M2-E7)', () => {
   });
 });
 
-describe('personal glossary (plan M2-E6): storage.sync with a quota guard', () => {
+describe('personal glossary (plan M2-E6): storage.sync, kept on this device when too large to sync', () => {
   const withBytes = (inUse: number) => {
     const f = fakeApi();
     const sync = f.api.storage.sync as unknown as Record<string, unknown>;
@@ -209,34 +210,46 @@ describe('personal glossary (plan M2-E6): storage.sync with a quota guard', () =
     expect(SYNC_QUOTA_BYTES).toBe(102400);
   });
 
-  it('refuses, without writing, a glossary over the per-item quota, and warns from 80%', async () => {
-    const { api, sync } = fakeApi();
+  it('a glossary over the per-item quota stays on this device; sync keeps the last one that fit; it warns from 80%', async () => {
+    const { api, sync, local } = fakeApi();
     const many = (n: number) => Array.from({ length: n }, (_, i) => ({ term: `term-${i}`, rendering: `rendering number ${i} with some text` }));
-    const tooBig = await saveGlossary(api, many(400));
-    expect(tooBig).toMatchObject({ ok: false, reason: 'item-quota' });
-    expect(sync.data).toEqual({});
     let n = 1;
     while (syncItemBytes(GLOSSARY_KEY, cleanGlossary(many(n + 1))) < SYNC_QUOTA_BYTES_PER_ITEM * 0.85) n++;
     const near = await saveGlossary(api, many(n));
-    expect(near).toMatchObject({ ok: true });
+    expect(near).toMatchObject({ ok: true, overflow: false });
     expect(near.ok && near.warning).toMatch(/uses 8\d% of the space/);
+    const big = await saveGlossary(api, many(1000));
+    expect(big).toMatchObject({ ok: true, overflow: true });
+    expect(big.ok && big.warning).toBeUndefined();
+    expect(sync.data.glossary).toEqual(cleanGlossary(many(n)));
+    expect(local.data).toEqual({ glossary: cleanGlossary(many(1000)), 'overflow:glossary': true });
+    expect(await readGlossary(api)).toEqual(cleanGlossary(many(1000)));
+    // Small again: back to sync, and the copy here goes.
     const small = await saveGlossary(api, many(2));
+    expect(small).toMatchObject({ ok: true, overflow: false });
     expect(small.ok && small.warning).toBeUndefined();
+    expect(sync.data.glossary).toEqual(cleanGlossary(many(2)));
+    expect(local.data).toEqual({});
+    expect(OVERFLOW_NOTICE).toMatch(/other devices keep the last synced version/);
   });
 
-  it('refuses a save that would push synced settings over the total quota', async () => {
-    const { api, sync } = withBytes(SYNC_QUOTA_BYTES - 50);
+  it('a save that would push synced settings over the total quota stays on this device', async () => {
+    const { api, sync, local } = withBytes(SYNC_QUOTA_BYTES - 50);
     const got = await saveGlossary(api, [{ term: 'a fairly long glossary term', rendering: 'and an even longer rendering for it, to pass fifty bytes' }]);
-    expect(got).toMatchObject({ ok: false, reason: 'total-quota' });
+    expect(got).toMatchObject({ ok: true, overflow: true });
     expect(sync.data).toEqual({});
+    expect(local.data['overflow:glossary']).toBe(true);
     const fine = withBytes(1000);
-    expect(await saveGlossary(fine.api, [{ term: 'deploy', rendering: 'deploy' }])).toMatchObject({ ok: true });
+    expect(await saveGlossary(fine.api, [{ term: 'deploy', rendering: 'deploy' }])).toMatchObject({ ok: true, overflow: false });
   });
 
-  it('reports a storage error instead of throwing', async () => {
-    const { api } = fakeApi();
-    (api.storage.sync as unknown as Record<string, unknown>).set = () => Promise.reject(new Error('QUOTA_BYTES_PER_ITEM quota exceeded'));
-    expect(await saveGlossary(api, [{ term: 'x', rendering: 'x' }])).toEqual({ ok: false, reason: 'error', message: 'QUOTA_BYTES_PER_ITEM quota exceeded' });
+  it('a sync write Chrome refuses anyway keeps the glossary on this device; a local failure is reported, not thrown', async () => {
+    const { api, local } = fakeApi();
+    (api.storage.sync as unknown as Record<string, unknown>).set = () => Promise.reject(new Error('MAX_WRITE_OPERATIONS_PER_MINUTE quota exceeded'));
+    expect(await saveGlossary(api, [{ term: 'x', rendering: 'x' }])).toMatchObject({ ok: true, overflow: true });
+    expect(local.data.glossary).toEqual([{ term: 'x', rendering: 'x' }]);
+    (api.storage.local as unknown as Record<string, unknown>).set = () => Promise.reject(new Error('QUOTA_BYTES quota exceeded'));
+    expect(await saveGlossary(api, [{ term: 'y', rendering: 'y' }])).toEqual({ ok: false, reason: 'error', message: 'QUOTA_BYTES quota exceeded' });
   });
 });
 

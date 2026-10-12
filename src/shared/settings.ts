@@ -8,6 +8,7 @@ import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
 import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS, GEMINI_OPENAI_BASE_URL } from '@/llm/presets';
 import type { Protocol, AuthStyle, LLMErrorKind, Quirks, ResolvedConnection } from '@/llm/types';
 import { endpointBase } from './connect.ts';
+import { readList, saveListWithOverflow, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from './sync-quota.ts';
 
 type Browser = typeof browser;
 
@@ -321,24 +322,15 @@ export function updatePreferences(api: Browser, patch: Partial<Preferences>): Pr
 
 // ---- Personal glossary (storage.sync, plan M2-E6) ----------------------------------------------
 // One sync item, `glossary`: an array of { term, rendering, note? }. "Keep as is" is a rendering
-// equal to the term. A basic quota guard refuses a save that would exceed chrome.storage.sync's
-// per-item or total quota (it would fail anyway, losing the edit silently) and warns from 80% of
-// the per-item quota. Splitting across items, compression and conflict handling are M6-E6.
+// equal to the term. A glossary too large to sync stays on this device (src/shared/sync-quota.ts),
+// so a save never fails for want of sync space; a warning comes from 80% of the per-item quota.
 
 export const GLOSSARY_KEY = 'glossary';
-/** chrome.storage.sync.QUOTA_BYTES_PER_ITEM and QUOTA_BYTES (fixed by Chrome). */
-export const SYNC_QUOTA_BYTES_PER_ITEM = 8192;
-export const SYNC_QUOTA_BYTES = 102400;
 /** Warn once an item reaches this share of its quota. */
 export const GLOSSARY_WARN_RATIO = 0.8;
 const TERM_MAX = 120;
 const RENDERING_MAX = 200;
 const NOTE_MAX = 200;
-
-/** Bytes chrome.storage.sync counts for one item: the key plus the value's JSON, in UTF-8. */
-export function syncItemBytes(key: string, value: unknown): number {
-  return new TextEncoder().encode(key + JSON.stringify(value)).length;
-}
 
 /** Trimmed and capped entries; blank terms and repeated terms (case-insensitive, first wins) dropped. */
 export function cleanGlossary(entries: readonly unknown[]): GlossaryEntry[] {
@@ -359,37 +351,25 @@ export function cleanGlossary(entries: readonly unknown[]): GlossaryEntry[] {
 }
 
 export async function readGlossary(api: Browser): Promise<GlossaryEntry[]> {
-  const got = await api.storage.sync.get(GLOSSARY_KEY);
-  const stored = got[GLOSSARY_KEY];
+  const stored = await readList(api, GLOSSARY_KEY);
   return Array.isArray(stored) ? cleanGlossary(stored) : [];
 }
 
-export type GlossarySave =
-  | { ok: true; entries: GlossaryEntry[]; bytes: number; warning?: string }
-  | { ok: false; reason: 'item-quota' | 'total-quota' | 'error'; message: string };
+/** `overflow`: the glossary is kept on this device (OVERFLOW_NOTICE says what that means). */
+export type GlossarySave = { ok: true; entries: GlossaryEntry[]; bytes: number; overflow: boolean; warning?: string } | { ok: false; reason: 'error'; message: string };
 
-/** Checks the quota first; nothing is written when the save would not fit. */
 export async function saveGlossary(api: Browser, entries: readonly GlossaryEntry[]): Promise<GlossarySave> {
   const clean = cleanGlossary(entries);
   const bytes = syncItemBytes(GLOSSARY_KEY, clean);
-  if (bytes > SYNC_QUOTA_BYTES_PER_ITEM) {
-    return { ok: false, reason: 'item-quota', message: `The glossary would take ${bytes} bytes, over Chrome's sync limit of ${SYNC_QUOTA_BYTES_PER_ITEM} bytes for one setting. Remove or shorten some entries.` };
-  }
+  let overflow: boolean;
   try {
-    const sync = api.storage.sync as { getBytesInUse?: (keys?: string | string[] | null) => Promise<number> };
-    if (typeof sync.getBytesInUse === 'function') {
-      const [total, current] = await Promise.all([sync.getBytesInUse(null), sync.getBytesInUse(GLOSSARY_KEY)]);
-      if (total - current + bytes > SYNC_QUOTA_BYTES) {
-        return { ok: false, reason: 'total-quota', message: `Synced settings would exceed Chrome's ${SYNC_QUOTA_BYTES}-byte limit. Remove some glossary entries.` };
-      }
-    }
-    await api.storage.sync.set({ [GLOSSARY_KEY]: clean });
+    ({ overflow } = await saveListWithOverflow(api, GLOSSARY_KEY, clean));
   } catch (error) {
     return { ok: false, reason: 'error', message: error instanceof Error ? error.message : String(error) };
   }
   const warning =
-    bytes >= SYNC_QUOTA_BYTES_PER_ITEM * GLOSSARY_WARN_RATIO ? `The glossary uses ${Math.round((100 * bytes) / SYNC_QUOTA_BYTES_PER_ITEM)}% of the space Chrome syncs for it.` : undefined;
-  return { ok: true, entries: clean, bytes, ...(warning ? { warning } : {}) };
+    !overflow && bytes >= SYNC_QUOTA_BYTES_PER_ITEM * GLOSSARY_WARN_RATIO ? `The glossary uses ${Math.round((100 * bytes) / SYNC_QUOTA_BYTES_PER_ITEM)}% of the space Chrome syncs for it.` : undefined;
+  return { ok: true, entries: clean, bytes, overflow, ...(warning ? { warning } : {}) };
 }
 
 /** Languages offered in options v0. A curated list; any BCP 47 code works in the prompt. */

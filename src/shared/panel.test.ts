@@ -39,7 +39,8 @@ function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, 
         set: (o: Record<string, unknown>) => (Object.assign(store, o), Promise.resolve()),
         remove: (k: string) => ((store[k] = undefined), Promise.resolve()),
       },
-      sync: { get: (keys: string[]) => Promise.resolve(Object.fromEntries(keys.filter((k) => k in sync).map((k) => [k, sync[k]]))) },
+      sync: { get: (keys: string | string[]) => Promise.resolve(Object.fromEntries((Array.isArray(keys) ? keys : [keys]).filter((k) => k in sync).map((k) => [k, sync[k]]))) },
+      local: { get: () => Promise.resolve({}) },
     },
     runtime: {
       sendMessage: (m: { type: string; windowId?: number; pressedAt?: number }) => {

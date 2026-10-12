@@ -16,7 +16,6 @@ import type { Quirks } from '@/llm/types';
 import {
   BASIC_FALLBACK,
   BASIC_MIGRATED_FIELD,
-  checkQuota,
   cleanConnection,
   cleanProfile,
   cleanRouting,
@@ -42,13 +41,12 @@ import {
   SECRET_PREFIX,
   secretKey,
   STYLES,
-  SYNC_QUOTA_BYTES_PER_ITEM,
-  syncItemBytes,
   type ModelProfile,
   type Preferences,
   type ProviderConnection,
 } from './settings.ts';
 import { cleanSiteList, readSiteLists, SITE_ALLOWLIST_KEY, SITE_NEVER_KEY, sitePattern } from './sites.ts';
+import { assertFits, saveListWithOverflow } from './sync-quota.ts';
 
 type Browser = typeof browser;
 
@@ -60,7 +58,7 @@ export const MAX_IMPORT_BYTES = 1_000_000;
 const MAX_CONNECTIONS = 100;
 const MAX_PROFILES = 400;
 const MAX_SITE_RULES = 200;
-const MAX_GLOSSARY = 500;
+const MAX_GLOSSARY = 5000;
 const MAX_KEY_LENGTH = 4096;
 
 const ID_RE = /^[A-Za-z0-9._-]{1,100}$/;
@@ -550,13 +548,8 @@ async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKey
 
   let glossaryCount: number | null = null;
   if (plan.glossary && plan.glossary.length > 0) {
-    const merged = cleanGlossary([...plan.glossary, ...glossary]);
-    const bytes = syncItemBytes(GLOSSARY_KEY, merged);
-    if (bytes > SYNC_QUOTA_BYTES_PER_ITEM) notes.push(`Skipped the glossary: with yours it would take ${bytes} bytes, over Chrome's sync limit of ${SYNC_QUOTA_BYTES_PER_ITEM} bytes for one setting.`);
-    else {
-      items[GLOSSARY_KEY] = merged;
-      glossaryCount = plan.glossary.length;
-    }
+    items[GLOSSARY_KEY] = cleanGlossary([...plan.glossary, ...glossary]);
+    glossaryCount = plan.glossary.length;
   }
 
   const never = new Set(plan.never ?? []);
@@ -627,19 +620,25 @@ export function previewImport(api: Browser, plan: ImportPlan, options: ImportOpt
   return resolveImport(api, plan, options).then((r) => r.report);
 }
 
+/** The lists an import writes: each one too large to sync stays on this device (sync-quota.ts). */
+const LIST_KEYS: readonly string[] = [GLOSSARY_KEY, SITE_RULES_KEY, SITE_ALLOWLIST_KEY, SITE_NEVER_KEY];
+
 /**
- * Merges `plan` into storage: one sync write for everything (it fits the sync quota or nothing
- * changes), then the keys, only when `withKeys` and only the ones the file carries. Nothing the file
- * does not mention is removed or changed, except the saved key of a connection the file points
- * somewhere else (`redirects`), which goes unless the user kept it.
+ * Merges `plan` into storage: one sync write for the records (it fits the sync quota or nothing
+ * changes), then each list (to sync, or kept on this device when too large), then the keys, only
+ * when `withKeys` and only the ones the file carries. Nothing the file does not mention is removed
+ * or changed, except the saved key of a connection the file points somewhere else (`redirects`),
+ * which goes unless the user kept it.
  */
 export function applyImport(api: Browser, plan: ImportPlan, options: ImportOptions): Promise<ImportReport> {
   return queued(async () => {
     const { items, secrets, removeSecrets, report } = await resolveImport(api, plan, options);
-    if (Object.keys(items).length > 0) {
-      await checkQuota(api, items);
-      await api.storage.sync.set(items);
+    const records = Object.fromEntries(Object.entries(items).filter(([k]) => !LIST_KEYS.includes(k)));
+    if (Object.keys(records).length > 0) {
+      await assertFits(api, records);
+      await api.storage.sync.set(records);
     }
+    for (const key of LIST_KEYS) if (key in items) await saveListWithOverflow(api, key, items[key]);
     if (Object.keys(secrets).length > 0) await api.storage.local.set(secrets);
     if (removeSecrets.length > 0) await api.storage.local.remove(removeSecrets);
     return report;

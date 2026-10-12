@@ -3,7 +3,8 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_CONNECTION, DEFAULT_PROFILE, GLOSSARY_KEY, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/settings';
+import { DEFAULT_CONNECTION, DEFAULT_PROFILE, GLOSSARY_KEY } from '@/shared/settings';
+import { OVERFLOW_NOTICE, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/sync-quota';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import { openTranslationCache, type TranslationCache } from '@/shared/cache';
 import { dayKey, estimateSpend, monthKey } from '@/shared/spend';
@@ -27,7 +28,7 @@ function fakeApi({ grant = true, answer = Promise.resolve() } = {}) {
         listeners.forEach((l) => l(Object.fromEntries(Object.keys(o).map((k) => [k, {}]))));
         return Promise.resolve();
       },
-      remove: (k: string) => Promise.resolve(void m.delete(k)),
+      remove: (k: string | string[]) => Promise.resolve(void (Array.isArray(k) ? k : [k]).forEach((x) => m.delete(x))),
       onChanged: { addListener: (l: (c: Record<string, unknown>) => void) => listeners.add(l), removeListener: (l: (c: Record<string, unknown>) => void) => listeners.delete(l) },
     };
   };
@@ -247,7 +248,7 @@ describe('options: style and personal glossary (plan M2-E6)', () => {
     expect(warn).toContain('the entries at the end of the list are left out');
   });
 
-  it('refuses a duplicate term and shows the quota guard\'s refusal without saving', async () => {
+  it('refuses a duplicate term; a glossary too large to sync is saved on this device with the notice', async () => {
     const f = fakeApi();
     f.sync.set('glossary', [{ term: 'deploy', rendering: 'deploy' }]);
     act(() => render(<Options api={f.api} />, root));
@@ -259,7 +260,7 @@ describe('options: style and personal glossary (plan M2-E6)', () => {
     expect(root.querySelector('[data-testid=glossary-note]')?.textContent).toContain('already in the glossary');
     expect(f.sync.get('glossary')).toEqual([{ term: 'deploy', rendering: 'deploy' }]);
 
-    // Fill the item close to its 8 KB quota, then one more entry is refused.
+    // Fill the item close to its 8 KB quota: one more entry stays on this device, sync keeps the last one that fit.
     const big = [];
     for (let i = 0; syncItemBytes(GLOSSARY_KEY, big) < SYNC_QUOTA_BYTES_PER_ITEM - 150; i++) big.push({ term: `term ${i}`, rendering: `r ${i}` });
     f.sync.set('glossary', big);
@@ -271,10 +272,17 @@ describe('options: style and personal glossary (plan M2-E6)', () => {
     input('#g-rendering', 'y'.repeat(200));
     submitGlossary();
     await flush();
-    const note = root.querySelector('[data-testid=glossary-note]')?.textContent ?? '';
-    expect(note).toContain("over Chrome's sync limit of 8192 bytes");
+    expect(root.querySelector('[data-testid=glossary-overflow]')?.textContent).toBe(OVERFLOW_NOTICE);
     expect(f.sync.get('glossary')).toBe(big);
-    expect(rows()).toHaveLength(big.length);
+    expect(f.local.get('overflow:glossary')).toBe(true);
+    expect(f.local.get('glossary')).toHaveLength(big.length + 1);
+    expect(rows()).toHaveLength(big.length + 1);
+    // Reopened: still read from this device, notice shown.
+    act(() => render(null, root));
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    expect(rows()).toHaveLength(big.length + 1);
+    expect(root.querySelector('[data-testid=glossary-overflow]')).not.toBeNull();
   });
 });
 

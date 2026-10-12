@@ -149,9 +149,12 @@ describe('selection mode in the panel (plan M3-E4, §3 #5)', () => {
     (t.hooks as Required<typeof t.hooks>).active(3);
     f.leave(3, record('Account number and balance.', 1, 'https://bank.example.com/account'));
     await until(() => t.snippets.jobs.get(3)?.status === 'running');
+    // Each change reaches the panel once the list's local overflow marker is read (sync-quota.ts).
     f.syncChange({ siteNever: { newValue: ['other.example.org'] } });
+    await settle(5);
     expect(t.snippets.store.get(3)).toBeDefined();
     f.syncChange({ siteNever: { newValue: ['bank.example.com'] } });
+    await settle(5);
     expect(t.snippets.store.get(3)).toBeUndefined();
     expect(t.snippets.jobs.get(3)).toBeUndefined();
     release();

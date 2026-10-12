@@ -49,10 +49,10 @@ import {
   GEMINI_CONNECTION,
   GEMINI_PROFILE,
   resolveConnection,
-  SYNC_QUOTA_BYTES_PER_ITEM,
   type ModelProfile,
   type ProviderConnection,
 } from './settings.ts';
+import { SYNC_QUOTA_BYTES_PER_ITEM } from './sync-quota.ts';
 
 type Api = Parameters<typeof migrateProviders>[0];
 
@@ -217,10 +217,11 @@ describe('migration from M1–M3 storage (plan M4 §3 #7)', () => {
     expect(parseStored(anthropic, await migratedRouteFromM1(anthropicApi))?.routing).toEqual({ translate: ANTHROPIC_HAIKU_PROFILE.id, fallback: [BASIC_FALLBACK] });
   });
 
-  it('a fresh install writes only the version; the default connection and route apply at read time', async () => {
+  it('a fresh install writes nothing, not even the version; the default connection and route apply at read time', async () => {
     const f = fakeApi();
     const s = await migrateProviders(f.api);
-    expect([...f.sync.data.keys()]).toEqual(['schemaVersion']);
+    expect([...f.sync.data.keys()]).toEqual([]);
+    expect(s.schemaVersion).toBe(SCHEMA_VERSION);
     expect(s.connections).toEqual(BUILTIN_CONNECTIONS);
     expect(ids(s.profiles)).toEqual(ids(BUILTIN_PROFILES));
     expect(ids(s.profiles).slice(0, 3)).toEqual([APIBOX_QWEN_PROFILE.id, APIBOX_PRO_PROFILE.id, APIBOX_FLASH_PROFILE.id]);
@@ -420,10 +421,10 @@ describe('routing resolution (plan M4-E8, DESIGN §4.3.5)', () => {
     expect(id(await resolveRoute(f.api, 'translate', { tabId: 5, url: 'https://y.com/' }))).toBe(`routing:${DEFAULT_PROFILE.id}`);
     await clearTabOverride(f.api, 4);
     expect(id(await resolveRoute(f.api, 'translate', { tabId: 4, url: 'https://y.com/' }))).toBe(`routing:${DEFAULT_PROFILE.id}`);
-    // Removing the last site rule empties its item, in the same write as the routing (review B-5).
+    // Removing the last site rule empties its item (review B-5), written before the routing.
     const before = f.sync.sets.length;
     await saveRouting(f.api, { translate: DEFAULT_PROFILE.id });
-    expect(f.sync.sets.slice(before)).toEqual([['routing', 'siteRules']]);
+    expect(f.sync.sets.slice(before)).toEqual([['siteRules'], ['routing']]);
     expect(f.sync.data.get('siteRules')).toEqual([]);
     expect((await readProviderSettings(f.api)).routing).toEqual({ translate: DEFAULT_PROFILE.id });
   });
