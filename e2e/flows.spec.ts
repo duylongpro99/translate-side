@@ -1,6 +1,7 @@
 // User flows over the extension, the fixture pages and the mock provider: the first-run privacy
 // notice, an SPA route change, a rate-limited provider and a malformed stream. Zero console errors
 // apply here too, apart from what a flow provokes on purpose (fixtures.ts `allowedConsole`).
+import fs from 'node:fs';
 import { blockStatuses, expect, jobSettled, test } from './fixtures.ts';
 
 test('the privacy notice blocks sending until it is acknowledged', async ({ extension, mock }) => {
@@ -20,7 +21,7 @@ test('the privacy notice blocks sending until it is acknowledged', async ({ exte
   expect(await jobSettled(panel)).toBe('done');
   expect(mock.calls.length).toBeGreaterThan(0);
   expect(Object.keys(await blockStatuses(panel)).filter((s) => s !== 'final' && s !== 'kept')).toEqual([]);
-  expect(await extension.worker.evaluate(async () => (await chrome.storage.local.get('privacyNotice')).privacyNotice)).toMatchObject({ version: 1 });
+  expect(await extension.worker.evaluate(async () => (await chrome.storage.local.get('privacyNotice')).privacyNotice)).toMatchObject({ version: 2 });
 });
 
 test('an SPA route change re-extracts the page, and translating it sends only the new segments', async ({ extension, mock }) => {
@@ -131,4 +132,38 @@ test('a 1,000-entry glossary saves through the options page, stays on this devic
   const translate = mock.calls.filter((c) => c.kind === 'translate');
   expect(translate.length).toBeGreaterThan(0);
   for (const call of translate) expect(call.prompt).toContain('quota-probe-term');
+});
+
+test('the diagnostics log records a failed job without the page text the provider echoed, and exports it without the site', async ({ extension, mock, context, allowedConsole }) => {
+  allowedConsole.push(/Failed to load resource: the server responded with a status of 400/);
+  await extension.seed();
+  mock.echoError(1);
+  const page = await extension.open('spa/docusaurus.html?p=intro');
+  const panel = await extension.panel();
+  await extension.translate(page);
+  expect(await jobSettled(panel)).toBe('done');
+  expect((await blockStatuses(panel)).failed ?? 0).toBeGreaterThan(0);
+  const sent = mock.calls.find((c) => c.status === 400)?.segments ?? [];
+  expect(sent.length).toBeGreaterThan(0);
+
+  const options = await context.newPage();
+  await options.goto(`chrome-extension://${extension.id}/options.html`);
+  await expect(options.getByTestId('diag-count')).toHaveText('1 entry.');
+  await options.getByTestId('diag-review').click();
+  await expect(options.getByTestId('diag-export')).toContainText('Nothing is sent automatically. Share this file privately.');
+  const [download] = await Promise.all([options.waitForEvent('download'), options.getByTestId('diag-save').click()]);
+  const file = fs.readFileSync((await download.path()) ?? '', 'utf8');
+  const { format, entries } = JSON.parse(file) as { format: string; entries: Record<string, unknown>[] };
+  expect(format).toBe('translate-side-diagnostics');
+  expect(entries).toHaveLength(1);
+  expect(entries[0]).toMatchObject({ type: 'page-job', outcome: 'done', model: 'mock-model', presetId: 'custom-openai', errors: [{ kind: 'bad_request', status: 400 }] });
+  expect(entries[0]?.failed).toBeGreaterThan(0);
+  expect(entries[0]?.calls).toBeGreaterThan(0);
+  expect(entries[0]?.chrome).toMatch(/^\d+\./);
+  for (const text of sent) expect(file).not.toContain(text.slice(0, 40));
+  for (const leak of ['Invalid request', '127.0.0.1', 'docusaurus', 'p=intro']) expect(file).not.toContain(leak);
+  // The same in storage: the file is what is kept.
+  const stored = JSON.stringify(await extension.worker.evaluate(async () => chrome.storage.local.get(null)));
+  for (const text of sent) expect(stored).not.toContain(text.slice(0, 40));
+  console.log(`diagnostics export:\n${file}`);
 });

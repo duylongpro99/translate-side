@@ -4,7 +4,8 @@
 // The mock answers every <seg> with "vi:" in front of its text and the analyze call (whose user
 // message starts with <document>) with a fixed brief, like the eval harness's mock client
 // (scripts/eval/run.ts). It can be told to answer the next translate calls with a 429 or a malformed
-// stream, and it logs every call so specs can see which segments were sent.
+// stream, or a 400 whose message quotes the segments sent (as some gateways do), and it logs every call so
+// specs can see which segments were sent.
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
@@ -59,6 +60,8 @@ export interface MockControl {
   rateLimit(n: number): void;
   /** Answer the next `n` translate calls with a stream holding a chunk that is not JSON. */
   malformed(n: number): void;
+  /** Answer the next `n` translate calls with a 400 whose error message quotes the segments sent. */
+  echoError(n: number): void;
   calls: MockCall[];
   reset(): void;
 }
@@ -69,14 +72,16 @@ const SEG = /<seg id="(\d+)"( n="[^"]*")?>([\s\S]*?)<\/seg>(?=\n<seg id=|$)/g;
 const chunk = (content: string, finish: string | null = null) => `data: ${JSON.stringify({ id: 'mock', object: 'chat.completion.chunk', created: 0, model: 'mock', choices: [{ index: 0, delta: { content }, finish_reason: finish }] })}\n\n`;
 
 export function mockServer(): { server: http.Server; control: MockControl } {
-  const pending = { rateLimit: 0, malformed: 0 };
+  const pending = { rateLimit: 0, malformed: 0, echoError: 0 };
   const control: MockControl = {
     rateLimit: (n) => void (pending.rateLimit = n),
     malformed: (n) => void (pending.malformed = n),
+    echoError: (n) => void (pending.echoError = n),
     calls: [],
     reset() {
       pending.rateLimit = 0;
       pending.malformed = 0;
+      pending.echoError = 0;
       control.calls.length = 0;
     },
   };
@@ -109,6 +114,12 @@ export function mockServer(): { server: http.Server; control: MockControl } {
         pending.rateLimit--;
         call.status = 429;
         res.writeHead(429, { 'content-type': 'application/json', 'retry-after': '1' }).end(JSON.stringify({ error: { message: 'Rate limit reached (mock)', type: 'rate_limit_error' } }));
+        return;
+      }
+      if (!analyze && pending.echoError > 0) {
+        pending.echoError--;
+        call.status = 400;
+        res.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: `Invalid request: ${call.segments.join(' ')}`, type: 'invalid_request_error' } }));
         return;
       }
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
