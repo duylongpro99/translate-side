@@ -1,6 +1,6 @@
 {
   "name": "translate-side",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Translate the current page in Chrome's side panel.",
