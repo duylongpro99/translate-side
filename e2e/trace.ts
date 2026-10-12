@@ -70,6 +70,10 @@ export async function record(context: BrowserContext, tab: Page, attribute: (sta
       const heap = await heapOf(session);
       const thread = mainThread(events, tab.url());
       if (thread === undefined) throw new Error(`no renderer main thread for ${tab.url()} in the trace`);
+      // Every task of that thread, long or not: none at all means the task event was renamed or not traced,
+      // and "no long task" would be measured on nothing.
+      const recorded = events.filter((e) => TOP.has(e.name) && e.ph === 'X' && `${e.pid}:${e.tid}` === thread).length;
+      if (recorded === 0) throw new Error(`no top-level task (${[...TOP].join(', ')}) recorded on the main thread of ${tab.url()}`);
       const tasks: LongTask[] = [];
       for (const e of events) {
         if (!TOP.has(e.name) || e.ph !== 'X' || (e.dur ?? 0) < 50_000 || `${e.pid}:${e.tid}` !== thread) continue;
