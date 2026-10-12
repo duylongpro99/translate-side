@@ -60,7 +60,13 @@ interface Fixtures {
   allowedConsole: RegExp[];
 }
 
-export const test = base.extend<Fixtures, { servers: MockControl; extPath: string }>({
+interface Options {
+  /** Chromium's UI language (`--lang`), which picks the extension's locale; unset: the browser's default. */
+  uiLang: string | undefined;
+}
+
+export const test = base.extend<Fixtures & Options, { servers: MockControl; extPath: string }>({
+  uiLang: [undefined, { option: true }],
   // Playwright reads a fixture's dependencies from its first parameter, which must be a destructuring pattern.
   // eslint-disable-next-line no-empty-pattern
   extPath: [async ({}, use) => use(copyExtension()), { scope: 'worker' }],
@@ -82,7 +88,7 @@ export const test = base.extend<Fixtures, { servers: MockControl; extPath: strin
   },
   // eslint-disable-next-line no-empty-pattern
   allowedConsole: async ({}, use) => use([]),
-  context: async ({ extPath, allowedConsole: allowed }, use) => {
+  context: async ({ extPath, allowedConsole: allowed, uiLang }, use) => {
     const errors: string[] = [];
     // Closing the browser makes the worker's tab cleanup fail with "The browser is shutting down": that is
     // the harness ending the run. Only that message is dropped once the close starts.
@@ -114,7 +120,7 @@ export const test = base.extend<Fixtures, { servers: MockControl; extPath: strin
     const context = await chromium.launchPersistentContext('', {
       channel: 'chromium',
       headless: true,
-      args: [`--disable-extensions-except=${extPath}`, `--load-extension=${extPath}`, ...CHROMIUM_ARGS],
+      args: [`--disable-extensions-except=${extPath}`, `--load-extension=${extPath}`, ...CHROMIUM_ARGS, ...(uiLang ? [`--lang=${uiLang}`] : [])],
       viewport: { width: 1100, height: 800 },
     });
     // The site fixtures keep their <base href> (fixtures/sites/README.md): stylesheets, fonts and images

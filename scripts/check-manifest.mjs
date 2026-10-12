@@ -21,6 +21,26 @@ expectEqual('minimum_chrome_version', m.minimum_chrome_version, '138');
 expectEqual('commands._execute_action.suggested_key', m.commands?._execute_action?.suggested_key, { default: 'Alt+T' });
 expectEqual('side_panel.default_path', m.side_panel?.default_path, 'sidepanel.html');
 expectEqual('background.service_worker', m.background?.service_worker, 'background.js');
+// Localization: the default locale is English, and every __MSG_*__ the manifest uses resolves in both locales.
+expectEqual('default_locale', m.default_locale, 'en');
+const messageKeys = [];
+const collect = (value) => {
+  if (typeof value === 'string') for (const [, key] of value.matchAll(/__MSG_(\w+)__/g)) messageKeys.push(key);
+  else if (value && typeof value === 'object') Object.values(value).forEach(collect);
+};
+collect(m);
+if (messageKeys.length === 0) problems.push('manifest: no __MSG_*__ keys (the name and description are localized)');
+for (const locale of ['en', 'vi']) {
+  const file = join(dirname(path), '_locales', locale, 'messages.json');
+  if (!existsSync(file)) {
+    problems.push(`_locales/${locale}/messages.json: missing from the build`);
+    continue;
+  }
+  const messages = JSON.parse(readFileSync(file, 'utf8'));
+  for (const key of messageKeys) {
+    if (typeof messages[key]?.message !== 'string' || messages[key].message === '') problems.push(`_locales/${locale}: __MSG_${key}__ does not resolve`);
+  }
+}
 // The worker injects this file by path (src/shared/inject.ts CONTENT_SCRIPT_FILE).
 if (!existsSync(join(dirname(path), 'content-scripts/content.js'))) problems.push('content-scripts/content.js: missing from the build');
 // The segment view is dev-only (plan M0-E7): import.meta.env.DEV must drop it from this build.
