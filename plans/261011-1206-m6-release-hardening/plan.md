@@ -182,3 +182,12 @@ apply to the local gate. The plan's §3 #3 wording "gate green in CI" is read as
 **Sweep:** a grep for `eval-gate.yml`, `Actions secret`, `AIBOX_API_KEY` and `CI run of the gate` across the plan
 files finds only this log and the Updated markers.
 
+
+### Session 3 — 2026-10-12
+
+| # | Question | Answer | Propagated to |
+|---|---|---|---|
+| 1 | What should the margin floor be? A shipped-default gate pass went red on terminology alone, 4.30 against a 0.137 margin, with no change to the code. | Raise `MIN_MARGIN` to 0.20, and recompute `eval/gate.json` from the existing 5 baseline runs with no new calls. Naturalness and terminology margins become 0.20; fidelity and tone stay at 0.26. | Phase 1 step 3, `scripts/eval/gate.ts`, `eval/gate.json`, `eval/README.md` |
+
+The reviewer judged the two terminology scores of 4.30 to be judge noise, not drift: a different set of passages lost
+a point each time, and the pooled SD over 8 passes is 0.10, which fits a 0.20 margin.

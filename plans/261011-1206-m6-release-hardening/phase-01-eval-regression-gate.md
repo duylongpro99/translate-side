@@ -79,7 +79,7 @@ Spec: DESIGN.md §6 (cost); `eval/README.md` (eval workflow).
 2. **Re-baseline at HEAD.** Run the gate configuration 5 times with the judge, and store the runs as
    `eval/runs/gate-baseline-<n>/`.
 3. **Margin.** For each dimension, take the SD of the 23-passage judge mean across the 5 runs. The margin is the
-   larger of 2 × SD and 0.10. Write `eval/gate.json` with:
+   larger of 2 × SD and 0.20 (Validation Session 3). Write `eval/gate.json` with:
    - the margins, the SDs and the per-dimension baseline means;
    - the judge model and the prompt id;
    - the model, strategy and chunk size;
