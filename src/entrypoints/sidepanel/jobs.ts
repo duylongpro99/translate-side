@@ -29,6 +29,8 @@ import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCa
 import { costUsd, formatUsd, type UsageTotals } from '@/shared/cost';
 import type { Detection } from '@/shared/language';
 import { entryId, type JobRecord } from '@/shared/diagnostics';
+import { i18n } from '#i18n';
+import { uiError } from './status.ts';
 import type { LimitReached, SpendDelta } from '@/shared/spend';
 import type { ModelProfile } from '@/shared/settings';
 
@@ -500,7 +502,7 @@ export function lazyWindow(translatable: readonly Segment[], screen: readonly st
 }
 
 /** What a run stopped by the soft limit shows as its error. */
-export const limitError = (l: LimitReached): LLMError => ({ kind: 'unknown', message: `This month's spend (${formatUsd(l.monthUsd)}) reached your soft limit of ${formatUsd(l.limitUsd)}` });
+export const limitError = (l: LimitReached): LLMError => uiError('unknown', `This month's spend (${formatUsd(l.monthUsd)}) reached your soft limit of ${formatUsd(l.limitUsd)}`, 'limit', [formatUsd(l.monthUsd), formatUsd(l.limitUsd)]);
 
 export interface JobDoc {
   url: string;
@@ -1134,7 +1136,7 @@ export class Jobs {
         else if (event.type === 'segment.failed' && event.id === id) outcome = { status: 'failed', error: event.error };
       }
       if (signal.aborted) return set(undefined);
-      set(outcome?.status === 'loading' || outcome === undefined ? { status: 'failed', error: { kind: 'unknown', message: 'no explanation came back' } } : outcome);
+      set(outcome?.status === 'loading' || outcome === undefined ? { status: 'failed', error: uiError('unknown', 'no explanation came back', 'noExplanation') } : outcome);
     } catch (err) {
       set(signal.aborted ? undefined : { status: 'failed', error: { kind: 'unknown', message: err instanceof Error ? err.message : String(err), raw: err } });
     } finally {
@@ -1206,7 +1208,7 @@ export class Jobs {
         }
       }
       if (signal.aborted || !outcome || outcome.status === 'streaming' || outcome.status === 'pending') return settle(before);
-      if (outcome.status === 'failed' && mode === 'retranslate') settle(failedWith(outcome.error ?? { kind: 'unknown', message: 'no translation came back' }));
+      if (outcome.status === 'failed' && mode === 'retranslate') settle(failedWith(outcome.error ?? uiError('unknown', 'no translation came back', 'noTranslation')));
       else {
         const key = this.keyFor(job, id, outcome.model);
         if (mode === 'retranslate' && key !== undefined) job.replaceKeys.add(key);
@@ -1340,7 +1342,7 @@ export class Jobs {
         // A retranslated block that fails keeps its earlier translation, and its cache entry (B2).
         const earlier = job.earlier.get(event.id);
         const restored = next.status === 'failed' && earlier !== undefined;
-        if (restored) next = { ...earlier, redoError: next.error ?? { kind: 'unknown', message: 'no translation came back' } };
+        if (restored) next = { ...earlier, redoError: next.error ?? uiError('unknown', 'no translation came back', 'noTranslation') };
         else if (next.status === 'final') job.earlier.delete(event.id);
         job.segs.set(event.id, next);
         if (!restored) this.remember(job, event.id, next);
@@ -1367,7 +1369,7 @@ export class Jobs {
         const info = event.info as BasicSwitchInfo;
         if (event.status === 'start') {
           job.basicCarried = false;
-          this.patch(tabId, job, { fallback: { from: info.from, to: info.to ?? 'basic translation', error: info.error, basic: true } });
+          this.patch(tabId, job, { fallback: { from: info.from, to: info.to ?? i18n.t('panel.segment.basic'), error: info.error, basic: true } });
         }
         else if (event.status === 'done' && info.recovered && job.view.fallback?.basic) this.patch(tabId, job, { fallback: { ...job.view.fallback, recovered: true } });
         return;

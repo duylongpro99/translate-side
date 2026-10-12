@@ -7,6 +7,7 @@ import { App, type TranslatorProps } from './App.tsx';
 import type { Jobs, JobView, SegState } from './jobs.ts';
 import { parseMarkup, plainText } from './markup.ts';
 import type { PanelController, PanelView } from './controller.ts';
+import { uiError } from './status.ts';
 
 function fakeController(view: PanelView) {
   let listener: ((v: PanelView, tabId: number | undefined) => void) | undefined;
@@ -310,7 +311,7 @@ describe('translation in the panel (plan M1-E10)', () => {
   });
 
   it('a stopped job offers the fix: settings for the key, Grant access for the host permission', async () => {
-    const f = mountJob(jobView([], { status: 'stopped', stopError: { kind: 'auth', message: 'Add your Gemini API key in settings' } }));
+    const f = mountJob(jobView([], { status: 'stopped', stopError: uiError('auth', 'Add your Gemini API key in settings', 'noKey', ['Gemini']) }));
     expect(root.querySelector('[data-testid=job]')?.textContent).toContain('Add your Gemini API key in settings');
     act(() => (root.querySelector('[data-testid=job] button') as HTMLButtonElement).click());
     await f.j.push(jobView([], { status: 'stopped', stopError: { kind: 'cors', cause: 'permission', message: 'No access to generativelanguage.googleapis.com' } }));

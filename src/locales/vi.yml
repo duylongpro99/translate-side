@@ -2,3 +2,249 @@ extName: Translate Side
 extDescription: Dịch trang hiện tại ngay trong bảng bên.
 actionTitle: Mở Translate Side
 commandToggle: Mở hoặc đóng bảng Translate Side
+
+panel:
+  appName: Translate Side
+  meta:
+    original:
+      n: Văn bản gốc · $1 đoạn
+  header:
+    follow: Cuộn theo trang
+    followOn: Đang cuộn theo trang (nhấn để dừng)
+    followOff: Cuộn theo trang khi bạn cuộn
+    shortcuts: Phím tắt
+    settings: Cài đặt
+    close: Đóng
+    closePanel: Đóng bảng
+    prefsFailed: Không lưu được thiết lập đó. Hãy thử lại hoặc đổi trong phần cài đặt.
+    switchFailed: Không đổi được mô hình cho thẻ này. Hãy thử lại.
+    defaultFailed: Không lưu được mặc định. Hãy thử lại hoặc đặt trong phần cài đặt.
+  setup:
+    text: Bạn mới dùng? Hãy thiết lập nhà cung cấp dịch để bắt đầu dịch.
+    button: Thiết lập Translate Side
+  controls:
+    auto: Tự động
+    from: Từ $1
+    sourceDetected: "Ngôn ngữ nguồn: tự nhận diện"
+    translateInto: Dịch sang
+    styleLabel: Phong cách
+    style:
+      natural: Tự nhiên
+      faithful: Sát nghĩa
+      simplified: Đơn giản
+    styleTitle:
+      natural: Đọc như thể được viết bằng ngôn ngữ của bạn
+      faithful: Sát với cách diễn đạt của bản gốc
+      simplified: "Dễ đọc hơn: câu ngắn hơn, từ ngữ đơn giản"
+    cancel: Hủy
+    retranslatePage: ↻ Dịch lại trang
+    retranslatePageTitle: Dịch lại toàn bộ trang, bỏ qua các bản dịch đã lưu
+  switcher:
+    label: Dịch thẻ này bằng
+    selectTitle: $1 (chỉ áp dụng cho thẻ này; mặc định của bạn không đổi)
+    defaultOption: $1 (mặc định)
+    defaultModel: Mô hình mặc định
+    model: "Mô hình: $1"
+    modelBare: Mô hình
+    local: cục bộ
+    noKey: chưa có key
+    tabOnly: Chỉ thẻ này
+    makeDefault: Đặt làm mặc định
+    makeDefaultTitle: Dùng mô hình này cho mọi trang từ giờ trở đi
+    rule: quy tắc trang $1 (ưu tiên hơn lựa chọn của thẻ)
+    ruleLocal: quy tắc trang $1 (chỉ cục bộ) (ưu tiên hơn lựa chọn của thẻ)
+    ruleTitle: Quy tắc trang cho $1 đã chọn mô hình, nên lựa chọn theo thẻ sẽ không có tác dụng
+    announceTab: Thẻ này hiện dịch bằng $1, chỉ riêng thẻ này.
+    announceDefault: Thẻ này dịch bằng $1, tức mô hình mặc định.
+  offer:
+    ask:
+      n: Văn bản gốc · $1 đoạn. Chưa có gì được gửi đi.
+    never:
+      n: Bạn đã chọn không bao giờ dịch trang này. Không có gì được gửi đi. · $1 đoạn
+    neverSite:
+      n: Bạn đã chọn không bao giờ dịch $1. Không có gì được gửi đi. · $2 đoạn
+    siteRules: Quy tắc trang
+    translate: Dịch trang này
+    allow: Luôn dịch $1
+    allowTitle: Tự dịch từng trang của $1 khi bảng đang mở. Trình duyệt sẽ hỏi quyền truy cập trang này một lần.
+    notGranted: Quyền truy cập $1 chưa được cấp, nên các trang ở đó vẫn chờ bạn nhấn nút này.
+  privacy:
+    title: Trước khi dịch
+    text: Translate Side gửi nội dung các trang bạn dịch đến nhà cung cấp AI mà bạn đã chọn{now}. Chỉ những trang bạn mở bảng này mới được gửi, và chỉ sau khi bạn nhấn nút bên dưới.
+    now: "— hiện là {provider}"
+    fallback: ", và nếu nhà cung cấp đó bận hoặc ngừng hoạt động thì dùng {list}"
+    then: ", rồi"
+    never: Trang thư và trang đăng nhập, trang của trình duyệt và Chrome Web Store không bao giờ được đọc hay gửi đi.
+    fields: Ô mật khẩu, các ô biểu mẫu khác và mọi nơi bạn có thể gõ chữ đều không bao giờ được đọc. Trang đang có ô mật khẩu được sử dụng sẽ bị bỏ qua.
+    local: Với các trang nhạy cảm, đừng dịch bằng nhà cung cấp đám mây. Một mô hình cục bộ trên máy tính này (Ollama hoặc LM Studio, thiết lập trong Nhà cung cấp) giữ văn bản ngay trên thiết bị.
+    diagnostics: Nhật ký chẩn đoán về các lần dịch gần đây (số lượng, thời gian, loại lỗi; không có nội dung trang) được lưu trên thiết bị này. Nó chỉ rời khỏi máy khi bạn xuất ra trong Cài đặt.
+    ok: Đã hiểu, bắt đầu dịch
+  state:
+    loading: Đang đọc trang…
+    idleTitle: Chưa đọc gì
+    idleText: Nhấn Alt+T hoặc nhấp biểu tượng trên thanh công cụ để đọc trang này.
+    passwordTitle: "Chưa đọc: đang dùng ô mật khẩu"
+    password: Con trỏ đang ở trong ô mật khẩu trên trang này, nên Translate Side không đọc trang. Không có gì được gửi đi.
+    passwordHint: Hãy nhấp ra ngoài ô mật khẩu, rồi nhấn Alt+T hoặc nhấp biểu tượng trên thanh công cụ lần nữa.
+    blockedTitle: Không đọc được trang này
+    denylisted: Translate Side không bao giờ đọc trang này (trang thư và trang đăng nhập nằm trong danh sách chặn có sẵn).
+    never: Bạn đã chọn không bao giờ dịch trang này. Translate Side không đọc trang. Bạn có thể đổi trong Cài đặt › Quy tắc trang.
+    browserPage: Chrome không cho tiện ích đọc trang này (trang của trình duyệt, Web Store và các trang tương tự).
+    lostTitle: Dịch trang này
+    lostText: Translate Side chưa biết trang này. Nhấn Alt+T hoặc nhấp biểu tượng trên thanh công cụ để đọc.
+    lostHint: Không đọc được trang của trình duyệt và Chrome Web Store; Chrome không cho tiện ích xem các trang đó.
+    extractionHint: Không đọc được trang này. Hãy chọn đoạn văn bản để dịch.
+    emptyText: Translate Side không tìm thấy bài viết hay nội dung tài liệu nào trên trang này.
+    emptyHint: Hãy chọn văn bản, rồi nhấp chuột phải → Dịch trong bảng bên.
+    errorTitle: Đã xảy ra lỗi
+    retry: Thử lại
+  selection:
+    title: Đoạn đã chọn
+    back: Quay lại trang
+    close: Đóng
+    blockedTitle: Không dịch được đoạn đã chọn
+    translating: Đang dịch đoạn đã chọn…
+    truncated: Chỉ phần đầu của đoạn chọn dài được dịch.
+  shortcuts:
+    title: Phím tắt
+    note: Các phím chữ và phím mũi tên hoạt động khi một đoạn hoặc một nút của đoạn đang được chọn. Phím Tab chỉ đưa bạn vào danh sách một lần; dùng phím mũi tên để di chuyển trong đó.
+    changeKey: Đổi phím bật/tắt
+    close: Đóng
+  about:
+    summary: Về tài liệu này
+    language: Ngôn ngữ
+    genre: Thể loại
+    audience: Đối tượng
+    purpose: Mục đích
+    tone: Giọng văn
+    keyTerms: Thuật ngữ chính
+  crash:
+    message: Bảng đã gặp sự cố. Tải lại bảng thường sẽ khắc phục được; các bản dịch đến lúc này vẫn được giữ trong bộ nhớ đệm.
+    reload: Tải lại bảng
+    copy: Sao chép chi tiết
+    copied: (đã sao chép)
+    details: "{app}: {kind} trong {name}"
+  segment:
+    region: Bản dịch
+    image: Hình ảnh
+    codeKept: mã, giữ nguyên
+    hidden: bị ẩn trên trang (thẻ hoặc phần đã thu gọn)
+    hiddenShort: bị ẩn trên trang
+    actionsFor: Thao tác cho "$1"
+    original: Bản gốc
+    hideOriginal: Ẩn bản gốc
+    showOriginalFor: "Hiện bản gốc: \"$1\""
+    hideOriginalFor: "Ẩn bản gốc: \"$1\""
+    retranslate: Dịch lại
+    retranslateFor: "Dịch lại: \"$1\""
+    retranslateTitle: Dịch lại đoạn này, bỏ qua bản dịch đã lưu
+    explain: Giải thích
+    explainAgain: Giải thích lại
+    explaining: Đang giải thích…
+    explainFor: "Giải thích đoạn: \"$1\""
+    explainTitle: Ghi chú ngắn về thành ngữ hoặc yếu tố văn hóa trong đoạn này
+    copy: Sao chép
+    copied: Đã sao chép
+    copyFailed: Không sao chép được
+    copyFor: "Sao chép: \"$1\""
+    basic: bản dịch cơ bản
+    basicTitle: Được dịch ngay trên thiết bị này bởi $1 vì không kết nối được mô hình nào. Bản dịch này sát từng chữ; hãy dịch lại khi mô hình hoạt động trở lại.
+    chromeTranslator: trình dịch tích hợp của Chrome
+    fallbackTitle: Được dịch bởi $1 vì $2 không khả dụng
+    fallbackLabel: Được dịch bởi mô hình dự phòng $1
+    failed: "Chưa dịch được: $1"
+    retry: Thử lại
+    redoFailed: "Dịch lại không thành công: $1. Bản dịch trước đó vẫn được giữ."
+    explainFailed: "Không có giải thích: $1"
+    itFailed: đã thất bại
+    explanation: Giải thích
+    explanationSr: "Giải thích: $1"
+  job:
+    seconds: $1 giây
+    running: Đang dịch sang $1… $2/$3
+    done: $1 · $2/$3
+    failed: $1 lỗi
+    restAsRead: phần còn lại dịch khi bạn đọc tới
+    cancelled: Đã hủy · đã dịch $1/$2
+    cancel: Hủy
+    retry: Thử lại
+    retryFailed: Thử lại các đoạn lỗi
+    tryAgain: Thử lại
+    stopped: Đã dừng
+    settings: Cài đặt
+    openSettings: Mở cài đặt
+    fixKey: Sửa key
+    fixKeyTitle: Mở cài đặt của $1
+    grantAccess: Cấp quyền truy cập
+    translateRest: Dịch phần còn lại
+    translateAnyway: Vẫn dịch
+    continueAnyway: Vẫn tiếp tục
+    excludesCancelled: chưa tính các yêu cầu đã hủy
+    costTitle: $1 token đầu vào ($2 token từ bộ nhớ đệm), $3 token đầu ra
+    kept:
+      n: $1 đoạn vẫn giữ bản dịch trước đó
+    restTitle:
+      n: $1 đoạn đang chờ; chúng sẽ được dịch khi bạn cuộn tới
+    limit: Chi tiêu tháng này ($1) đã đạt giới hạn mềm $2 của bạn. Không có gì được gửi đi.
+    limitSaveFailed: Không lưu được lựa chọn “Vẫn tiếp tục” ($1). Hãy thử lại hoặc nâng giới hạn trong Cài đặt.
+    lostConnection: Mất kết nối · đã dịch $1/$2, phần còn lại đang chờ
+    localModel: Mô hình cục bộ
+    localUnreachable: Không kết nối được $1 · đã dịch $2/$3, phần còn lại đang chờ
+    localBusy: $1 $2 · đã dịch $3/$4
+    localOnly: Quy tắc chỉ-cục-bộ cho $1 giữ trang này không đi qua nhà cung cấp đám mây, nên không chuyển sang nhà cung cấp đám mây.
+    skipped: Trang này đã bằng ngôn ngữ $1 nên không được dịch ($2).
+    how:
+      override: theo thiết lập ngôn ngữ nguồn của bạn
+      htmlLang: theo thẻ ngôn ngữ của trang
+      detected: theo nhận diện ngôn ngữ trên thiết bị này
+    backoff:
+      rateLimit: Bị giới hạn tốc độ
+      network: Sự cố kết nối
+      busy: Nhà cung cấp đang bận
+      soon: sẽ thử lại ngay
+      in: thử lại sau $1 giây
+      part: phần $1
+      attempt: (lần thử $1)
+    why:
+      rateLimit: đang bị giới hạn tốc độ
+      network: không kết nối được
+      overloaded: đang quá tải
+    whyPast:
+      rateLimit: đã bị giới hạn tốc độ
+      network: đã không kết nối được
+      overloaded: đã quá tải
+    fallback:
+      againRunning: đang dịch trở lại
+      againDone: đã dịch các đoạn sau đó
+      recoveredBasic: $1 $2 trong một lúc; $3 đã dịch các đoạn ở giữa, được đánh dấu “bản dịch cơ bản”, và $1 $4.
+      recoveredNoBasic: $1 $2 trong một lúc; $3 không dịch được các đoạn ở giữa, và $1 $4.
+      basicNoHelp: $1 $2 và không có mô hình nào khác phản hồi; $3 cũng không dịch được trang này.
+      basicContinuing: $1 $2 và không có mô hình nào khác phản hồi; đang tiếp tục với $3. Các đoạn do nó dịch được đánh dấu “bản dịch cơ bản”.
+      basicContinued: $1 $2 và không có mô hình nào khác phản hồi; đã tiếp tục với $3. Các đoạn do nó dịch được đánh dấu “bản dịch cơ bản”.
+      continuing: $1 $2; đang tiếp tục với $3. Các đoạn do nó dịch được đánh dấu.
+      continued: $1 $2; đã tiếp tục với $3. Các đoạn do nó dịch được đánh dấu.
+
+errors:
+  auth: API key không hợp lệ hoặc bị thiếu
+  authCharacters: API key có ký tự không thể gửi đi
+  noKey: Hãy thêm API key của $1 trong cài đặt
+  noProtocol: $1 chưa có giao thức. Hãy kiểm tra kết nối trong cài đặt.
+  nanoOff: Chrome tích hợp (Gemini Nano) còn đang thử nghiệm và đã tắt trong phiên bản này. Hãy chọn mô hình khác trong cài đặt.
+  noAccess: Không có quyền truy cập $1
+  noAccessProvider: không có quyền truy cập nhà cung cấp
+  corsOrigin: nhà cung cấp từ chối nguồn gốc này (CORS)
+  settingsRead: Không đọc được cài đặt nhà cung cấp ($1)
+  limit: Chi tiêu tháng này ($1) đã đạt giới hạn mềm $2 của bạn
+  noExplanation: không nhận được giải thích
+  noTranslation: không nhận được bản dịch
+  noBasicMissing: Thiết bị này không có trình dịch tích hợp, nên cũng không có bản dịch cơ bản.
+  noBasicPair: $1 không dịch được $2 → $3 trên thiết bị này, nên cũng không có bản dịch cơ bản.
+  withNoBasic: $1. $2
+  budget: đã bỏ qua, ngân sách cho trang này đã hết
+  stopped: quá trình dịch đã dừng bất ngờ
+  quota: key này không còn hạn mức ($1)
+  busy: nhà cung cấp đang bận; hãy thử lại sau giây lát
+  network: lỗi mạng
+  contextLength: quá dài đối với mô hình
+  modelNotFound: không tìm thấy mô hình ($1)
+  unknown: lỗi không xác định

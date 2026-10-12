@@ -468,6 +468,7 @@ body {
 /* Per-block actions (M3-E5): shown on hover or keyboard focus, always reachable by Tab. */
 .seg__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   margin-top: 2px;
   opacity: 0;

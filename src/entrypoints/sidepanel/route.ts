@@ -9,11 +9,14 @@ import { DEFAULT_CONNECTION, hasHostPermission, originPattern, protocolOf, resol
 import { fallbackRoutesIn, hasBasicFallback, readProviderSettings, resolveFallback, resolveRoute, saveLearnedQuirk, type Route } from '@/shared/providers';
 import { pricingFor } from '@/shared/pricing';
 import type { AnalyzeResult, ClientResult, FallbackLink, JobConnection } from './jobs.ts';
+import { uiError } from './status.ts';
+import type { LLMError } from '@/llm/types';
 
 type Browser = typeof browser;
 
 /** Message of the "no key yet" stop: the panel shows the settings link for it. */
 export const noKeyMessage = (label: string) => `Add your ${label} API key in settings`;
+const noKeyError = (label: string): LLMError => uiError('auth', noKeyMessage(label), 'noKey', [label]);
 export const NO_KEY_MESSAGE = noKeyMessage(DEFAULT_CONNECTION.label);
 
 /** What a job translates: the page's URL (site rules) and its tab (the tab's override). */
@@ -53,16 +56,16 @@ async function clientOf(api: Browser, route: Route): Promise<Omit<Resolved, 'ana
   const { profile, connection } = route;
   const label = jobConnection(connection);
   if (protocolOf(connection, profile) === undefined) {
-    return { ok: false, error: { kind: 'bad_request', message: `${connection.label} has no protocol yet. Test the connection in settings.` }, connection: label };
+    return { ok: false, error: uiError('bad_request', `${connection.label} has no protocol yet. Test the connection in settings.`, 'noProtocol', [connection.label]), connection: label };
   }
   // A stored or synced Gemini Nano profile (no UI makes one while the flag is off, M5-E7).
-  if (protocolOf(connection, profile) === 'chrome-builtin' && !CHROME_NANO) return { ok: false, error: { kind: 'bad_request', message: NANO_OFF_MESSAGE }, connection: label };
+  if (protocolOf(connection, profile) === 'chrome-builtin' && !CHROME_NANO) return { ok: false, error: uiError('bad_request', NANO_OFF_MESSAGE, 'nanoOff'), connection: label };
   const conn = await resolveConnection(api, connection, profile);
-  if (conn === null) return { ok: false, error: { kind: 'auth', message: noKeyMessage(connection.label) }, connection: label };
+  if (conn === null) return { ok: false, error: noKeyError(connection.label), connection: label };
   // Checked up front: without it the request fails as `cors` / `permission` anyway (S4 row 1), but
   // only after the job has started.
   if (!(await hasHostPermission(api, conn.baseUrl))) {
-    return { ok: false, error: { kind: 'cors', cause: 'permission', message: `No access to ${new URL(conn.baseUrl).hostname}` }, connection: label };
+    return { ok: false, error: uiError('cors', `No access to ${new URL(conn.baseUrl).hostname}`, 'noAccess', [new URL(conn.baseUrl).hostname], 'permission'), connection: label };
   }
   // The cost readout prices the job from the profile: its own pricing, or the built-in Anthropic table (M3-E9).
   const pricing = pricingFor(profile, connection);
@@ -81,7 +84,7 @@ async function clientOf(api: Browser, route: Route): Promise<Omit<Resolved, 'ana
 
 const settingsError = (error: unknown): Failed => ({
   ok: false,
-  error: { kind: 'unknown', message: `Could not read the provider settings (${error instanceof Error ? error.message : String(error)})` },
+  error: uiError('unknown', `Could not read the provider settings (${error instanceof Error ? error.message : String(error)})`, 'settingsRead', [error instanceof Error ? error.message : String(error)]),
 });
 
 /**

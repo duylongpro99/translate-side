@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { i18n } from '#i18n';
 import type { PageOffer } from './offers.ts';
 
 // A page the panel read but does not translate on its own (plan M5-E3, DESIGN §8): after a
@@ -10,36 +11,36 @@ export function OfferBar({ offer, blocks, onTranslate, onAllow, onSettings }: { 
     return (
       <section class="offer" data-testid="offer" data-reason="never" role="status">
         <p class="offer__text">
-          You chose never to translate {offer.site ?? 'this site'}. Nothing is sent. · {blocks} blocks
+          {offer.site ? i18n.t('panel.offer.neverSite', blocks, [offer.site, String(blocks)]) : i18n.t('panel.offer.never', blocks)}
         </p>
         <button type="button" class="job__button" onClick={onSettings}>
-          Site rules
+          {i18n.t('panel.offer.siteRules')}
         </button>
       </section>
     );
   return (
     <section class="offer" data-testid="offer" data-reason="ask" role="status">
-      <p class="offer__text">Original text · {blocks} blocks. Nothing has been sent.</p>
+      <p class="offer__text">{i18n.t('panel.offer.ask', blocks)}</p>
       <div class="offer__actions">
         <button type="button" class="job__button job__button--primary" data-testid="translate-page" onClick={onTranslate}>
-          Translate this page
+          {i18n.t('panel.offer.translate')}
         </button>
         {offer.site ? (
           <button
             type="button"
             class="job__button"
             data-testid="allow-site"
-            title={`Translate each page of ${offer.site} by itself while the panel is open. The browser asks for access to the site once.`}
+            title={i18n.t('panel.offer.allowTitle', [offer.site])}
             onClick={() => {
               setNote(null);
               // First call in the handler: the permission prompt needs the click (S5).
               onAllow().then(
-                (granted) => setNote(granted ? null : `Access to ${offer.site} was not granted, so pages there still wait for this click.`),
+                (granted) => setNote(granted ? null : i18n.t('panel.offer.notGranted', [offer.site as string])),
                 (e: unknown) => setNote(e instanceof Error ? e.message : String(e)),
               );
             }}
           >
-            Always translate {offer.site}
+            {i18n.t('panel.offer.allow', [offer.site])}
           </button>
         ) : null}
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { i18n } from '#i18n';
 import type { SwitcherState } from './switcher.ts';
 
 // The quick switcher in the panel header (DESIGN.md §3, §4.3.3 B, plan M4-E11): the model profiles
@@ -31,19 +32,18 @@ export function ModelSwitcher({ state, model, onChoose, onMakeDefault, error }: 
   }, [choice]);
   if (rule) {
     return (
-      <span class="panel__model panel__model--rule" data-slot="quick-switcher" data-testid="header-model" title={`The site rule for ${rule.pattern} sets the model, so a tab choice would not apply`}>
+      <span class="panel__model panel__model--rule" data-slot="quick-switcher" data-testid="header-model" title={i18n.t('panel.switcher.ruleTitle', [rule.pattern])}>
         {rule.model}
         <span class="panel__rule" data-testid="switcher-site-rule">
           {' '}
-          · site rule {rule.pattern}
-          {rule.localOnly ? ' (local only)' : ''} (overrides tab choice)
+          · {i18n.t(rule.localOnly ? 'panel.switcher.ruleLocal' : 'panel.switcher.rule', [rule.pattern])}
         </span>
       </span>
     );
   }
   if (!state || state.options.length <= 1) {
     return (
-      <span class="panel__model" data-slot="quick-switcher" data-testid="header-model" title={model ? `Model: ${model}` : 'Model'}>
+      <span class="panel__model" data-slot="quick-switcher" data-testid="header-model" title={model ? i18n.t('panel.switcher.model', [model]) : i18n.t('panel.switcher.modelBare')}>
         {model}
       </span>
     );
@@ -58,8 +58,8 @@ export function ModelSwitcher({ state, model, onChoose, onMakeDefault, error }: 
       <select
         class="panel__select"
         data-testid="model-switcher"
-        aria-label="Translate this tab with"
-        title={`${selectedLabel} (applies to this tab only; your default stays the same)`}
+        aria-label={i18n.t('panel.switcher.label')}
+        title={i18n.t('panel.switcher.selectTitle', [selectedLabel])}
         aria-describedby={overridden ? 'switcher-note' : undefined}
         value={overridden ? state.tabId : DEFAULT_VALUE}
         onChange={(e) => {
@@ -67,30 +67,30 @@ export function ModelSwitcher({ state, model, onChoose, onMakeDefault, error }: 
           onChoose(v === DEFAULT_VALUE ? undefined : v);
         }}
       >
-        <option value={DEFAULT_VALUE}>{defaultOption ? `${defaultOption.model} (default)` : (model || 'Default model')}</option>
+        <option value={DEFAULT_VALUE}>{defaultOption ? i18n.t('panel.switcher.defaultOption', [defaultOption.model]) : model || i18n.t('panel.switcher.defaultModel')}</option>
         {state.options
           .filter((o) => o.id !== state.defaultId)
           .map((o) => (
             <option key={o.id} value={o.id} disabled={!o.usable && o.id !== current}>
               {o.model} · {o.connection}
-              {o.local ? ' · local' : ''}
-              {o.usable ? '' : ' · no key'}
+              {o.local ? ` · ${i18n.t('panel.switcher.local')}` : ''}
+              {o.usable ? '' : ` · ${i18n.t('panel.switcher.noKey')}`}
             </option>
           ))}
       </select>
       {overridden && current ? (
         <>
           <span id="switcher-note" class="panel__tabonly" data-testid="switcher-tab-only">
-            This tab only
+            {i18n.t('panel.switcher.tabOnly')}
           </span>
-          <button type="button" class="panel__action" data-testid="make-default" aria-describedby="switcher-note" title="Use this model for every page from now on" onClick={() => onMakeDefault(current)}>
-            Make default
+          <button type="button" class="panel__action" data-testid="make-default" aria-describedby="switcher-note" title={i18n.t('panel.switcher.makeDefaultTitle')} onClick={() => onMakeDefault(current)}>
+            {i18n.t('panel.switcher.makeDefault')}
           </button>
         </>
       ) : null}
       {/* Said aloud when a switch lands: the page below changes, not the focus. */}
       <span class="panel__sr" role="status" aria-live="polite" data-testid="switcher-live">
-        {!announce ? '' : overridden && current ? `This tab now translates with ${options(state, current)}, this tab only.` : `This tab translates with ${defaultOption?.model ?? model}, the default.`}
+        {!announce ? '' : overridden && current ? i18n.t('panel.switcher.announceTab', [options(state, current)]) : i18n.t('panel.switcher.announceDefault', [defaultOption?.model ?? model])}
       </span>
       {error ? (
         <span class="panel__error" role="alert" data-testid="switcher-error">

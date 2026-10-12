@@ -3,6 +3,7 @@ import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Segment } from '@/engine/types';
 import type { JobView, SegState } from './jobs.ts';
 import { markerKinds, parseMarkup, plainText, type MarkupNode } from './markup.ts';
+import { i18n } from '#i18n';
 import { failureText } from './status.ts';
 import { handleBlockKey, rove } from './blocks-nav.ts';
 
@@ -109,10 +110,10 @@ function BlockActions({ seg, state, actions, original, onOriginal }: Props) {
     timer.current = setTimeout(() => setCopied(undefined), 1500);
   };
   return (
-    <span class="seg__actions" role="group" aria-label={`Actions for "${name}"`}>
+    <span class="seg__actions" role="group" aria-label={i18n.t('panel.segment.actionsFor', [name])}>
       {done && onOriginal ? (
-        <button type="button" class="seg__action" data-testid="seg-original" aria-keyshortcuts="O" aria-pressed={original === true} aria-label={`${original ? 'Hide original' : 'Show original'}: "${name}"`} onClick={() => onOriginal(seg.id)}>
-          {original ? 'Hide original' : 'Original'}
+        <button type="button" class="seg__action" data-testid="seg-original" aria-keyshortcuts="O" aria-pressed={original === true} aria-label={i18n.t(original ? 'panel.segment.hideOriginalFor' : 'panel.segment.showOriginalFor', [name])} onClick={() => onOriginal(seg.id)}>
+          {original ? i18n.t('panel.segment.hideOriginal') : i18n.t('panel.segment.original')}
         </button>
       ) : null}
       {done && actions?.retranslate ? (
@@ -121,11 +122,11 @@ function BlockActions({ seg, state, actions, original, onOriginal }: Props) {
           class="seg__action"
           data-testid="seg-retranslate"
           aria-keyshortcuts="R"
-          aria-label={`Retranslate: "${name}"`}
-          title="Translate this block again, skipping the saved translation"
+          aria-label={i18n.t('panel.segment.retranslateFor', [name])}
+          title={i18n.t('panel.segment.retranslateTitle')}
           onClick={() => actions.retranslate?.(seg.id)}
         >
-          Retranslate
+          {i18n.t('panel.segment.retranslate')}
         </button>
       ) : null}
       {done && actions?.explain ? (
@@ -134,16 +135,16 @@ function BlockActions({ seg, state, actions, original, onOriginal }: Props) {
           class="seg__action"
           data-testid="seg-explain"
           aria-keyshortcuts="E"
-          aria-label={`Explain this: "${name}"`}
-          title="A short note on idioms or cultural references in this block"
+          aria-label={i18n.t('panel.segment.explainFor', [name])}
+          title={i18n.t('panel.segment.explainTitle')}
           disabled={state?.explain?.status === 'loading'}
           onClick={() => actions.explain?.(seg.id)}
         >
-          {state?.explain?.status === 'loading' ? 'Explaining…' : state?.explain ? 'Explain again' : 'Explain this'}
+          {i18n.t(state?.explain?.status === 'loading' ? 'panel.segment.explaining' : state?.explain ? 'panel.segment.explainAgain' : 'panel.segment.explain')}
         </button>
       ) : null}
-      <button type="button" class="seg__action" data-testid="seg-copy" aria-keyshortcuts="C" aria-label={`Copy: "${name}"`} onClick={copy}>
-        {copied === 'ok' ? 'Copied' : copied === 'failed' ? "Couldn't copy" : 'Copy'}
+      <button type="button" class="seg__action" data-testid="seg-copy" aria-keyshortcuts="C" aria-label={i18n.t('panel.segment.copyFor', [name])} onClick={copy}>
+        {i18n.t(copied === 'ok' ? 'panel.segment.copied' : copied === 'failed' ? 'panel.segment.copyFailed' : 'panel.segment.copy')}
       </button>
     </span>
   );
@@ -182,14 +183,14 @@ function ModelBadge({ state, model }: Props) {
   // Every provider was down and Chrome's Translator translated the block (M5-E7, DESIGN §9).
   if (state?.status === 'final' && state.basic) {
     return (
-      <span class="seg__badge seg__badge--basic" data-testid="seg-basic-badge" title={`Translated on this device by ${state.model ?? "Chrome's built-in translator"}, because no model could be reached. It is literal; Retranslate when the model is back.`}>
-        basic translation
+      <span class="seg__badge seg__badge--basic" data-testid="seg-basic-badge" title={i18n.t('panel.segment.basicTitle', [state.model ?? i18n.t('panel.segment.chromeTranslator')])}>
+        {i18n.t('panel.segment.basic')}
       </span>
     );
   }
   if (state?.status !== 'final' || state.model === undefined || model === undefined || model === '' || state.model === model) return null;
   return (
-    <span class="seg__badge" data-testid="seg-model-badge" title={`Translated by ${state.model}, because ${model} was unavailable`} aria-label={`Translated by the fallback model ${state.model}`}>
+    <span class="seg__badge" data-testid="seg-model-badge" title={i18n.t('panel.segment.fallbackTitle', [state.model, model])} aria-label={i18n.t('panel.segment.fallbackLabel', [state.model])}>
       {state.model}
     </span>
   );
@@ -201,20 +202,20 @@ function Notes(props: Props) {
     <>
       <ModelBadge {...props} />
       <Original {...props} />
-      {seg.hidden ? <span class="seg__note">hidden on the page (tab or collapsed section)</span> : null}
+      {seg.hidden ? <span class="seg__note">{i18n.t('panel.segment.hidden')}</span> : null}
       {state?.status === 'failed' && state.error ? (
         <span class="seg__note seg__note--failed" role="note">
-          Not translated: {failureText(state.error)}
+          {i18n.t('panel.segment.failed', [failureText(state.error)])}
           {actions && state.error.kind !== 'auth' ? (
             <button type="button" class="seg__retry" data-testid="segment-retry" onClick={() => actions.retry(seg.id)}>
-              Retry
+              {i18n.t('panel.segment.retry')}
             </button>
           ) : null}
         </span>
       ) : null}
       {state?.status === 'final' && state.redoError ? (
         <span class="seg__note seg__note--failed" role="note" data-testid="seg-redo-failed">
-          Retranslate failed: {failureText(state.redoError)}. The earlier translation is kept.
+          {i18n.t('panel.segment.redoFailed', [failureText(state.redoError)])}
         </span>
       ) : null}
       <ExplainNote {...props} />
@@ -230,7 +231,7 @@ function ExplainNote({ state }: Props) {
   if (explain.status === 'failed') {
     return (
       <span class="seg__note seg__note--failed" role="note" data-testid="seg-explain-failed">
-        No explanation: {explain.error ? failureText(explain.error) : 'it failed'}
+        {i18n.t('panel.segment.explainFailed', [explain.error ? failureText(explain.error) : i18n.t('panel.segment.itFailed')])}
       </span>
     );
   }
@@ -240,10 +241,10 @@ function ExplainNote({ state }: Props) {
     <>
       {/* Hidden from screen readers (it would be read delta by delta); the status region below says it once, when whole. */}
       <span class="seg__explain" role="note" data-testid="seg-explain-note" aria-hidden="true">
-        <span class="seg__explain-label">Explanation</span> {explain.text}
+        <span class="seg__explain-label">{i18n.t('panel.segment.explanation')}</span> {explain.text}
       </span>
       <span class="sr-only" role="status" data-testid="seg-explain-status">
-        {ready ? `Explanation: ${explain.text ?? ''}` : ''}
+        {ready ? i18n.t('panel.segment.explanationSr', [explain.text ?? '']) : ''}
       </span>
     </>
   );
@@ -270,7 +271,9 @@ class Block extends Component<Props> {
         return (
           <figure {...common}>
             <figcaption class="seg__label">
-              {seg.codeLang ? `${seg.codeLang} · ` : ''}code, kept as is{seg.hidden ? ' · hidden on the page' : ''}
+              {seg.codeLang ? `${seg.codeLang} · ` : ''}
+              {i18n.t('panel.segment.codeKept')}
+              {seg.hidden ? ` · ${i18n.t('panel.segment.hiddenShort')}` : ''}
             </figcaption>
             <pre>
               <code>{seg.text}</code>
@@ -295,7 +298,7 @@ class Block extends Component<Props> {
       default:
         return (
           <p {...common}>
-            {seg.alt ? <span class="seg__label seg__label--image">Image · </span> : null}
+            {seg.alt ? <span class="seg__label seg__label--image">{i18n.t('panel.segment.image')} · </span> : null}
             <Text seg={seg} state={state} />
             <Notes {...props} />
           </p>
@@ -402,7 +405,7 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
   }
   return (
     <Langs.Provider value={{ target: targetLang, source: sourceLang }}>
-      <div class="segments" ref={root} role="region" aria-label="Translation" aria-busy={busy === true} onKeyDown={(e) => root.current && handleBlockKey(e, root.current)} onFocusIn={(e) => root.current && rove(root.current, (e.target as Element).closest<HTMLElement>('[data-id]') ?? undefined)}>
+      <div class="segments" ref={root} role="region" aria-label={i18n.t('panel.segment.region')} aria-busy={busy === true} onKeyDown={(e) => root.current && handleBlockKey(e, root.current)} onFocusIn={(e) => root.current && rove(root.current, (e.target as Element).closest<HTMLElement>('[data-id]') ?? undefined)}>
         {out}
       </div>
     </Langs.Provider>

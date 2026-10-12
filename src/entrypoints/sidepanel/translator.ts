@@ -5,6 +5,7 @@
 // **Translate this page** (plan M5-E3, §8). A page that changes under the panel (an SPA, plan M5-E2)
 // is translated again from the cache, so only new or changed blocks are sent.
 import type { browser } from 'wxt/browser';
+import { i18n } from '#i18n';
 import { chromeLanguageDetector, detectionSample, detectSourceLanguage, MIXED_LANGUAGE_DETECTION, sameLanguage, segmentsInLanguage, type LanguageDetectorPort } from '@/shared/language';
 import type { GlossaryEntry } from '@/engine/types';
 import { GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences, SECRET_PREFIX, type Preferences } from '@/shared/settings';
@@ -88,7 +89,7 @@ async function readSettings(api: Browser): Promise<Settings> {
 }
 
 /** Why "Continue anyway" could not go on (review 3 #3): the bar shows it instead of nothing. */
-const limitFailure = (err: unknown) => `Could not save “Continue anyway” (${err instanceof Error ? err.message : String(err)}). Try again, or raise the limit in Settings.`;
+const limitFailure = (err: unknown) => i18n.t('panel.job.limitSaveFailed', [err instanceof Error ? err.message : String(err)]);
 
 export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, options: TranslatorOptions = {}): Translator {
   // The running total in settings (M3-E9): pages and selections alike.

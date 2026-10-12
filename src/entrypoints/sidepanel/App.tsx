@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { browser } from 'wxt/browser';
+import { i18n } from '#i18n';
 import type { PanelController, PanelView } from './controller.ts';
 import { AboutDocument } from './AboutDocument.tsx';
 import { DevView } from './DevView.tsx';
@@ -242,14 +243,14 @@ export function App({ controller, translator }: { controller: PanelController; t
             setSwitcherError(undefined);
             translator.switcher?.choose(tabId, profileId).then(
               () => setSwitcherVersion((v) => v + 1),
-              () => setSwitcherError("Couldn't switch the model for this tab. Try again."),
+              () => setSwitcherError(i18n.t('panel.header.switchFailed')),
             );
           },
           onMakeDefault: (profileId: string) => {
             setSwitcherError(undefined);
             translator.switcher?.makeDefault(tabId, profileId).then(
               () => setSwitcherVersion((v) => v + 1),
-              () => setSwitcherError("Couldn't save the default. Try again, or set it in settings."),
+              () => setSwitcherError(i18n.t('panel.header.defaultFailed')),
             );
           },
         }
@@ -300,7 +301,7 @@ export function App({ controller, translator }: { controller: PanelController; t
     <main class="panel" onKeyDown={(e) => help && e.key === 'Escape' && closeHelp()}>
       <header class="panel__header" ref={headerRef}>
         <div class="panel__row">
-          <h1 title={view.kind === 'ready' ? view.result.title : undefined}>{view.kind === 'ready' ? view.result.title || 'Translate Side' : 'Translate Side'}</h1>
+          <h1 title={view.kind === 'ready' ? view.result.title : undefined}>{view.kind === 'ready' ? view.result.title || i18n.t('panel.appName') : i18n.t('panel.appName')}</h1>
           {import.meta.env.DEV && view.kind === 'ready' ? (
             <button type="button" class="panel__icon panel__dev" aria-pressed={dev} title="Segment view (dev build only)" onClick={() => setDev(!dev)}>
               {'{ }'}
@@ -312,31 +313,31 @@ export function App({ controller, translator }: { controller: PanelController; t
               class="panel__icon panel__follow"
               aria-pressed={follow}
               data-testid="scroll-follow"
-              title={follow ? 'Following the page as it scrolls (click to stop)' : 'Follow the page as it scrolls'}
-              aria-label="Follow page scroll"
+              title={i18n.t(follow ? 'panel.header.followOn' : 'panel.header.followOff')}
+              aria-label={i18n.t('panel.header.follow')}
               onClick={toggleFollow}
             >
               ⇅
             </button>
           ) : null}
-          <button type="button" class="panel__icon" ref={helpButton} data-testid="shortcuts-button" title="Keyboard shortcuts" aria-label="Keyboard shortcuts" aria-expanded={help} aria-controls="shortcuts" onClick={() => setHelp(!help)}>
+          <button type="button" class="panel__icon" ref={helpButton} data-testid="shortcuts-button" title={i18n.t('panel.header.shortcuts')} aria-label={i18n.t('panel.header.shortcuts')} aria-expanded={help} aria-controls="shortcuts" onClick={() => setHelp(!help)}>
             ?
           </button>
-          <button type="button" class="panel__icon" title="Settings" aria-label="Settings" onClick={openOptions}>
+          <button type="button" class="panel__icon" title={i18n.t('panel.header.settings')} aria-label={i18n.t('panel.header.settings')} onClick={openOptions}>
             ⚙
           </button>
-          <button type="button" class="panel__icon" title="Close" aria-label="Close panel" onClick={closeThisPanel}>
+          <button type="button" class="panel__icon" title={i18n.t('panel.header.close')} aria-label={i18n.t('panel.header.closePanel')} onClick={closeThisPanel}>
             ✕
           </button>
         </div>
-        {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} routedModel={routed?.model} switcher={switcherActions} actions={job ? pageActions : undefined} onPrefs={switchPrefs} error={prefsError ? "Couldn't save that setting. Try again, or change it in settings." : undefined} /> : null}
+        {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} routedModel={routed?.model} switcher={switcherActions} actions={job ? pageActions : undefined} onPrefs={switchPrefs} error={prefsError ? i18n.t('panel.header.prefsFailed') : undefined} /> : null}
       </header>
       {help ? <ShortcutList id="shortcuts" onClose={closeHelp} /> : null}
       {offerSetup ? (
         <section class="setup-offer" data-testid="setup-offer">
-          <p>New here? Set up a translation provider to start translating.</p>
+          <p>{i18n.t('panel.setup.text')}</p>
           <button type="button" class="job__button" data-testid="setup-open" onClick={() => void openOnboarding(browser)}>
-            Set up Translate Side
+            {i18n.t('panel.setup.button')}
           </button>
         </section>
       ) : null}
@@ -355,7 +356,7 @@ export function App({ controller, translator }: { controller: PanelController; t
             <OfferBar offer={offer} blocks={view.result.segments.length} onTranslate={() => translator.translatePage?.(tabId)} onAllow={() => translator.allowSite?.(tabId) ?? Promise.resolve(false)} onSettings={openOptions} />
           ) : (
             <p class="panel__meta" data-testid="panel-ready">
-              Original text · {view.result.segments.length} blocks
+              {i18n.t('panel.meta.original', view.result.segments.length)}
             </p>
           )}
           {job?.brief ? <AboutDocument brief={job.brief} sourceLang={job.sourceLang} /> : null}

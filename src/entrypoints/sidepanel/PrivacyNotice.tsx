@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'preact/hooks';
+import { i18n } from '#i18n';
+import { slots } from './slots.tsx';
 
 // The first-run privacy notice (DESIGN.md §8, plan M3-E10). Shown until acknowledged; nothing is
 // sent before that (privacy.ts).
@@ -10,38 +12,38 @@ export function PrivacyNotice({ to, onAcknowledge }: { to?: { label: string; hos
   return (
     <section class="privacy" data-testid="privacy-notice" role="dialog" aria-modal="true" aria-labelledby="privacy-title" aria-describedby="privacy-text">
       <h2 id="privacy-title" class="privacy__title">
-        Before you translate
+        {i18n.t('panel.privacy.title')}
       </h2>
       <p id="privacy-text">
-        Translate Side sends the text of the pages you translate to the AI provider you chose
-        {to ? (
-          <>
-            {' '}
-            — now <strong data-testid="privacy-provider">{to.label}</strong> {to.host ? `(${to.host})` : ''}
-            {to.fallback?.length ? (
-              <span data-testid="privacy-fallback">
-                , and if it is busy or down, {to.fallback.map((f, i) => (
-                  <span key={i}>
-                    {i > 0 ? ', then ' : ''}
-                    <strong>{f.label}</strong> {f.host ? `(${f.host})` : ''}
-                  </span>
-                ))}
-              </span>
-            ) : null}
-          </>
-        ) : null}
-        . Only pages you open the panel on are sent, and only after you click below.
+        {slots(i18n.t('panel.privacy.text', { now: '{now}' }), {
+          now: to ? (
+            <>
+              {' '}
+              {slots(i18n.t('panel.privacy.now', { provider: '{provider}' }), { provider: <strong data-testid="privacy-provider">{to.label}</strong> })} {to.host ? `(${to.host})` : ''}
+              {to.fallback?.length ? (
+                <span data-testid="privacy-fallback">
+                  {slots(i18n.t('panel.privacy.fallback', { list: '{list}' }), {
+                    list: to.fallback.map((f, i) => (
+                      <span key={i}>
+                        {i > 0 ? `${i18n.t('panel.privacy.then')} ` : ''}
+                        <strong>{f.label}</strong> {f.host ? `(${f.host})` : ''}
+                      </span>
+                    )),
+                  })}
+                </span>
+              ) : null}
+            </>
+          ) : null,
+        })}
       </p>
       <ul class="privacy__list">
-        <li>Mail and sign-in pages, browser pages and the Chrome Web Store are never read or sent.</li>
-        <li>Password and other form fields, and anything you can type into, are never read. A page with a password field in use is skipped.</li>
-        <li>
-          For sensitive pages, don't translate them with a cloud provider. A local model on this computer (Ollama or LM Studio, set up in Providers) keeps the text on this device.
-        </li>
-        <li data-testid="privacy-diagnostics">A diagnostics log of recent translations (counts, timings, error kinds; no page text) is kept on this device. It leaves only if you export it in Settings.</li>
+        <li>{i18n.t('panel.privacy.never')}</li>
+        <li>{i18n.t('panel.privacy.fields')}</li>
+        <li>{i18n.t('panel.privacy.local')}</li>
+        <li data-testid="privacy-diagnostics">{i18n.t('panel.privacy.diagnostics')}</li>
       </ul>
       <button type="button" ref={ok} class="privacy__ok" data-testid="privacy-ok" onClick={onAcknowledge}>
-        Got it, translate
+        {i18n.t('panel.privacy.ok')}
       </button>
     </section>
   );

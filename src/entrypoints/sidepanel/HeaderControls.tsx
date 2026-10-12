@@ -1,4 +1,5 @@
 import type { StyleMode } from '@/engine/types';
+import { i18n } from '#i18n';
 import { languageLabel } from '@/engine/index';
 import { LANGUAGES, STYLES, type Preferences } from '@/shared/settings';
 import type { JobActions } from './JobBar.tsx';
@@ -11,12 +12,8 @@ import type { SwitcherState } from './switcher.ts';
 // the style mode, and Cancel / Retranslate page. Settings and the scroll-follow toggle sit in the
 // header's first row (App.tsx).
 
-export const STYLE_LABELS: Record<StyleMode, string> = { natural: 'Natural', faithful: 'Faithful', simplified: 'Simplified' };
-const STYLE_TITLES: Record<StyleMode, string> = {
-  natural: 'Reads like it was written in your language',
-  faithful: 'Closer to the source wording',
-  simplified: 'Easier reading: shorter sentences, plain words',
-};
+const styleLabel = (style: StyleMode) => i18n.t(`panel.controls.style.${style}`);
+const styleTitle = (style: StyleMode) => i18n.t(`panel.controls.styleTitle.${style}`);
 
 export interface HeaderControlsProps {
   job: JobView | undefined;
@@ -42,11 +39,11 @@ export function HeaderControls({ job, prefs, routedModel, actions, switcher, onP
   return (
     <div class="panel__controls" data-testid="header-controls">
       <span class="panel__pair" data-testid="lang-pair">
-        <span class="panel__source" data-testid="source-lang" title={source ? `From ${languageLabel(source)}` : 'Source language: detected'}>
-          {source ? source.toUpperCase() : 'Auto'}
+        <span class="panel__source" data-testid="source-lang" title={source ? i18n.t('panel.controls.from', [languageLabel(source)]) : i18n.t('panel.controls.sourceDetected')}>
+          {source ? source.toUpperCase() : i18n.t('panel.controls.auto')}
         </span>
         <span aria-hidden="true">→</span>
-        <select class="panel__select" data-testid="target-lang" aria-label="Translate into" value={target} disabled={!prefs} onChange={(e) => onPrefs({ targetLang: (e.currentTarget as HTMLSelectElement).value })}>
+        <select class="panel__select" data-testid="target-lang" aria-label={i18n.t('panel.controls.translateInto')} value={target} disabled={!prefs} onChange={(e) => onPrefs({ targetLang: (e.currentTarget as HTMLSelectElement).value })}>
           {languages.map((l) => (
             <option key={l.code} value={l.code}>
               {l.name}
@@ -55,21 +52,21 @@ export function HeaderControls({ job, prefs, routedModel, actions, switcher, onP
         </select>
       </span>
       <ModelSwitcher state={switcher?.state} model={model} onChoose={switcher?.onChoose ?? (() => {})} onMakeDefault={switcher?.onMakeDefault ?? (() => {})} error={switcher?.error} />
-      <select class="panel__select" data-testid="style-mode" aria-label="Style" title={STYLE_TITLES[style]} value={style} disabled={!prefs} onChange={(e) => onPrefs({ style: (e.currentTarget as HTMLSelectElement).value as StyleMode })}>
+      <select class="panel__select" data-testid="style-mode" aria-label={i18n.t('panel.controls.styleLabel')} title={styleTitle(style)} value={style} disabled={!prefs} onChange={(e) => onPrefs({ style: (e.currentTarget as HTMLSelectElement).value as StyleMode })}>
         {STYLES.map((s) => (
-          <option key={s} value={s} title={STYLE_TITLES[s]}>
-            {STYLE_LABELS[s]}
+          <option key={s} value={s} title={styleTitle(s)}>
+            {styleLabel(s)}
           </option>
         ))}
       </select>
       {actions && job ? (
         running ? (
           <button type="button" class="panel__action" data-testid="page-cancel" onClick={actions.cancel}>
-            Cancel
+            {i18n.t('panel.controls.cancel')}
           </button>
         ) : (
-          <button type="button" class="panel__action" data-testid="page-retranslate" title="Translate the whole page again, skipping saved translations" onClick={actions.retranslatePage}>
-            ↻ Retranslate page
+          <button type="button" class="panel__action" data-testid="page-retranslate" title={i18n.t('panel.controls.retranslatePageTitle')} onClick={actions.retranslatePage}>
+            {i18n.t('panel.controls.retranslatePage')}
           </button>
         )
       ) : null}

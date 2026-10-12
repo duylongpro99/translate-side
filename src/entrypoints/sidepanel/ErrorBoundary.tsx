@@ -3,6 +3,7 @@
 // component it came out of only; "Copy details" copies just those, never a message or a stack (a message
 // can hold page text).
 import { Component, type ComponentChildren } from 'preact';
+import { i18n } from '#i18n';
 import type { DiagnosticsLog } from '@/shared/diagnostics';
 
 interface Props {
@@ -37,14 +38,14 @@ export class ErrorBoundary extends Component<Props, State> {
   override render() {
     const { kind, copied } = this.state;
     if (kind === undefined) return this.props.children;
-    const details = `Translate Side${this.props.version ? ` ${this.props.version}` : ''}: ${kind} in ${this.props.name}`;
+    const details = i18n.t('panel.crash.details', { app: i18n.t('panel.appName') + (this.props.version ? ` ${this.props.version}` : ''), kind, name: this.props.name });
     return (
       <main class="panel">
         <div class="state" role="alert" data-testid="panel-crash">
-          <p>Something went wrong in the panel. Reloading it usually helps; your translations so far are kept in the cache.</p>
+          <p>{i18n.t('panel.crash.message')}</p>
           <p>
             <button type="button" data-testid="panel-reload" onClick={() => (this.props.reload ?? (() => location.reload()))()}>
-              Reload panel
+              {i18n.t('panel.crash.reload')}
             </button>{' '}
             <button
               type="button"
@@ -56,12 +57,12 @@ export class ErrorBoundary extends Component<Props, State> {
                 )
               }
             >
-              Copy details
+              {i18n.t('panel.crash.copy')}
             </button>
           </p>
           <p class="state__hint" data-testid="panel-crash-details">
             {details}
-            {copied ? ' (copied)' : ''}
+            {copied ? ` ${i18n.t('panel.crash.copied')}` : ''}
           </p>
         </div>
       </main>

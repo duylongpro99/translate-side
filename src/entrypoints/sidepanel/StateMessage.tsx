@@ -1,5 +1,5 @@
-import { DENYLIST_MESSAGE, EXTRACTION_HINT, NEVER_MESSAGE, PASSWORD_MESSAGE } from '@/shared/snippet';
 import type { PanelView } from './controller.ts';
+import { i18n } from '#i18n';
 
 // Loading, empty, error and access states (plan M0-E7; "can't read this page", criterion #4).
 export function StateMessage({ view, onRetry }: { view: Exclude<PanelView, { kind: 'ready' }>; onRetry: () => void }) {
@@ -7,61 +7,57 @@ export function StateMessage({ view, onRetry }: { view: Exclude<PanelView, { kin
     case 'loading':
       return (
         <p class="state" data-state="loading" role="status">
-          Reading the page…
+          {i18n.t('panel.state.loading')}
         </p>
       );
     case 'idle':
       return (
         <div class="state" data-state="idle">
-          <p class="state__title">Nothing read yet</p>
-          <p>Press Alt+T or click the toolbar icon to read this page.</p>
+          <p class="state__title">{i18n.t('panel.state.idleTitle')}</p>
+          <p>{i18n.t('panel.state.idleText')}</p>
         </div>
       );
     case 'blocked':
       if (view.reason === 'password')
         return (
           <div class="state" data-state="blocked" data-reason="password" role="alert">
-            <p class="state__title">Not read: a password field is in use</p>
-            <p>{PASSWORD_MESSAGE}</p>
-            <p class="state__hint">Click outside the password field, then press Alt+T or click the toolbar icon again.</p>
+            <p class="state__title">{i18n.t('panel.state.passwordTitle')}</p>
+            <p>{i18n.t('panel.state.password')}</p>
+            <p class="state__hint">{i18n.t('panel.state.passwordHint')}</p>
           </div>
         );
       return (
         <div class="state" data-state="blocked" role="alert">
-          <p class="state__title">Can't read this page</p>
+          <p class="state__title">{i18n.t('panel.state.blockedTitle')}</p>
           <p>
-            {view.reason === 'denylisted'
-              ? DENYLIST_MESSAGE
-              : view.reason === 'never'
-                ? NEVER_MESSAGE
-              : 'Chrome does not let extensions read this page (browser pages, the Web Store and similar).'}
+            {i18n.t(view.reason === 'denylisted' ? 'panel.state.denylisted' : view.reason === 'never' ? 'panel.state.never' : 'panel.state.browserPage')}
           </p>
         </div>
       );
     case 'lost':
       return (
         <div class="state" data-state="lost" role="alert">
-          <p class="state__title">Translate this page</p>
-          <p>This page is new to Translate Side. Press Alt+T or click the toolbar icon to read it.</p>
-          <p class="state__hint">Browser pages and the Chrome Web Store can't be read; Chrome doesn't let extensions see them.</p>
+          <p class="state__title">{i18n.t('panel.state.lostTitle')}</p>
+          <p>{i18n.t('panel.state.lostText')}</p>
+          <p class="state__hint">{i18n.t('panel.state.lostHint')}</p>
         </div>
       );
     case 'empty':
       return (
         <div class="state" data-state="empty">
-          <p class="state__title">{EXTRACTION_HINT}</p>
-          <p>This page has no article or docs content that Translate Side can find.</p>
-          <p class="state__hint">Select the text, then right-click → Translate in side panel.</p>
+          <p class="state__title">{i18n.t('panel.state.extractionHint')}</p>
+          <p>{i18n.t('panel.state.emptyText')}</p>
+          <p class="state__hint">{i18n.t('panel.state.emptyHint')}</p>
         </div>
       );
     case 'error':
       return (
         <div class="state" data-state="error" role="alert">
-          <p class="state__title">Something went wrong</p>
+          <p class="state__title">{i18n.t('panel.state.errorTitle')}</p>
           <p class="state__detail">{view.message}</p>
-          <p class="state__hint">{EXTRACTION_HINT}</p>
+          <p class="state__hint">{i18n.t('panel.state.extractionHint')}</p>
           <button type="button" onClick={onRetry}>
-            Try again
+            {i18n.t('panel.state.retry')}
           </button>
         </div>
       );

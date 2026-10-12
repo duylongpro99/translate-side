@@ -2,3 +2,255 @@ extName: Translate Side
 extDescription: Translate the current page in the side panel.
 actionTitle: Open Translate Side
 commandToggle: Open or close the Translate Side panel
+
+panel:
+  appName: Translate Side
+  meta:
+    original:
+      1: Original text · 1 block
+      n: Original text · $1 blocks
+  header:
+    follow: Follow page scroll
+    followOn: Following the page as it scrolls (click to stop)
+    followOff: Follow the page as it scrolls
+    shortcuts: Keyboard shortcuts
+    settings: Settings
+    close: Close
+    closePanel: Close panel
+    prefsFailed: "Couldn't save that setting. Try again, or change it in settings."
+    switchFailed: "Couldn't switch the model for this tab. Try again."
+    defaultFailed: "Couldn't save the default. Try again, or set it in settings."
+  setup:
+    text: New here? Set up a translation provider to start translating.
+    button: Set up Translate Side
+  controls:
+    auto: Auto
+    from: From $1
+    sourceDetected: "Source language: detected"
+    translateInto: Translate into
+    styleLabel: Style
+    style:
+      natural: Natural
+      faithful: Faithful
+      simplified: Simplified
+    styleTitle:
+      natural: Reads like it was written in your language
+      faithful: Closer to the source wording
+      simplified: "Easier reading: shorter sentences, plain words"
+    cancel: Cancel
+    retranslatePage: ↻ Retranslate page
+    retranslatePageTitle: Translate the whole page again, skipping saved translations
+  switcher:
+    label: Translate this tab with
+    selectTitle: $1 (applies to this tab only; your default stays the same)
+    defaultOption: $1 (default)
+    defaultModel: Default model
+    model: "Model: $1"
+    modelBare: Model
+    local: local
+    noKey: no key
+    tabOnly: This tab only
+    makeDefault: Make default
+    makeDefaultTitle: Use this model for every page from now on
+    rule: site rule $1 (overrides tab choice)
+    ruleLocal: site rule $1 (local only) (overrides tab choice)
+    ruleTitle: The site rule for $1 sets the model, so a tab choice would not apply
+    announceTab: This tab now translates with $1, this tab only.
+    announceDefault: This tab translates with $1, the default.
+  offer:
+    ask:
+      1: Original text · 1 block. Nothing has been sent.
+      n: Original text · $1 blocks. Nothing has been sent.
+    never:
+      1: You chose never to translate this site. Nothing is sent. · 1 block
+      n: You chose never to translate this site. Nothing is sent. · $1 blocks
+    neverSite:
+      1: You chose never to translate $1. Nothing is sent. · 1 block
+      n: You chose never to translate $1. Nothing is sent. · $2 blocks
+    siteRules: Site rules
+    translate: Translate this page
+    allow: Always translate $1
+    allowTitle: Translate each page of $1 by itself while the panel is open. The browser asks for access to the site once.
+    notGranted: Access to $1 was not granted, so pages there still wait for this click.
+  privacy:
+    title: Before you translate
+    text: Translate Side sends the text of the pages you translate to the AI provider you chose{now}. Only pages you open the panel on are sent, and only after you click below.
+    now: "— now {provider}"
+    fallback: ", and if it is busy or down, {list}"
+    then: ", then"
+    never: Mail and sign-in pages, browser pages and the Chrome Web Store are never read or sent.
+    fields: Password and other form fields, and anything you can type into, are never read. A page with a password field in use is skipped.
+    local: For sensitive pages, don't translate them with a cloud provider. A local model on this computer (Ollama or LM Studio, set up in Providers) keeps the text on this device.
+    diagnostics: A diagnostics log of recent translations (counts, timings, error kinds; no page text) is kept on this device. It leaves only if you export it in Settings.
+    ok: Got it, translate
+  state:
+    loading: Reading the page…
+    idleTitle: Nothing read yet
+    idleText: Press Alt+T or click the toolbar icon to read this page.
+    passwordTitle: "Not read: a password field is in use"
+    password: A password field has focus on this page, so Translate Side did not read it. Nothing was sent.
+    passwordHint: Click outside the password field, then press Alt+T or click the toolbar icon again.
+    blockedTitle: Can't read this page
+    denylisted: Translate Side never reads this site (mail and sign-in pages are on a built-in denylist).
+    never: You chose never to translate this site. Translate Side does not read it. Change it in Settings › Site rules.
+    browserPage: Chrome does not let extensions read this page (browser pages, the Web Store and similar).
+    lostTitle: Translate this page
+    lostText: This page is new to Translate Side. Press Alt+T or click the toolbar icon to read it.
+    lostHint: Browser pages and the Chrome Web Store can't be read; Chrome doesn't let extensions see them.
+    extractionHint: Couldn't read this page. Select text to translate it.
+    emptyText: This page has no article or docs content that Translate Side can find.
+    emptyHint: Select the text, then right-click → Translate in side panel.
+    errorTitle: Something went wrong
+    retry: Try again
+  selection:
+    title: Selection
+    back: Back to the page
+    close: Close
+    blockedTitle: Can't translate this selection
+    translating: Translating the selection…
+    truncated: Only the first part of a long selection is translated.
+  shortcuts:
+    title: Keyboard shortcuts
+    note: The letters and arrows work while a block or one of its buttons has focus. Tab reaches the list once; the arrows move through it.
+    changeKey: Change the toggle key
+    close: Close
+  about:
+    summary: About this document
+    language: Language
+    genre: Genre
+    audience: Audience
+    purpose: Purpose
+    tone: Tone
+    keyTerms: Key terms
+  crash:
+    message: Something went wrong in the panel. Reloading it usually helps; your translations so far are kept in the cache.
+    reload: Reload panel
+    copy: Copy details
+    copied: (copied)
+    details: "{app}: {kind} in {name}"
+  segment:
+    region: Translation
+    image: Image
+    codeKept: code, kept as is
+    hidden: hidden on the page (tab or collapsed section)
+    hiddenShort: hidden on the page
+    actionsFor: Actions for "$1"
+    original: Original
+    hideOriginal: Hide original
+    showOriginalFor: "Show original: \"$1\""
+    hideOriginalFor: "Hide original: \"$1\""
+    retranslate: Retranslate
+    retranslateFor: "Retranslate: \"$1\""
+    retranslateTitle: Translate this block again, skipping the saved translation
+    explain: Explain this
+    explainAgain: Explain again
+    explaining: Explaining…
+    explainFor: "Explain this: \"$1\""
+    explainTitle: A short note on idioms or cultural references in this block
+    copy: Copy
+    copied: Copied
+    copyFailed: Couldn't copy
+    copyFor: "Copy: \"$1\""
+    basic: basic translation
+    basicTitle: Translated on this device by $1, because no model could be reached. It is literal; Retranslate when the model is back.
+    chromeTranslator: Chrome's built-in translator
+    fallbackTitle: Translated by $1, because $2 was unavailable
+    fallbackLabel: Translated by the fallback model $1
+    failed: "Not translated: $1"
+    retry: Retry
+    redoFailed: "Retranslate failed: $1. The earlier translation is kept."
+    explainFailed: "No explanation: $1"
+    itFailed: it failed
+    explanation: Explanation
+    explanationSr: "Explanation: $1"
+  job:
+    seconds: $1 s
+    running: Translating into $1… $2 of $3
+    done: $1 · $2 of $3
+    failed: $1 failed
+    restAsRead: the rest as you read
+    cancelled: Cancelled · $1 of $2 translated
+    cancel: Cancel
+    retry: Retry
+    retryFailed: Retry failed
+    tryAgain: Try again
+    stopped: Stopped
+    settings: Settings
+    openSettings: Open settings
+    fixKey: Fix key
+    fixKeyTitle: Open the settings of $1
+    grantAccess: Grant access
+    translateRest: Translate the rest
+    translateAnyway: Translate anyway
+    continueAnyway: Continue anyway
+    excludesCancelled: excludes cancelled requests
+    costTitle: $1 input tokens ($2 cached), $3 output tokens
+    kept:
+      1: 1 block kept its earlier translation
+      n: $1 blocks kept their earlier translation
+    restTitle:
+      1: 1 block is waiting; it is translated as you scroll to it
+      n: $1 blocks are waiting; they are translated as you scroll to them
+    limit: This month's spend ($1) reached your soft limit of $2. Nothing was sent.
+    limitSaveFailed: Could not save “Continue anyway” ($1). Try again, or raise the limit in Settings.
+    lostConnection: Lost the connection · $1 of $2 translated, the rest is waiting
+    localModel: The local model
+    localUnreachable: $1 can't be reached · $2 of $3 translated, the rest is waiting
+    localBusy: $1 $2 · $3 of $4 translated
+    localOnly: The local-only rule for $1 keeps this page off cloud providers, so it did not fall back to one.
+    skipped: This page is already in $1, so it was not translated ($2).
+    how:
+      override: your source-language setting
+      htmlLang: the page's language tag
+      detected: language detection on this device
+    backoff:
+      rateLimit: Rate limited
+      network: Connection problem
+      busy: Provider busy
+      soon: retrying shortly
+      in: retrying in $1 s
+      part: part $1
+      attempt: (attempt $1)
+    why:
+      rateLimit: is rate limited
+      network: is unreachable
+      overloaded: is overloaded
+    whyPast:
+      rateLimit: was rate limited
+      network: was unreachable
+      overloaded: was overloaded
+    fallback:
+      againRunning: is translating again
+      againDone: translated the blocks after that
+      recoveredBasic: $1 $2 for a while; $3 translated the blocks in between, marked “basic translation”, and $1 $4.
+      recoveredNoBasic: $1 $2 for a while; $3 could not translate the blocks in between, and $1 $4.
+      basicNoHelp: $1 $2 and no other model answered; $3 could not translate the page either.
+      basicContinuing: $1 $2 and no other model answered; continuing with $3. Its blocks are marked “basic translation”.
+      basicContinued: $1 $2 and no other model answered; continued with $3. Its blocks are marked “basic translation”.
+      continuing: $1 $2; continuing with $3. Blocks it translated are marked.
+      continued: $1 $2; continued with $3. Blocks it translated are marked.
+
+errors:
+  auth: Key invalid or missing
+  authCharacters: Key has characters that can't be sent
+  noKey: Add your $1 API key in settings
+  noProtocol: $1 has no protocol yet. Test the connection in settings.
+  nanoOff: Chrome built-in (Gemini Nano) is experimental and off in this version. Choose another model in settings.
+  noAccess: No access to $1
+  noAccessProvider: no access to the provider
+  corsOrigin: the provider refused this origin (CORS)
+  settingsRead: Could not read the provider settings ($1)
+  limit: This month's spend ($1) reached your soft limit of $2
+  noExplanation: no explanation came back
+  noTranslation: no translation came back
+  noBasicMissing: There is no built-in translator here, so there is no basic translation either.
+  noBasicPair: $1 can't translate $2 → $3 on this device, so there is no basic translation either.
+  withNoBasic: $1. $2
+  budget: skipped, the budget for this page ran out
+  stopped: the translation stopped unexpectedly
+  quota: no allowance left on this key ($1)
+  busy: the provider is busy; try again in a moment
+  network: network error
+  contextLength: too long for the model
+  modelNotFound: model not found ($1)
+  unknown: unknown error
