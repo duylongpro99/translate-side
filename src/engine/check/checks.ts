@@ -302,10 +302,13 @@ export const TARGET_SCRIPTS: Record<string, readonly string[]> = {
   ne: ['Devanagari'],
 };
 
+/** Any letter of a script in SCRIPTS: only those characters are tested script by script. */
+const ANY_SCRIPT = new RegExp(Object.values(SCRIPTS).map((re) => re.source).join('|'), 'gu');
+
 /** The script letters of `text` outside code spans: the first character of each script found. */
 function scriptsIn(text: string): Map<string, string> {
   const out = new Map<string, string>();
-  for (const ch of withoutCode(text)) {
+  for (const [ch] of withoutCode(text).matchAll(ANY_SCRIPT)) {
     for (const [name, re] of Object.entries(SCRIPTS)) if (!out.has(name) && re.test(ch)) out.set(name, ch);
   }
   return out;

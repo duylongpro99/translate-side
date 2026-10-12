@@ -218,6 +218,13 @@ describe('checks: wrong script (M2-D19)', () => {
     expect(checkScript('Hello', 'Привет', 'ru')).toBeUndefined();
     expect(checkScript('Hello', 'Привет', 'vi')?.detail).toBe('Cyrillic text (П)');
   });
+
+  it('names the first letter of the script met first in the text, wherever it is in a long text', () => {
+    const filler = 'Đây là một câu tiếng Việt khá dài. '.repeat(200);
+    expect(checkScript('Hello', `${filler}ми 你好 Привет`, 'vi')?.detail).toBe('Cyrillic text (м)');
+    expect(checkScript('Hello', `${filler}你好 Привет`, 'vi')?.detail).toBe('Han text (你)');
+    expect(checkScript('Hello', `\`ми\` ${filler}`, 'vi')).toBeUndefined();
+  });
 });
 
 describe('checks: neighbour duplicates (document level, M2-D19)', () => {
