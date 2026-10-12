@@ -34,7 +34,7 @@ import {
   defaultPreferences,
   LANGUAGES,
 } from './settings.ts';
-import { OVERFLOW_NOTICE, SYNC_QUOTA_BYTES, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from './sync-quota.ts';
+import { overflowNotice, SYNC_QUOTA_BYTES, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from './sync-quota.ts';
 
 type Api = Parameters<typeof readApiKey>[0];
 
@@ -230,7 +230,7 @@ describe('personal glossary: storage.sync, kept on this device when too large to
     expect(small.ok && small.warning).toBeUndefined();
     expect(sync.data.glossary).toEqual(cleanGlossary(many(2)));
     expect(local.data).toEqual({});
-    expect(OVERFLOW_NOTICE).toMatch(/other devices keep the last synced version/);
+    expect(overflowNotice()).toMatch(/other devices keep the last synced version/);
   });
 
   it('a save that would push synced settings over the total quota stays on this device', async () => {

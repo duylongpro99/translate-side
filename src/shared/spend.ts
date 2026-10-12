@@ -7,6 +7,7 @@
 // spend reaches it, a new translation waits for "Continue anyway", which holds for the rest of
 // the month. It is a warning, not a cap: a translation already running finishes.
 import type { browser } from 'wxt/browser';
+import { i18n } from '#i18n';
 import type { UsageTotals } from './cost.ts';
 
 type Browser = typeof browser;
@@ -201,7 +202,7 @@ export async function readSpendLimit(api: Browser): Promise<SpendLimit | undefin
 export async function saveSpendLimit(api: Browser, monthlyUsd: number | undefined): Promise<void> {
   if (monthlyUsd === undefined) return api.storage.local.remove(SPEND_LIMIT_KEY);
   const clean = cleanSpendLimit({ monthlyUsd });
-  if (!clean) throw new Error('The limit must be an amount above $0');
+  if (!clean) throw new Error(i18n.t('errors.spendAmount'));
   await api.storage.local.set({ [SPEND_LIMIT_KEY]: clean });
 }
 

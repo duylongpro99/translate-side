@@ -27,7 +27,7 @@
 // `tabRoute:<tabId>`, cleared when the tab closes (src/shared/panel.ts).
 import type { browser } from 'wxt/browser';
 import type { AuthStyle, ModelRole, Protocol, Quirks } from '@/llm/types';
-import { ROLE_LABELS } from './presets.ts';
+import { i18n } from '#i18n';
 import {
   BUILTIN_CONNECTIONS,
   BUILTIN_PROFILES,
@@ -679,7 +679,7 @@ export async function revokeUnusedOrigin(api: Browser, baseUrl: string, except: 
  */
 export async function removeProfile(api: Browser, id: string): Promise<void> {
   const settings = await readProviderSettings(api);
-  if (settings.routing.translate === id) throw new Error('This model is used to translate. Choose another one under Routing first.');
+  if (settings.routing.translate === id) throw new Error(i18n.t('errors.modelInUse'));
   await queued(async () => {
     const items = await api.storage.sync.get(null);
     if (profileKey(id) in items) await api.storage.sync.remove(profileKey(id));
@@ -755,12 +755,12 @@ export function resolveRouteIn(settings: ProviderSettings, role: ModelRole, ctx:
   const connections = new Map(settings.connections.map((c) => [c.id, c]));
   const pick = (id: string, source: RouteSource, extra: { localOnly?: boolean; rule?: SiteRule } = {}): Route => {
     const profile = profiles.get(id);
-    if (!profile) return { ok: false, source, message: `The ${ROLE_LABELS[role].toLowerCase()} route points at a model that no longer exists. Choose a model in settings.` };
+    if (!profile) return { ok: false, source, message: i18n.t('errors.routeGone', [i18n.t(role === 'translate' ? 'errors.roleTranslate' : role === 'analyze' ? 'errors.roleAnalyze' : 'errors.roleReview')]) };
     const connection = connections.get(profile.connectionId);
-    if (!connection) return { ok: false, source, message: `The model ${profile.model} has no connection. Set it up again in settings.` };
+    if (!connection) return { ok: false, source, message: i18n.t('errors.noConnection', [profile.model]) };
     // A local-only rule fails closed: its own model must keep the text on this device too, not just the fallback.
     if (extra.localOnly && !isLocalConnection(connection)) {
-      return { ok: false, source, connection, message: `This site is set to local only, but its model ${profile.model} is not on this device. Nothing was sent. Choose a local model for the site in settings.` };
+      return { ok: false, source, connection, message: i18n.t('errors.localOnly', [profile.model]) };
     }
     return { ok: true, profile, connection, source, localOnly: extra.localOnly === true, ...(extra.rule ? { rule: extra.rule } : {}) };
   };

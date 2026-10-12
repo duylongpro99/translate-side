@@ -11,6 +11,7 @@
 // connection and the user asked for keys to be imported. Whatever is skipped or ignored is listed
 // in `notes`, never dropped silently.
 import type { browser } from 'wxt/browser';
+import { i18n } from '#i18n';
 import type { GlossaryEntry } from '@/engine/types';
 import type { Quirks } from '@/llm/types';
 import {
@@ -109,7 +110,7 @@ function portableConnection(c: ProviderConnection): ProviderConnection {
   return out;
 }
 
-/** An address with its credentials and key-named query parameters removed; `removed` says what went. Not a URL: returned as is. */
+/** An address with its credentials and key-named query parameters removed; `removed` says what went (`credentials`, `param:<name>`). Not a URL: returned as is. */
 export function redactAddress(address: string): { url: string; removed: string[] } {
   const removed: string[] = [];
   try {
@@ -117,12 +118,12 @@ export function redactAddress(address: string): { url: string; removed: string[]
     if (url.username !== '' || url.password !== '') {
       url.username = '';
       url.password = '';
-      removed.push('credentials in the base URL');
+      removed.push('credentials');
     }
     for (const name of [...url.searchParams.keys()]) {
       if (!SENSITIVE_NAME.test(name)) continue;
       url.searchParams.delete(name);
-      removed.push(`base URL parameter ${name}`);
+      removed.push(`param:${name}`);
     }
     if (removed.length > 0) return { url: url.toString().replace(/\/$/, address.endsWith('/') ? '/' : ''), removed };
   } catch {
@@ -135,7 +136,7 @@ function redactConnection(c: ProviderConnection, omitted: string[]): ProviderCon
   const out: ProviderConnection = { ...c };
   const drop = (kind: string, record: Record<string, string> | undefined) => {
     if (!record) return undefined;
-    const kept = Object.fromEntries(Object.entries(record).filter(([name]) => !SENSITIVE_NAME.test(name) || (omitted.push(`${c.label}: ${kind} ${name}`), false)));
+    const kept = Object.fromEntries(Object.entries(record).filter(([name]) => !SENSITIVE_NAME.test(name) || (omitted.push(i18n.t(kind === 'header' ? 'options.portable.header' : 'options.portable.queryParam', { label: c.label, name })), false)));
     return Object.keys(kept).length > 0 ? kept : undefined;
   };
   const headers = drop('header', c.extraHeaders);
@@ -145,7 +146,7 @@ function redactConnection(c: ProviderConnection, omitted: string[]): ProviderCon
   if (headers) out.extraHeaders = headers;
   if (params) out.queryParams = params;
   const base = redactAddress(c.baseUrl);
-  for (const what of base.removed) omitted.push(`${c.label}: ${what}`);
+  for (const what of base.removed) omitted.push(what === 'credentials' ? i18n.t('options.portable.credentials', { label: c.label }) : i18n.t('options.portable.urlParam', { label: c.label, name: what.slice('param:'.length) }));
   if (base.removed.length > 0) out.baseUrl = base.url;
   return out;
 }
@@ -205,12 +206,12 @@ function findSuspects(connections: readonly ProviderConnection[]): string[] {
   const out: string[] = [];
   for (const c of connections) {
     const fields: [string, string][] = [
-      ['label', c.label],
-      ['base URL', c.baseUrl],
-      ...Object.entries(c.extraHeaders ?? {}).map(([k, v]): [string, string] => [`header ${k}`, v]),
-      ...Object.entries(c.queryParams ?? {}).map(([k, v]): [string, string] => [`query parameter ${k}`, v]),
+      [i18n.t('options.portable.suspectLabel', { label: c.label }), c.label],
+      [i18n.t('options.portable.suspectBaseUrl', { label: c.label }), c.baseUrl],
+      ...Object.entries(c.extraHeaders ?? {}).map(([name, v]): [string, string] => [i18n.t('options.portable.header', { label: c.label, name }), v]),
+      ...Object.entries(c.queryParams ?? {}).map(([name, v]): [string, string] => [i18n.t('options.portable.queryParam', { label: c.label, name }), v]),
     ];
-    for (const [where, value] of fields) if (KEY_LIKE.test(value)) out.push(`${c.label}: ${where}`);
+    for (const [where, value] of fields) if (KEY_LIKE.test(value)) out.push(where);
   }
   return out;
 }
@@ -276,21 +277,21 @@ function importConnection(raw: unknown, notes: string[]): ProviderConnection | n
   const c = cleanConnection(raw);
   const name = isRecord(raw) && typeof raw.id === 'string' ? raw.id.slice(0, 40) : '?';
   if (!c || !ID_RE.test(c.id)) {
-    notes.push(`Skipped a connection that is not valid (${name}).`);
+    notes.push(i18n.t('options.portable.skipConnection', { name }));
     return null;
   }
   if (!okString(c.label, 200) || !okString(c.presetId, 100) || c.baseUrl.length > 2000 || !httpUrlOrEmpty(c.baseUrl)) {
-    notes.push(`Skipped connection "${c.id}": its label or base URL is not valid (a base URL must be http or https).`);
+    notes.push(i18n.t('options.portable.skipConnectionAddress', { id: c.id }));
     return null;
   }
   const headerOk = (r: Record<string, string> | undefined, nameRe: RegExp) => !r || Object.entries(r).every(([k, v]) => nameRe.test(k) && v.length <= 2000 && !CONTROL_RE.test(v));
   if (!headerOk(c.extraHeaders, HEADER_NAME_RE) || !headerOk(c.queryParams, /^.{1,100}$/)) {
-    notes.push(`Skipped connection "${c.id}": a header or query parameter in it is not valid.`);
+    notes.push(i18n.t('options.portable.skipConnectionHeader', { id: c.id }));
     return null;
   }
   const authHeaders = [c.auth, ...Object.values(c.authByProtocol ?? {})].flatMap((a) => (a?.headerName === undefined ? [] : [a.headerName]));
   if (!authHeaders.every((h) => HEADER_NAME_RE.test(h))) {
-    notes.push(`Skipped connection "${c.id}": an auth header name in it is not valid.`);
+    notes.push(i18n.t('options.portable.skipConnectionAuth', { id: c.id }));
     return null;
   }
   // Learned from this device's requests, not portable: re-detected on the first test.
@@ -300,7 +301,7 @@ function importConnection(raw: unknown, notes: string[]): ProviderConnection | n
 function importProfile(raw: unknown, notes: string[]): ModelProfile | null {
   const p = cleanProfile(raw);
   if (!p || !ID_RE.test(p.id) || !ID_RE.test(p.connectionId) || !okString(p.model, 200)) {
-    notes.push(`Skipped a model profile that is not valid (${isRecord(raw) && typeof raw.id === 'string' ? raw.id.slice(0, 40) : '?'}).`);
+    notes.push(i18n.t('options.portable.skipProfile', { id: isRecord(raw) && typeof raw.id === 'string' ? raw.id.slice(0, 40) : '?' }));
     return null;
   }
   const quirks = cleanQuirks(p.quirks);
@@ -312,7 +313,7 @@ function importProfile(raw: unknown, notes: string[]): ModelProfile | null {
 function importPrefs(raw: unknown, notes: string[]): Partial<Preferences> | undefined {
   if (!isRecord(raw)) return undefined;
   const out: Partial<Preferences> = {};
-  const bad = (name: string) => notes.push(`Ignored the preference "${name}": not a valid value.`);
+  const bad = (name: string) => notes.push(i18n.t('options.portable.ignorePref', { name }));
   const lang = (name: 'targetLang' | 'sourceLang') => {
     const v = raw[name];
     if (v === undefined) return;
@@ -347,12 +348,12 @@ function importRouting(raw: unknown, notes: string[]): ImportPlan['routing'] {
   if (raw === undefined) return undefined;
   const routing = cleanRouting(raw);
   if (!routing || !ID_RE.test(routing.translate)) {
-    notes.push('Skipped the routing: it names no valid model to translate with.');
+    notes.push(i18n.t('options.portable.skipRouting'));
     return undefined;
   }
   const ok = (id: string | undefined) => id === undefined || ID_RE.test(id);
   const fallback = routing.fallback?.filter((id) => ID_RE.test(id));
-  if (!ok(routing.analyze) || !ok(routing.review) || fallback?.length !== routing.fallback?.length) notes.push('Dropped model ids in the routing that are not valid.');
+  if (!ok(routing.analyze) || !ok(routing.review) || fallback?.length !== routing.fallback?.length) notes.push(i18n.t('options.portable.dropRoutingIds'));
   return {
     translate: routing.translate,
     ...(ok(routing.analyze) && routing.analyze ? { analyze: routing.analyze } : {}),
@@ -361,33 +362,41 @@ function importRouting(raw: unknown, notes: string[]): ImportPlan['routing'] {
   };
 }
 
-function capped<T>(list: readonly T[], max: number, what: string, notes: string[]): T[] {
-  if (list.length > max) notes.push(`The file lists ${list.length} ${what}; only the first ${max} were read.`);
+type Capped = 'connections' | 'profiles' | 'siteRules' | 'glossary';
+const CAPPED_NOTE: Record<Capped, (vars: { count: string; max: string }) => string> = {
+  connections: (v) => i18n.t('options.portable.cappedConnections', v),
+  profiles: (v) => i18n.t('options.portable.cappedProfiles', v),
+  siteRules: (v) => i18n.t('options.portable.cappedSiteRules', v),
+  glossary: (v) => i18n.t('options.portable.cappedGlossary', v),
+};
+
+function capped<T>(list: readonly T[], max: number, what: Capped, notes: string[]): T[] {
+  if (list.length > max) notes.push(CAPPED_NOTE[what]({ count: String(list.length), max: String(max) }));
   return list.slice(0, max);
 }
 
 /** Reads `text` as a settings file. Nothing is written; the result is what the file would bring. */
 export function parseImport(text: string): ParseResult {
-  if (text.length > MAX_IMPORT_BYTES) return { ok: false, error: 'This file is too large to be a settings file.' };
+  if (text.length > MAX_IMPORT_BYTES) return { ok: false, error: i18n.t('options.portable.tooLarge') };
   let root: unknown;
   try {
     root = JSON.parse(text);
   } catch {
-    return { ok: false, error: 'This file is not valid JSON.' };
+    return { ok: false, error: i18n.t('options.portable.notJson') };
   }
-  if (!isRecord(root) || root.format !== EXPORT_FORMAT) return { ok: false, error: 'This is not a Translate Side settings file.' };
-  if (typeof root.formatVersion !== 'number' || !Number.isInteger(root.formatVersion) || root.formatVersion < 1) return { ok: false, error: 'This settings file has no valid version.' };
-  if (root.formatVersion > EXPORT_VERSION) return { ok: false, error: 'This settings file was made by a newer version of Translate Side. Update the extension, then import it.' };
+  if (!isRecord(root) || root.format !== EXPORT_FORMAT) return { ok: false, error: i18n.t('options.portable.notOurs') };
+  if (typeof root.formatVersion !== 'number' || !Number.isInteger(root.formatVersion) || root.formatVersion < 1) return { ok: false, error: i18n.t('options.portable.noVersion') };
+  if (root.formatVersion > EXPORT_VERSION) return { ok: false, error: i18n.t('options.portable.newerVersion') };
   const s = root.settings;
-  if (!isRecord(s)) return { ok: false, error: 'This settings file has no settings in it.' };
+  if (!isRecord(s)) return { ok: false, error: i18n.t('options.portable.noSettings') };
 
   const notes: string[] = [];
   const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
   const seen = new Set<string>();
-  const unique = <T extends { id: string }>(items: (T | null)[], what: string): T[] =>
+  const unique = <T extends { id: string }>(items: (T | null)[], what: 'connection' | 'profile'): T[] =>
     items.flatMap((i) => {
       if (!i) return [];
-      if (seen.has(`${what}:${i.id}`)) return (notes.push(`Ignored a repeated ${what} id "${i.id}".`), []);
+      if (seen.has(`${what}:${i.id}`)) return (notes.push(i18n.t(what === 'connection' ? 'options.portable.repeatedConnection' : 'options.portable.repeatedProfile', { id: i.id })), []);
       seen.add(`${what}:${i.id}`);
       return [i];
     });
@@ -395,22 +404,22 @@ export function parseImport(text: string): ParseResult {
   const connections = unique(rawConnections.map((c) => importConnection(c, notes)), 'connection');
   // A key travels with a connection that was read: one whose record was skipped brings none (it could be a key for the id of one you already have).
   const skippedIds = new Set(rawConnections.flatMap((c) => (isRecord(c) && typeof c.id === 'string' && !connections.some((k) => k.id === c.id) ? [c.id] : [])));
-  const profiles = unique(capped(list(s.profiles), MAX_PROFILES, 'model profiles', notes).map((p) => importProfile(p, notes)), 'profile');
+  const profiles = unique(capped(list(s.profiles), MAX_PROFILES, 'profiles', notes).map((p) => importProfile(p, notes)), 'profile');
 
   const routing = importRouting(s.routing, notes);
-  const siteRules = cleanSiteRules(capped(list(s.siteRules), MAX_SITE_RULES, 'site rules', notes)).filter((r) => ID_RE.test(r.translate) && sitePattern(r.pattern) === r.pattern);
-  if (Array.isArray(s.siteRules) && siteRules.length < Math.min(s.siteRules.length, MAX_SITE_RULES)) notes.push('Skipped some site rules that are not valid.');
-  const glossary = Array.isArray(s.glossary) ? cleanGlossary(capped(s.glossary, MAX_GLOSSARY, 'glossary entries', notes)) : undefined;
+  const siteRules = cleanSiteRules(capped(list(s.siteRules), MAX_SITE_RULES, 'siteRules', notes)).filter((r) => ID_RE.test(r.translate) && sitePattern(r.pattern) === r.pattern);
+  if (Array.isArray(s.siteRules) && siteRules.length < Math.min(s.siteRules.length, MAX_SITE_RULES)) notes.push(i18n.t('options.portable.skipSiteRules'));
+  const glossary = Array.isArray(s.glossary) ? cleanGlossary(capped(s.glossary, MAX_GLOSSARY, 'glossary', notes)) : undefined;
   const prefs = importPrefs(s.prefs, notes);
 
   const keys: Record<string, string> = {};
   if (root.keys !== undefined) {
-    if (!isRecord(root.keys)) notes.push('Ignored the keys: they are not in a valid form.');
+    if (!isRecord(root.keys)) notes.push(i18n.t('options.portable.keysInvalid'));
     else {
       for (const [id, value] of Object.entries(root.keys).slice(0, MAX_CONNECTIONS)) {
         const key = typeof value === 'string' ? value.trim() : '';
-        if (skippedIds.has(id)) notes.push(`Ignored the key for "${id.slice(0, 40)}": its connection in the file was skipped.`);
-        else if (!ID_RE.test(id) || key === '' || key.length > MAX_KEY_LENGTH || CONTROL_RE.test(key)) notes.push(`Ignored a key that is not valid (for "${id.slice(0, 40)}").`);
+        if (skippedIds.has(id)) notes.push(i18n.t('options.portable.keyConnectionSkipped', { id: id.slice(0, 40) }));
+        else if (!ID_RE.test(id) || key === '' || key.length > MAX_KEY_LENGTH || CONTROL_RE.test(key)) notes.push(i18n.t('options.portable.keyInvalid', { id: id.slice(0, 40) }));
         else Object.defineProperty(keys, id, { value: key, enumerable: true, writable: true, configurable: true });
       }
     }
@@ -513,14 +522,14 @@ async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKey
   for (const p of plan.profiles) items[profileKey(p.id)] = p;
   const connectionIds = new Set([...settings.connections.map((c) => c.id), ...plan.connections.map((c) => c.id)]);
   const profileIds = new Set([...settings.profiles.map((p) => p.id), ...plan.profiles.map((p) => p.id)]);
-  for (const p of plan.profiles) if (!connectionIds.has(p.connectionId)) notes.push(`The model "${p.model}" belongs to a connection that is in neither the file nor this browser (${p.connectionId}).`);
+  for (const p of plan.profiles) if (!connectionIds.has(p.connectionId)) notes.push(i18n.t('options.portable.modelOrphan', { model: p.model, id: p.connectionId }));
 
   let routing: ImportReport['routing'] = 'none';
   if (plan.routing) {
     const r = plan.routing;
     if (!profileIds.has(r.translate)) {
       routing = 'kept';
-      notes.push(`Kept your current routing: the file's routing translates with "${r.translate}", which is in neither the file nor this browser.`);
+      notes.push(i18n.t('options.portable.routingKept', { model: r.translate }));
     } else {
       const known = (id: string | undefined) => id !== undefined && profileIds.has(id);
       const next: Omit<Routing, 'siteOverrides'> = {
@@ -529,9 +538,9 @@ async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKey
         ...(known(r.review) ? { review: r.review } : {}),
         ...(r.fallback ? { fallback: r.fallback.filter((id) => id === BASIC_FALLBACK || profileIds.has(id)) } : {}),
       };
-      if (r.analyze && !known(r.analyze)) notes.push(`Dropped the routing's analyze model "${r.analyze}": it is not here.`);
-      if (r.review && !known(r.review)) notes.push(`Dropped the routing's review model "${r.review}": it is not here.`);
-      if (r.fallback && next.fallback?.length !== r.fallback.length) notes.push('Dropped fallback models that are not here.');
+      if (r.analyze && !known(r.analyze)) notes.push(i18n.t('options.portable.dropAnalyze', { model: r.analyze }));
+      if (r.review && !known(r.review)) notes.push(i18n.t('options.portable.dropReview', { model: r.review }));
+      if (r.fallback && next.fallback?.length !== r.fallback.length) notes.push(i18n.t('options.portable.dropFallback'));
       if (next.fallback?.length === 0) delete next.fallback;
       items[ROUTING_KEY] = { ...next, [BASIC_MIGRATED_FIELD]: true };
       routing = 'replaced';
@@ -539,7 +548,7 @@ async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKey
   }
   if (plan.siteRules.length > 0) {
     const kept = plan.siteRules.filter((r) => profileIds.has(r.translate));
-    if (kept.length < plan.siteRules.length) notes.push('Skipped site rules that use a model that is not here.');
+    if (kept.length < plan.siteRules.length) notes.push(i18n.t('options.portable.skipSiteRulesModel'));
     const patterns = new Set(kept.map((r) => r.pattern));
     const merged = [...(settings.routing.siteOverrides ?? []).filter((r) => !patterns.has(r.pattern)), ...kept];
     if (kept.length > 0) items[SITE_RULES_KEY] = merged.slice(0, MAX_SITE_RULES);
@@ -555,7 +564,7 @@ async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKey
   const never = new Set(plan.never ?? []);
   const allow = (plan.allow ?? []).filter((p) => !never.has(p));
   if (plan.allow || plan.never) {
-    if (allow.length < (plan.allow?.length ?? 0)) notes.push('A site listed as both always and never translate stays on the never list.');
+    if (allow.length < (plan.allow?.length ?? 0)) notes.push(i18n.t('options.portable.bothLists'));
     items[SITE_ALLOWLIST_KEY] = cleanSiteList([...lists.allow.filter((p) => !never.has(p)), ...allow]);
     items[SITE_NEVER_KEY] = cleanSiteList([...lists.never.filter((p) => !allow.includes(p)), ...never]);
   }
@@ -566,7 +575,7 @@ async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKey
   let wouldReplace = 0;
   for (const [id, key] of Object.entries(plan.keys)) {
     if (!connectionIds.has(id)) {
-      notes.push(`Ignored a key for "${id}": that connection is in neither the file nor this browser.`);
+      notes.push(i18n.t('options.portable.keyConnectionMissing', { id }));
       continue;
     }
     const current = local[`${SECRET_PREFIX}${id}`];

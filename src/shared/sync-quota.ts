@@ -11,6 +11,7 @@
 // are not merged into it (the notice says so).
 // Nothing is written to sync for the overflow itself: a pointer or index item would reach every
 // device, and an index conflicts with records found by key prefix (providers.ts header).
+import { i18n } from '#i18n';
 import type { browser } from 'wxt/browser';
 
 type Browser = typeof browser;
@@ -24,7 +25,7 @@ export const OVERFLOW_PREFIX = 'overflow:';
 export const overflowKey = (key: string) => `${OVERFLOW_PREFIX}${key}`;
 
 /** What Options shows for a list kept on this device. */
-export const OVERFLOW_NOTICE = 'Too large to sync. Changes stay on this device; other devices keep the last synced version, and their edits no longer reach this device.';
+export const overflowNotice = (): string => i18n.t('options.syncQuota.overflow');
 
 /** Bytes chrome.storage.sync counts for one item: the key plus the value's JSON, in UTF-8. */
 export function syncItemBytes(key: string, value: unknown): number {
@@ -62,9 +63,9 @@ export async function fits(api: Browser, items: Record<string, unknown>, removed
 export async function assertFits(api: Browser, items: Record<string, unknown>, removed: readonly string[] = []): Promise<void> {
   const check = await fits(api, items, removed);
   if (check.ok) return;
-  if (check.reason === 'item') throw new Error(`This setting would take ${check.bytes} bytes, over Chrome's sync limit of ${SYNC_QUOTA_BYTES_PER_ITEM} bytes for one setting. Shorten it (fewer extra headers or a shorter label).`);
-  if (check.reason === 'items') throw new Error(`Synced settings would exceed Chrome's limit of ${SYNC_MAX_ITEMS} items. Remove some connections, models or site rules.`);
-  throw new Error(`Synced settings would exceed Chrome's ${SYNC_QUOTA_BYTES}-byte limit. Remove some connections, models, site rules or glossary entries.`);
+  if (check.reason === 'item') throw new Error(i18n.t('errors.syncItem', [String(check.bytes), String(SYNC_QUOTA_BYTES_PER_ITEM)]));
+  if (check.reason === 'items') throw new Error(i18n.t('errors.syncItems', [String(SYNC_MAX_ITEMS)]));
+  throw new Error(i18n.t('errors.syncTotal', [String(SYNC_QUOTA_BYTES)]));
 }
 
 /** Is the list under `key` kept on this device (its overflow marker set)? */

@@ -26,12 +26,12 @@ import {
   type ProviderConnection,
 } from '@/shared/settings';
 import { onProviderSettingsChanged, readProviderSettings, resolveRoute, type ProviderSettings } from '@/shared/providers';
-import { isOverflowed, onListChanged, OVERFLOW_NOTICE } from '@/shared/sync-quota';
+import { isOverflowed, onListChanged, overflowNotice } from '@/shared/sync-quota';
 import { openOnboarding } from '@/shared/onboarding';
 import { ProvidersSection, type AdapterFor } from './Providers.tsx';
 import { TransferSection } from './Transfer.tsx';
 import { DiagnosticsSection } from './Diagnostics.tsx';
-import { SCREEN_READER_NOTE, SHORTCUTS } from '@/shared/shortcuts';
+import { screenReaderNote, shortcutList } from '@/shared/shortcuts';
 import { openShortcutSettings, toggleRow, useToggleShortcut } from '@/shared/toggle-shortcut';
 import { openTranslationCache, type CacheStats, type TranslationCache } from '@/shared/cache';
 import { formatUsd } from '@/shared/cost';
@@ -303,7 +303,7 @@ function GlossarySection({ api }: { api: Browser }) {
       )}
       {local ? (
         <p class="opt__status opt__status--warn" role="status" data-testid="glossary-overflow">
-          {OVERFLOW_NOTICE}
+          {overflowNotice()}
         </p>
       ) : null}
       <form onSubmit={onSubmit} class="opt__row" data-testid="glossary-form">
@@ -450,7 +450,7 @@ function SitesSection({ api }: { api: Browser }) {
       <h2 id="sites-h">{i18n.t('options.sites.title')}</h2>
       {local ? (
         <p class="opt__status opt__status--warn" role="status" data-testid="sites-overflow">
-          {OVERFLOW_NOTICE}
+          {overflowNotice()}
         </p>
       ) : null}
       <h3>{i18n.t('options.sites.allowTitle')}</h3>
@@ -505,7 +505,7 @@ const mb = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(0, Math.round(b
 /** The panel's keyboard shortcuts (plan M5-E10): the same list the panel's ? button and the README show. */
 function ShortcutsSection({ api }: { api: Browser }) {
   const shortcut = useToggleShortcut(api);
-  const rows = SHORTCUTS.map((s, i) => (i === 0 ? { ...s, ...toggleRow(shortcut) } : s));
+  const rows = shortcutList().map((s, i) => (i === 0 ? { ...s, ...toggleRow(shortcut) } : s));
   return (
     <section class="opt__section" id="shortcuts" aria-labelledby="shortcuts-h">
       <h2 id="shortcuts-h">{i18n.t('options.shortcuts.title')}</h2>
@@ -528,7 +528,7 @@ function ShortcutsSection({ api }: { api: Browser }) {
         </tbody>
       </table>
       <p class="opt__hint">{i18n.t('options.shortcuts.focusHint')}</p>
-      <p class="opt__hint">{SCREEN_READER_NOTE}</p>
+      <p class="opt__hint">{screenReaderNote()}</p>
       <p class="opt__hint">
         <button type="button" class="opt__link" data-testid="shortcut-settings" onClick={() => void openShortcutSettings(api)}>
           {i18n.t('options.shortcuts.change')}

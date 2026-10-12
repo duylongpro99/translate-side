@@ -2,6 +2,7 @@
 // fields its form shows. A preset is never stored: a connection keeps its `presetId`, and every
 // value the preset gave it is the connection's own from then on (the user can override any).
 // Dependency-free apart from types and constants, so the options page can read it without an SDK.
+import { i18n } from '#i18n';
 import { APIBOX_BASE_URL, GEMINI_OPENAI_BASE_URL } from '@/llm/presets';
 import type { AuthStyle, Protocol, Quirks } from '@/llm/types';
 
@@ -21,8 +22,6 @@ export type PresetId =
 export interface ConnectionPreset {
   id: PresetId;
   label: string;
-  /** What the picker says under the name. */
-  blurb: string;
   protocol: Protocol | 'auto';
   /** Empty for the Custom presets: the user enters it. */
   baseUrl: string;
@@ -45,8 +44,6 @@ export interface ConnectionPreset {
   defaultModel?: string;
   /** Defaults for a profile created on this connection (§4.3.1, §4.3.6). */
   profile: { maxConcurrency: number; chunkTokens: number };
-  /** Shown under the form. */
-  note?: string;
 }
 
 /** §4.3.1 defaults: 2 requests in flight, 1,200-token chunks. */
@@ -58,7 +55,6 @@ export const PRESETS: readonly ConnectionPreset[] = [
   {
     id: 'anthropic',
     label: 'Anthropic (Claude)',
-    blurb: 'Claude models with your Anthropic key',
     protocol: 'anthropic-messages',
     baseUrl: 'https://api.anthropic.com',
     auth: 'x-api-key',
@@ -71,7 +67,6 @@ export const PRESETS: readonly ConnectionPreset[] = [
   {
     id: 'openai',
     label: 'OpenAI',
-    blurb: 'GPT models with your OpenAI key',
     protocol: 'openai-chat',
     baseUrl: 'https://api.openai.com/v1',
     auth: 'bearer',
@@ -84,7 +79,6 @@ export const PRESETS: readonly ConnectionPreset[] = [
   {
     id: 'gemini',
     label: 'Google Gemini',
-    blurb: 'Gemini Flash and Flash-Lite through its OpenAI-compatible API',
     protocol: 'openai-chat',
     baseUrl: GEMINI_OPENAI_BASE_URL,
     auth: 'bearer',
@@ -98,7 +92,6 @@ export const PRESETS: readonly ConnectionPreset[] = [
   {
     id: 'openrouter',
     label: 'OpenRouter',
-    blurb: 'Many models through one key',
     protocol: 'openai-chat',
     baseUrl: 'https://openrouter.ai/api/v1',
     auth: 'bearer',
@@ -111,7 +104,6 @@ export const PRESETS: readonly ConnectionPreset[] = [
   {
     id: 'ollama',
     label: 'Ollama (local)',
-    blurb: 'Models on this computer; free and private',
     protocol: 'openai-chat',
     baseUrl: 'http://localhost:11434/v1',
     auth: 'none',
@@ -120,12 +112,10 @@ export const PRESETS: readonly ConnectionPreset[] = [
     keyCheck: 'list',
     defaultModel: 'qwen3:8b',
     profile: LOCAL_PROFILE,
-    note: 'Ollama must allow requests from extensions (OLLAMA_ORIGINS). Qwen and Gemma models of 7B and up translate best.',
   },
   {
     id: 'ollama-cloud',
     label: 'Ollama (cloud)',
-    blurb: "Ollama's hosted models with an ollama.com key",
     protocol: 'openai-chat',
     baseUrl: 'https://ollama.com/v1',
     auth: 'bearer',
@@ -138,7 +128,6 @@ export const PRESETS: readonly ConnectionPreset[] = [
   {
     id: 'lmstudio',
     label: 'LM Studio (local)',
-    blurb: 'Models in LM Studio on this computer',
     protocol: 'openai-chat',
     baseUrl: 'http://localhost:1234/v1',
     auth: 'none',
@@ -146,12 +135,10 @@ export const PRESETS: readonly ConnectionPreset[] = [
     quirks: {},
     keyCheck: 'list',
     profile: LOCAL_PROFILE,
-    note: 'Start the server and turn on CORS in LM Studio (Developer → Server settings).',
   },
   {
     id: 'apibox',
     label: 'APIBOX',
-    blurb: 'An OpenAI-compatible gateway (Qwen, DeepSeek)',
     protocol: 'openai-chat',
     baseUrl: APIBOX_BASE_URL,
     auth: 'bearer',
@@ -164,7 +151,6 @@ export const PRESETS: readonly ConnectionPreset[] = [
   {
     id: 'custom-openai',
     label: 'Custom — OpenAI-compatible',
-    blurb: 'vLLM, LiteLLM, a company proxy',
     protocol: 'openai-chat',
     baseUrl: '',
     auth: 'bearer',
@@ -177,7 +163,6 @@ export const PRESETS: readonly ConnectionPreset[] = [
   {
     id: 'custom-anthropic',
     label: 'Custom — Anthropic-compatible',
-    blurb: 'An Anthropic-format gateway',
     protocol: 'anthropic-messages',
     baseUrl: '',
     auth: 'x-api-key',
@@ -190,7 +175,6 @@ export const PRESETS: readonly ConnectionPreset[] = [
   {
     id: 'custom-auto',
     label: 'Custom — Auto-detect',
-    blurb: 'A gateway that may speak both formats (LiteLLM, OpenRouter-style)',
     protocol: 'auto',
     baseUrl: '',
     auth: 'bearer',
@@ -214,26 +198,95 @@ export function presetFor(presetId: string, protocol?: Protocol | 'auto'): Conne
   return PRESETS.find((p) => p.id === id) as ConnectionPreset;
 }
 
-export const AUTH_LABELS: Record<AuthStyle, string> = {
-  bearer: 'Bearer token',
-  'x-api-key': 'x-api-key',
-  'custom-header': 'Custom header',
-  none: 'None',
-};
+/** What the picker says under a preset's name, in the reader's language. */
+export function presetBlurb(preset: ConnectionPreset): string {
+  switch (preset.id) {
+    case 'anthropic':
+      return i18n.t('options.presets.blurbAnthropic');
+    case 'openai':
+      return i18n.t('options.presets.blurbOpenai');
+    case 'gemini':
+      return i18n.t('options.presets.blurbGemini');
+    case 'openrouter':
+      return i18n.t('options.presets.blurbOpenrouter');
+    case 'ollama':
+      return i18n.t('options.presets.blurbOllama');
+    case 'ollama-cloud':
+      return i18n.t('options.presets.blurbOllamaCloud');
+    case 'lmstudio':
+      return i18n.t('options.presets.blurbLmstudio');
+    case 'apibox':
+      return i18n.t('options.presets.blurbApibox');
+    case 'custom-openai':
+      return i18n.t('options.presets.blurbCustomOpenai');
+    case 'custom-anthropic':
+      return i18n.t('options.presets.blurbCustomAnthropic');
+    case 'custom-auto':
+      return i18n.t('options.presets.blurbCustomAuto');
+  }
+}
 
-export const PROTOCOL_LABELS: Record<Protocol | 'auto', string> = {
-  'openai-chat': 'OpenAI-compatible',
-  'anthropic-messages': 'Anthropic-compatible',
-  'chrome-builtin': 'Chrome built-in',
-  auto: 'Auto-detect',
-};
+/** Shown under the form: what the preset's server needs (the local ones only). */
+export function presetNote(preset: ConnectionPreset): string | undefined {
+  if (preset.id === 'ollama') return i18n.t('options.presets.noteOllama');
+  if (preset.id === 'lmstudio') return i18n.t('options.presets.noteLmstudio');
+  return undefined;
+}
 
-/** What the UI calls a routing role (plan M4 §5 "Role naming"). `review` is M7's. */
-export const ROLE_LABELS = { translate: 'Translate', analyze: 'Document brief', review: 'Review' } as const;
+/**
+ * The preset's name in the picker and the form's title. A connection's own label (what is saved) stays
+ * `preset.label`: it is a name, not interface text, so it does not change with the browser's language.
+ */
+export function presetTitle(preset: ConnectionPreset): string {
+  switch (preset.id) {
+    case 'ollama':
+      return i18n.t('options.presets.titleOllama');
+    case 'ollama-cloud':
+      return i18n.t('options.presets.titleOllamaCloud');
+    case 'lmstudio':
+      return i18n.t('options.presets.titleLmstudio');
+    case 'custom-openai':
+      return i18n.t('options.presets.titleCustomOpenai');
+    case 'custom-anthropic':
+      return i18n.t('options.presets.titleCustomAnthropic');
+    case 'custom-auto':
+      return i18n.t('options.presets.titleCustomAuto');
+    default:
+      return preset.label;
+  }
+}
+
+export function authLabel(style: AuthStyle): string {
+  switch (style) {
+    case 'bearer':
+      return i18n.t('options.presets.authBearer');
+    case 'x-api-key':
+      return 'x-api-key';
+    case 'custom-header':
+      return i18n.t('options.presets.authCustomHeader');
+    case 'none':
+      return i18n.t('options.presets.authNone');
+  }
+}
+
+export function protocolLabel(protocol: Protocol | 'auto'): string {
+  switch (protocol) {
+    case 'openai-chat':
+      return i18n.t('options.presets.protocolOpenai');
+    case 'anthropic-messages':
+      return i18n.t('options.presets.protocolAnthropic');
+    case 'chrome-builtin':
+      return i18n.t('options.presets.protocolChrome');
+    case 'auto':
+      return i18n.t('options.presets.protocolAuto');
+  }
+}
+
+const PICKER_IDS: readonly { title: () => string; ids: readonly PresetId[] }[] = [
+  { title: () => i18n.t('options.presets.groupCloud'), ids: ['anthropic', 'openai', 'gemini', 'openrouter', 'ollama-cloud', 'apibox'] },
+  { title: () => i18n.t('options.presets.groupLocal'), ids: ['ollama', 'lmstudio'] },
+  { title: () => i18n.t('options.presets.groupCustom'), ids: ['custom-openai', 'custom-anthropic', 'custom-auto'] },
+];
 
 /** The add-connection picker (§4.3.3 step 1), grouped. */
-export const PICKER_GROUPS: readonly { title: string; presets: readonly ConnectionPreset[] }[] = [
-  { title: 'Cloud', ids: ['anthropic', 'openai', 'gemini', 'openrouter', 'ollama-cloud', 'apibox'] },
-  { title: 'On this computer', ids: ['ollama', 'lmstudio'] },
-  { title: 'Custom endpoint', ids: ['custom-openai', 'custom-anthropic', 'custom-auto'] },
-].map((g) => ({ title: g.title, presets: g.ids.map((id) => PRESETS.find((p) => p.id === id) as ConnectionPreset) }));
+export const pickerGroups = (): readonly { title: string; presets: readonly ConnectionPreset[] }[] => PICKER_IDS.map((g) => ({ title: g.title(), presets: g.ids.map((id) => PRESETS.find((p) => p.id === id) as ConnectionPreset) }));

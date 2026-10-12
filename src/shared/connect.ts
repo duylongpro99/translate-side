@@ -2,6 +2,7 @@
 // (§4.2.5, M4-E6), and what the settings say about each failure (§4.3.5, §4.3.6, M4-E12). Pure:
 // the adapters and the permission check come in as ports, so every path is unit-tested without a
 // network. The permission request itself is the caller's (it must be the first call in the click).
+import { i18n } from '#i18n';
 import type { AuthStyle, LLMError, ModelInfo, NormalizedRequest, Protocol, ProtocolAdapter, Quirks, ResolvedConnection } from '@/llm/types';
 import { checkBaseUrl } from '@/llm/errors';
 import type { ConnectionPreset } from './presets.ts';
@@ -16,11 +17,18 @@ export interface UrlFix {
   to: string;
 }
 
-export const URL_FIX_TEXT: Record<UrlFixReason, string> = {
-  endpoint: 'The base URL ends before the endpoint path (/chat/completions, /messages, /models): the extension adds it.',
-  'double-v1': 'The base URL had /v1 twice.',
-  'missing-v1': 'The base URL was missing /v1.',
-  'anthropic-v1': 'The Anthropic API adds /v1 itself, so the base URL ends before it.',
+/** What a base URL fix said it did, in the reader's language. */
+export const urlFixText = (reason: UrlFixReason): string => {
+  switch (reason) {
+    case 'endpoint':
+      return i18n.t('options.connect.fixEndpoint');
+    case 'double-v1':
+      return i18n.t('options.connect.fixDoubleV1');
+    case 'missing-v1':
+      return i18n.t('options.connect.fixMissingV1');
+    case 'anthropic-v1':
+      return i18n.t('options.connect.fixAnthropicV1');
+  }
 };
 
 /** Endpoint paths people paste into the base URL field. */
@@ -342,43 +350,41 @@ export function connectMessage(error: LLMError, ctx: MessageContext): ConnectMes
   const server = local ? LOCAL_NAMES[local] : host;
   switch (error.kind) {
     case 'auth':
-      if (ctx.noKey) return { status: 'No key', text: `Enter your ${ctx.preset.label} API key.`, action: 'fix-key' };
-      return { status: 'Key invalid', text: `${server} rejected this key. Check that it was copied in full, or create a new one.`, action: 'fix-key' };
+      if (ctx.noKey) return { status: i18n.t('options.connect.noKeyStatus'), text: i18n.t('options.connect.noKey', { provider: ctx.preset.label }), action: 'fix-key' };
+      return { status: i18n.t('options.connect.keyInvalidStatus'), text: i18n.t('options.connect.keyInvalid', { server }), action: 'fix-key' };
     case 'quota':
-      return { status: 'No allowance', text: `The key works, but ${server} says it has no allowance: ${error.message}` };
+      return { status: i18n.t('options.connect.noAllowanceStatus'), text: i18n.t('options.connect.noAllowance', { server, reason: error.message }) };
     case 'cors':
-      if (error.cause === 'permission') return { status: 'No access', text: `Translate Side has no access to ${host}. Allow it when Chrome asks.`, action: 'grant' };
+      if (error.cause === 'permission') return { status: i18n.t('options.connect.noAccessStatus'), text: i18n.t('options.connect.noAccess', { host }), action: 'grant' };
       return {
-        status: 'CORS blocked',
-        text:
-          local === 'lmstudio'
-            ? 'LM Studio refused requests from the extension. Turn on CORS in its server settings; the test runs again by itself.'
-            : `${server} refused requests from the extension (CORS). Allow them as the guide shows, and the test runs again by itself.`,
+        status: i18n.t('options.connect.corsStatus'),
+        text: local === 'lmstudio' ? i18n.t('options.connect.corsLmStudio') : i18n.t('options.connect.cors', { server }),
         action: 'cors-guide',
       };
     case 'model_not_found': {
-      const model = ctx.model?.trim() || 'that model';
-      if (local === 'ollama' && ctx.model) return { status: 'Model not pulled', text: `${model} is not on this computer yet. Run this, then test again:`, action: 'command', command: `ollama pull ${ctx.model.trim()}` };
-      return { status: 'Model not found', text: `${server} has no model named ${model}. Pick one from the list.` };
+      const model = ctx.model?.trim() || i18n.t('options.connect.thatModel');
+      if (local === 'ollama' && ctx.model) return { status: i18n.t('options.connect.notPulledStatus'), text: i18n.t('options.connect.notPulled', { model }), action: 'command', command: `ollama pull ${ctx.model.trim()}` };
+      return { status: i18n.t('options.connect.modelNotFoundStatus'), text: i18n.t('options.connect.modelNotFound', { server, model }) };
     }
     case 'network':
-      if (local === 'ollama') return { status: 'Not running', text: `Nothing answers at ${host}. Start Ollama (open the app, or run this), then test again:`, action: 'command', command: 'ollama serve' };
-      if (local === 'lmstudio') return { status: 'Not running', text: `Nothing answers at ${host}. In LM Studio, open Developer and start the server, then test again.`, action: 'retry' };
-      return { status: 'Not reachable', text: `Can't reach ${host}. Check the base URL and your network.`, action: 'retry' };
+      if (local === 'ollama') return { status: i18n.t('options.connect.notRunningStatus'), text: i18n.t('options.connect.notRunningOllama', { host }), action: 'command', command: 'ollama serve' };
+      if (local === 'lmstudio') return { status: i18n.t('options.connect.notRunningStatus'), text: i18n.t('options.connect.notRunningLmStudio', { host }), action: 'retry' };
+      return { status: i18n.t('options.connect.notReachableStatus'), text: i18n.t('options.connect.notReachable', { host }), action: 'retry' };
     case 'rate_limit':
     case 'overloaded':
-      return { status: 'Busy', text: `${server} is busy or rate-limited right now (${error.message}). Try again in a moment.`, action: 'retry' };
+      return { status: i18n.t('options.connect.busyStatus'), text: i18n.t('options.connect.busy', { server, reason: error.message }), action: 'retry' };
     case 'bad_request':
       if (error.status === 404) {
-        const api = ctx.preset.protocol === 'auto' ? 'an OpenAI-compatible or Anthropic-compatible API' : ctx.preset.protocol === 'anthropic-messages' ? 'an Anthropic-compatible API' : 'an OpenAI-compatible API';
-        const text = `Nothing at ${ctx.baseUrl} answers as ${api}. Check the base URL.`;
-        return ctx.suggestion ? { status: 'Wrong base URL', text: `${text} Did you mean ${ctx.suggestion}?`, action: 'use-url', suggestion: ctx.suggestion } : { status: 'Wrong base URL', text };
+        const api = i18n.t(ctx.preset.protocol === 'auto' ? 'options.connect.apiEither' : ctx.preset.protocol === 'anthropic-messages' ? 'options.connect.apiAnthropic' : 'options.connect.apiOpenai');
+        const text = i18n.t('options.connect.wrongUrl', { url: ctx.baseUrl, api });
+        const status = i18n.t('options.connect.wrongUrlStatus');
+        return ctx.suggestion ? { status, text: i18n.t('options.connect.wrongUrlSuggest', { text, suggestion: ctx.suggestion }), action: 'use-url', suggestion: ctx.suggestion } : { status, text };
       }
-      if (error.message === NEITHER_FORMAT) return { status: 'Wrong base URL', text: NEITHER_FORMAT };
-      if (error.status === undefined && /base URL/i.test(error.message)) return { status: 'Invalid base URL', text: 'Enter a base URL that starts with https:// (or http:// for a local server).' };
-      return { status: 'Test failed', text: error.message };
+      if (error.message === NEITHER_FORMAT) return { status: i18n.t('options.connect.wrongUrlStatus'), text: i18n.t('options.connect.neitherFormat') };
+      if (error.status === undefined && /base URL/i.test(error.message)) return { status: i18n.t('options.connect.invalidUrlStatus'), text: i18n.t('options.connect.invalidUrl') };
+      return { status: i18n.t('options.connect.failedStatus'), text: error.message };
     default:
-      return { status: 'Test failed', text: error.message };
+      return { status: i18n.t('options.connect.failedStatus'), text: error.message };
   }
 }
 
@@ -403,32 +409,32 @@ export type GuideKind = 'ollama' | 'lmstudio' | 'generic';
 export function corsGuide(local: GuideKind): { title: string; steps: GuideStep[] } {
   if (local === 'generic') {
     return {
-      title: 'Let Translate Side use this server',
+      title: i18n.t('options.connect.guideGenericTitle'),
       steps: [
         {
           os: 'All',
-          text: `The server answers 403 to requests from the extension. In its CORS or allowed-origins setting, allow ${OLLAMA_ORIGINS} (or this extension's own origin), then restart it.`,
-          after: 'vLLM: --allowed-origins \'["chrome-extension://*"]\'. LiteLLM: allow the origin in its CORS settings.',
+          text: i18n.t('options.connect.guideGenericText', { origin: OLLAMA_ORIGINS }),
+          after: i18n.t('options.connect.guideGenericAfter'),
         },
       ],
     };
   }
   if (local === 'lmstudio') {
     return {
-      title: 'Let Translate Side use LM Studio',
-      steps: [{ os: 'All', text: 'In LM Studio, open Developer → Server settings, turn on "Enable CORS", and start the server.' }],
+      title: i18n.t('options.connect.guideLmStudioTitle'),
+      steps: [{ os: 'All', text: i18n.t('options.connect.guideLmStudioText') }],
     };
   }
   return {
-    title: 'Let Translate Side use Ollama',
+    title: i18n.t('options.connect.guideOllamaTitle'),
     steps: [
-      { os: 'macOS', text: 'Run this in Terminal:', command: `launchctl setenv OLLAMA_ORIGINS "${OLLAMA_ORIGINS}"`, after: 'Then quit Ollama from the menu bar and open it again.' },
-      { os: 'Windows', text: 'Run this in PowerShell or Command Prompt:', command: `setx OLLAMA_ORIGINS "${OLLAMA_ORIGINS}"`, after: 'Then quit Ollama from the taskbar and start it again.' },
+      { os: 'macOS', text: i18n.t('options.connect.guideMacText'), command: `launchctl setenv OLLAMA_ORIGINS "${OLLAMA_ORIGINS}"`, after: i18n.t('options.connect.guideMacAfter') },
+      { os: 'Windows', text: i18n.t('options.connect.guideWinText'), command: `setx OLLAMA_ORIGINS "${OLLAMA_ORIGINS}"`, after: i18n.t('options.connect.guideWinAfter') },
       {
         os: 'Linux',
-        text: 'Run this in a terminal (Ollama installed as a systemd service):',
+        text: i18n.t('options.connect.guideLinuxText'),
         command: `sudo mkdir -p /etc/systemd/system/ollama.service.d && printf '[Service]\\nEnvironment="OLLAMA_ORIGINS=${OLLAMA_ORIGINS}"\\n' | sudo tee /etc/systemd/system/ollama.service.d/origins.conf && sudo systemctl daemon-reload && sudo systemctl restart ollama`,
-        after: `Or, for this session only: OLLAMA_ORIGINS="${OLLAMA_ORIGINS}" ollama serve`,
+        after: i18n.t('options.connect.guideLinuxAfter', { command: `OLLAMA_ORIGINS="${OLLAMA_ORIGINS}" ollama serve` }),
       },
     ],
   };

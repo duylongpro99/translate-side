@@ -1,6 +1,7 @@
 // Side panel wiring in the worker (plan M0-E2/E3, decision S5). Features are gated by
 // availability checks, not Chrome version (ROADMAP §8 item 18).
 import type { browser } from 'wxt/browser';
+import { i18n } from '#i18n';
 import { clearAccess, readAccess } from './access.ts';
 import { injectInto, type TabRef } from './inject.ts';
 import { clearTabOverride } from './providers.ts';
@@ -8,7 +9,6 @@ import { anyDenylisted, clearSnippet, writeSnippet } from './snippet.ts';
 import { readSiteLists, listedFor } from './sites.ts';
 
 export const CONTEXT_MENU_ID = 'translate-side.open-panel';
-export const CONTEXT_MENU_TITLE = 'Translate in side panel';
 
 type Browser = typeof browser;
 
@@ -91,7 +91,7 @@ export async function createContextMenu(api: Browser): Promise<void> {
   // On a selection it translates the selection (plan M3-E4); on the page it opens the panel.
   api.contextMenus.create({
     id: CONTEXT_MENU_ID,
-    title: CONTEXT_MENU_TITLE,
+    title: i18n.t('panel.contextMenuTitle'),
     contexts: ['page', 'selection'],
   });
 }

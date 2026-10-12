@@ -4,7 +4,7 @@ import { act } from 'preact/test-utils';
 import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONNECTION, DEFAULT_PROFILE, GLOSSARY_KEY } from '@/shared/settings';
-import { OVERFLOW_NOTICE, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/sync-quota';
+import { overflowNotice, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/sync-quota';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import { openTranslationCache, type TranslationCache } from '@/shared/cache';
 import { dayKey, estimateSpend, monthKey } from '@/shared/spend';
@@ -272,7 +272,7 @@ describe('options: style and personal glossary (plan M2-E6)', () => {
     input('#g-rendering', 'y'.repeat(200));
     submitGlossary();
     await flush();
-    expect(root.querySelector('[data-testid=glossary-overflow]')?.textContent).toBe(OVERFLOW_NOTICE);
+    expect(root.querySelector('[data-testid=glossary-overflow]')?.textContent).toBe(overflowNotice());
     expect(f.sync.get('glossary')).toBe(big);
     expect(f.local.get('overflow:glossary')).toBe(true);
     expect(f.local.get('glossary')).toHaveLength(big.length + 1);

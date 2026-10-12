@@ -5,16 +5,19 @@
 // it is acknowledged, and acknowledging here is the same acknowledgement the panel keeps.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
+import { i18n } from '#i18n';
 import type { Segment } from '@/engine/index';
 import { languageLabel } from '@/engine/index';
 import { createAdapter } from '@/llm/client';
-import { PRESETS, type PresetId } from '@/shared/presets';
+import { PRESETS, presetTitle, type PresetId } from '@/shared/presets';
 import { markOnboarding } from '@/shared/onboarding';
 import { SpendLedger } from '@/shared/spend';
 import { LANGUAGES, readPreferences, updatePreferences } from '@/shared/settings';
 import { Jobs, type JobView } from '../sidepanel/jobs.ts';
 import { PrivacyGate, type PrivacyState } from '../sidepanel/privacy.ts';
 import { routedSummary, translateClient, type Routed } from '../sidepanel/route.ts';
+import { failureText } from '../sidepanel/status.ts';
+import { slots } from '../sidepanel/slots.tsx';
 import { ConnectionForm, load, RETEST_MS, type AdapterFor, type Loaded } from '../options/Providers.tsx';
 
 type Browser = typeof browser;
@@ -23,7 +26,10 @@ type Browser = typeof browser;
 type Path = 'key' | 'local' | 'builtin';
 const CLOUD_CHOICES: readonly PresetId[] = ['anthropic', 'openai', 'gemini', 'openrouter', 'ollama-cloud', 'apibox'];
 const LOCAL_CHOICES: readonly PresetId[] = ['ollama', 'lmstudio'];
-const presetLabel = (id: PresetId) => PRESETS.find((p) => p.id === id)?.label ?? id;
+const presetLabel = (id: PresetId) => {
+  const preset = PRESETS.find((p) => p.id === id);
+  return preset ? presetTitle(preset) : id;
+};
 
 const SAMPLES: Record<string, { lang: string; text: string }> = {
   en: { lang: 'en', text: 'The library is open late on Fridays. If you bring a book back after closing, drop it in the box by the door and it will be checked in the next morning.' },
@@ -75,19 +81,20 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
       setStep(2);
     } catch (err) {
       console.error('[translate-side] onboarding: could not save the language', err);
-      setNote("Couldn't save your language. Try again, or set it later in settings.");
+      setNote(i18n.t('onboarding.saveLangFailed'));
     }
   };
 
   if (closed) {
     return (
       <main class="onb" data-testid="onboarding-closed">
-        <h1>{closed === 'done' ? "You're set" : 'Skipped for now'}</h1>
-        <p>
-          {closed === 'done'
-            ? 'Open any page and click the Translate Side icon in the toolbar (or press Alt+T): the page is translated in the side panel.'
-            : 'You can set things up later: Settings ▸ Providers, or "Set up guide" at the top of the settings page.'}
-        </p>
+        <h1>{closed === 'done' ? i18n.t('onboarding.doneTitle') : i18n.t('onboarding.skippedTitle')}</h1>
+        <p>{closed === 'done' ? i18n.t('onboarding.doneText') : i18n.t('onboarding.skippedText')}</p>
+        {closed === 'done' ? (
+          <p class="opt__hint" data-testid="onboarding-shortcut-note">
+            {i18n.t('onboarding.rebindNote', { url: 'chrome://extensions/shortcuts' })}
+          </p>
+        ) : null}
       </main>
     );
   }
@@ -95,15 +102,15 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
   const presetId = path === 'key' ? cloud : local;
   const skip = (
     <button type="button" class="onb__skip" data-testid="onboarding-skip" onClick={() => close('skipped')}>
-      Skip for now
+      {i18n.t('onboarding.skip')}
     </button>
   );
 
   return (
     <main class="onb" data-testid="onboarding">
-      <h1>Set up Translate Side</h1>
-      <ol class="onb__steps" aria-label="Steps">
-        {['Your language', 'How to translate', 'Try it'].map((name, i) => (
+      <h1>{i18n.t('onboarding.title')}</h1>
+      <ol class="onb__steps" aria-label={i18n.t('onboarding.stepsLabel')}>
+        {[i18n.t('onboarding.step1'), i18n.t('onboarding.step2'), i18n.t('onboarding.step3')].map((name, i) => (
           <li key={name} aria-current={Math.min(step, 3) === i + 1 ? 'step' : undefined} data-testid={`onboarding-step-${i + 1}`}>
             {i + 1}. {name}
           </li>
@@ -112,10 +119,10 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
 
       {step === 1 ? (
         <section data-testid="onboarding-language">
-          <h2 ref={heading} tabIndex={-1}>What is your language?</h2>
-          <p class="opt__hint">Pages are translated into it. You can change it any time in the panel.</p>
+          <h2 ref={heading} tabIndex={-1}>{i18n.t('onboarding.langTitle')}</h2>
+          <p class="opt__hint">{i18n.t('onboarding.langHint')}</p>
           <div class="opt__row">
-            <label for="onb-lang">Translate into</label>
+            <label for="onb-lang">{i18n.t('onboarding.translateInto')}</label>
             <select id="onb-lang" data-testid="onboarding-lang" value={lang} onChange={(e) => setLang((e.target as HTMLSelectElement).value)}>
               {(LANGUAGES.some((l) => l.code === lang) || lang === '' ? LANGUAGES : [{ code: lang, name: languageLabel(lang) }, ...LANGUAGES]).map((l) => (
                 <option key={l.code} value={l.code}>
@@ -127,7 +134,7 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
           {note ? <p class="opt__status opt__status--warn" role="alert">{note}</p> : null}
           <div class="onb__nav">
             <button type="button" data-testid="onboarding-next" disabled={lang === ''} onClick={() => void saveLang()}>
-              Next
+              {i18n.t('onboarding.next')}
             </button>
             {skip}
           </div>
@@ -136,21 +143,20 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
 
       {step === 2 ? (
         <section data-testid="onboarding-how">
-          <h2 ref={heading} tabIndex={-1}>How do you want to translate?</h2>
+          <h2 ref={heading} tabIndex={-1}>{i18n.t('onboarding.howTitle')}</h2>
           <fieldset class="onb__cards">
-            <legend class="onb__legend">How to translate</legend>
+            <legend class="onb__legend">{i18n.t('onboarding.howLegend')}</legend>
             <div class={`onb__card${path === 'key' ? ' onb__card--on' : ''}`}>
               <input type="radio" id="onb-path-key" name="onb-path" data-testid="path-key" aria-describedby="onb-path-key-sub" checked={path === 'key'} onChange={() => setPath('key')} />
-              <label for="onb-path-key" class="onb__title">Best quality: an API key</label>
-              <p class="onb__sub" id="onb-path-key-sub">Anthropic (Claude) is recommended. Pages are sent to the provider you pick, and you pay it per use.</p>
+              <label for="onb-path-key" class="onb__title">{i18n.t('onboarding.pathKeyTitle')}</label>
+              <p class="onb__sub" id="onb-path-key-sub">{i18n.t('onboarding.pathKeySub')}</p>
               {path === 'key' ? (
                 <p class="onb__sub">
-                  <label for="onb-cloud">Provider </label>
+                  <label for="onb-cloud">{i18n.t('onboarding.provider')} </label>
                   <select id="onb-cloud" data-testid="cloud-preset" value={cloud} onChange={(e) => setCloud((e.target as HTMLSelectElement).value as PresetId)}>
                     {CLOUD_CHOICES.map((id) => (
                       <option key={id} value={id}>
-                        {presetLabel(id)}
-                        {id === 'anthropic' ? ' (recommended)' : ''}
+                        {id === 'anthropic' ? i18n.t('onboarding.recommended', { provider: presetLabel(id) }) : presetLabel(id)}
                       </option>
                     ))}
                   </select>
@@ -159,11 +165,11 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
             </div>
             <div class={`onb__card${path === 'local' ? ' onb__card--on' : ''}`}>
               <input type="radio" id="onb-path-local" name="onb-path" data-testid="path-local" aria-describedby="onb-path-local-sub" checked={path === 'local'} onChange={() => setPath('local')} />
-              <label for="onb-path-local" class="onb__title">Private and free: a model on this computer</label>
-              <p class="onb__sub" id="onb-path-local-sub">Runs with Ollama or LM Studio, so the text never leaves this device. Needs one of them installed; the next step walks you through the setup.</p>
+              <label for="onb-path-local" class="onb__title">{i18n.t('onboarding.pathLocalTitle')}</label>
+              <p class="onb__sub" id="onb-path-local-sub">{i18n.t('onboarding.pathLocalSub')}</p>
               {path === 'local' ? (
                 <p class="onb__sub">
-                  <label for="onb-local">Runs with </label>
+                  <label for="onb-local">{i18n.t('onboarding.runsWith')} </label>
                   <select id="onb-local" data-testid="local-preset" value={local} onChange={(e) => setLocal((e.target as HTMLSelectElement).value as PresetId)}>
                     {LOCAL_CHOICES.map((id) => (
                       <option key={id} value={id}>
@@ -176,16 +182,16 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
             </div>
             <div class="onb__card" aria-disabled="true" data-testid="path-builtin-card">
               <input type="radio" id="onb-path-builtin" name="onb-path" data-testid="path-builtin" aria-describedby="onb-path-builtin-sub" disabled />
-              <label for="onb-path-builtin" class="onb__title">Just try it: Chrome's built-in translator</label>
-              <p class="onb__sub" id="onb-path-builtin-sub">Coming soon. It is not available in this version.</p>
+              <label for="onb-path-builtin" class="onb__title">{i18n.t('onboarding.pathBuiltinTitle')}</label>
+              <p class="onb__sub" id="onb-path-builtin-sub">{i18n.t('onboarding.pathBuiltinSub')}</p>
             </div>
           </fieldset>
           <div class="onb__nav">
             <button type="button" onClick={() => setStep(1)} data-testid="onboarding-back">
-              Back
+              {i18n.t('onboarding.back')}
             </button>
             <button type="button" data-testid="onboarding-next" onClick={() => setStep(3)}>
-              Next
+              {i18n.t('onboarding.next')}
             </button>
             {skip}
           </div>
@@ -194,13 +200,13 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
 
       {step === 3 && loaded ? (
         <section data-testid="onboarding-try">
-          <h2 ref={heading} tabIndex={-1}>{saved ? 'Try it' : 'Connect and test'}</h2>
+          <h2 ref={heading} tabIndex={-1}>{saved ? i18n.t('onboarding.step3') : i18n.t('onboarding.connectTitle')}</h2>
           {saved ? (
             <Sample api={api} lang={lang} saved={saved} injected={injected} injectedGate={injectedGate} onDone={() => close('done')} onChange={() => setSaved(undefined)} onSkip={() => close('skipped')} />
           ) : (
             <>
               <p class="opt__hint" data-testid="onboarding-key-note">
-                {path === 'local' ? 'Nothing leaves this computer with a local model.' : 'Your key stays on this device: it is not synced to your other devices, and it is sent only to the provider you choose.'}
+                {path === 'local' ? i18n.t('onboarding.noteLocal') : i18n.t('onboarding.noteKey')}
               </p>
               <ConnectionForm
                 key={presetId}
@@ -220,7 +226,7 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
               />
               <div class="onb__nav">
                 <button type="button" onClick={() => setStep(2)} data-testid="onboarding-back">
-                  Back
+                  {i18n.t('onboarding.back')}
                 </button>
                 {skip}
               </div>
@@ -280,27 +286,24 @@ function Sample({ api, lang, saved, injected, injectedGate, onDone, onChange, on
   };
   const state = view?.segs.get('s0');
   const finished = view?.status === 'done' && state?.status === 'final';
-  const failure = view?.stopError?.message ?? (state?.status === 'failed' ? state.error?.message : undefined);
+  const failureError = view?.stopError ?? (state?.status === 'failed' ? state.error : undefined);
+  const failure = failureError ? failureText(failureError) : undefined;
 
   return (
     <div data-testid="onboarding-sample">
       <p class="opt__status" data-testid="onboarding-saved">{saved}</p>
       <div class="onb__sample">
-        <strong>Sample paragraph ({languageLabel(sample.lang)})</strong>
+        <strong>{i18n.t('onboarding.sampleTitle', { language: languageLabel(sample.lang) })}</strong>
         <blockquote data-testid="sample-original">{sample.text}</blockquote>
         {asked && privacy !== 'acknowledged' ? (
           <div class="onb__notice" role="alert" data-testid="onboarding-privacy">
             <p>
-              Before this goes out: Translate Side sends the text of what you translate to the provider you chose
-              {to ? (
-                <>
-                  , now <strong data-testid="onboarding-privacy-provider">{to.label}</strong> {to.host ? `(${to.host})` : ''}
-                </>
-              ) : null}
-              . Here that is the sample paragraph above. Mail and sign-in pages, and anything you type into, are never read.
+              {to
+                ? slots(i18n.t('onboarding.privacyNow', { provider: '{provider}', host: '{host}' }), { provider: <strong data-testid="onboarding-privacy-provider">{to.label}</strong>, host: to.host ? ` (${to.host})` : '' })
+                : i18n.t('onboarding.privacy')}
             </p>
             <button type="button" ref={noticeButton} data-testid="onboarding-privacy-ok" onClick={() => void gate.acknowledge().catch(() => {})}>
-              Got it, translate the sample
+              {i18n.t('onboarding.privacyOk')}
             </button>
           </div>
         ) : null}
@@ -317,25 +320,24 @@ function Sample({ api, lang, saved, injected, injectedGate, onDone, onChange, on
         ) : null}
         {finished && view ? (
           <p class="opt__hint" data-testid="sample-model">
-            Translated by {view.model}
-            {view.connection ? ` (${view.connection.label})` : ''}.
+            {view.connection ? i18n.t('onboarding.translatedByVia', [view.model, view.connection.label]) : i18n.t('onboarding.translatedBy', [view.model])}
           </p>
         ) : null}
         <div class="opt__row">
           <button type="button" data-testid="translate-sample" disabled={view?.status === 'running'} onClick={translate}>
-            {view?.status === 'running' ? 'Translating…' : finished || failure ? 'Translate again' : 'Translate the sample'}
+            {view?.status === 'running' ? i18n.t('onboarding.translating') : finished || failure ? i18n.t('onboarding.translateAgain') : i18n.t('onboarding.translateSample')}
           </button>
           <button type="button" onClick={onChange} data-testid="onboarding-change">
-            Change connection
+            {i18n.t('onboarding.changeConnection')}
           </button>
         </div>
       </div>
       <div class="onb__nav">
         <button type="button" data-testid="onboarding-finish" onClick={onDone}>
-          {finished ? 'Finish' : 'Finish without the sample'}
+          {finished ? i18n.t('onboarding.finish') : i18n.t('onboarding.finishNoSample')}
         </button>
         <button type="button" class="onb__skip" onClick={onSkip}>
-          Skip for now
+          {i18n.t('onboarding.skip')}
         </button>
       </div>
     </div>

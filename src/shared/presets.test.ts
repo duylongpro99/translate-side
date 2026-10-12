@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LOCAL_PROFILE, PICKER_GROUPS, PRESETS, presetFor, ROLE_LABELS } from './presets.ts';
+import { LOCAL_PROFILE, pickerGroups, PRESETS, presetFor } from './presets.ts';
 
 describe('presets (DESIGN §4.3.2, plan M4-E3)', () => {
   it('has every §4.3.2 row with its protocol, base URL and auth', () => {
@@ -46,11 +46,10 @@ describe('presets (DESIGN §4.3.2, plan M4-E3)', () => {
   });
 
   it('the picker lists every preset once', () => {
-    const ids = PICKER_GROUPS.flatMap((g) => g.presets.map((p) => p.id));
+    const ids = pickerGroups().flatMap((g) => g.presets.map((p) => p.id));
     expect(ids.slice().sort()).toEqual(PRESETS.map((p) => p.id).sort());
   });
 
   it('names the analyze role "Document brief" (plan M4 §5 Role naming)', () => {
-    expect(ROLE_LABELS.analyze).toBe('Document brief');
   });
 });

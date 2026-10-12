@@ -7,7 +7,7 @@ import { createOpenAIAdapter } from '@/llm/openai';
 import { anthropicStream, openaiStream } from '@/llm/testing';
 import type { Protocol } from '@/llm/types';
 import { ProvidersSection } from './Providers.tsx';
-import { OVERFLOW_NOTICE } from '@/shared/sync-quota';
+import { overflowNotice } from '@/shared/sync-quota';
 
 type Api = Parameters<typeof ProvidersSection>[0]['api'];
 
@@ -450,7 +450,7 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     });
     await mount(f, server(() => openaiList()));
     await waitFor(() => $('[data-testid=site-rules-overflow]') !== null);
-    expect($('[data-testid=site-rules-overflow]')?.textContent).toBe(OVERFLOW_NOTICE);
+    expect($('[data-testid=site-rules-overflow]')?.textContent).toBe(overflowNotice());
     expect([...document.querySelectorAll('[data-testid=site-rule]')].map((e) => e.textContent)).toEqual([expect.stringContaining('here.example.com')]);
   });
 

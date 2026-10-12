@@ -3,6 +3,7 @@
 // chrome://extensions/shortcuts, so the help shows what chrome.commands reports (M5-E10).
 import { useEffect, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
+import { i18n } from '#i18n';
 
 type Browser = typeof browser;
 
@@ -48,6 +49,6 @@ export async function openShortcutSettings(api: Pick<Browser, 'tabs'>): Promise<
 
 /** The first row of the list, as it should read for the assigned key. */
 export function toggleRow(shortcut: string | undefined): { keys: string; what: string } {
-  if (shortcut === '') return { keys: 'Not set', what: `Open the panel, or close it when it is open. Choose a key at ${SHORTCUT_SETTINGS_URL}` };
-  return { keys: shortcut ?? 'Alt+T', what: 'Open the panel, or close it when it is open (change it at chrome://extensions/shortcuts)' };
+  if (shortcut === '') return { keys: i18n.t('options.shortcuts.notSet'), what: i18n.t('options.shortcuts.toggleNotSet', { url: SHORTCUT_SETTINGS_URL }) };
+  return { keys: shortcut ?? 'Alt+T', what: i18n.t('options.shortcuts.toggleSet', { url: SHORTCUT_SETTINGS_URL }) };
 }

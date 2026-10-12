@@ -4,6 +4,7 @@
 // (M2-D14), ds/deepseek-flash (M2-D13) and the Gemini preset stay defined. From M4 the stored
 // connections, profiles and routing live in src/shared/providers.ts; these are the built-in ones.
 import type { browser } from 'wxt/browser';
+import { i18n } from '#i18n';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
 import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS, GEMINI_OPENAI_BASE_URL } from '@/llm/presets';
 import type { Protocol, AuthStyle, LLMErrorKind, Quirks, ResolvedConnection } from '@/llm/types';
@@ -355,7 +356,7 @@ export async function readGlossary(api: Browser): Promise<GlossaryEntry[]> {
   return Array.isArray(stored) ? cleanGlossary(stored) : [];
 }
 
-/** `overflow`: the glossary is kept on this device (OVERFLOW_NOTICE says what that means). */
+/** `overflow`: the glossary is kept on this device (overflowNotice says what that means). */
 export type GlossarySave = { ok: true; entries: GlossaryEntry[]; bytes: number; overflow: boolean; warning?: string } | { ok: false; reason: 'error'; message: string };
 
 export async function saveGlossary(api: Browser, entries: readonly GlossaryEntry[]): Promise<GlossarySave> {
@@ -368,7 +369,7 @@ export async function saveGlossary(api: Browser, entries: readonly GlossaryEntry
     return { ok: false, reason: 'error', message: error instanceof Error ? error.message : String(error) };
   }
   const warning =
-    !overflow && bytes >= SYNC_QUOTA_BYTES_PER_ITEM * GLOSSARY_WARN_RATIO ? `The glossary uses ${Math.round((100 * bytes) / SYNC_QUOTA_BYTES_PER_ITEM)}% of the space Chrome syncs for it.` : undefined;
+    !overflow && bytes >= SYNC_QUOTA_BYTES_PER_ITEM * GLOSSARY_WARN_RATIO ? i18n.t('errors.glossaryNearLimit', [String(Math.round((100 * bytes) / SYNC_QUOTA_BYTES_PER_ITEM))]) : undefined;
   return { ok: true, entries: clean, bytes, overflow, ...(warning ? { warning } : {}) };
 }
 

@@ -9,10 +9,10 @@ import { i18n } from '#i18n';
 import { slots } from '../sidepanel/slots.tsx';
 import { createAdapter } from '@/llm/client';
 import type { ModelInfo, Protocol, ProtocolAdapter } from '@/llm/types';
-import { connectMessage, corsGuide, displayModels, fixBaseUrl, isClaudeModel, preferredProtocol, testConnection, URL_FIX_TEXT, type ConnectMessage, type GuideKind, type GuideStep, type TestResult } from '@/shared/connect';
-import { AUTH_LABELS, PICKER_GROUPS, presetFor, PROTOCOL_LABELS, type PresetId } from '@/shared/presets';
+import { connectMessage, corsGuide, displayModels, fixBaseUrl, isClaudeModel, preferredProtocol, testConnection, urlFixText, type ConnectMessage, type GuideKind, type GuideStep, type TestResult } from '@/shared/connect';
+import { authLabel, pickerGroups, presetBlurb, presetFor, presetNote, presetTitle, protocolLabel, type PresetId } from '@/shared/presets';
 import { pricingFor } from '@/shared/pricing';
-import { OVERFLOW_NOTICE } from '@/shared/sync-quota';
+import { overflowNotice } from '@/shared/sync-quota';
 import { BASIC_FALLBACK, isLocalConnection, onProviderSettingsChanged, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnectionStatus, saveProfile, saveRouting, saveSetup, type ProviderSettings, type SiteRule } from '@/shared/providers';
 import { sitePattern } from '@/shared/sites';
 import { BUILTIN_CONNECTIONS, hasHostPermission, maskKey, originPattern, readApiKey, resolveConnection, SECRET_PREFIX, type ModelProfile, type ProviderConnection } from '@/shared/settings';
@@ -281,7 +281,7 @@ function Models({ api, loaded, onAdd, onNote }: { api: Browser; loaded: Loaded; 
     );
   const setProtocol = (p: ModelProfile, protocol: Protocol) =>
     saveProfileProtocol(api, p, protocol).then(
-      () => onNote(i18n.t('options.providers.usesApi', [p.model, PROTOCOL_LABELS[protocol]])),
+      () => onNote(i18n.t('options.providers.usesApi', [p.model, protocolLabel(protocol)])),
       (err: unknown) => onNote(String(err), true),
     );
   return (
@@ -310,7 +310,7 @@ function Models({ api, loaded, onAdd, onNote }: { api: Browser; loaded: Loaded; 
                   <select value={p.protocolOverride ?? c.detectedProtocols?.[0]} onChange={(e) => void setProtocol(p, (e.target as HTMLSelectElement).value as Protocol)} aria-label={i18n.t('options.providers.apiFormatFor', [p.model])}>
                     {(c.detectedProtocols ?? []).map((x) => (
                       <option key={x} value={x}>
-                        {PROTOCOL_LABELS[x]}
+                        {protocolLabel(x)}
                       </option>
                     ))}
                   </select>
@@ -450,7 +450,7 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
       <h4>{i18n.t('options.providers.perSite')}</h4>
       {settings.siteRulesLocal ? (
         <p class="opt__status opt__status--warn" role="status" data-testid="site-rules-overflow">
-          {OVERFLOW_NOTICE}
+          {overflowNotice()}
         </p>
       ) : null}
       {rules.length ? (
@@ -843,8 +843,8 @@ export function ConnectionForm({
 
   return (
     <form class="prov__block" onSubmit={onSave} data-testid="connection-form">
-      <h3>{editing ? i18n.t('options.providers.editTitle', [editing.label]) : i18n.t('options.providers.addTitle', [preset.label])}</h3>
-      {preset.note ? <p class="opt__hint">{preset.note}</p> : null}
+      <h3>{editing ? i18n.t('options.providers.editTitle', [editing.label]) : i18n.t('options.providers.addTitle', [presetTitle(preset)])}</h3>
+      {presetNote(preset) ? <p class="opt__hint">{presetNote(preset)}</p> : null}
       <div class="opt__row">
         <label for="c-label">{i18n.t('options.providers.name')}</label>
         <input id="c-label" value={draft.label} placeholder={preset.custom ? i18n.t('options.providers.namePlaceholder') : preset.label} onInput={(e) => set({ label: (e.target as HTMLInputElement).value })} />
@@ -856,7 +856,7 @@ export function ConnectionForm({
           <select id="c-format" value={draft.protocol} onChange={(e) => set({ protocol: (e.target as HTMLSelectElement).value as Protocol | 'auto' })}>
             {(['openai-chat', 'anthropic-messages', 'auto'] as const).map((p) => (
               <option key={p} value={p}>
-                {PROTOCOL_LABELS[p]}
+                {protocolLabel(p)}
               </option>
             ))}
           </select>
@@ -868,7 +868,7 @@ export function ConnectionForm({
           <select id="c-auth" value={draft.authStyle} onChange={(e) => set({ authStyle: (e.target as HTMLSelectElement).value as ConnectionDraft['authStyle'] })}>
             {(preset.authChoices ?? [preset.auth]).map((a) => (
               <option key={a} value={a}>
-                {AUTH_LABELS[a]}
+                {authLabel(a)}
               </option>
             ))}
           </select>
@@ -946,7 +946,7 @@ export function ConnectionForm({
           <div class="prov__radios">
             {(['anthropic-messages', 'openai-chat'] as const).map((p) => (
               <label key={p}>
-                <input type="radio" name="c-protocol" checked={protocol === p} onChange={() => setProtocolChoice(p)} /> {PROTOCOL_LABELS[p]}
+                <input type="radio" name="c-protocol" checked={protocol === p} onChange={() => setProtocolChoice(p)} /> {protocolLabel(p)}
               </label>
             ))}
           </div>
@@ -990,15 +990,15 @@ function PresetPicker({ onPick, onCancel }: { onPick: (id: PresetId) => void; on
   return (
     <div class="prov__block" data-testid="preset-picker">
       <h3>{i18n.t('options.providers.addConnection')}</h3>
-      {PICKER_GROUPS.map((g) => (
+      {pickerGroups().map((g) => (
         <div key={g.title}>
           <p class="opt__hint">{g.title}</p>
           <ul class="prov__presets">
             {g.presets.map((p) => (
               <li key={p.id}>
                 <button type="button" class="prov__preset" onClick={() => onPick(p.id)} data-preset={p.id}>
-                  <strong>{p.label}</strong>
-                  <span class="opt__hint">{p.blurb}</span>
+                  <strong>{presetTitle(p)}</strong>
+                  <span class="opt__hint">{presetBlurb(p)}</span>
                 </button>
               </li>
             ))}
@@ -1018,12 +1018,12 @@ function TestOutcome({ draft, protocol, test, onFixKey, onRetry, onUseUrl, onGui
     <ul class="prov__fixes" data-testid="url-fixes">
       {result.fixes.map((f) => (
         <li key={f.reason}>
-          {slots(i18n.t('options.providers.urlFixed', { to: '{to}', reason: URL_FIX_TEXT[f.reason] }), { to: <code>{f.to}</code> })}
+          {slots(i18n.t('options.providers.urlFixed', { to: '{to}', reason: urlFixText(f.reason) }), { to: <code>{f.to}</code> })}
         </li>
       ))}
     </ul>
   ) : null;
-  const detectedNames = result.ok ? result.detected.map((p) => PROTOCOL_LABELS[p]).join(i18n.t('options.providers.and')) : '';
+  const detectedNames = result.ok ? result.detected.map((p) => protocolLabel(p)).join(i18n.t('options.providers.and')) : '';
   if (result.ok) {
     return (
       <div class="prov__outcome prov__outcome--ok" role="status" data-testid="test-result">
@@ -1032,7 +1032,7 @@ function TestOutcome({ draft, protocol, test, onFixKey, onRetry, onUseUrl, onGui
           {/* The API named is the switch's below, so the two agree (tester C1 #2). */}
           {draft.protocol === 'auto'
             ? result.detected.length > 1 && draft.model.trim()
-              ? i18n.t('options.providers.detectedUses', [detectedNames, draft.model.trim(), PROTOCOL_LABELS[protocol]])
+              ? i18n.t('options.providers.detectedUses', [detectedNames, draft.model.trim(), protocolLabel(protocol)])
               : i18n.t('options.providers.detected', [detectedNames])
             : detectedNames}
         </p>

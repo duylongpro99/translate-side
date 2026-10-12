@@ -11,6 +11,15 @@ type Browser = typeof browser;
 
 type Note = { text: string; warn: boolean };
 
+/** What a connection's import would change, in words (portable.ts names the fields). */
+const CHANGED_NAMES: Record<string, () => string> = {
+  address: () => i18n.t('options.transfer.fieldAddress'),
+  auth: () => i18n.t('options.transfer.fieldAuth'),
+  headers: () => i18n.t('options.transfer.fieldHeaders'),
+  'query parameters': () => i18n.t('options.transfer.fieldQueryParams'),
+};
+const changedNames = (changed: readonly string[]) => changed.map((c) => CHANGED_NAMES[c]?.() ?? c).join(', ');
+
 /** The browser's download of `text` as a file (an anchor click: no `downloads` permission needed). */
 export function download(text: string, name: string) {
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
@@ -51,8 +60,8 @@ function Summary({ report, keep, onKeep }: { report: ImportReport; keep: Readonl
           {report.redirects.map((r) => (
             <li key={r.id} data-testid="import-redirect">
               {r.changed.includes('address')
-                ? slots(i18n.t('options.transfer.redirectAddress', { label: '{label}', changed: r.changed.join(', '), from: '{from}', to: '{to}' }), { label: <strong>{r.label}</strong>, from: <code>{r.from || i18n.t('options.transfer.none')}</code>, to: <code>{r.to || i18n.t('options.transfer.none')}</code> })
-                : slots(i18n.t('options.transfer.redirect', { label: '{label}', changed: r.changed.join(', ') }), { label: <strong>{r.label}</strong> })}{' '}
+                ? slots(i18n.t('options.transfer.redirectAddress', { label: '{label}', changed: changedNames(r.changed), from: '{from}', to: '{to}' }), { label: <strong>{r.label}</strong>, from: <code>{r.from || i18n.t('options.transfer.none')}</code>, to: <code>{r.to || i18n.t('options.transfer.none')}</code> })
+                : slots(i18n.t('options.transfer.redirect', { label: '{label}', changed: changedNames(r.changed) }), { label: <strong>{r.label}</strong> })}{' '}
               {r.keyAction === 'removed' ? i18n.t('options.transfer.keyRemoved') : null}
               {r.keyAction === 'replaced' ? i18n.t('options.transfer.keyReplaced') : null}
               {r.keyAction === 'kept' ? i18n.t('options.transfer.keyKept') : null}

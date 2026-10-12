@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { SCREEN_READER_NOTE, SHORTCUTS } from './shortcuts.ts';
+import { screenReaderNote, shortcutList } from './shortcuts.ts';
+
+const SHORTCUTS = shortcutList();
 
 describe('the shortcut list', () => {
   it('lists Alt+T, and no key twice', () => {
@@ -20,6 +22,6 @@ describe('the shortcut list', () => {
 
   it('says the same screen reader note in the README', () => {
     const readme = readFileSync(new URL('../../README.md', import.meta.url), 'utf8');
-    expect(readme).toContain(SCREEN_READER_NOTE);
+    expect(readme).toContain(screenReaderNote());
   });
 });

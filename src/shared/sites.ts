@@ -12,6 +12,7 @@
 // Entries are host patterns as site rules take them: `example.com`, or `*.example.com` for it and
 // its subdomains (providers.ts matchesSite).
 import type { browser } from 'wxt/browser';
+import { i18n } from '#i18n';
 import { matchesSite, readProviderSettings, SITE_ALLOWLIST_KEY } from './providers.ts';
 import { readList, saveListWithOverflow } from './sync-quota.ts';
 
@@ -136,7 +137,7 @@ async function editList(api: Browser, key: typeof SITE_ALLOWLIST_KEY | typeof SI
   return queued(async () => {
     const list = cleanSiteList(await readList(api, key));
     const edited = edit(list);
-    if (edited.length > MAX_SITES && edited.length > list.length) throw new Error(`At most ${MAX_SITES} sites per list. Remove a site first.`);
+    if (edited.length > MAX_SITES && edited.length > list.length) throw new Error(i18n.t('errors.tooManySites', [String(MAX_SITES)]));
     const next = cleanSiteList(edited);
     await saveListWithOverflow(api, key, next);
     return next;
