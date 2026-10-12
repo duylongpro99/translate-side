@@ -54,7 +54,7 @@ panel:
     makeDefault: Đặt làm mặc định
     makeDefaultTitle: Dùng mô hình này cho mọi trang từ giờ trở đi
     rule: quy tắc trang web $1 (ưu tiên hơn lựa chọn của thẻ)
-    ruleLocal: quy tắc trang web $1 (chỉ cục bộ) (ưu tiên hơn lựa chọn của thẻ)
+    ruleLocal: quy tắc trang web $1 (chỉ dùng cục bộ) (ưu tiên hơn lựa chọn của thẻ)
     ruleTitle: Quy tắc trang web cho $1 đã chọn mô hình, nên lựa chọn theo thẻ sẽ không có tác dụng
     announceTab: Thẻ này hiện dịch bằng $1, chỉ riêng thẻ này.
     announceDefault: Thẻ này dịch bằng $1, tức mô hình mặc định.
@@ -65,7 +65,7 @@ panel:
       n: Bạn đã chọn không bao giờ dịch trang web này. Không có gì được gửi đi. · $1 đoạn
     neverSite:
       n: Bạn đã chọn không bao giờ dịch $1. Không có gì được gửi đi. · $2 đoạn
-    siteRules: Quy tắc trang web
+    siteRules: Quy tắc theo trang web
     translate: Dịch trang này
     allow: Luôn dịch $1
     allowTitle: Tự dịch từng trang của $1 khi bảng đang mở. Trình duyệt sẽ hỏi quyền truy cập trang web này một lần.
@@ -239,7 +239,7 @@ errors:
   roleAnalyze: "tóm tắt tài liệu"
   roleReview: "rà soát"
   noConnection: "Mô hình $1 không có kết nối. Hãy thiết lập lại trong phần cài đặt."
-  localOnly: "Trang web này được đặt là chỉ dùng mô hình cục bộ, nhưng mô hình $1 của nó không nằm trên thiết bị này. Không có gì được gửi đi. Hãy chọn một mô hình cục bộ cho trang trong phần cài đặt."
+  localOnly: "Trang web này được đặt là chỉ dùng mô hình cục bộ, nhưng mô hình $1 của nó không nằm trên thiết bị này. Không có gì được gửi đi. Hãy chọn một mô hình cục bộ cho trang web trong phần cài đặt."
   auth: API key không hợp lệ hoặc bị thiếu
   authCharacters: API key có ký tự không thể gửi đi
   noKey: Hãy thêm API key của $1 trong cài đặt
@@ -329,7 +329,7 @@ options:
     allowPlaceholder: "docs.example.com hoặc *.example.com"
     add: "Thêm"
     neverTitle: "Không bao giờ dịch"
-    neverHint: "Translate Side không bao giờ đọc các trang web này và không gửi gì từ chúng, giống như danh sách có sẵn gồm các trang thư và trang đăng nhập: không gửi trang, không gửi phần bôi chọn, kể cả khi bạn bấm nút trên thanh công cụ. Trang đang mở trên các trang web này sẽ được ngừng đọc ngay."
+    neverHint: "Translate Side không bao giờ đọc các trang web này và không gửi gì từ chúng, giống như danh sách có sẵn gồm các trang thư và trang đăng nhập: không gửi trang, không gửi phần bôi chọn, kể cả khi bạn bấm nút trên thanh công cụ. Trang đang mở trên các trang web này sẽ bị ngừng đọc ngay."
     neverAria: "Trang web không bao giờ dịch"
     neverPlaceholder: "mail.example.com hoặc *.example.com"
     modelHint: "Mô hình riêng cho từng trang web và chế độ “chỉ dùng cục bộ” được đặt trong Nhà cung cấp › Định tuyến › Mô hình theo trang web."
@@ -510,23 +510,23 @@ options:
     briefSaved: "Đã lưu tuyến tóm tắt tài liệu."
     sameAsTranslate: "Giống với dịch"
     briefHint: "Bản tóm tắt tài liệu là một lệnh gọi ngắn cho mỗi trang để tìm chủ đề, giọng văn và các thuật ngữ chính; một mô hình rẻ hơn thường làm tốt việc này."
-    needsLocal: "“Chỉ cục bộ” cần một mô hình chạy trên thiết bị này (Ollama, LM Studio). Hãy thêm một mô hình ở trên trước."
-    localOnlyPick: "$1 chỉ dùng cục bộ: hãy chọn một mô hình trên thiết bị này, hoặc bỏ chọn “Chỉ cục bộ” trước."
+    needsLocal: "“Chỉ dùng cục bộ” cần một mô hình chạy trên thiết bị này (Ollama, LM Studio). Hãy thêm một mô hình ở trên trước."
+    localOnlyPick: "$1 chỉ dùng cục bộ: hãy chọn một mô hình trên thiết bị này, hoặc bỏ chọn “Chỉ dùng cục bộ” trước."
     hasRule: "$1 đã có quy tắc."
-    pickLocal: "Chỉ cục bộ: hãy chọn một mô hình trên thiết bị này cho trang web."
+    pickLocal: "Chỉ dùng cục bộ: hãy chọn một mô hình trên thiết bị này cho trang web."
     siteRuleSaved: "Đã lưu quy tắc cho $1."
     perSite: "Mô hình theo trang web"
     modelFor: "Mô hình cho $1"
-    localOnlyFor: "Chỉ cục bộ cho $1"
-    localOnly: "Chỉ cục bộ"
+    localOnlyFor: "Chỉ dùng cục bộ cho $1"
+    localOnly: "Chỉ dùng cục bộ"
     removeRuleAria: "Xóa quy tắc cho $1"
     siteRuleRemoved: "Đã xóa quy tắc cho $1."
     ruleCloud: "$1 chỉ dùng cục bộ, nhưng mô hình của nó không nằm trên máy này, nên các trang ở đó không được dịch (không có gì được gửi đi). Hãy chọn một mô hình cục bộ."
     site: "Trang web"
     modelForSite: "Mô hình cho trang web"
-    localOnlyForSite: "Chỉ cục bộ cho trang web"
+    localOnlyForSite: "Chỉ dùng cục bộ cho trang web"
     addRule: "Thêm quy tắc"
-    rulesHint: "Các trang của một trang web có quy tắc sẽ được dịch bằng mô hình của quy tắc đó thay vì mô hình ở trên. “Chỉ cục bộ” giữ các trang của trang web đó trên thiết bị này: mô hình của nó phải chạy cục bộ và không bao giờ chuyển sang mô hình đám mây."
+    rulesHint: "Các trang của một trang web có quy tắc sẽ được dịch bằng mô hình của quy tắc đó thay vì mô hình ở trên. “Chỉ dùng cục bộ” giữ các trang của trang web đó trên thiết bị này: mô hình của nó phải chạy cục bộ và không bao giờ chuyển sang mô hình đám mây."
     basic: "Bản dịch cơ bản của Chrome"
     ifFails: "Nếu thất bại"
     fallbackN: "Dự phòng $1"
@@ -539,7 +539,7 @@ options:
     basicTitle: "Trình dịch tích hợp của Chrome, chạy trên thiết bị này: dịch sát chữ, chỉ dùng khi không có mô hình nào trả lời"
     basicAdded: "Đã thêm bản dịch cơ bản."
     addBasic: "+ Bản dịch cơ bản của Chrome"
-    fallbackHint: "Được dùng khi mô hình được định tuyến bị giới hạn tốc độ, quá tải hoặc không kết nối được; không bao giờ dùng khi khóa bị từ chối hoặc hết hạn mức, nên văn bản không bao giờ bị chuyển sang nhà cung cấp khác trong những trường hợp đó. Quy tắc trang web đánh dấu “chỉ cục bộ” chỉ chuyển sang các mô hình trên thiết bị này. Bản dịch cơ bản của Chrome luôn ở cuối: trình dịch tích hợp của Chrome, chạy trên thiết bị này, khi không có mô hình nào trả lời."
+    fallbackHint: "Được dùng khi mô hình được định tuyến bị giới hạn tốc độ, quá tải hoặc không kết nối được; không bao giờ dùng khi khóa bị từ chối hoặc hết hạn mức, nên văn bản không bao giờ bị chuyển sang nhà cung cấp khác trong những trường hợp đó. Quy tắc trang web đánh dấu “chỉ dùng cục bộ” chỉ chuyển sang các mô hình trên thiết bị này. Bản dịch cơ bản của Chrome luôn ở cuối: trình dịch tích hợp của Chrome, chạy trên thiết bị này, khi không có mô hình nào trả lời."
     noKeyError: "Kết nối này chưa có khóa."
     addedRouted: "Đã thêm $1; các trang giờ được dịch bằng nó."
     added: "Đã thêm $1."
