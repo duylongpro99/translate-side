@@ -56,6 +56,8 @@ The baseline was first written with a 0.10 minimum. Naturalness's margin was the
 
 ## Green run (§3 #3)
 
+Before this run, the shipped default had 4 scored passes: 2 green, one of them the tester's run (4.26, 3.78, 4.61, 4.52), and 2 red at the old 0.10 terminology floor that are green at 0.20. The table is in `plans/reports/eval-gate-261012-0910-green-run-at-head.md`. The tester's runs are not in the spend below.
+
 `pnpm run eval:gate` at c7ed294, 2026-10-12 08:53, the only eval run against APIBOX at the time:
 
 ```
@@ -127,5 +129,5 @@ One pass takes about 15 minutes and costs about $0.15. A gate run stops at $0.50
 
 1. **No per-call timeout in the harness.** One hung call uses up the whole 25-minute pass, and the pass ends without a verdict. The gate handles this correctly (never green), but an outage costs a pass. By the supervisor's ruling, this is out of scope for this phase.
 2. **The harness writes no commit.** `summary.json` has no `gitCommit` field, and never had one. The baseline runs' provenance is recorded in this report and in `gate.json`'s `createdAt`.
-3. **Tone cleared its floor by 0.01 on the green run** (4.35 against 4.34). That is within the measured judge noise (pooled SD 0.10), but the next gate runs should watch tone.
+3. **Tone cleared its floor by 0.01 on the green run** (4.35 against 4.34), and its scores spread widely across the scored passes of the shipped default: 4.70, 4.61, 4.48 and 4.35. That is within the measured judge noise (pooled SD 0.10), but tone is the dimension to watch in the next gate runs.
 4. **Step 8 is blocked** on OpenRouter credit (above).

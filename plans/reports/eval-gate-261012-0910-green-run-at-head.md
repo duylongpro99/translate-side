@@ -23,9 +23,12 @@ The translation made 57 calls over the 23 passages, including one marker repair,
 
 ## Earlier runs of the same code
 
+Before this run, the same code had 4 scored passes: 2 green, and 2 red at the old 0.10 terminology floor that are green at 0.20. All of them have translate prompt hash 848336fde86c and 23/23 passages scored.
+
 | run | fidelity | naturalness | tone | terminology | verdict at the time | under the 0.20 minimum |
 |---|---|---|---|---|---|---|
 | 2026-10-11 pass 1 | 4.22 | 3.87 | 4.70 | 4.30 | red, terminology < 4.34 | green |
+| 2026-10-11 pass 1, the tester's run (`gate-2026-10-11T14-49-46-053Z`) | 4.26 | 3.78 | 4.61 | 4.52 | green | green |
 | 2026-10-12 pass 1 | 4.26 | 3.78 | 4.48 | 4.30 | red, terminology < 4.34 | green |
 
 Four other passes ended without a verdict because APIBOX stopped answering chat requests: two on 2026-10-11, after the first pass in the table, and two on 2026-10-12, early in the morning. The gate correctly reported them as failed passes with no scores.
