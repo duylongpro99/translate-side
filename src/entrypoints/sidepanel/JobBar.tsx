@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { languageLabel } from '@/engine/index';
+import { languageName } from '@/shared/language-name';
 import { formatUsd } from '@/shared/cost';
 import type { Backoff, JobView } from './jobs.ts';
 import { i18n } from '#i18n';
@@ -64,7 +64,7 @@ function BackoffNote({ entries }: { entries: readonly Backoff[] }) {
 
 export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobView; actions: JobActions; cancel?: boolean }) {
   const { final, failed, total } = job.counts;
-  const into = languageLabel(job.targetLang);
+  const into = languageName(job.targetLang);
   // Providers report usage at the end of a stream, so a cancelled request's spend is unknown:
   // say so instead of estimating it (review E-T2).
   const cost = job.cost === undefined ? null : (

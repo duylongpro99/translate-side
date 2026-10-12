@@ -25,6 +25,7 @@ import {
   type Preferences,
   type ProviderConnection,
 } from '@/shared/settings';
+import { languageName } from '@/shared/language-name';
 import { onProviderSettingsChanged, readProviderSettings, resolveRoute, type ProviderSettings } from '@/shared/providers';
 import { isOverflowed, onListChanged, overflowNotice } from '@/shared/sync-quota';
 import { openOnboarding } from '@/shared/onboarding';
@@ -97,7 +98,7 @@ function LanguageSection({ api }: { api: Browser }) {
       {selected === 'auto' || LANGUAGES.some((l) => l.code === selected) ? null : <option value={selected}>{selected}</option>}
       {LANGUAGES.map((l) => (
         <option key={l.code} value={l.code}>
-          {l.name}
+          {languageName(l.code)}
         </option>
       ))}
     </>

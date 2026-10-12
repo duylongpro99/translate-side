@@ -1,6 +1,6 @@
 import type { StyleMode } from '@/engine/types';
 import { i18n } from '#i18n';
-import { languageLabel } from '@/engine/index';
+import { languageName } from '@/shared/language-name';
 import { LANGUAGES, STYLES, type Preferences } from '@/shared/settings';
 import type { JobActions } from './JobBar.tsx';
 import type { JobView } from './jobs.ts';
@@ -32,21 +32,21 @@ export interface HeaderControlsProps {
 export function HeaderControls({ job, prefs, routedModel, actions, switcher, onPrefs, error }: HeaderControlsProps) {
   const target = prefs?.targetLang ?? job?.targetLang ?? '';
   const source = job?.sourceLang ?? '';
-  const languages = LANGUAGES.some((l) => l.code === target) || target === '' ? LANGUAGES : [{ code: target, name: languageLabel(target) }, ...LANGUAGES];
+  const languages = LANGUAGES.some((l) => l.code === target) || target === '' ? LANGUAGES : [{ code: target, name: languageName(target) }, ...LANGUAGES];
   const style = prefs?.style ?? 'natural';
   const model = job?.model || routedModel || '';
   const running = job?.status === 'running';
   return (
     <div class="panel__controls" data-testid="header-controls">
       <span class="panel__pair" data-testid="lang-pair">
-        <span class="panel__source" data-testid="source-lang" title={source ? i18n.t('panel.controls.from', [languageLabel(source)]) : i18n.t('panel.controls.sourceDetected')}>
+        <span class="panel__source" data-testid="source-lang" title={source ? i18n.t('panel.controls.from', [languageName(source)]) : i18n.t('panel.controls.sourceDetected')}>
           {source ? source.toUpperCase() : i18n.t('panel.controls.auto')}
         </span>
         <span aria-hidden="true">→</span>
         <select class="panel__select" data-testid="target-lang" aria-label={i18n.t('panel.controls.translateInto')} value={target} disabled={!prefs} onChange={(e) => onPrefs({ targetLang: (e.currentTarget as HTMLSelectElement).value })}>
           {languages.map((l) => (
             <option key={l.code} value={l.code}>
-              {l.name}
+              {languageName(l.code)}
             </option>
           ))}
         </select>

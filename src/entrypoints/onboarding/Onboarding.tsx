@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
 import { i18n } from '#i18n';
 import type { Segment } from '@/engine/index';
-import { languageLabel } from '@/engine/index';
+import { languageName } from '@/shared/language-name';
 import { createAdapter } from '@/llm/client';
 import { PRESETS, presetTitle, type PresetId } from '@/shared/presets';
 import { markOnboarding } from '@/shared/onboarding';
@@ -124,9 +124,9 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
           <div class="opt__row">
             <label for="onb-lang">{i18n.t('onboarding.translateInto')}</label>
             <select id="onb-lang" data-testid="onboarding-lang" value={lang} onChange={(e) => setLang((e.target as HTMLSelectElement).value)}>
-              {(LANGUAGES.some((l) => l.code === lang) || lang === '' ? LANGUAGES : [{ code: lang, name: languageLabel(lang) }, ...LANGUAGES]).map((l) => (
+              {(LANGUAGES.some((l) => l.code === lang) || lang === '' ? LANGUAGES : [{ code: lang, name: languageName(lang) }, ...LANGUAGES]).map((l) => (
                 <option key={l.code} value={l.code}>
-                  {l.name}
+                  {languageName(l.code)}
                 </option>
               ))}
             </select>
@@ -293,7 +293,7 @@ function Sample({ api, lang, saved, injected, injectedGate, onDone, onChange, on
     <div data-testid="onboarding-sample">
       <p class="opt__status" data-testid="onboarding-saved">{saved}</p>
       <div class="onb__sample">
-        <strong>{i18n.t('onboarding.sampleTitle', { language: languageLabel(sample.lang) })}</strong>
+        <strong>{i18n.t('onboarding.sampleTitle', { language: languageName(sample.lang) })}</strong>
         <blockquote data-testid="sample-original">{sample.text}</blockquote>
         {asked && privacy !== 'acknowledged' ? (
           <div class="onb__notice" role="alert" data-testid="onboarding-privacy">
@@ -309,7 +309,7 @@ function Sample({ api, lang, saved, injected, injectedGate, onDone, onChange, on
         ) : null}
         {state?.status === 'final' || state?.status === 'streaming' ? (
           <>
-            <strong>{languageLabel(lang)}</strong>
+            <strong>{languageName(lang)}</strong>
             <blockquote data-testid="sample-translation">{state.text}</blockquote>
           </>
         ) : null}

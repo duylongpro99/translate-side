@@ -79,7 +79,7 @@ provider's answer time with a delay added so it reads as a plausible duration; i
    Upload the five screenshots in order, the tile and the store icon (`assets/store-icon-128.png`; the extension's own icon files are unchanged). Category **Productivity**, language **English**. Set the official
    URL and support URL as listed.
 4. **Privacy tab.** Paste the single purpose; paste each permission justification (the four optional host permissions
-   share the host justification field: paste the three host paragraphs there); remote code **No**; tick the data types
+   share the host justification field: paste the three host sections there: `https://*/*`, `http://*/*`, and the one section that covers both `http://localhost/*` and `http://127.0.0.1/*`); remote code **No**; tick the data types
    as listed (Website content, Authentication information); tick the three certifications; paste the privacy policy
    URL.
 5. **Distribution tab.** Visibility **Unlisted** for the first release; all regions; free.

@@ -71,7 +71,7 @@ guidelines ask); the package keeps its own `public/icon/128.png`.
 **Permission justifications:** paste each paragraph from [permission-justifications.md](permission-justifications.md):
 `sidePanel`, `storage`, `activeTab`, `scripting`, `contextMenus`, and the optional host permissions `https://*/*`,
 `http://*/*`, `http://localhost/*` and `http://127.0.0.1/*`. Chrome shows the optional hosts under the host
-permission justification field; paste the three host paragraphs there.
+permission justification field; paste the three host sections there: `https://*/*`, `http://*/*`, and the one section that covers both `http://localhost/*` and `http://127.0.0.1/*`.
 
 **Are you using remote code?** No.
 

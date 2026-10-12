@@ -1,6 +1,7 @@
 import { Fragment } from 'preact';
 import { i18n } from '#i18n';
-import { languageLabel, type DocumentBrief } from '@/engine/index';
+import type { DocumentBrief } from '@/engine/index';
+import { languageName } from '@/shared/language-name';
 
 // "About this document" (plan M2 §2, M2-E1): the brief from the analyze stage, collapsed by
 // default. It is model output, so it is rendered as text only (DESIGN.md §5.6, §8).
@@ -16,7 +17,7 @@ export function AboutDocument({ brief, sourceLang }: { brief: DocumentBrief; sou
         {sourceLang ? (
           <>
             <dt>{i18n.t('panel.about.language')}</dt>
-            <dd>{languageLabel(sourceLang)}</dd>
+            <dd>{languageName(sourceLang)}</dd>
           </>
         ) : null}
         {rows.map((key) => (
