@@ -11,6 +11,7 @@
 //   only when the user turned on "include site names", and the export can still leave it out.
 import type { browser } from 'wxt/browser';
 import type { LLMErrorKind } from '@/llm/types';
+import { PRESETS } from './presets.ts';
 
 type Browser = typeof browser;
 
@@ -112,6 +113,10 @@ function versions(api: Browser): { extension: string; chrome: string } {
 
 const iso = (ms: number) => new Date(ms).toISOString();
 
+/** A preset id is settings data (an imported file can hold any string): only one of ours is logged, else `custom`. */
+const KNOWN_PRESETS: ReadonlySet<string> = new Set(PRESETS.map((p) => p.id));
+const presetOf = (id: string) => (KNOWN_PRESETS.has(id) ? id : 'custom');
+
 /** A new entry id: the time first, so ids sort by age. */
 export const entryId = (now: number) => `${now}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -143,7 +148,7 @@ export function jobEntry(api: Browser, record: JobRecord, sites: boolean): JobEn
     outcome: record.outcome,
     strategy: record.strategy,
     promptIds: [...record.promptIds],
-    ...(record.presetId === undefined ? {} : { presetId: record.presetId }),
+    ...(record.presetId === undefined ? {} : { presetId: presetOf(record.presetId) }),
     ...(record.model ? { model: record.model } : {}),
     lazy: record.lazy,
     segments: record.segments,

@@ -80,6 +80,14 @@ describe('the diagnostics log', () => {
     expect(diagnosticsFile(entries, { sites: true, exportedAt: 3000 })).toContain('https://example.com');
   });
 
+  it('logs a preset id only when it is one of ours', async () => {
+    const { api } = fakeDevice();
+    const log = createDiagnosticsLog(api);
+    await log.record(record(1000, { presetId: 'openai' }));
+    await log.record(record(2000, { presetId: 'https://gateway.example.com/v1' }));
+    expect((await readDiagnostics(api)).map((e) => (e.type === 'page-job' ? e.presetId : undefined))).toEqual(['custom', 'openai']);
+  });
+
   it('names each error by its kind and status with our own message', async () => {
     const { api } = fakeDevice();
     await createDiagnosticsLog(api).record(record(1000, { outcome: 'stopped', endedAt: 2000, errors: [{ kind: 'rate_limit', status: 429, count: 2 }] }));
