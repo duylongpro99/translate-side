@@ -61,25 +61,31 @@ export async function compareAndSet(area: Area, expected: Record<string, unknown
  */
 export async function migrateSync(api: Browser, versionKey: string, steps: readonly MigrationStep[]): Promise<Record<string, unknown>> {
   const read = await api.storage.sync.get(null);
-  const stored = read[versionKey];
+  const from = read[versionKey];
   const latest = steps.at(-1)?.version ?? 0;
-  if (typeof stored === 'number' && stored >= latest) return read;
+  if (typeof from === 'number' && from >= latest) return read;
+  // `items`: storage.sync as the steps so far make it. `stored`: what it holds, the compare-and-set's
+  // expectation. `pending`: patches a failed write left unwritten, written with the next step's.
   let items = read;
-  let version = typeof stored === 'number' ? stored : 0;
+  let stored = read;
+  let pending: Record<string, unknown> = {};
+  let version = typeof from === 'number' ? from : 0;
   for (const step of steps) {
     if (step.version <= version) continue;
     const patch = await step.patch(api, items);
     if (Object.keys(patch).length > 0) {
+      pending = { ...pending, ...patch };
       try {
-        const written = await compareAndSet(api.storage.sync, items, { ...patch, [versionKey]: step.version }, versionKey);
+        const written = await compareAndSet(api.storage.sync, stored, { ...pending, [versionKey]: step.version }, versionKey);
         // Someone else moved the version on meanwhile: what they wrote is the truth.
         if (!(versionKey in written)) return migrateAgain(api, versionKey, latest);
+        stored = { ...stored, ...written };
+        pending = {};
       } catch (err) {
         console.warn('[translate-side] could not save the migrated settings', err);
       }
     }
-    // The version goes with the step: the next step's guard expects what this one wrote.
-    items = { ...items, ...patch, ...(Object.keys(patch).length > 0 ? { [versionKey]: step.version } : {}) };
+    items = { ...items, ...patch };
     version = step.version;
   }
   return { ...items, [versionKey]: version };

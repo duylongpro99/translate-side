@@ -149,6 +149,27 @@ describe('migration runs one at a time and writes compare-and-set', () => {
     expect(d.sync.sets).toHaveLength(2);
   });
 
+  it('a step whose write fails leaves the next step writing both patches, so none is lost', async () => {
+    const d = fakeDevice({ sync: { prefs: { targetLang: 'vi' } } });
+    const set = d.sync.set.bind(d.sync);
+    let fail = true;
+    d.sync.set = async (items) => {
+      if (fail) {
+        fail = false;
+        throw new Error('MAX_WRITE_OPERATIONS_PER_MINUTE quota exceeded');
+      }
+      return set(items);
+    };
+    const steps: MigrationStep[] = [
+      { version: 1, patch: async (_api, items) => ({ prefs: { ...(items.prefs as object), style: 'natural' } }) },
+      { version: 2, patch: async (_api, items) => ({ prefs: { ...(items.prefs as object), gloss: 'first' } }) },
+    ];
+    const out = await migrateSync(d.api, SCHEMA_KEY, steps);
+    expect(d.sync.data.get('prefs')).toEqual({ targetLang: 'vi', style: 'natural', gloss: 'first' });
+    expect(d.sync.data.get(SCHEMA_KEY)).toBe(2);
+    expect(out).toEqual({ prefs: { targetLang: 'vi', style: 'natural', gloss: 'first' }, [SCHEMA_KEY]: 2 });
+  });
+
   it('another runner moved the version on meanwhile: nothing is written, its storage is returned', async () => {
     const d = fakeDevice();
     const steps: MigrationStep[] = [
