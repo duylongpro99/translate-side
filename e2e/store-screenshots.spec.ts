@@ -45,14 +45,16 @@ const GLOSSARY = [
   { term: 'repository', rendering: 'kho mã' },
 ];
 
-async function prepare({ extension, mock }: { extension: Extension; mock: { answerWith(fn: (t: string) => string): void } }) {
+async function prepare({ extension, mock }: { extension: Extension; mock: { answerWith(fn: (t: string) => string): void; delayAnswers(ms: number): void } }) {
   mock.answerWith((text) => VI[text] ?? `vi:${text}`);
+  // The mock answers at once; a plausible duration is what the job bar should show (the model name and label say nothing of speed).
+  mock.delayAnswers(1800);
   await extension.seed();
   // A friendlier connection name than the harness's "Mock"; the endpoint is still the mock on this computer.
   await extension.worker.evaluate(async (glossary) => {
     const got = await chrome.storage.sync.get('conn:mock');
     const prof = await chrome.storage.sync.get('profile:mock-model');
-    await chrome.storage.sync.set({ siteNever: ['bank.example.com', '*.intranet.example.org'], 'conn:mock': { ...(got['conn:mock'] as object), label: 'Local model' }, glossary, 'profile:mock-model': { ...(prof['profile:mock-model'] as object), model: 'local-model' } });
+    await chrome.storage.sync.set({ siteNever: ['bank.example.com', '*.intranet.example.org'], 'conn:mock': { ...(got['conn:mock'] as object), label: 'My provider' }, glossary, 'profile:mock-model': { ...(prof['profile:mock-model'] as object), model: 'translate-1' } });
   }, GLOSSARY);
 }
 
@@ -100,19 +102,28 @@ test.describe('English interface', () => {
     // 1. The page with its translation beside it.
     await compose(await page.screenshot(), await panel.screenshot(), shot('01-page-and-panel.png'));
 
-    // 2. Hovering a block in the panel marks the matching block on the page.
+    const panelShot = await panel.screenshot();
+
+    // 2. The hover link works both ways. Pointing at a block in the panel marks it on the page; pointing at it on the
+    // page marks it in the panel. Both states belong to the same block, so the two halves are shot in turn.
     const block = panel.locator('.seg[data-id]').nth(4);
     // The panel is a background tab (fixtures.ts), where Playwright's own hover never sees a frame: send the pointer event.
     await block.dispatchEvent('mouseover');
     await expect.poll(async () => page.evaluate(() => document.getElementById('translate-side-link-style') !== null)).toBe(true);
-    await compose(await page.screenshot(), await panel.screenshot(), shot('02-hover-link.png'));
+    const pageMarked = await page.screenshot();
+    await block.dispatchEvent('mouseout');
+    await page.getByText('The cheapest fix is to put the docs').hover();
+    await expect(panel.locator('.seg[data-linked]')).toHaveCount(1);
+    await compose(pageMarked, await panel.screenshot(), shot('02-hover-link.png'));
 
-    // 3 and 4. The settings page: providers, then the glossary and the site rules.
+    // 3 and 4. The settings page beside the panel: providers, then the glossary and the site rules. The panel is shot
+    // first (opening the settings tab makes it the active tab, which the panel follows).
     const options = await extension.options();
+    await sized(options, PAGE_WIDTH);
     await showSection(options, 'Providers');
-    await options.screenshot({ path: shot('03-options-providers.png') });
+    await compose(await options.screenshot(), panelShot, shot('03-options-providers.png'));
     await showSection(options, 'Personal glossary');
-    await options.screenshot({ path: shot('04-glossary-and-sites.png') });
+    await compose(await options.screenshot(), panelShot, shot('04-glossary-and-sites.png'));
   });
 });
 
@@ -147,6 +158,20 @@ test('the small promo tile', async () => {
     await tile.goto(pathToFileURL(path.join(ROOT, 'scripts/store-tile.html')).href);
     await tile.waitForLoadState('load');
     await tile.screenshot({ path: shot('tile-440x280.png') });
+  } finally {
+    await browser.close();
+  }
+});
+
+test('the store icon: the 128 px icon with its artwork at 96 px inside a 16 px transparent margin', async () => {
+  fs.mkdirSync(OUT, { recursive: true });
+  const icon = fs.readFileSync(path.join(ROOT, 'public/icon/128.png')).toString('base64');
+  const browser = await chromium.launch();
+  try {
+    const canvas = await browser.newPage({ viewport: { width: 128, height: 128 } });
+    await canvas.setContent(`<body style="margin:0;background:transparent"><img src="data:image/png;base64,${icon}" width="96" height="96" style="position:absolute;left:16px;top:16px"></body>`);
+    await canvas.waitForLoadState('load');
+    await canvas.screenshot({ path: shot('store-icon-128.png'), omitBackground: true });
   } finally {
     await browser.close();
   }

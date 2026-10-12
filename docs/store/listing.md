@@ -54,8 +54,8 @@ Source code and documentation: https://github.com/duylongpro99/translate-side
 | 4 | `04-glossary-and-sites.png` | A personal glossary and rules for sites |
 | 5 | `05-vietnamese-interface.png` | The interface in Vietnamese |
 
-**Small promo tile (440×280):** `tile-440x280.png`. **Icon:** the 128×128 icon in the package
-(`public/icon/128.png`).
+**Small promo tile (440×280):** `tile-440x280.png`. **Icon:** `store-icon-128.png` (128×128, artwork 96 px with a 16 px transparent margin, as the store
+guidelines ask); the package keeps its own `public/icon/128.png`.
 
 **Official URL / homepage:** https://github.com/duylongpro99/translate-side
 

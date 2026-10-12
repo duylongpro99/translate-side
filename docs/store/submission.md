@@ -47,14 +47,16 @@ written for the purpose (no real key, account or page).
 | File | Size | Shows |
 |---|---|---|
 | `01-page-and-panel.png` | 1280×800 | The page with the translation beside it |
-| `02-hover-link.png` | 1280×800 | A block marked on the page while pointing at it in the panel |
-| `03-options-providers.png` | 1280×800 | Settings: connections, models, routing |
-| `04-glossary-and-sites.png` | 1280×800 | Settings: glossary and site rules |
+| `02-hover-link.png` | 1280×800 | The hover link both ways: a block marked on the page (pointing at it in the panel) and in the panel (pointing at it on the page). The two halves are shot in turn for the same block |
+| `03-options-providers.png` | 1280×800 | Settings (providers) beside the panel |
+| `04-glossary-and-sites.png` | 1280×800 | Settings (glossary and site rules) beside the panel |
 | `05-vietnamese-interface.png` | 1280×800 | Settings and panel with the Vietnamese interface |
 | `tile-440x280.png` | 440×280 | The small promo tile |
+| `store-icon-128.png` | 128×128 | The store icon: the package's 128 px icon with its artwork at 96 px inside a 16 px transparent margin, as the store's image guidelines ask |
 
 The real side panel cannot be captured by the test browser, so each page-and-panel image is two screenshots of the
-real interface (the page and the panel) placed side by side.
+real interface (the page or settings, and the panel) placed side by side. The job bar's duration is the mock
+provider's answer time with a delay added so it reads as a plausible duration; it says nothing about any real model.
 
 ## Text to paste
 
@@ -74,7 +76,7 @@ real interface (the page and the panel) placed side by side.
      repository.
 2. **Add the item.** Developer dashboard → **Add new item** → upload the zip. Fix anything the upload reports.
 3. **Store listing tab.** Paste the name, short description and detailed description from [listing.md](listing.md).
-   Upload the five screenshots in order and the tile. Category **Productivity**, language **English**. Set the official
+   Upload the five screenshots in order, the tile and the store icon (`assets/store-icon-128.png`; the extension's own icon files are unchanged). Category **Productivity**, language **English**. Set the official
    URL and support URL as listed.
 4. **Privacy tab.** Paste the single purpose; paste each permission justification (the four optional host permissions
    share the host justification field: paste the three host paragraphs there); remote code **No**; tick the data types

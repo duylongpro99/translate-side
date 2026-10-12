@@ -64,6 +64,8 @@ export interface MockControl {
   echoError(n: number): void;
   /** Answers a translate call's segments with `fn(text)` instead of `vi:` + text (the store screenshots show real Vietnamese). */
   answerWith(fn: ((text: string) => string) | undefined): void;
+  /** Holds each translate answer for `ms` before it starts (the store screenshots show a plausible duration, not the mock's instant one). */
+  delayAnswers(ms: number): void;
   calls: MockCall[];
   reset(): void;
 }
@@ -76,17 +78,20 @@ const chunk = (content: string, finish: string | null = null) => `data: ${JSON.s
 export function mockServer(): { server: http.Server; control: MockControl } {
   const pending = { rateLimit: 0, malformed: 0, echoError: 0 };
   let answer: ((text: string) => string) | undefined;
+  let delay = 0;
   const control: MockControl = {
     rateLimit: (n) => void (pending.rateLimit = n),
     malformed: (n) => void (pending.malformed = n),
     echoError: (n) => void (pending.echoError = n),
     answerWith: (fn) => void (answer = fn),
+    delayAnswers: (ms) => void (delay = ms),
     calls: [],
     reset() {
       pending.rateLimit = 0;
       pending.malformed = 0;
       pending.echoError = 0;
       answer = undefined;
+      delay = 0;
       control.calls.length = 0;
     },
   };
@@ -127,20 +132,24 @@ export function mockServer(): { server: http.Server; control: MockControl } {
         res.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: `Invalid request: ${call.segments.join(' ')}`, type: 'invalid_request_error' } }));
         return;
       }
-      res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
-      if (!analyze && pending.malformed > 0) {
-        pending.malformed--;
-        call.malformed = true;
-        res.end(`${chunk('<seg id="')}data: {not json\n\n`);
-        return;
-      }
-      const out = analyze ? BRIEF : segs.replace(SEG, (_m, id: string, n: string | undefined, text: string) => `<seg id="${id}"${n ?? ''}>${answer ? answer(text) : `vi:${text}`}</seg>`);
-      // Two content chunks, so the panel sees a stream rather than one block.
-      const half = Math.ceil(out.length / 2);
-      res.write(chunk(out.slice(0, half)));
-      res.write(chunk(out.slice(half), 'stop'));
-      res.write(`data: ${JSON.stringify({ id: 'mock', object: 'chat.completion.chunk', created: 0, model: 'mock', choices: [], usage: { prompt_tokens: Math.ceil(user.length / 3.5), completion_tokens: Math.ceil(out.length / 3.5) } })}\n\n`);
-      res.end('data: [DONE]\n\n');
+      const start = () => {
+        res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
+        if (!analyze && pending.malformed > 0) {
+          pending.malformed--;
+          call.malformed = true;
+          res.end(`${chunk('<seg id="')}data: {not json\n\n`);
+          return;
+        }
+        const out = analyze ? BRIEF : segs.replace(SEG, (_m, id: string, n: string | undefined, text: string) => `<seg id="${id}"${n ?? ''}>${answer ? answer(text) : `vi:${text}`}</seg>`);
+        // Two content chunks, so the panel sees a stream rather than one block.
+        const half = Math.ceil(out.length / 2);
+        res.write(chunk(out.slice(0, half)));
+        res.write(chunk(out.slice(half), 'stop'));
+        res.write(`data: ${JSON.stringify({ id: 'mock', object: 'chat.completion.chunk', created: 0, model: 'mock', choices: [], usage: { prompt_tokens: Math.ceil(user.length / 3.5), completion_tokens: Math.ceil(out.length / 3.5) } })}\n\n`);
+        res.end('data: [DONE]\n\n');
+      };
+      if (!analyze && delay > 0) setTimeout(start, delay);
+      else start();
     });
   });
   return { server, control };
