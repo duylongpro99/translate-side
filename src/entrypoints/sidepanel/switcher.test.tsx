@@ -60,7 +60,7 @@ function area(initial: Record<string, unknown> = {}) {
 
 function fakeApi(opts: { siteRules?: unknown[]; keys?: string[]; denied?: string[] } = {}) {
   const sync = area({ prefs: { targetLang: 'vi', sourceLang: 'auto', style: 'natural' }, ...(opts.siteRules ? { siteRules: opts.siteRules } : {}) });
-  const local = area({ privacyNotice: { version: 1, at: 0 }, ...Object.fromEntries((opts.keys ?? ['apibox', 'gemini']).map((id) => [`secret:${id}`, `key-${id}`])) });
+  const local = area({ privacyNotice: { version: 2, at: 0 }, ...Object.fromEntries((opts.keys ?? ['apibox', 'gemini']).map((id) => [`secret:${id}`, `key-${id}`])) });
   const session = area();
   const none = { addListener: () => {}, removeListener: () => {} };
   const removed = new Set<(tabId: number) => void>();

@@ -10,7 +10,7 @@ import { createOpenAIAdapter } from '@/llm/openai';
 import { anthropicStream } from '@/llm/testing';
 import type { Protocol } from '@/llm/types';
 import { markOnboarding, ONBOARDING_KEY, ONBOARDING_PAGE, openOnboarding, readOnboarding } from '@/shared/onboarding';
-import { PRIVACY_KEY } from '../sidepanel/privacy.ts';
+import { PRIVACY_KEY, PRIVACY_NOTICE_VERSION } from '../sidepanel/privacy.ts';
 import { Jobs } from '../sidepanel/jobs.ts';
 import { resolveRoute } from '@/shared/providers';
 import { Onboarding } from './Onboarding.tsx';
@@ -272,7 +272,7 @@ describe('onboarding (M4-E13)', () => {
   });
 
   it('with the notice already acknowledged the sample translates at once; an English reader gets a Spanish sample', async () => {
-    const f = fakeApi({ local: { [PRIVACY_KEY]: { version: 1, at: 1 } } });
+    const f = fakeApi({ local: { [PRIVACY_KEY]: { version: PRIVACY_NOTICE_VERSION, at: 1 } } });
     await f.api.storage.sync.set({ prefs: { targetLang: 'en', sourceLang: 'auto', style: 'natural' } });
     const { jobs, client } = sampleJobs(f);
     await mount(f, server(), { jobs });
@@ -286,7 +286,7 @@ describe('onboarding (M4-E13)', () => {
   });
 
   it('a sample that fails says why and can be tried again', async () => {
-    const f = fakeApi({ local: { [PRIVACY_KEY]: { version: 1, at: 1 } } });
+    const f = fakeApi({ local: { [PRIVACY_KEY]: { version: PRIVACY_NOTICE_VERSION, at: 1 } } });
     const { jobs } = sampleJobs(f, true);
     await mount(f, server(), { jobs });
     await toStep3();

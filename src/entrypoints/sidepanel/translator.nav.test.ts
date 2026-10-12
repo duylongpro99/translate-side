@@ -27,7 +27,7 @@ function fakeApi(sites: { allow?: string[]; never?: string[] } = {}, granted: st
   const api = {
     storage: {
       sync: { get: (k: string | string[]) => Promise.resolve(pick(k)), set: (o: Record<string, unknown>) => (Object.entries(o).forEach(([k, v]) => sync.set(k, v)), Promise.resolve()), onChanged: listeners() },
-      local: { get: () => Promise.resolve({ privacyNotice: { version: 1, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
+      local: { get: () => Promise.resolve({ privacyNotice: { version: 2, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
       session: { onChanged: listeners(), get: () => Promise.resolve({}), remove: () => Promise.resolve() },
     },
     permissions: {

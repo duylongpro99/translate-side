@@ -34,7 +34,7 @@ function fakeApi(prefs: Record<string, unknown> = { targetLang: 'vi', sourceLang
         },
         onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) },
       },
-      local: { get: () => Promise.resolve({ privacyNotice: { version: 1, at: 0 } }), set: () => Promise.resolve(), onChanged: none },
+      local: { get: () => Promise.resolve({ privacyNotice: { version: 2, at: 0 } }), set: () => Promise.resolve(), onChanged: none },
       session: { get: () => Promise.resolve({}), remove: () => Promise.resolve(), onChanged: none },
     },
     permissions: { onAdded: none },

@@ -150,7 +150,7 @@ export const test = base.extend<Fixtures, { servers: MockControl; extPath: strin
             await chrome.storage.sync.set(sync);
             await chrome.storage.local.set(local);
           },
-          [SYNC, { 'secret:mock': 'placeholder-key', ...(privacy ? { privacyNotice: { version: 1, at: 1 } } : {}) }] as const,
+          [SYNC, { 'secret:mock': 'placeholder-key', ...(privacy ? { privacyNotice: { version: 2, at: 1 } } : {}) }] as const,
         );
       },
       async open(fixture) {

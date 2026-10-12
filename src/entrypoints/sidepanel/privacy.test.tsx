@@ -8,7 +8,7 @@ import { GEMINI_PROFILE } from '@/shared/settings';
 import type { SnippetRecord } from '@/shared/snippet';
 import { App } from './App.tsx';
 import type { PanelController, PanelView, SessionHooks } from './controller.ts';
-import { PRIVACY_KEY, PrivacyGate } from './privacy.ts';
+import { PRIVACY_KEY, PRIVACY_NOTICE_VERSION, PrivacyGate } from './privacy.ts';
 import { PrivacyNotice } from './PrivacyNotice.tsx';
 import { createTranslator } from './translator.ts';
 
@@ -93,13 +93,13 @@ describe('PrivacyGate', () => {
     expect(ran).toEqual([]);
     await gate.acknowledge();
     expect(ran).toEqual(['a2']);
-    expect(local[PRIVACY_KEY]).toMatchObject({ version: 1 });
+    expect(local[PRIVACY_KEY]).toMatchObject({ version: PRIVACY_NOTICE_VERSION });
     gate.whenAcknowledged('c', () => ran.push('c'));
     expect(ran).toEqual(['a2', 'c']);
   });
 
   it('is acknowledged from the start when storage says so (shown once), and follows an acknowledgement made elsewhere', async () => {
-    const seen = new PrivacyGate(fakeApi({ [PRIVACY_KEY]: { version: 1, at: 5 } }).api);
+    const seen = new PrivacyGate(fakeApi({ [PRIVACY_KEY]: { version: PRIVACY_NOTICE_VERSION, at: 5 } }).api);
     await settle();
     expect(seen.state).toBe('acknowledged');
 
@@ -107,12 +107,12 @@ describe('PrivacyGate', () => {
     const gate = new PrivacyGate(other.api);
     await settle();
     expect(gate.state).toBe('needed');
-    await other.api.storage.local.set({ [PRIVACY_KEY]: { version: 1, at: 9 } });
+    await other.api.storage.local.set({ [PRIVACY_KEY]: { version: PRIVACY_NOTICE_VERSION, at: 9 } });
     expect(gate.state).toBe('acknowledged');
   });
 
   it('shows the notice again for an older notice version', async () => {
-    const gate = new PrivacyGate(fakeApi({ [PRIVACY_KEY]: { version: 0, at: 5 } }).api);
+    const gate = new PrivacyGate(fakeApi({ [PRIVACY_KEY]: { version: 1, at: 5 } }).api);
     await settle();
     expect(gate.state).toBe('needed');
   });
@@ -142,7 +142,7 @@ describe('first-run privacy notice in the panel', () => {
     expect(root.querySelector('[data-testid=privacy-notice]')).toBeNull();
     expect(calls()).toBe(1);
     expect(t.jobs.get(1)?.status).toBe('done');
-    expect(f.local[PRIVACY_KEY]).toMatchObject({ version: 1 });
+    expect(f.local[PRIVACY_KEY]).toMatchObject({ version: PRIVACY_NOTICE_VERSION });
 
     // Shown once: a panel opened later on this device starts at once, with no notice.
     const again = setup(f.local);
@@ -219,5 +219,12 @@ describe('the notice names the fallback providers too (plan M4-E9)', () => {
     const text = root.textContent ?? '';
     expect(text).toContain('A local model on this computer (Ollama or LM Studio, set up in Providers) keeps the text on this device.');
     expect(text).not.toContain('later version');
+  });
+
+  it('says the diagnostics log stays on this device unless exported', () => {
+    const root = document.createElement('div');
+    document.body.replaceChildren(root);
+    act(() => render(<PrivacyNotice onAcknowledge={() => {}} />, root));
+    expect(root.querySelector('[data-testid=privacy-diagnostics]')?.textContent).toBe('A diagnostics log of recent translations (counts, timings, error kinds; no page text) is kept on this device. It leaves only if you export it in Settings.');
   });
 });

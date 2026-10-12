@@ -41,7 +41,7 @@ describe('cost (M3-E9)', () => {
   });
 
   it('the panel adds what a page cost to the running total in storage.local', async () => {
-    const local = new Map<string, unknown>([['privacyNotice', { version: 1, at: 0 }]]);
+    const local = new Map<string, unknown>([['privacyNotice', { version: 2, at: 0 }]]);
     const none = { addListener: () => {}, removeListener: () => {} };
     const api = {
       storage: {

@@ -38,6 +38,7 @@ export function PrivacyNotice({ to, onAcknowledge }: { to?: { label: string; hos
         <li>
           For sensitive pages, don't translate them with a cloud provider. A local model on this computer (Ollama or LM Studio, set up in Providers) keeps the text on this device.
         </li>
+        <li data-testid="privacy-diagnostics">A diagnostics log of recent translations (counts, timings, error kinds; no page text) is kept on this device. It leaves only if you export it in Settings.</li>
       </ul>
       <button type="button" ref={ok} class="privacy__ok" data-testid="privacy-ok" onClick={onAcknowledge}>
         Got it, translate

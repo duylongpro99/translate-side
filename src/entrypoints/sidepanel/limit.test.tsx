@@ -76,7 +76,7 @@ describe('Jobs and the soft limit (M4-E10)', () => {
 describe('the panel: Continue anyway (M4-E10, review 3 #3)', () => {
   function api(opts: { failSet?: boolean } = {}) {
     const local = new Map<string, unknown>([
-      ['privacyNotice', { version: 1, at: 0 }],
+      ['privacyNotice', { version: 2, at: 0 }],
       [SPEND_LIMIT_KEY, { monthlyUsd: 5 }],
       [SPEND_KEY, { since: 0, usd: 5.25, input: 1, cachedInput: 0, output: 1, unpricedTokens: 0, months: { [monthKey(Date.now())]: 5.25 }, days: {}, profiles: {} }],
     ]);
@@ -180,7 +180,7 @@ describe('Continue anyway carries out what the limit stopped (M4-D tester)', () 
   });
 
   it('in the panel: Retranslate page past the limit, then Continue anyway, sends the page again', async () => {
-    const local = new Map<string, unknown>([['privacyNotice', { version: 1, at: 0 }]]);
+    const local = new Map<string, unknown>([['privacyNotice', { version: 2, at: 0 }]]);
     const none = { addListener: () => {}, removeListener: () => {} };
     const api = {
       storage: {

@@ -74,7 +74,7 @@ try {
   let sw = ctx.serviceWorkers()[0] ?? (await ctx.waitForEvent('serviceworker'));
   const extId = new URL(sw.url()).host;
   const sync = { schemaVersion: 1, prefs: { targetLang: 'vi', sourceLang: 'auto', style: 'natural', gloss: 'first', budgetTokens: 0 }, glossary: [] };
-  const local = { [`secret:${P.conn}`]: key, privacyNotice: { version: 1, at: 1 } };
+  const local = { [`secret:${P.conn}`]: key, privacyNotice: { version: 2, at: 1 } };
   if (P.model) {
     const pid = `${P.conn}-${P.model.replace(/[^a-z0-9]+/gi, '-')}`;
     // `--protocol auto` (OpenRouter): what Auto-detect saves on a dual-protocol gateway (src/shared/connect.ts, per-protocol auth);
