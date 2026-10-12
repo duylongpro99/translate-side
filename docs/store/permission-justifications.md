@@ -125,7 +125,7 @@ source, not a progress log).
 - storage: src/shared/settings.ts:182-198 (keys, storage.local), src/shared/providers.ts:48-62 (sync records),
   src/shared/access.ts:52 and src/shared/snippet.ts:50 (storage.session), src/shared/diagnostics.ts:133 and
   src/shared/spend.ts:255 (storage.local).
-- Per-origin requests on a click, given back on removal: src/entrypoints/options/Providers.tsx:813 (Test connection),
+- Per-origin requests on a click, given back on removal: src/entrypoints/options/Providers.tsx:818 (Test connection),
   src/entrypoints/sidepanel/translator.ts:529 and :555 (Grant access), src/shared/sites.ts:167 (allowlist),
   :187 and src/shared/providers.ts:673 (permissions.remove), src/shared/settings.ts:206 (originPattern: one origin).
 - Plain-HTTP rule: src/llm/endpoint.ts:31 (isPlainHttpRefused, with isLoopbackHost and isPrivateNetworkHost),

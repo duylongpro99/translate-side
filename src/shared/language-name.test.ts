@@ -17,6 +17,12 @@ describe('languageName: what the reader sees', () => {
     expect(languageName('ja', 'vi-VN')).toBe('Tiếng Nhật');
   });
 
+  it('stays English when the extension has no messages in the browser’s language (a French Chrome shows the English interface)', () => {
+    expect(languageName('vi', 'fr')).toBe('Vietnamese');
+    expect(languageName('vi', 'fr-FR')).toBe('Vietnamese');
+    expect(languageName('en', 'ja')).toBe('English');
+  });
+
   it('keeps the English wording for a code the browser does not know, and for a blank one', () => {
     expect(languageName('x-made-up', 'vi')).toBe('x-made-up');
     expect(languageName('', 'vi')).toBe(languageLabel(''));

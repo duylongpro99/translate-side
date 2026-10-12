@@ -94,7 +94,7 @@ Reviewer-only: where each statement comes from (paths relative to the repository
   (the access message), options.providers.* ("Local only" is routing's localOnly: src/shared/providers.ts:842).
 - Plain-HTTP rule: src/llm/endpoint.ts:31, src/llm/errors.ts:18, src/shared/settings.ts:225.
 - Decision G5 (no local model measured): docs/provider-matrix.md "Scope" and item 2 of its open items.
-- Access request for localhost: src/entrypoints/options/Providers.tsx:813 (Test), src/shared/settings.ts:206
+- Access request for localhost: src/entrypoints/options/Providers.tsx:818 (Test), src/shared/settings.ts:206
   (originPattern gives http://localhost/*).
 - Memory sizes are general guidance for 4-bit 7–8 B models, not a measurement of this project.
 -->
