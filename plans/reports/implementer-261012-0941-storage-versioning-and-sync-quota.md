@@ -9,7 +9,7 @@ Settings and the cache now survive an upgrade from every earlier build, and a li
 breaks a save.
 
 - **Demo 3, real.** The M3 build (4524123) was built in a temporary worktree, filled with settings, glossary, key
-  and cache, then upgraded in place to the current build. `onInstalled` reported `reason: "update"`, every item
+  and cache, then upgraded in place to the current build (same extension id, build swapped; both builds are version 0.0.1). `onInstalled` reported `reason: "update"`, every item
   M3 stored was kept, and the cached page translated again with 0 provider calls.
 - **Demo 4.** In real Chromium, a 1,000-entry glossary saves through the Options page with no error. The whole
   list goes to `storage.local` under `glossary` with the marker `overflow:glossary`, and the overflow notice shows.
