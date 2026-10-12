@@ -3,13 +3,13 @@
 // of what it would change, and nothing is written until the user confirms that too (§8).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
+import { i18n } from '#i18n';
+import { slots } from '../sidepanel/slots.tsx';
 import { applyImport, buildExport, exportFileName, MAX_IMPORT_BYTES, parseImport, previewImport, type ImportPlan, type ImportReport } from '@/shared/portable';
 
 type Browser = typeof browser;
 
 type Note = { text: string; warn: boolean };
-
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** The browser's download of `text` as a file (an anchor click: no `downloads` permission needed). */
 export function download(text: string, name: string) {
@@ -26,13 +26,13 @@ export function download(text: string, name: string) {
 function Summary({ report, keep, onKeep }: { report: ImportReport; keep: ReadonlySet<string>; onKeep: (id: string, on: boolean) => void }) {
   const lines: string[] = [];
   const { connections: c, profiles: p } = report;
-  if (c.added + c.replaced > 0) lines.push(`Connections: ${c.added} new, ${c.replaced} replaced.`);
-  if (p.added + p.replaced > 0) lines.push(`Models: ${p.added} new, ${p.replaced} replaced.`);
-  if (report.routing === 'replaced') lines.push('Routing: replaced by the file’s.');
-  if (report.siteRules > 0) lines.push(`Per-site models: ${plural(report.siteRules, 'rule')} added or replaced.`);
-  if (report.prefs) lines.push('Preferences: the ones in the file replace yours.');
-  if (report.glossary !== null) lines.push(`Glossary: ${plural(report.glossary, 'entry', 'entries')} added or replaced; yours stay.`);
-  if (report.sites.allow + report.sites.never > 0) lines.push(`Sites: ${report.sites.allow} always translate (each needs its permission granted again under Site rules), ${report.sites.never} never.`);
+  if (c.added + c.replaced > 0) lines.push(i18n.t('options.transfer.connections', [String(c.added), String(c.replaced)]));
+  if (p.added + p.replaced > 0) lines.push(i18n.t('options.transfer.models', [String(p.added), String(p.replaced)]));
+  if (report.routing === 'replaced') lines.push(i18n.t('options.transfer.routing'));
+  if (report.siteRules > 0) lines.push(i18n.t('options.transfer.siteRules', report.siteRules));
+  if (report.prefs) lines.push(i18n.t('options.transfer.prefs'));
+  if (report.glossary !== null) lines.push(i18n.t('options.transfer.glossary', report.glossary));
+  if (report.sites.allow + report.sites.never > 0) lines.push(i18n.t('options.transfer.sites', [String(report.sites.allow), String(report.sites.never)]));
   return (
     <>
       {lines.length > 0 ? (
@@ -43,26 +43,22 @@ function Summary({ report, keep, onKeep }: { report: ImportReport; keep: Readonl
         </ul>
       ) : (
         <p class="opt__status" data-testid="import-summary">
-          Nothing in this file would change your settings.
+          {i18n.t('options.transfer.nothing')}
         </p>
       )}
       {report.redirects.length > 0 ? (
-        <ul class="opt__status opt__status--warn" data-testid="import-redirects" aria-label="Connections that would point somewhere else">
+        <ul class="opt__status opt__status--warn" data-testid="import-redirects" aria-label={i18n.t('options.transfer.redirectsLabel')}>
           {report.redirects.map((r) => (
             <li key={r.id} data-testid="import-redirect">
-              <strong>{r.label}</strong> would change its {r.changed.join(', ')}
-              {r.changed.includes('address') ? (
-                <>
-                  : <code>{r.from || '(none)'}</code> → <code>{r.to || '(none)'}</code>
-                </>
-              ) : null}
-              .{' '}
-              {r.keyAction === 'removed' ? 'Your saved key for it will be removed, so it is not sent to the new address.' : null}
-              {r.keyAction === 'replaced' ? 'Its saved key is replaced by the key in the file.' : null}
-              {r.keyAction === 'kept' ? 'Your saved key stays, and will be sent to the new address.' : null}
+              {r.changed.includes('address')
+                ? slots(i18n.t('options.transfer.redirectAddress', { label: '{label}', changed: r.changed.join(', '), from: '{from}', to: '{to}' }), { label: <strong>{r.label}</strong>, from: <code>{r.from || i18n.t('options.transfer.none')}</code>, to: <code>{r.to || i18n.t('options.transfer.none')}</code> })
+                : slots(i18n.t('options.transfer.redirect', { label: '{label}', changed: r.changed.join(', ') }), { label: <strong>{r.label}</strong> })}{' '}
+              {r.keyAction === 'removed' ? i18n.t('options.transfer.keyRemoved') : null}
+              {r.keyAction === 'replaced' ? i18n.t('options.transfer.keyReplaced') : null}
+              {r.keyAction === 'kept' ? i18n.t('options.transfer.keyKept') : null}
               {r.keyAction === 'removed' || r.keyAction === 'kept' ? (
                 <label class="opt__check">
-                  <input type="checkbox" data-testid="import-keep-key" checked={keep.has(r.id)} onChange={(e) => onKeep(r.id, (e.target as HTMLInputElement).checked)} /> Keep my saved key for {r.label} and send it to {r.to || 'the new address'}
+                  <input type="checkbox" data-testid="import-keep-key" checked={keep.has(r.id)} onChange={(e) => onKeep(r.id, (e.target as HTMLInputElement).checked)} /> {i18n.t('options.transfer.keepKey', [r.label, r.to || i18n.t('options.transfer.newAddress')])}
                 </label>
               ) : null}
             </li>
@@ -71,11 +67,11 @@ function Summary({ report, keep, onKeep }: { report: ImportReport; keep: Readonl
       ) : null}
       {report.endpoints.length > 0 ? (
         <p class="opt__hint" data-testid="import-endpoints">
-          Page text will go to these servers when you translate with the imported connections: {report.endpoints.join(', ')}. Chrome asks for permission for each when you test it.
+          {i18n.t('options.transfer.endpoints', [report.endpoints.join(', ')])}
         </p>
       ) : null}
       {report.notes.length > 0 ? (
-        <ul class="opt__status opt__status--warn" data-testid="import-notes" aria-label="Skipped or ignored">
+        <ul class="opt__status opt__status--warn" data-testid="import-notes" aria-label={i18n.t('options.transfer.notesLabel')}>
           {report.notes.map((n) => (
             <li key={n}>{n}</li>
           ))}
@@ -133,15 +129,15 @@ export function TransferSection({ api }: { api: Browser }) {
     try {
       const out = await buildExport(api, { includeKeys });
       download(out.json, exportFileName());
-      const parts = [includeKeys ? `Exported, with ${plural(out.keyCount, 'API key')} in the file. Keep it private.` : 'Exported. The file has no API keys.'];
-      if (out.omitted.length > 0) parts.push(`Left out because they look like keys: ${out.omitted.join('; ')}.`);
+      const parts = [includeKeys ? i18n.t('options.transfer.exportedKeys', out.keyCount) : i18n.t('options.transfer.exported')];
+      if (out.omitted.length > 0) parts.push(i18n.t('options.transfer.omitted', [out.omitted.join('; ')]));
       if (!includeKeys) {
-        parts.push('Only headers and query parameters with key-like names, and credentials in a base URL, are removed; a key written anywhere else is not detected.');
-        if (out.suspects.length > 0) parts.push(`Check these before you share the file, they look like a key: ${out.suspects.join('; ')}.`);
+        parts.push(i18n.t('options.transfer.scope'));
+        if (out.suspects.length > 0) parts.push(i18n.t('options.transfer.suspects', [out.suspects.join('; ')]));
       }
       setExportNote({ text: parts.join(' '), warn: includeKeys || out.omitted.length > 0 || out.suspects.length > 0 });
     } catch (e) {
-      setExportNote({ text: `The export failed: ${e instanceof Error ? e.message : String(e)}`, warn: true });
+      setExportNote({ text: i18n.t('options.transfer.exportFailed', [e instanceof Error ? e.message : String(e)]), warn: true });
     } finally {
       setBusy(false);
     }
@@ -157,7 +153,7 @@ export function TransferSection({ api }: { api: Browser }) {
     setKeep(new Set());
     if (!file) return;
     if (file.size > MAX_IMPORT_BYTES) {
-      setImportNote({ text: 'This file is too large to be a settings file.', warn: true });
+      setImportNote({ text: i18n.t('options.transfer.tooLarge'), warn: true });
       return;
     }
     const parsed = parseImport(await file.text());
@@ -168,7 +164,7 @@ export function TransferSection({ api }: { api: Browser }) {
     try {
       setPending({ plan: parsed.plan, report: await previewImport(api, parsed.plan, { withKeys: false }), fileName: file.name });
     } catch (err) {
-      setImportNote({ text: `The file could not be read: ${err instanceof Error ? err.message : String(err)}`, warn: true });
+      setImportNote({ text: i18n.t('options.transfer.unreadable', [err instanceof Error ? err.message : String(err)]), warn: true });
     }
   };
 
@@ -178,14 +174,14 @@ export function TransferSection({ api }: { api: Browser }) {
     setBusy(true);
     try {
       const report = await applyImport(api, pending.plan, { withKeys: importKeys, keepKeys: keep });
-      const parts = [`Imported from ${pending.fileName}.`];
-      if (importKeys) parts.push(`${plural(report.keys.written, 'API key')} saved.`);
-      else if (keyCount > 0) parts.push('The keys in the file were not imported.');
-      if (report.keys.removed > 0) parts.push(`${plural(report.keys.removed, 'saved key')} removed because the connection now points to another address.`);
+      const parts = [i18n.t('options.transfer.imported', [pending.fileName])];
+      if (importKeys) parts.push(i18n.t('options.transfer.keysSaved', report.keys.written));
+      else if (keyCount > 0) parts.push(i18n.t('options.transfer.keysSkipped'));
+      if (report.keys.removed > 0) parts.push(i18n.t('options.transfer.keysRemoved', report.keys.removed));
       setImportNote({ text: parts.join(' '), warn: report.keys.removed > 0 });
       setPending(undefined);
     } catch (err) {
-      setImportNote({ text: `Nothing was imported: ${err instanceof Error ? err.message : String(err)}`, warn: true });
+      setImportNote({ text: i18n.t('options.transfer.importFailed', [err instanceof Error ? err.message : String(err)]), warn: true });
     } finally {
       setBusy(false);
     }
@@ -193,11 +189,11 @@ export function TransferSection({ api }: { api: Browser }) {
 
   return (
     <section class="opt__section" id="transfer" aria-labelledby="transfer-h">
-      <h2 id="transfer-h">Export and import settings</h2>
+      <h2 id="transfer-h">{i18n.t('options.transfer.title')}</h2>
       <p class="opt__hint">
-        Move your connections, models, routing, preferences, glossary and site lists to another browser, or share a setup that points at a company gateway. The usage log, the cache and your first-run choices stay on this device.
+        {i18n.t('options.transfer.intro')}
       </p>
-      <h3>Export</h3>
+      <h3>{i18n.t('options.transfer.exportTitle')}</h3>
       <div class="opt__row">
         <label class="opt__check">
           <input
@@ -211,16 +207,16 @@ export function TransferSection({ api }: { api: Browser }) {
               setConfirming(on);
             }}
           />{' '}
-          Include API keys
+          {i18n.t('options.transfer.includeKeys')}
         </label>
         <button type="button" data-testid="export" disabled={busy || confirming} onClick={() => void runExport(withKeys)}>
-          Export settings
+          {i18n.t('options.transfer.export')}
         </button>
       </div>
       {confirming ? (
         <div class="opt__status opt__status--warn" role="alertdialog" aria-labelledby="keys-confirm-h" data-testid="keys-confirm">
           <p id="keys-confirm-h">
-            <strong>The file will hold your API keys in plain text.</strong> Anyone who gets the file can use them and spend your money. Share it only with yourself, and delete it after you import it.
+            {slots(i18n.t('options.transfer.confirm', { warning: '{warning}' }), { warning: <strong>{i18n.t('options.transfer.confirmWarning')}</strong> })}
           </p>
           <button
             type="button"
@@ -231,10 +227,10 @@ export function TransferSection({ api }: { api: Browser }) {
               setWithKeys(false);
             }}
           >
-            Cancel
+            {i18n.t('options.transfer.cancel')}
           </button>{' '}
           <button type="button" data-testid="keys-confirm-yes" onClick={() => setConfirming(false)}>
-            Include keys
+            {i18n.t('options.transfer.confirmYes')}
           </button>
         </div>
       ) : null}
@@ -243,15 +239,15 @@ export function TransferSection({ api }: { api: Browser }) {
           {exportNote.text}
         </p>
       ) : null}
-      <h3>Import</h3>
+      <h3>{i18n.t('options.transfer.importTitle')}</h3>
       <div class="opt__row">
-        <label for="import-file">Settings file</label>
+        <label for="import-file">{i18n.t('options.transfer.file')}</label>
         <input id="import-file" ref={fileInput} type="file" accept=".json,application/json" data-testid="import-file" onChange={(e) => void onFile(e)} />
       </div>
       {pending ? (
-        <div ref={previewBox} data-testid="import-preview" role="group" aria-label={`What importing ${pending.fileName} would change`}>
+        <div ref={previewBox} data-testid="import-preview" role="group" aria-label={i18n.t('options.transfer.previewLabel', [pending.fileName])}>
           <p>
-            <strong>{pending.fileName}</strong> would change this:
+            {slots(i18n.t('options.transfer.wouldChange', { file: '{file}' }), { file: <strong>{pending.fileName}</strong> })}
           </p>
           <Summary
             report={pending.report}
@@ -267,15 +263,16 @@ export function TransferSection({ api }: { api: Browser }) {
           />
           {keyCount > 0 ? (
             <label class="opt__check">
-              <input type="checkbox" data-testid="import-keys" checked={importKeys} onChange={(e) => setImportKeys((e.target as HTMLInputElement).checked)} /> Also import the {plural(keyCount, 'API key')} in this file{pending.report.keys.wouldReplace > 0 ? ` (${plural(pending.report.keys.wouldReplace, 'key')} replace${pending.report.keys.wouldReplace === 1 ? 's' : ''} one you have saved)` : ''}
+              <input type="checkbox" data-testid="import-keys" checked={importKeys} onChange={(e) => setImportKeys((e.target as HTMLInputElement).checked)} /> {i18n.t('options.transfer.alsoKeys', keyCount)}
+              {pending.report.keys.wouldReplace > 0 ? ` ${i18n.t('options.transfer.alsoKeysReplace', pending.report.keys.wouldReplace)}` : ''}
             </label>
           ) : null}
           <p>
             <button type="button" data-testid="import-apply" disabled={busy} onClick={() => void runImport()}>
-              Import
+              {i18n.t('options.transfer.apply')}
             </button>{' '}
             <button type="button" data-testid="import-cancel" onClick={() => setPending(undefined)}>
-              Cancel
+              {i18n.t('options.transfer.cancel')}
             </button>
           </p>
         </div>

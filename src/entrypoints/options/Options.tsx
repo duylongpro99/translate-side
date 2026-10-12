@@ -3,6 +3,8 @@
 // language and a source-language override. M2-E6 adds the translation style, the gloss setting
 // and the personal glossary editor (storage.sync, with the quota guard in shared/settings.ts).
 import { useEffect, useState } from 'preact/hooks';
+import { i18n } from '#i18n';
+import { slots } from '../sidepanel/slots.tsx';
 import type { browser } from 'wxt/browser';
 import {
   DEFAULT_BUDGET_TOKENS,
@@ -102,34 +104,32 @@ function LanguageSection({ api }: { api: Browser }) {
   );
   return (
     <section class="opt__section" aria-labelledby="lang-h">
-      <h2 id="lang-h">Languages</h2>
+      <h2 id="lang-h">{i18n.t('options.languages.title')}</h2>
       <div class="opt__row">
-        <label for="target">Translate into</label>
+        <label for="target">{i18n.t('options.languages.target')}</label>
         <select id="target" value={prefs.targetLang} onChange={(e) => update({ targetLang: (e.target as HTMLSelectElement).value })}>
           {options(prefs.targetLang)}
         </select>
       </div>
       <div class="opt__row">
-        <label for="source">Page language</label>
+        <label for="source">{i18n.t('options.languages.source')}</label>
         <select id="source" value={prefs.sourceLang} onChange={(e) => update({ sourceLang: (e.target as HTMLSelectElement).value })}>
-          <option value="auto">As the page declares it</option>
+          <option value="auto">{i18n.t('options.languages.auto')}</option>
           {options(prefs.sourceLang)}
         </select>
       </div>
-      <p class="opt__hint">Set the page language only if pages come out wrong: it overrides what every page says about itself.</p>
+      <p class="opt__hint">{i18n.t('options.languages.hint')}</p>
     </section>
   );
 }
 
-const STYLE_TEXT: Record<StyleMode, { label: string; hint: string }> = {
-  natural: { label: 'Natural', hint: 'Reads as if written in your language.' },
-  faithful: { label: 'Faithful', hint: 'Closer to the original wording and sentence structure.' },
-  simplified: { label: 'Simplified', hint: 'Short sentences and plain words, for easier reading.' },
-};
-const GLOSS_TEXT: Record<GlossMode, string> = {
-  first: 'Explain a term once, where it first appears',
-  off: 'Never explain terms in parentheses',
-};
+const styleText = (style: StyleMode): { label: string; hint: string } =>
+  style === 'natural'
+    ? { label: i18n.t('options.style.natural'), hint: i18n.t('options.style.naturalHint') }
+    : style === 'faithful'
+      ? { label: i18n.t('options.style.faithful'), hint: i18n.t('options.style.faithfulHint') }
+      : { label: i18n.t('options.style.simplified'), hint: i18n.t('options.style.simplifiedHint') };
+const glossText = (gloss: GlossMode): string => (gloss === 'first' ? i18n.t('options.style.glossFirst') : i18n.t('options.style.glossOff'));
 
 function StyleSection({ api }: { api: Browser }) {
   const [prefs, setPrefs] = useState<Preferences | undefined>();
@@ -144,33 +144,33 @@ function StyleSection({ api }: { api: Browser }) {
   };
   return (
     <section class="opt__section" aria-labelledby="style-h">
-      <h2 id="style-h">Translation style</h2>
+      <h2 id="style-h">{i18n.t('options.style.title')}</h2>
       <div class="opt__row">
-        <label for="style">Style</label>
+        <label for="style">{i18n.t('options.style.label')}</label>
         <select id="style" value={prefs.style} onChange={(e) => update({ style: (e.target as HTMLSelectElement).value as StyleMode })}>
           {STYLES.map((s) => (
             <option key={s} value={s}>
-              {STYLE_TEXT[s].label}
+              {styleText(s).label}
             </option>
           ))}
         </select>
       </div>
       <p class="opt__hint" data-testid="style-hint">
-        {STYLE_TEXT[prefs.style].hint}
+        {styleText(prefs.style).hint}
       </p>
       <div class="opt__row">
-        <label for="gloss">Terms</label>
+        <label for="gloss">{i18n.t('options.style.terms')}</label>
         <select id="gloss" value={prefs.gloss} onChange={(e) => update({ gloss: (e.target as HTMLSelectElement).value as GlossMode })}>
           {GLOSS_MODES.map((g) => (
             <option key={g} value={g}>
-              {GLOSS_TEXT[g]}
+              {glossText(g)}
             </option>
           ))}
         </select>
       </div>
-      <p class="opt__hint">A change retranslates the page open in the panel.</p>
+      <p class="opt__hint">{i18n.t('options.style.retranslates')}</p>
       <div class="opt__row">
-        <label for="budget">Token budget per page</label>
+        <label for="budget">{i18n.t('options.style.budget')}</label>
         <input
           id="budget"
           type="number"
@@ -187,17 +187,17 @@ function StyleSection({ api }: { api: Browser }) {
       </div>
       <div class="opt__row">
         <input id="captions" type="checkbox" checked={prefs.captions} onChange={(e) => update({ captions: (e.target as HTMLInputElement).checked })} />
-        <label for="captions">Translate figure and table captions</label>
+        <label for="captions">{i18n.t('options.style.captions')}</label>
       </div>
       <div class="opt__row">
         <input id="alt-text" type="checkbox" checked={prefs.altText} onChange={(e) => update({ altText: (e.target as HTMLInputElement).checked })} />
-        <label for="alt-text">Translate image descriptions (alt text)</label>
+        <label for="alt-text">{i18n.t('options.style.altText')}</label>
       </div>
       <p class="opt__hint" data-testid="media-hint">
-        Image descriptions are page text too: with this on they are sent to your provider with the rest of the page. Off, they are not shown in the panel and never sent.
+        {i18n.t('options.style.mediaHint')}
       </p>
       <p class="opt__hint" data-testid="budget-hint">
-        Input and output tokens for one page, every model call included; 0 for no limit, empty for the default. What is left untranslated when it runs out is marked as skipped.
+        {i18n.t('options.style.budgetHint')}
       </p>
     </section>
   );
@@ -250,7 +250,7 @@ function GlossarySection({ api }: { api: Browser }) {
     const key = entry.term.toLowerCase();
     const clash = entries.findIndex((x, i) => i !== editing && x.term.toLowerCase() === key);
     if (clash >= 0) {
-      setNote({ text: `"${entries[clash]?.term}" is already in the glossary.`, warn: true });
+      setNote({ text: i18n.t('options.glossary.duplicate', [entries[clash]?.term ?? '']), warn: true });
       return;
     }
     const next = editing === undefined ? [...entries, entry] : entries.map((x, i) => (i === editing ? entry : x));
@@ -278,27 +278,27 @@ function GlossarySection({ api }: { api: Browser }) {
 
   return (
     <section class="opt__section" aria-labelledby="glossary-h">
-      <h2 id="glossary-h">Personal glossary</h2>
-      <p class="opt__hint">Terms you always want rendered one way, for example keep “deploy” in English. Your entries take priority over the terms Translate Side finds in each page.</p>
+      <h2 id="glossary-h">{i18n.t('options.glossary.title')}</h2>
+      <p class="opt__hint">{i18n.t('options.glossary.intro')}</p>
       {entries.length ? (
         <ul class="opt__glossary" data-testid="glossary-list">
           {entries.map((e, i) => (
             <li key={e.term} data-testid="glossary-entry">
               <span class="opt__term">{e.term}</span> →{' '}
-              {e.rendering === e.term ? <em>keep as is</em> : <span class="opt__term">{e.rendering}</span>}
+              {e.rendering === e.term ? <em>{i18n.t('options.glossary.keepShort')}</em> : <span class="opt__term">{e.rendering}</span>}
               {e.note ? <span class="opt__hint"> · {e.note}</span> : null}{' '}
-              <button type="button" class="opt__link" onClick={() => onEdit(i)} aria-label={`Edit ${e.term}`}>
-                Edit
+              <button type="button" class="opt__link" onClick={() => onEdit(i)} aria-label={i18n.t('options.glossary.editAria', [e.term])}>
+                {i18n.t('options.glossary.edit')}
               </button>{' '}
-              <button type="button" class="opt__link" onClick={() => onRemove(i)} aria-label={`Remove ${e.term}`}>
-                Remove
+              <button type="button" class="opt__link" onClick={() => onRemove(i)} aria-label={i18n.t('options.glossary.removeAria', [e.term])}>
+                {i18n.t('options.glossary.remove')}
               </button>
             </li>
           ))}
         </ul>
       ) : (
         <p class="opt__status" data-testid="glossary-empty">
-          No entries yet.
+          {i18n.t('options.glossary.empty')}
         </p>
       )}
       {local ? (
@@ -307,12 +307,12 @@ function GlossarySection({ api }: { api: Browser }) {
         </p>
       ) : null}
       <form onSubmit={onSubmit} class="opt__row" data-testid="glossary-form">
-        <label for="g-term">Term</label>
+        <label for="g-term">{i18n.t('options.glossary.term')}</label>
         <input id="g-term" value={draft.term} maxLength={120} onInput={(e) => setDraft({ ...draft, term: (e.target as HTMLInputElement).value })} />
         <label class="opt__check">
-          <input type="checkbox" id="g-keep" checked={draft.keep} onChange={(e) => setDraft({ ...draft, keep: (e.target as HTMLInputElement).checked })} /> Keep as is
+          <input type="checkbox" id="g-keep" checked={draft.keep} onChange={(e) => setDraft({ ...draft, keep: (e.target as HTMLInputElement).checked })} /> {i18n.t('options.glossary.keep')}
         </label>
-        <label for="g-rendering">Translate as</label>
+        <label for="g-rendering">{i18n.t('options.glossary.rendering')}</label>
         <input
           id="g-rendering"
           value={draft.keep ? '' : draft.rendering}
@@ -321,18 +321,17 @@ function GlossarySection({ api }: { api: Browser }) {
           onInput={(e) => setDraft({ ...draft, rendering: (e.target as HTMLInputElement).value })}
         />
         <button type="submit" disabled={draft.term.trim() === ''}>
-          {editing === undefined ? 'Add' : 'Save'}
+          {editing === undefined ? i18n.t('options.glossary.add') : i18n.t('options.glossary.save')}
         </button>
         {editing !== undefined ? (
           <button type="button" onClick={onCancel}>
-            Cancel
+            {i18n.t('options.glossary.cancel')}
           </button>
         ) : null}
       </form>
       {personalGlossaryTokens(entries) > PERSONAL_GLOSSARY_PROMPT_TOKENS ? (
         <p class="opt__status opt__status--warn" data-testid="glossary-share">
-          Your glossary is longer than fits in a translation request (about {personalGlossaryTokens(entries)} of {PERSONAL_GLOSSARY_PROMPT_TOKENS} tokens): the entries at the end of the list
-          are left out. Keep the ones that matter most near the top.
+          {i18n.t('options.glossary.tooLong', [String(personalGlossaryTokens(entries)), String(PERSONAL_GLOSSARY_PROMPT_TOKENS)])}
         </p>
       ) : null}
       {note ? (
@@ -390,30 +389,30 @@ function SitesSection({ api }: { api: Browser }) {
   /** The click handler: the permission prompt must be its first await (S5). */
   const allow = async (input: string) => {
     const pattern = sitePattern(input);
-    if (!pattern) return setNote({ text: 'Enter a site, like docs.example.com or *.example.com.', warn: true });
+    if (!pattern) return setNote({ text: i18n.t('options.sites.enterAllow'), warn: true });
     // Full: refuse before the browser asks for a permission that would then go unused (review N2).
-    if (!lists.allow.includes(pattern) && lists.allow.length >= MAX_SITES) return setNote({ text: `At most ${MAX_SITES} sites per list. Remove a site first.`, warn: true });
+    if (!lists.allow.includes(pattern) && lists.allow.length >= MAX_SITES) return setNote({ text: i18n.t('options.sites.full', [String(MAX_SITES)]), warn: true });
     const granted = await requestSitePermission(api, pattern);
-    if (!granted) return setNote({ text: `Access to ${pattern} was not granted, so it was not added.`, warn: true });
+    if (!granted) return setNote({ text: i18n.t('options.sites.notGranted', [pattern]), warn: true });
     try {
       await addAllowlisted(api, pattern);
     } catch (e) {
       return failed(e);
     }
     setAllowInput('');
-    setNote({ text: lists.never.includes(pattern) ? `${pattern} added, and taken off never translate.` : `${pattern} added.`, warn: false });
+    setNote({ text: lists.never.includes(pattern) ? i18n.t('options.sites.addedOffNever', [pattern]) : i18n.t('options.sites.added', [pattern]), warn: false });
     await load();
   };
   const never = async (input: string) => {
     const pattern = sitePattern(input);
-    if (!pattern) return setNote({ text: 'Enter a site, like mail.example.com or *.example.com.', warn: true });
+    if (!pattern) return setNote({ text: i18n.t('options.sites.enterNever'), warn: true });
     try {
       await addNever(api, pattern);
     } catch (e) {
       return failed(e);
     }
     setNeverInput('');
-    setNote({ text: lists.allow.includes(pattern) ? `${pattern} added, and taken off auto-translate.` : `${pattern} added.`, warn: false });
+    setNote({ text: lists.allow.includes(pattern) ? i18n.t('options.sites.addedOffAuto', [pattern]) : i18n.t('options.sites.added', [pattern]), warn: false });
     await load();
   };
   const run = (p: Promise<unknown>, said: string) =>
@@ -430,33 +429,33 @@ function SitesSection({ api }: { api: Browser }) {
             {kind === 'allow' && noAccess[p] ? (
               <>
                 <span class="opt__status--warn" data-testid="site-no-access">
-                  {noAccess[p] === 'all' ? 'no access' : `no ${noAccess[p]} access: its ${noAccess[p]} pages wait for a click`} ·{' '}
+                  {noAccess[p] === 'all' ? i18n.t('options.sites.noAccess') : i18n.t('options.sites.noSchemeAccess', [noAccess[p] as string])} ·{' '}
                 </span>
-                <button type="button" class="opt__link" onClick={() => void allow(p)} aria-label={`Grant access to ${p}`}>
-                  Grant access
+                <button type="button" class="opt__link" onClick={() => void allow(p)} aria-label={i18n.t('options.sites.grantAria', [p])}>
+                  {i18n.t('options.sites.grant')}
                 </button>{' '}
               </>
             ) : null}
-            <button type="button" class="opt__link" aria-label={`Remove ${p}`} onClick={() => void run(kind === 'allow' ? removeAllowlisted(api, p) : removeNever(api, p), `${p} removed.`)}>
-              Remove
+            <button type="button" class="opt__link" aria-label={i18n.t('options.sites.removeAria', [p])} onClick={() => void run(kind === 'allow' ? removeAllowlisted(api, p) : removeNever(api, p), i18n.t('options.sites.removed', [p]))}>
+              {i18n.t('options.sites.remove')}
             </button>
           </li>
         ))}
       </ul>
     ) : (
-      <p class="opt__status">None yet.</p>
+      <p class="opt__status">{i18n.t('options.sites.none')}</p>
     );
   return (
     <section class="opt__section" id="sites" aria-labelledby="sites-h">
-      <h2 id="sites-h">Site rules</h2>
+      <h2 id="sites-h">{i18n.t('options.sites.title')}</h2>
       {local ? (
         <p class="opt__status opt__status--warn" role="status" data-testid="sites-overflow">
           {OVERFLOW_NOTICE}
         </p>
       ) : null}
-      <h3>Translate by itself while the panel is open</h3>
+      <h3>{i18n.t('options.sites.allowTitle')}</h3>
       <p class="opt__hint">
-        On these sites, each page you open is translated without a click while the panel is open. Chrome asks once for access to each site. On other sites, a page you reach by a link waits for “Translate this page”.
+        {i18n.t('options.sites.allowHint')}
       </p>
       {list(lists.allow, 'allow')}
       <form
@@ -467,15 +466,14 @@ function SitesSection({ api }: { api: Browser }) {
           void allow(allowInput);
         }}
       >
-        <input aria-label="Site to translate by itself" placeholder="docs.example.com or *.example.com" value={allowInput} onInput={(e) => setAllowInput((e.target as HTMLInputElement).value)} />
+        <input aria-label={i18n.t('options.sites.allowAria')} placeholder={i18n.t('options.sites.allowPlaceholder')} value={allowInput} onInput={(e) => setAllowInput((e.target as HTMLInputElement).value)} />
         <button type="submit" disabled={allowInput.trim() === ''}>
-          Add
+          {i18n.t('options.sites.add')}
         </button>
       </form>
-      <h3>Never translate</h3>
+      <h3>{i18n.t('options.sites.neverTitle')}</h3>
       <p class="opt__hint">
-        Translate Side never reads these sites and sends nothing from them, the same as the built-in list of mail and sign-in pages: not the page, not a selection, not even when you press the toolbar
-        button. A page open on one is let go at once.
+        {i18n.t('options.sites.neverHint')}
       </p>
       {list(lists.never, 'never')}
       <form
@@ -486,12 +484,12 @@ function SitesSection({ api }: { api: Browser }) {
           void never(neverInput);
         }}
       >
-        <input aria-label="Site to never translate" placeholder="mail.example.com or *.example.com" value={neverInput} onInput={(e) => setNeverInput((e.target as HTMLInputElement).value)} />
+        <input aria-label={i18n.t('options.sites.neverAria')} placeholder={i18n.t('options.sites.neverPlaceholder')} value={neverInput} onInput={(e) => setNeverInput((e.target as HTMLInputElement).value)} />
         <button type="submit" disabled={neverInput.trim() === ''}>
-          Add
+          {i18n.t('options.sites.add')}
         </button>
       </form>
-      <p class="opt__hint">A model for a site, and “local only”, are set in Providers › Routing › Model per site.</p>
+      <p class="opt__hint">{i18n.t('options.sites.modelHint')}</p>
       {note ? (
         <p class={note.warn ? 'opt__status opt__status--warn' : 'opt__note'} role="status" data-testid="sites-note">
           {note.text}
@@ -510,12 +508,12 @@ function ShortcutsSection({ api }: { api: Browser }) {
   const rows = SHORTCUTS.map((s, i) => (i === 0 ? { ...s, ...toggleRow(shortcut) } : s));
   return (
     <section class="opt__section" id="shortcuts" aria-labelledby="shortcuts-h">
-      <h2 id="shortcuts-h">Keyboard shortcuts</h2>
+      <h2 id="shortcuts-h">{i18n.t('options.shortcuts.title')}</h2>
       <table class="opt__table" data-testid="shortcuts-table" aria-labelledby="shortcuts-h">
         <thead>
           <tr>
-            <th scope="col">Keys</th>
-            <th scope="col">What it does</th>
+            <th scope="col">{i18n.t('options.shortcuts.keys')}</th>
+            <th scope="col">{i18n.t('options.shortcuts.what')}</th>
           </tr>
         </thead>
         <tbody>
@@ -529,13 +527,13 @@ function ShortcutsSection({ api }: { api: Browser }) {
           ))}
         </tbody>
       </table>
-      <p class="opt__hint">The letters and arrows work while a block in the panel, or one of its buttons, has keyboard focus, so they do not clash with a page's or Chrome's shortcuts.</p>
+      <p class="opt__hint">{i18n.t('options.shortcuts.focusHint')}</p>
       <p class="opt__hint">{SCREEN_READER_NOTE}</p>
       <p class="opt__hint">
         <button type="button" class="opt__link" data-testid="shortcut-settings" onClick={() => void openShortcutSettings(api)}>
-          Change the toggle key
+          {i18n.t('options.shortcuts.change')}
         </button>{' '}
-        Chrome keeps shortcuts on its own page, chrome://extensions/shortcuts. The button opens it; if it does not, paste that address into a new tab.
+        {i18n.t('options.shortcuts.changeHint')}
       </p>
     </section>
   );
@@ -552,14 +550,14 @@ function CacheSection({ cache }: { cache: TranslationCache | undefined }) {
   if (!cache || stats === null) return null;
   return (
     <section class="opt__section" aria-labelledby="cache-h">
-      <h2 id="cache-h">Translation cache</h2>
+      <h2 id="cache-h">{i18n.t('options.cache.title')}</h2>
       <p class="opt__hint" data-testid="cache-stats">
-        {stats === undefined ? 'Reading…' : `${stats.entries} translated blocks and ${stats.briefs} document briefs, ${mb(stats.bytes)} of ${mb(stats.maxBytes)}.`}
+        {stats === undefined ? i18n.t('options.reading') : i18n.t('options.cache.stats', [String(stats.entries), String(stats.briefs), mb(stats.bytes), mb(stats.maxBytes)])}
       </p>
-      <p class="opt__hint">Pages you translated again open from this cache at no cost. The oldest entries go first when it is full. It stays on this device.</p>
+      <p class="opt__hint">{i18n.t('options.cache.hint')}</p>
       <div class="opt__row">
         <button type="button" data-testid="cache-clear" onClick={() => void cache.clear().then(load, () => setStats(null))}>
-          Clear cache
+          {i18n.t('options.cache.clear')}
         </button>
       </div>
     </section>
@@ -603,52 +601,52 @@ function SpendSection({ api, now = Date.now }: { api: Browser; now?: () => numbe
   /** A profile by its settings name (model · connection), or its last model when it is gone. */
   const nameOf = (id: string, model: string) => {
     const p = providers?.profiles.find((x) => x.id === id);
-    if (!p) return `${model || id} (removed)`;
+    if (!p) return i18n.t('options.spend.removed', [model || id]);
     const c = providers?.connections.find((x) => x.id === p.connectionId);
     return c ? `${p.model} · ${c.label}` : p.model;
   };
   const rows = Object.entries(spend?.profiles ?? {}).sort(([, a], [, b]) => b.usd - a.usd || b.input + b.output - (a.input + a.output));
   return (
     <section class="opt__section" aria-labelledby="spend-h">
-      <h2 id="spend-h">Usage and cost</h2>
+      <h2 id="spend-h">{i18n.t('options.spend.title')}</h2>
       <p class="opt__hint" data-testid="spend-price">
         {pricing
-          ? `${profile.model}: ${perM(pricing.inPerM)} input, ${perM(pricing.cachedInPerM)} cached input, ${perM(pricing.outPerM)} output per million tokens${builtIn ? ' (built-in Anthropic price)' : ''}.`
-          : `${profile.model} has no price, so its tokens are counted without a cost.`}
+          ? i18n.t(builtIn ? 'options.spend.priceBuiltIn' : 'options.spend.price', [profile.model, perM(pricing.inPerM), perM(pricing.cachedInPerM), perM(pricing.outPerM)])
+          : i18n.t('options.spend.noPrice', [profile.model])}
       </p>
       {spend === null ? (
-        <p class="opt__hint">Reading…</p>
+        <p class="opt__hint">{i18n.t('options.reading')}</p>
       ) : spend === undefined ? (
         <p class="opt__hint" data-testid="spend-total">
-          Nothing spent yet.
+          {i18n.t('options.spend.none')}
         </p>
       ) : (
         <>
           <p data-testid="spend-total">
-            <strong>{formatUsd(spend.usd)}</strong> since {new Date(spend.since).toLocaleDateString()} · this month {formatUsd(estimate.month)}
+            {slots(i18n.t('options.spend.total', { total: '{total}', date: new Date(spend.since).toLocaleDateString(), month: formatUsd(estimate.month) }), { total: <strong>{formatUsd(spend.usd)}</strong> })}
           </p>
           <p data-testid="spend-estimate">
-            Today {formatUsd(estimate.today)} · about {formatUsd(estimate.perDay)} a day this month · {formatUsd(estimate.monthProjected)} by the end of the month at this rate
+            {i18n.t('options.spend.estimate', [formatUsd(estimate.today), formatUsd(estimate.perDay), formatUsd(estimate.monthProjected)])}
           </p>
           <p class="opt__hint" data-testid="spend-tokens">
-            {tokens(spend.input)} input tokens ({tokens(spend.cachedInput)} cached), {tokens(spend.output)} output tokens
-            {spend.unpricedTokens > 0 ? ` · ${tokens(spend.unpricedTokens)} tokens on models without a price are not in the total` : ''}.
+            {i18n.t('options.spend.tokens', [tokens(spend.input), tokens(spend.cachedInput), tokens(spend.output)])}
+            {spend.unpricedTokens > 0 ? ` · ${i18n.t('options.spend.unpriced', [tokens(spend.unpricedTokens)])}` : ''}.
           </p>
           {rows.length ? (
             <table class="opt__table" data-testid="spend-profiles">
-              <caption class="opt__hint">By model, since {new Date(spend.since).toLocaleDateString()}</caption>
+              <caption class="opt__hint">{i18n.t('options.spend.byModel', [new Date(spend.since).toLocaleDateString()])}</caption>
               <thead>
                 <tr>
-                  <th scope="col">Model</th>
-                  <th scope="col">Cost</th>
-                  <th scope="col">Tokens in / out</th>
+                  <th scope="col">{i18n.t('options.spend.model')}</th>
+                  <th scope="col">{i18n.t('options.spend.cost')}</th>
+                  <th scope="col">{i18n.t('options.spend.tokensInOut')}</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map(([id, p]) => (
                   <tr key={id}>
                     <th scope="row">{nameOf(id, p.model)}</th>
-                    <td>{p.usd > 0 || p.unpricedTokens === 0 ? formatUsd(p.usd) : 'no price'}</td>
+                    <td>{p.usd > 0 || p.unpricedTokens === 0 ? formatUsd(p.usd) : i18n.t('options.spend.noPriceShort')}</td>
                     <td>
                       {tokens(p.input)} / {tokens(p.output)}
                     </td>
@@ -659,12 +657,12 @@ function SpendSection({ api, now = Date.now }: { api: Browser; now?: () => numbe
           ) : null}
         </>
       )}
-      <p class="opt__hint">An estimate from the tokens each response reports and the price above; your provider's bill is the real figure. Cache writes are priced as plain input, so a provider that charges more for them is slightly undercounted. Requests cancelled before they finished are not counted. Kept on this device.</p>
+      <p class="opt__hint">{i18n.t('options.spend.hint')}</p>
       <SpendLimitRow api={api} limit={limit} month={monthKey(now())} onSaved={setLimit} />
       {spend ? (
         <div class="opt__row">
           <button type="button" data-testid="spend-reset" onClick={() => void resetSpend(api).then(() => setSpend(undefined))}>
-            Reset total
+            {i18n.t('options.spend.reset')}
           </button>
         </div>
       ) : null}
@@ -681,21 +679,21 @@ function SpendLimitRow({ api, limit, month, onSaved }: { api: Browser; limit: Sp
     void saveSpendLimit(api, amount).then(
       () => {
         onSaved(amount === undefined ? undefined : { monthlyUsd: amount });
-        setNote({ text: amount === undefined ? 'Limit removed.' : 'Limit saved.' });
+        setNote({ text: amount === undefined ? i18n.t('options.spend.limitRemoved') : i18n.t('options.spend.limitSaved') });
       },
       (err: unknown) => setNote({ text: err instanceof Error ? err.message : String(err), warn: true }),
     );
   return (
     <>
       <div class="opt__row">
-        <label for="spend-limit">Monthly soft limit (USD)</label>
+        <label for="spend-limit">{i18n.t('options.spend.limit')}</label>
         <input
           id="spend-limit"
           type="number"
           min="0"
           step="0.01"
           inputMode="decimal"
-          placeholder="None"
+          placeholder={i18n.t('options.spend.limitPlaceholder')}
           value={draft}
           onInput={(e) => setDraft((e.target as HTMLInputElement).value)}
           onKeyDown={(e) => {
@@ -703,11 +701,11 @@ function SpendLimitRow({ api, limit, month, onSaved }: { api: Browser; limit: Sp
           }}
         />
         <button type="button" data-testid="spend-limit-save" disabled={draft.trim() === ''} onClick={() => save(Number(draft))}>
-          Save limit
+          {i18n.t('options.spend.limitSave')}
         </button>
         {limit ? (
           <button type="button" data-testid="spend-limit-remove" onClick={() => save(undefined)}>
-            Remove
+            {i18n.t('options.spend.limitRemove')}
           </button>
         ) : null}
       </div>
@@ -718,11 +716,11 @@ function SpendLimitRow({ api, limit, month, onSaved }: { api: Browser; limit: Sp
       ) : null}
       {limit?.continuedFor === month ? (
         <p class="opt__hint" data-testid="spend-limit-continued">
-          You chose Continue anyway this month: no more warnings until next month.
+          {i18n.t('options.spend.continued')}
         </p>
       ) : null}
       <p class="opt__hint">
-        Once this month's spend reaches the limit, a new translation stops before it sends anything and asks first; a translation already running is not cut off. Only priced spend counts: tokens on a local model or a model without a price don't count toward it. Reset total zeroes this month's spend too and re-arms the limit.
+        {i18n.t('options.spend.limitHint')}
       </p>
     </>
   );
@@ -731,12 +729,12 @@ function SpendLimitRow({ api, limit, month, onSaved }: { api: Browser; limit: Sp
 export function Options({ api, cache = openTranslationCache(), adapterFor }: { api: Browser; cache?: TranslationCache | undefined; adapterFor?: AdapterFor }) {
   return (
     <main class="opt">
-      <h1>Translate Side settings</h1>
+      <h1>{i18n.t('options.title')}</h1>
       <p class="opt__hint">
         <button type="button" data-testid="open-onboarding" onClick={() => void openOnboarding(api)}>
-          Set up guide
+          {i18n.t('options.guide.button')}
         </button>{' '}
-        Language, how to translate, and a sample, step by step.
+        {i18n.t('options.guide.text')}
       </p>
       <ProvidersSection api={api} {...(adapterFor ? { adapterFor } : {})} />
       <LanguageSection api={api} />

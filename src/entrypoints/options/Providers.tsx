@@ -5,10 +5,12 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
+import { i18n } from '#i18n';
+import { slots } from '../sidepanel/slots.tsx';
 import { createAdapter } from '@/llm/client';
 import type { ModelInfo, Protocol, ProtocolAdapter } from '@/llm/types';
 import { connectMessage, corsGuide, displayModels, fixBaseUrl, isClaudeModel, preferredProtocol, testConnection, URL_FIX_TEXT, type ConnectMessage, type GuideKind, type GuideStep, type TestResult } from '@/shared/connect';
-import { AUTH_LABELS, PICKER_GROUPS, presetFor, PROTOCOL_LABELS, ROLE_LABELS, type PresetId } from '@/shared/presets';
+import { AUTH_LABELS, PICKER_GROUPS, presetFor, PROTOCOL_LABELS, type PresetId } from '@/shared/presets';
 import { pricingFor } from '@/shared/pricing';
 import { OVERFLOW_NOTICE } from '@/shared/sync-quota';
 import { BASIC_FALLBACK, isLocalConnection, onProviderSettingsChanged, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnectionStatus, saveProfile, saveRouting, saveSetup, type ProviderSettings, type SiteRule } from '@/shared/providers';
@@ -46,9 +48,10 @@ const safeOrigin = (url: string) => {
 export const accessHint = (url: string) => {
   try {
     const u = new URL(url);
-    return `Chrome asks for access to ${u.protocol}//${u.hostname} only${u.port ? ' (all its ports, not just ' + u.port + ')' : ''}.`;
+    const origin = `${u.protocol}//${u.hostname}`;
+    return u.port ? i18n.t('options.providers.accessHintPorts', [origin, u.port]) : i18n.t('options.providers.accessHint', [origin]);
   } catch {
-    return 'Chrome asks for access to this server only.';
+    return i18n.t('options.providers.accessHintServer');
   }
 };
 const newId = () => (globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -91,11 +94,11 @@ const isLocal = (c: ProviderConnection) => presetFor(c.presetId, c.protocol).loc
 /** What a connection's row says about it. */
 function statusOf(c: ProviderConnection, l: Loaded): { text: string; tone: 'ok' | 'warn' | 'muted' } {
   const needsKey = c.auth.style !== 'none' && !l.keyed.has(c.id);
-  if (isImplicit(l.settings, c.id)) return needsKey ? { text: 'Built-in, no key', tone: 'muted' } : { text: 'Built-in · key saved', tone: 'muted' };
-  if (needsKey) return { text: 'No key', tone: 'warn' };
-  if (c.status === 'error') return { text: `⚠ ${c.lastError ?? 'Error'}`, tone: 'warn' };
-  if (c.status === 'ok') return { text: '✓ Connected', tone: 'ok' };
-  return { text: 'Not tested', tone: 'muted' };
+  if (isImplicit(l.settings, c.id)) return needsKey ? { text: i18n.t('options.providers.builtInNoKey'), tone: 'muted' } : { text: i18n.t('options.providers.builtInKey'), tone: 'muted' };
+  if (needsKey) return { text: i18n.t('options.providers.noKey'), tone: 'warn' };
+  if (c.status === 'error') return { text: `⚠ ${c.lastError ?? i18n.t('options.providers.error')}`, tone: 'warn' };
+  if (c.status === 'ok') return { text: `✓ ${i18n.t('options.providers.connected')}`, tone: 'ok' };
+  return { text: i18n.t('options.providers.notTested'), tone: 'muted' };
 }
 
 const profileName = (p: ModelProfile, connections: readonly ProviderConnection[]) => `${p.model} · ${connections.find((c) => c.id === p.connectionId)?.label ?? '?'}`;
@@ -106,7 +109,7 @@ export function ProvidersSection({ api, adapterFor = createAdapter, retestMs = R
   const [loaded, setLoaded] = useState<Loaded | undefined>();
   const [view, setView] = useState<View>({ kind: 'list' });
   const [note, setNote] = useState<{ text: string; warn?: boolean | undefined } | undefined>();
-  const reload = () => load(api).then(setLoaded, (err: unknown) => setNote({ text: `Could not read the provider settings (${String(err)})`, warn: true }));
+  const reload = () => load(api).then(setLoaded, (err: unknown) => setNote({ text: i18n.t('options.providers.readFailed', [String(err)]), warn: true }));
   useEffect(() => {
     void reload();
     const onLocal = (changes: Record<string, unknown>) => {
@@ -133,9 +136,9 @@ export function ProvidersSection({ api, adapterFor = createAdapter, retestMs = R
 
   return (
     <section class="opt__section" aria-labelledby="providers-h" data-testid="providers">
-      <h2 id="providers-h">Providers</h2>
+      <h2 id="providers-h">{i18n.t('options.providers.title')}</h2>
       {!loaded ? (
-        <p class="opt__hint">Reading…</p>
+        <p class="opt__hint">{i18n.t('options.reading')}</p>
       ) : view.kind === 'add' || view.kind === 'edit' ? (
         <ConnectionForm
           api={api}
@@ -161,8 +164,7 @@ export function ProvidersSection({ api, adapterFor = createAdapter, retestMs = R
         </p>
       ) : null}
       <p class="opt__honest">
-        Keys are stored on this device only and are never synced; connections, models and routing sync to your other devices without them. Extra headers and query params (under Advanced) sync
-        like other settings, so keep secrets in the key field. Anyone with access to this browser profile could read a key. Use keys with a spending limit.
+        {i18n.t('options.providers.honest')}
       </p>
     </section>
   );
@@ -180,29 +182,26 @@ function Connections({ api, loaded, onAdd, onEdit, onNote }: { api: Browser; loa
     const hasModels = loaded.settings.profiles.some((p) => p.connectionId === c.id);
     removeConnection(api, c.id).then(
       async ({ revoked }) => {
-        const access = revoked ? ` and access to ${hostOf(c.baseUrl)}` : '';
         // Name only what there was (a keyless local server has no key, tester C1 #4).
-        const parts = [hasModels ? 'its models' : '', keyed ? 'its key' : '', revoked ? `access to ${hostOf(c.baseUrl)}` : ''].filter(Boolean);
-        const what = parts.length > 1 ? `, ${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts.length === 1 ? ` and ${parts[0]}` : '';
-        if (!builtIn) return onNote(`Removed ${c.label}${what}.`);
+        const parts = [hasModels ? i18n.t('options.providers.itsModels') : '', keyed ? i18n.t('options.providers.itsKey') : '', revoked ? i18n.t('options.providers.accessTo', [hostOf(c.baseUrl)]) : ''].filter(Boolean);
+        if (!builtIn) return onNote(removedText(c.label, parts));
         // Say what the list will show: a built-in stays listed (keyless) only while a route uses it.
         const listed = visibleConnections(await load(api)).some((x) => x.id === c.id);
-        onNote(
-          `Removed the key${access} of ${c.label}. ${listed ? 'It is built in and a route still uses it, so it stays listed without a key.' : 'It is built in and now hidden; use + Add to set that provider up again.'}`,
-        );
+        const removed = revoked ? i18n.t('options.providers.removedKeyAccess', [c.label, hostOf(c.baseUrl)]) : i18n.t('options.providers.removedKey', [c.label]);
+        onNote(`${removed} ${listed ? i18n.t('options.providers.builtInListed') : i18n.t('options.providers.builtInHidden')}`);
       },
-      (err: unknown) => onNote(`Could not remove ${c.label} (${err instanceof Error ? err.message : String(err)})`, true),
+      (err: unknown) => onNote(i18n.t('options.providers.removeFailed', [c.label, err instanceof Error ? err.message : String(err)]), true),
     );
   };
   return (
     <div class="prov__block" data-testid="connections">
       <div class="prov__head">
-        <h3>Connections</h3>
+        <h3>{i18n.t('options.providers.connections')}</h3>
         <button type="button" onClick={onAdd} data-testid="add-connection">
-          + Add
+          {i18n.t('options.providers.add')}
         </button>
       </div>
-      {rows.length === 0 ? <p class="opt__hint">No connections yet.</p> : null}
+      {rows.length === 0 ? <p class="opt__hint">{i18n.t('options.providers.noConnections')}</p> : null}
       <ul class="prov__list">
         {rows.map((c) => {
           const status = statusOf(c, loaded);
@@ -221,25 +220,25 @@ function Connections({ api, loaded, onAdd, onEdit, onNote }: { api: Browser; loa
               <span class="prov__actions">
                 {c.lastErrorKind === 'cors-origin' && c.status === 'error' ? (
                   <button type="button" onClick={() => onEdit(c.id, true)} data-testid="fix-cors">
-                    Fix…
+                    {i18n.t('options.providers.fix')}
                   </button>
                 ) : null}
-                <button type="button" onClick={() => onEdit(c.id)} aria-label={`Edit ${c.label}`}>
-                  Edit
+                <button type="button" onClick={() => onEdit(c.id)} aria-label={i18n.t('options.providers.editAria', [c.label])}>
+                  {i18n.t('options.providers.edit')}
                 </button>
                 {implicit && !loaded.keyed.has(c.id) ? null : confirm === c.id ? (
                   <span class="prov__confirm" data-testid="confirm-remove">
-                    {implicit || BUILTIN_IDS.has(c.id) ? 'Remove its key and settings?' : `Remove ${c.label}, its models and its key?`}{' '}
+                    {implicit || BUILTIN_IDS.has(c.id) ? i18n.t('options.providers.confirmBuiltIn') : i18n.t('options.providers.confirm', [c.label])}{' '}
                     <button type="button" onClick={() => remove(c)} data-testid="confirm-remove-yes">
-                      Remove
+                      {i18n.t('options.providers.remove')}
                     </button>{' '}
                     <button type="button" onClick={() => setConfirm(undefined)}>
-                      Cancel
+                      {i18n.t('options.providers.cancel')}
                     </button>
                   </span>
                 ) : (
-                  <button type="button" onClick={() => setConfirm(c.id)} aria-label={`Remove ${c.label}`} data-testid="remove-connection">
-                    {implicit ? 'Remove key' : 'Remove'}
+                  <button type="button" onClick={() => setConfirm(c.id)} aria-label={i18n.t('options.providers.removeAria', [c.label])} data-testid="remove-connection">
+                    {implicit ? i18n.t('options.providers.removeKey') : i18n.t('options.providers.remove')}
                   </button>
                 )}
               </span>
@@ -251,15 +250,25 @@ function Connections({ api, loaded, onAdd, onEdit, onNote }: { api: Browser; loa
   );
 }
 
+/** The message for a removed connection: its label, then what went with it (up to three things), as one sentence. */
+const removedText = (label: string, parts: string[]): string =>
+  parts.length === 0
+    ? i18n.t('options.providers.removed0', [label])
+    : parts.length === 1
+      ? i18n.t('options.providers.removed1', [label, parts[0] as string])
+      : parts.length === 2
+        ? i18n.t('options.providers.removed2', [label, parts[0] as string, parts[1] as string])
+        : i18n.t('options.providers.removed3', [label, parts[0] as string, parts[1] as string, parts[2] as string]);
+
 const BUILTIN_IDS = new Set(BUILTIN_CONNECTIONS.map((c) => c.id));
 
 // ---- Models -----------------------------------------------------------------------------------
 
 function priceText(p: ModelProfile, c: ProviderConnection | undefined): string {
   // Ollama and LM Studio run here; a gateway that merely listens on localhost may still bill.
-  if (c && presetFor(c.presetId, c.protocol).local !== undefined) return 'free · local';
+  if (c && presetFor(c.presetId, c.protocol).local !== undefined) return i18n.t('options.providers.freeLocal');
   const price = c ? pricingFor(p, c) : p.pricing;
-  return price ? `${perM(price.inPerM)}/${perM(price.outPerM)} per M` : 'no price set';
+  return price ? i18n.t('options.providers.pricePerM', [perM(price.inPerM), perM(price.outPerM)]) : i18n.t('options.providers.noPrice');
 }
 
 function Models({ api, loaded, onAdd, onNote }: { api: Browser; loaded: Loaded; onAdd: () => void; onNote: (text: string, warn?: boolean) => void }) {
@@ -267,26 +276,26 @@ function Models({ api, loaded, onAdd, onNote }: { api: Browser; loaded: Loaded; 
   const rows = visibleProfiles(loaded);
   const remove = (p: ModelProfile) =>
     removeProfile(api, p.id).then(
-      () => onNote(`Removed ${p.model}.`),
+      () => onNote(i18n.t('options.providers.removed0', [p.model])),
       (err: unknown) => onNote(err instanceof Error ? err.message : String(err), true),
     );
   const setProtocol = (p: ModelProfile, protocol: Protocol) =>
     saveProfileProtocol(api, p, protocol).then(
-      () => onNote(`${p.model} now uses the ${PROTOCOL_LABELS[protocol]} API.`),
+      () => onNote(i18n.t('options.providers.usesApi', [p.model, PROTOCOL_LABELS[protocol]])),
       (err: unknown) => onNote(String(err), true),
     );
   return (
     <div class="prov__block" data-testid="models">
       <div class="prov__head">
-        <h3>Models</h3>
+        <h3>{i18n.t('options.providers.models')}</h3>
         <button type="button" onClick={onAdd} data-testid="add-model">
-          + Add
+          {i18n.t('options.providers.add')}
         </button>
       </div>
       <ul class="prov__list">
         {rows.map((p) => {
           const c = settings.connections.find((x) => x.id === p.connectionId);
-          const roles = [settings.routing.translate === p.id ? ROLE_LABELS.translate : '', settings.routing.analyze === p.id ? ROLE_LABELS.analyze : ''].filter(Boolean);
+          const roles = [settings.routing.translate === p.id ? i18n.t('options.providers.roleTranslate') : '', settings.routing.analyze === p.id ? i18n.t('options.providers.brief') : ''].filter(Boolean);
           const dual = (c?.detectedProtocols?.length ?? 0) > 1;
           const implicit = settings.implicit?.profiles.includes(p.id) === true;
           return (
@@ -298,7 +307,7 @@ function Models({ api, loaded, onAdd, onNote }: { api: Browser; loaded: Loaded; 
               {dual && c ? (
                 <label class="prov__switch">
                   API{' '}
-                  <select value={p.protocolOverride ?? c.detectedProtocols?.[0]} onChange={(e) => void setProtocol(p, (e.target as HTMLSelectElement).value as Protocol)} aria-label={`API format for ${p.model}`}>
+                  <select value={p.protocolOverride ?? c.detectedProtocols?.[0]} onChange={(e) => void setProtocol(p, (e.target as HTMLSelectElement).value as Protocol)} aria-label={i18n.t('options.providers.apiFormatFor', [p.model])}>
                     {(c.detectedProtocols ?? []).map((x) => (
                       <option key={x} value={x}>
                         {PROTOCOL_LABELS[x]}
@@ -309,8 +318,8 @@ function Models({ api, loaded, onAdd, onNote }: { api: Browser; loaded: Loaded; 
               ) : null}
               <span class="prov__actions">
                 {implicit || settings.routing.translate === p.id ? null : (
-                  <button type="button" onClick={() => void remove(p)} aria-label={`Remove ${p.model}`}>
-                    Remove
+                  <button type="button" onClick={() => void remove(p)} aria-label={i18n.t('options.providers.removeAria', [p.model])}>
+                    {i18n.t('options.providers.remove')}
                   </button>
                 )}
               </span>
@@ -332,7 +341,7 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
   /** The profiles to choose from; `exclude` leaves some out (never the selected one). */
   const options = (selected: string | undefined, exclude: readonly string[] = []) => (
     <>
-      {selected !== undefined && !profiles.some((p) => p.id === selected) ? <option value={selected}>(missing model)</option> : null}
+      {selected !== undefined && !profiles.some((p) => p.id === selected) ? <option value={selected}>{i18n.t('options.providers.missingModel')}</option> : null}
       {profiles.filter((p) => p.id === selected || !exclude.includes(p.id)).map((p) => (
         <option key={p.id} value={p.id}>
           {profileName(p, settings.connections)}
@@ -356,28 +365,28 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
   };
   return (
     <div class="prov__block" data-testid="routing">
-      <h3>Routing</h3>
+      <h3>{i18n.t('options.providers.routing')}</h3>
       <div class="opt__row">
-        <label for="route-translate">{ROLE_LABELS.translate} with</label>
-        <select id="route-translate" value={settings.routing.translate} onChange={(e) => save({ translate: (e.target as HTMLSelectElement).value }, 'Translate route saved.')}>
+        <label for="route-translate">{i18n.t('options.providers.translateWith')}</label>
+        <select id="route-translate" value={settings.routing.translate} onChange={(e) => save({ translate: (e.target as HTMLSelectElement).value }, i18n.t('options.providers.translateSaved'))}>
           {options(settings.routing.translate)}
         </select>
       </div>
       <div class="opt__row">
-        <label for="route-analyze">{ROLE_LABELS.analyze}</label>
+        <label for="route-analyze">{i18n.t('options.providers.brief')}</label>
         <select
           id="route-analyze"
           value={settings.routing.analyze ?? ''}
           onChange={(e) => {
             const v = (e.target as HTMLSelectElement).value;
-            save({ analyze: v === '' ? undefined : v }, `${ROLE_LABELS.analyze} route saved.`);
+            save({ analyze: v === '' ? undefined : v }, i18n.t('options.providers.briefSaved'));
           }}
         >
-          <option value="">Same as translate</option>
+          <option value="">{i18n.t('options.providers.sameAsTranslate')}</option>
           {options(settings.routing.analyze)}
         </select>
       </div>
-      <p class="opt__hint">The document brief is one short call per page that finds its topic, tone and key terms; a cheaper model often does it well.</p>
+      <p class="opt__hint">{i18n.t('options.providers.briefHint')}</p>
       <FallbackChain settings={settings} profiles={profiles} options={options} onSave={(fallback, said) => save({ fallback }, said)} />
       <SiteModelRules settings={settings} profiles={profiles} options={options} onSave={(siteOverrides, said) => saveSites(siteOverrides, said)} />
     </div>
@@ -407,7 +416,7 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
   // A local-only rule runs only on a model on this device (review R2): routing refuses the other
   // combination (nothing is sent), so it is never saved. Ticking Local only picks the first local model.
   const firstLocal = profiles.find((p) => { const c = connectionOf(p.id); return c !== undefined && isLocalConnection(c); })?.id;
-  const NEEDS_LOCAL = 'Local only needs a model on this device (Ollama, LM Studio). Add one above first.';
+  const NEEDS_LOCAL = i18n.t('options.providers.needsLocal');
   const tidy = ({ localOnly: lo, ...r }: SiteRule): SiteRule => (lo ? { ...r, localOnly: true } : r);
   const edit = (pattern: string, patch: Partial<SiteRule>, said: string) => {
     const rule = rules.find((r) => r.pattern === pattern);
@@ -416,7 +425,7 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
     if (next.localOnly && cloud(next.translate)) {
       // Ticked on a cloud model: move to a local one. A cloud model picked for a local-only rule: refused.
       if (patch.localOnly && firstLocal) next.translate = firstLocal;
-      else return setProblem(patch.localOnly ? NEEDS_LOCAL : `${pattern} is local only: pick a model on this device, or untick Local only first.`);
+      else return setProblem(patch.localOnly ? NEEDS_LOCAL : i18n.t('options.providers.localOnlyPick', [pattern]));
     }
     setProblem(undefined);
     onSave(rules.map((r) => (r.pattern === pattern ? next : r)), said);
@@ -428,17 +437,17 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
   const add = (e: Event) => {
     e.preventDefault();
     const pattern = sitePattern(site);
-    if (!pattern) return setProblem('Enter a site, like docs.example.com or *.example.com.');
-    if (rules.some((r) => r.pattern === pattern)) return setProblem(`${pattern} already has a rule.`);
-    if (localOnly && cloud(chosen)) return setProblem(firstLocal ? 'Local only: pick a model on this device for the site.' : NEEDS_LOCAL);
+    if (!pattern) return setProblem(i18n.t('options.sites.enterAllow'));
+    if (rules.some((r) => r.pattern === pattern)) return setProblem(i18n.t('options.providers.hasRule', [pattern]));
+    if (localOnly && cloud(chosen)) return setProblem(firstLocal ? i18n.t('options.providers.pickLocal') : NEEDS_LOCAL);
     setProblem(undefined);
-    onSave([...rules, { pattern, translate: chosen, ...(localOnly ? { localOnly: true } : {}) }], `Site rule for ${pattern} saved.`);
+    onSave([...rules, { pattern, translate: chosen, ...(localOnly ? { localOnly: true } : {}) }], i18n.t('options.providers.siteRuleSaved', [pattern]));
     setSite('');
     setLocalOnly(false);
   };
   return (
     <div class="prov__sites" data-testid="site-rules">
-      <h4>Model per site</h4>
+      <h4>{i18n.t('options.providers.perSite')}</h4>
       {settings.siteRulesLocal ? (
         <p class="opt__status opt__status--warn" role="status" data-testid="site-rules-overflow">
           {OVERFLOW_NOTICE}
@@ -449,20 +458,20 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
           {rules.map((r) => (
             <li key={r.pattern} class="prov__row" data-testid="site-rule">
               <span class="prov__name">{r.pattern}</span>
-              <select value={r.translate} aria-label={`Model for ${r.pattern}`} onChange={(e) => edit(r.pattern, { translate: (e.target as HTMLSelectElement).value }, `Site rule for ${r.pattern} saved.`)}>
+              <select value={r.translate} aria-label={i18n.t('options.providers.modelFor', [r.pattern])} onChange={(e) => edit(r.pattern, { translate: (e.target as HTMLSelectElement).value }, i18n.t('options.providers.siteRuleSaved', [r.pattern]))}>
                 {options(r.translate)}
               </select>
               <label class="opt__check">
-                <input type="checkbox" checked={r.localOnly === true} aria-label={`Local only for ${r.pattern}`} onChange={(e) => edit(r.pattern, { localOnly: (e.target as HTMLInputElement).checked }, `Site rule for ${r.pattern} saved.`)} /> Local only
+                <input type="checkbox" checked={r.localOnly === true} aria-label={i18n.t('options.providers.localOnlyFor', [r.pattern])} onChange={(e) => edit(r.pattern, { localOnly: (e.target as HTMLInputElement).checked }, i18n.t('options.providers.siteRuleSaved', [r.pattern]))} /> {i18n.t('options.providers.localOnly')}
               </label>
               <span class="prov__actions">
-                <button type="button" aria-label={`Remove the rule for ${r.pattern}`} onClick={() => onSave(rules.filter((x) => x.pattern !== r.pattern), `Site rule for ${r.pattern} removed.`)}>
-                  Remove
+                <button type="button" aria-label={i18n.t('options.providers.removeRuleAria', [r.pattern])} onClick={() => onSave(rules.filter((x) => x.pattern !== r.pattern), i18n.t('options.providers.siteRuleRemoved', [r.pattern]))}>
+                  {i18n.t('options.providers.remove')}
                 </button>
               </span>
               {r.localOnly && cloud(r.translate) ? (
                 <p class="opt__status opt__status--warn" data-testid="site-rule-cloud">
-                  {r.pattern} is local only, but its model is not on this machine, so pages there are not translated (nothing is sent). Pick a local model.
+                  {i18n.t('options.providers.ruleCloud', [r.pattern])}
                 </p>
               ) : null}
             </li>
@@ -470,15 +479,15 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
         </ul>
       ) : null}
       <form class="opt__row" onSubmit={add} data-testid="site-rule-form">
-        <input aria-label="Site" placeholder="docs.example.com or *.example.com" value={site} onInput={(e) => setSite((e.target as HTMLInputElement).value)} />
-        <select aria-label="Model for the site" value={chosen} onChange={(e) => setModel((e.target as HTMLSelectElement).value)}>
+        <input aria-label={i18n.t('options.providers.site')} placeholder={i18n.t('options.sites.allowPlaceholder')} value={site} onInput={(e) => setSite((e.target as HTMLInputElement).value)} />
+        <select aria-label={i18n.t('options.providers.modelForSite')} value={chosen} onChange={(e) => setModel((e.target as HTMLSelectElement).value)}>
           {options(chosen)}
         </select>
         <label class="opt__check">
-          <input type="checkbox" checked={localOnly} aria-label="Local only for the site" onChange={(e) => tickLocal((e.target as HTMLInputElement).checked)} /> Local only
+          <input type="checkbox" checked={localOnly} aria-label={i18n.t('options.providers.localOnlyForSite')} onChange={(e) => tickLocal((e.target as HTMLInputElement).checked)} /> {i18n.t('options.providers.localOnly')}
         </label>
         <button type="submit" disabled={site.trim() === ''}>
-          Add rule
+          {i18n.t('options.providers.addRule')}
         </button>
       </form>
       {problem ? (
@@ -486,7 +495,7 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
           {problem}
         </p>
       ) : null}
-      <p class="opt__hint">Pages on a site with a rule are translated by its model instead of the one above. “Local only” keeps the site’s pages on this device: its model must be local, and it never falls back to a cloud model.</p>
+      <p class="opt__hint">{i18n.t('options.providers.rulesHint')}</p>
     </div>
   );
 }
@@ -500,14 +509,14 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
 function FallbackChain({ settings, profiles, options, onSave }: { settings: ProviderSettings; profiles: readonly ModelProfile[]; options: (selected: string | undefined, exclude?: readonly string[]) => ComponentChildren; onSave: (fallback: string[], said: string) => void }) {
   const chain = settings.routing.fallback ?? [];
   const unused = profiles.filter((p) => p.id !== settings.routing.translate && !chain.includes(p.id));
-  const named = (id: string) => (id === BASIC_FALLBACK ? 'Chrome basic translation' : (profiles.find((p) => p.id === id)?.model ?? '(missing model)'));
+  const named = (id: string) => (id === BASIC_FALLBACK ? i18n.t('options.providers.basic') : (profiles.find((p) => p.id === id)?.model ?? i18n.t('options.providers.missingModel')));
   const hasBasic = chain.includes(BASIC_FALLBACK);
   /** `id` added to the chain, before the terminal `basic` entry. */
   const withAdded = (id: string) => (hasBasic ? [...chain.filter((x) => x !== BASIC_FALLBACK), id, BASIC_FALLBACK] : [...chain, id]);
   return (
     <div class="opt__row prov__fallback" data-testid="route-fallback">
       <span class="prov__label" id="route-fallback-label">
-        If it fails
+        {i18n.t('options.providers.ifFails')}
       </span>
       <ol class="prov__chain" aria-labelledby="route-fallback-label">
         {chain.map((id, i) => (
@@ -515,12 +524,12 @@ function FallbackChain({ settings, profiles, options, onSave }: { settings: Prov
             {i > 0 ? <span aria-hidden="true">→ </span> : null}
             {profiles.some((p) => p.id === id) ? (
               <select
-                aria-label={`Fallback ${i + 1}`}
+                aria-label={i18n.t('options.providers.fallbackN', [String(i + 1)])}
                 value={id}
                 onChange={(e) => {
                   const next = [...chain];
                   next[i] = (e.target as HTMLSelectElement).value;
-                  onSave(next.filter((x, j) => next.indexOf(x) === j), 'Fallback saved.');
+                  onSave(next.filter((x, j) => next.indexOf(x) === j), i18n.t('options.providers.fallbackSaved'));
                 }}
               >
                 {/* Not the translate model itself, nor a model already in the chain (M4-D tester). */}
@@ -529,31 +538,30 @@ function FallbackChain({ settings, profiles, options, onSave }: { settings: Prov
             ) : (
               <span>{named(id)}</span>
             )}{' '}
-            <button type="button" class="prov__small" aria-label={`Remove fallback ${i + 1} (${named(id)})`} onClick={() => onSave(chain.filter((_, j) => j !== i), 'Fallback removed.')}>
+            <button type="button" class="prov__small" aria-label={i18n.t('options.providers.removeFallbackAria', [String(i + 1), named(id)])} onClick={() => onSave(chain.filter((_, j) => j !== i), i18n.t('options.providers.fallbackRemoved'))}>
               ×
             </button>
           </li>
         ))}
         {unused.length ? (
           <li>
-            <button type="button" class="prov__small" data-testid="fallback-add" onClick={() => onSave(withAdded((unused[0] as ModelProfile).id), 'Fallback added.')}>
-              {chain.some((id) => id !== BASIC_FALLBACK) ? '+' : '+ Add a fallback model'}
+            <button type="button" class="prov__small" data-testid="fallback-add" onClick={() => onSave(withAdded((unused[0] as ModelProfile).id), i18n.t('options.providers.fallbackAdded'))}>
+              {chain.some((id) => id !== BASIC_FALLBACK) ? '+' : i18n.t('options.providers.addFallback')}
             </button>
           </li>
         ) : chain.length === 0 ? (
-          <li class="opt__hint">Add a second model to use one.</li>
+          <li class="opt__hint">{i18n.t('options.providers.needSecond')}</li>
         ) : null}
         {hasBasic ? null : (
           <li>
-            <button type="button" class="prov__small" data-testid="fallback-add-basic" title="Chrome's built-in translator, on this device: literal, used only when no model answers" onClick={() => onSave([...chain, BASIC_FALLBACK], 'Basic translation added.')}>
-              + Chrome basic translation
+            <button type="button" class="prov__small" data-testid="fallback-add-basic" title={i18n.t('options.providers.basicTitle')} onClick={() => onSave([...chain, BASIC_FALLBACK], i18n.t('options.providers.basicAdded'))}>
+              {i18n.t('options.providers.addBasic')}
             </button>
           </li>
         )}
       </ol>
       <p class="opt__hint">
-        Used when the routed model is rate-limited, overloaded or unreachable; never when its key is refused or out of credit, so text never goes to another provider for those. A site rule marked “local only” falls back only to
-        models on this device. Chrome basic translation comes last: Chrome's built-in translator, on this device, when no model answers.
+        {i18n.t('options.providers.fallbackHint')}
       </p>
     </div>
   );
@@ -576,7 +584,7 @@ function ModelForm({ api, adapterFor, loaded, onDone }: { api: Browser; adapterF
     setNeedsAccess(false);
     void (async () => {
       const conn = await resolveConnection(api, connection);
-      if (!conn) return setError('This connection has no key.');
+      if (!conn) return setError(i18n.t('options.providers.noKeyError'));
       const result = await adapterFor(conn.protocol).probe(conn);
       if (result.ok) return setModels(displayModels(conn.quirks, result.models ?? []));
       const message = connectMessage(result.error, { preset: presetFor(connection.presetId, connection.protocol), baseUrl: connection.baseUrl, model });
@@ -602,25 +610,25 @@ function ModelForm({ api, adapterFor, loaded, onDone }: { api: Browser; adapterF
     const dual = (connection.detectedProtocols?.length ?? 0) > 1;
     const profile = toProfile(connection, model.trim(), newId(), loaded.settings.profiles, models, dual ? preferredProtocol(model) : undefined);
     void saveSetup(api, { connection, profile }).then(
-      ({ routed }) => onDone(`Added ${profile.model}${routed ? '; pages now translate with it' : ''}.`),
+      ({ routed }) => onDone(routed ? i18n.t('options.providers.addedRouted', [profile.model]) : i18n.t('options.providers.added', [profile.model])),
       (err: unknown) => setError(err instanceof Error ? err.message : String(err)),
     );
   };
   if (usable.length === 0) {
     return (
       <div class="prov__block">
-        <p class="opt__hint">Add a connection with a key first.</p>
+        <p class="opt__hint">{i18n.t('options.providers.needConnection')}</p>
         <button type="button" onClick={() => onDone()}>
-          Back
+          {i18n.t('options.providers.back')}
         </button>
       </div>
     );
   }
   return (
     <form class="prov__block" onSubmit={save} data-testid="model-form">
-      <h3>Add a model</h3>
+      <h3>{i18n.t('options.providers.addModel')}</h3>
       <div class="opt__row">
-        <label for="m-conn">Connection</label>
+        <label for="m-conn">{i18n.t('options.providers.connection')}</label>
         <select id="m-conn" value={connId} onChange={(e) => setConnId((e.target as HTMLSelectElement).value)}>
           {usable.map((c) => (
             <option key={c.id} value={c.id}>
@@ -635,17 +643,17 @@ function ModelForm({ api, adapterFor, loaded, onDone }: { api: Browser; adapterF
           {error}{' '}
           {needsAccess ? (
             <button type="button" onClick={grant} data-testid="model-form-grant">
-              Grant access
+              {i18n.t('options.providers.grant')}
             </button>
           ) : null}
         </p>
       ) : null}
       <div class="opt__row">
         <button type="submit" disabled={model.trim() === ''}>
-          Save
+          {i18n.t('options.providers.save')}
         </button>
         <button type="button" onClick={() => onDone()}>
-          Cancel
+          {i18n.t('options.providers.cancel')}
         </button>
       </div>
     </form>
@@ -658,19 +666,19 @@ function ModelPicker({ id, model, models, onModel }: { id: string; model: string
   return (
     <>
       <div class="opt__row">
-        <label for={id}>Model</label>
-        <input id={id} list={`${id}-list`} value={model} placeholder={models.length ? `Search ${models.length} models, or type an id` : 'Type a model id'} onInput={(e) => onModel((e.target as HTMLInputElement).value)} autocomplete="off" spellcheck={false} />
+        <label for={id}>{i18n.t('options.providers.model')}</label>
+        <input id={id} list={`${id}-list`} value={model} placeholder={models.length ? i18n.t('options.providers.search', models.length) : i18n.t('options.providers.typeId')} onInput={(e) => onModel((e.target as HTMLInputElement).value)} autocomplete="off" spellcheck={false} />
         <datalist id={`${id}-list`} data-testid="model-list">
           {models.map((m) => (
             <option key={m.id} value={m.id}>
-              {[m.displayName, m.contextWindow ? `${Math.round(m.contextWindow / 1000)}K context` : ''].filter(Boolean).join(' · ')}
+              {[m.displayName, m.contextWindow ? i18n.t('options.providers.contextK', [String(Math.round(m.contextWindow / 1000))]) : ''].filter(Boolean).join(' · ')}
             </option>
           ))}
         </datalist>
       </div>
       {info?.contextWindow ? (
         <p class="opt__hint" data-testid="model-context">
-          {info.displayName ?? info.id}: {info.contextWindow.toLocaleString('en-US')} tokens of context.
+          {i18n.t('options.providers.contextTokens', [info.displayName ?? info.id, info.contextWindow.toLocaleString('en-US')])}
         </p>
       ) : null}
     </>
@@ -812,7 +820,7 @@ export function ConnectionForm({
   const onSave = (e: Event) => {
     e.preventDefault();
     if (keyMissing) {
-      setError('The base URL now points at another server: enter the key again, so this key never goes to a server it was not made for.');
+      setError(i18n.t('options.providers.keyAgain'));
       keyInput.current?.focus();
       return;
     }
@@ -828,22 +836,23 @@ export function ConnectionForm({
       // what a test of another URL was granted.
       if (movedFrom && safeOrigin(movedFrom) !== safeOrigin(connection.baseUrl)) await revokeUnusedOrigin(api, movedFrom, id);
       await giveBack(connection.baseUrl);
-      onDone(`Saved ${connection.label}${profile ? ` with ${profile.model}` : ''}.${routed ? ` Pages now translate with ${profile?.model}.` : ''}`);
+      const saved = profile ? i18n.t('options.providers.savedWith', [connection.label, profile.model]) : i18n.t('options.providers.saved', [connection.label]);
+      onDone(routed && profile ? `${saved} ${i18n.t('options.providers.routedNow', [profile.model])}` : saved);
     })().catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
   };
 
   return (
     <form class="prov__block" onSubmit={onSave} data-testid="connection-form">
-      <h3>{editing ? `Edit ${editing.label}` : `Add ${preset.label}`}</h3>
+      <h3>{editing ? i18n.t('options.providers.editTitle', [editing.label]) : i18n.t('options.providers.addTitle', [preset.label])}</h3>
       {preset.note ? <p class="opt__hint">{preset.note}</p> : null}
       <div class="opt__row">
-        <label for="c-label">Name</label>
-        <input id="c-label" value={draft.label} placeholder={preset.custom ? 'e.g. Company gateway' : preset.label} onInput={(e) => set({ label: (e.target as HTMLInputElement).value })} />
+        <label for="c-label">{i18n.t('options.providers.name')}</label>
+        <input id="c-label" value={draft.label} placeholder={preset.custom ? i18n.t('options.providers.namePlaceholder') : preset.label} onInput={(e) => set({ label: (e.target as HTMLInputElement).value })} />
       </div>
       {fields.baseUrl ? <BaseUrlField draft={draft} set={set} /> : null}
       {fields.apiFormat ? (
         <div class="opt__row">
-          <label for="c-format">API format</label>
+          <label for="c-format">{i18n.t('options.providers.apiFormat')}</label>
           <select id="c-format" value={draft.protocol} onChange={(e) => set({ protocol: (e.target as HTMLSelectElement).value as Protocol | 'auto' })}>
             {(['openai-chat', 'anthropic-messages', 'auto'] as const).map((p) => (
               <option key={p} value={p}>
@@ -855,7 +864,7 @@ export function ConnectionForm({
       ) : null}
       {fields.auth ? (
         <div class="opt__row">
-          <label for="c-auth">Auth</label>
+          <label for="c-auth">{i18n.t('options.providers.auth')}</label>
           <select id="c-auth" value={draft.authStyle} onChange={(e) => set({ authStyle: (e.target as HTMLSelectElement).value as ConnectionDraft['authStyle'] })}>
             {(preset.authChoices ?? [preset.auth]).map((a) => (
               <option key={a} value={a}>
@@ -863,12 +872,12 @@ export function ConnectionForm({
               </option>
             ))}
           </select>
-          {draft.authStyle === 'custom-header' ? <input aria-label="Header name" placeholder="Header name, e.g. api-key" value={draft.headerName} onInput={(e) => set({ headerName: (e.target as HTMLInputElement).value })} /> : null}
+          {draft.authStyle === 'custom-header' ? <input aria-label={i18n.t('options.providers.headerName')} placeholder={i18n.t('options.providers.headerNamePlaceholder')} value={draft.headerName} onInput={(e) => set({ headerName: (e.target as HTMLInputElement).value })} /> : null}
         </div>
       ) : null}
       {fields.key ? (
         <div class="opt__row">
-          <label for="c-key">API key</label>
+          <label for="c-key">{i18n.t('options.providers.apiKey')}</label>
           <input
             id="c-key"
             ref={keyInput}
@@ -878,40 +887,42 @@ export function ConnectionForm({
             value={draft.apiKey}
             placeholder={
               storedKey && moved
-                ? 'Enter the key again for the new server'
+                ? i18n.t('options.providers.keyNewServer')
                 : storedKey
-                  ? `Saved: ${maskKey(storedKey)} (enter a new key to replace it)`
-                  : `Paste your ${preset.custom ? '' : `${preset.label} `}API key`
+                  ? i18n.t('options.providers.keySaved', [maskKey(storedKey)])
+                  : preset.custom
+                    ? i18n.t('options.providers.pasteKey')
+                    : i18n.t('options.providers.pastePresetKey', [preset.label])
             }
             onInput={(e) => set({ apiKey: (e.target as HTMLInputElement).value })}
           />
           {preset.keyUrl ? (
             <a href={preset.keyUrl} target="_blank" rel="noreferrer">
-              Get a key ↗
+              {i18n.t('options.providers.getKey')}
             </a>
           ) : null}
         </div>
       ) : null}
       <details class="prov__advanced" data-testid="advanced">
-        <summary>Advanced</summary>
+        <summary>{i18n.t('options.providers.advanced')}</summary>
         <p class="opt__hint" data-testid="advanced-sync-note">
-          Extra headers and query params sync to your other devices with the connection: don't put a key or other secret here.
+          {i18n.t('options.providers.advancedSync')}
         </p>
         {fields.baseUrl ? null : <BaseUrlField draft={draft} set={set} />}
         <div class="opt__row">
-          <label for="c-headers">Extra headers</label>
-          <textarea id="c-headers" rows={2} placeholder="Name: value, one per line" value={draft.extraHeaders} onInput={(e) => set({ extraHeaders: (e.target as HTMLTextAreaElement).value })} />
+          <label for="c-headers">{i18n.t('options.providers.extraHeaders')}</label>
+          <textarea id="c-headers" rows={2} placeholder={i18n.t('options.providers.headersPlaceholder')} value={draft.extraHeaders} onInput={(e) => set({ extraHeaders: (e.target as HTMLTextAreaElement).value })} />
         </div>
         <div class="opt__row">
-          <label for="c-query">Query params</label>
-          <textarea id="c-query" rows={1} placeholder="api-version=2024-10-21, one per line" value={draft.queryParams} onInput={(e) => set({ queryParams: (e.target as HTMLTextAreaElement).value })} />
+          <label for="c-query">{i18n.t('options.providers.queryParams')}</label>
+          <textarea id="c-query" rows={1} placeholder={i18n.t('options.providers.queryPlaceholder')} value={draft.queryParams} onInput={(e) => set({ queryParams: (e.target as HTMLTextAreaElement).value })} />
         </div>
         <div class="opt__row">
           {(
             [
-              ['maxCompletionTokens', 'Send max_completion_tokens'],
-              ['noTemperature', 'No temperature'],
-              ['noSystemRole', 'No system role'],
+              ['maxCompletionTokens', i18n.t('options.providers.toggleMaxTokens')],
+              ['noTemperature', i18n.t('options.providers.toggleNoTemperature')],
+              ['noSystemRole', i18n.t('options.providers.toggleNoSystem')],
             ] as const
           ).map(([k, text]) => (
             <label key={k} class="opt__check">
@@ -922,7 +933,7 @@ export function ConnectionForm({
       </details>
       <div class="opt__row">
         <button type="button" onClick={onTest} disabled={test.kind === 'running'} data-testid="test-connection">
-          {test.kind === 'running' ? 'Testing…' : 'Test connection'}
+          {test.kind === 'running' ? i18n.t('options.providers.testing') : i18n.t('options.providers.test')}
         </button>
         <span class="opt__hint" data-testid="access-hint">{accessHint(fixBaseUrl(draft.baseUrl).url)}</span>
       </div>
@@ -931,7 +942,7 @@ export function ConnectionForm({
       <ModelPicker id="c-model" model={draft.model} models={models} onModel={(m) => set({ model: m })} />
       {dual ? (
         <fieldset class="prov__protocol" data-testid="protocol-switch">
-          <legend>API for this model</legend>
+          <legend>{i18n.t('options.providers.apiForModel')}</legend>
           <div class="prov__radios">
             {(['anthropic-messages', 'openai-chat'] as const).map((p) => (
               <label key={p}>
@@ -940,19 +951,19 @@ export function ConnectionForm({
             ))}
           </div>
           <p class="opt__hint">
-            Both work here. Claude models default to Anthropic-compatible, so prompt caching works fully; others to OpenAI-compatible.
-            {isClaudeModel(draft.model) && /haiku/i.test(draft.model) ? ' On Haiku caching brings little: its minimum cacheable prompt is longer than a typical translation prefix.' : ''}
+            {i18n.t('options.providers.bothWork')}
+            {isClaudeModel(draft.model) && /haiku/i.test(draft.model) ? ` ${i18n.t('options.providers.haiku')}` : ''}
           </p>
         </fieldset>
       ) : null}
       {error ? <p class="opt__status opt__status--warn">{error}</p> : null}
       <div class="opt__row">
         <button type="submit" data-testid="save-connection">
-          Save
+          {i18n.t('options.providers.save')}
         </button>
         {hideCancel ? null : (
           <button type="button" onClick={cancel} data-testid="cancel-connection">
-            Cancel
+            {i18n.t('options.providers.cancel')}
           </button>
         )}
       </div>
@@ -969,7 +980,7 @@ function statusFrom(result: TestResult, message: ConnectMessage | undefined): Te
 function BaseUrlField({ draft, set }: { draft: ConnectionDraft; set: (patch: Partial<ConnectionDraft>) => void }) {
   return (
     <div class="opt__row">
-      <label for="c-base">Base URL</label>
+      <label for="c-base">{i18n.t('options.providers.baseUrl')}</label>
       <input id="c-base" type="url" spellcheck={false} value={draft.baseUrl} placeholder="https://llm.example.com/v1" onInput={(e) => set({ baseUrl: (e.target as HTMLInputElement).value })} />
     </div>
   );
@@ -978,7 +989,7 @@ function BaseUrlField({ draft, set }: { draft: ConnectionDraft; set: (patch: Par
 function PresetPicker({ onPick, onCancel }: { onPick: (id: PresetId) => void; onCancel: () => void }) {
   return (
     <div class="prov__block" data-testid="preset-picker">
-      <h3>Add a connection</h3>
+      <h3>{i18n.t('options.providers.addConnection')}</h3>
       {PICKER_GROUPS.map((g) => (
         <div key={g.title}>
           <p class="opt__hint">{g.title}</p>
@@ -995,7 +1006,7 @@ function PresetPicker({ onPick, onCancel }: { onPick: (id: PresetId) => void; on
         </div>
       ))}
       <button type="button" onClick={onCancel}>
-        Cancel
+        {i18n.t('options.providers.cancel')}
       </button>
     </div>
   );
@@ -1007,22 +1018,27 @@ function TestOutcome({ draft, protocol, test, onFixKey, onRetry, onUseUrl, onGui
     <ul class="prov__fixes" data-testid="url-fixes">
       {result.fixes.map((f) => (
         <li key={f.reason}>
-          Base URL corrected to <code>{f.to}</code>: {URL_FIX_TEXT[f.reason]}
+          {slots(i18n.t('options.providers.urlFixed', { to: '{to}', reason: URL_FIX_TEXT[f.reason] }), { to: <code>{f.to}</code> })}
         </li>
       ))}
     </ul>
   ) : null;
+  const detectedNames = result.ok ? result.detected.map((p) => PROTOCOL_LABELS[p]).join(i18n.t('options.providers.and')) : '';
   if (result.ok) {
     return (
       <div class="prov__outcome prov__outcome--ok" role="status" data-testid="test-result">
         <p>
-          <strong>✓ Connected</strong> · {result.models.length ? `${result.models.length} models` : 'no model list'} · {result.detected.map((p) => PROTOCOL_LABELS[p]).join(' and ')}
+          <strong>✓ {i18n.t('options.providers.connected')}</strong> · {result.models.length ? i18n.t('options.providers.modelCount', result.models.length) : i18n.t('options.providers.noList')} ·{' '}
           {/* The API named is the switch's below, so the two agree (tester C1 #2). */}
-          {draft.protocol === 'auto' ? ` detected${result.detected.length > 1 && draft.model.trim() ? `; ${draft.model.trim()} uses ${PROTOCOL_LABELS[protocol]}` : ''}` : ''}
+          {draft.protocol === 'auto'
+            ? result.detected.length > 1 && draft.model.trim()
+              ? i18n.t('options.providers.detectedUses', [detectedNames, draft.model.trim(), PROTOCOL_LABELS[protocol]])
+              : i18n.t('options.providers.detected', [detectedNames])
+            : detectedNames}
         </p>
         {result.modelUnchecked ? (
           <p class="opt__hint" data-testid="pick-model">
-            No model was tried yet: pick one below and test again{result.keyUnchecked ? ' to check the key (this provider lists its models without one)' : ' to check it'}.
+            {result.keyUnchecked ? i18n.t('options.providers.pickModelKey') : i18n.t('options.providers.pickModel')}
           </p>
         ) : null}
         {fixes}
@@ -1038,19 +1054,19 @@ function TestOutcome({ draft, protocol, test, onFixKey, onRetry, onUseUrl, onGui
       {m.command ? <Command text={m.command} /> : null}
       {m.action === 'fix-key' ? (
         <button type="button" onClick={onFixKey} data-testid="fix-key">
-          Fix key
+          {i18n.t('options.providers.fixKey')}
         </button>
       ) : m.action === 'grant' ? (
         <button type="button" onClick={onRetry}>
-          Grant access
+          {i18n.t('options.providers.grant')}
         </button>
       ) : m.action === 'cors-guide' ? (
         <button type="button" onClick={onGuide} data-testid="open-guide">
-          Fix…
+          {i18n.t('options.providers.fix')}
         </button>
       ) : m.action === 'use-url' && m.suggestion ? (
         <button type="button" onClick={() => onUseUrl(m.suggestion as string)}>
-          Use {m.suggestion}
+          {i18n.t('options.providers.useUrl', [m.suggestion])}
         </button>
       ) : null}
       {fixes}
@@ -1072,7 +1088,7 @@ function Command({ text }: { text: string }) {
           )
         }
       >
-        {copied ? 'Copied' : 'Copy'}
+        {copied ? i18n.t('options.providers.copied') : i18n.t('options.providers.copy')}
       </button>
     </div>
   );
@@ -1109,10 +1125,10 @@ export function CorsGuide({ local, onClose }: { local: GuideKind; onClose: () =>
         </>
       ) : null}
       <p class="opt__hint" data-testid="retest-note">
-        Testing again every few seconds; this closes when the connection works.
+        {i18n.t('options.providers.retest')}
       </p>
       <button type="button" onClick={onClose}>
-        Close
+        {i18n.t('options.providers.close')}
       </button>
     </div>
   );

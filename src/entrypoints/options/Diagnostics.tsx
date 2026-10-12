@@ -3,6 +3,7 @@
 // sent anywhere: the user saves the file and decides who gets it (DESIGN.md §8).
 import { useEffect, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
+import { i18n } from '#i18n';
 import { clearDiagnostics, DIAG_PREFIX, DIAG_SITES_KEY, diagnosticsFile, MAX_ENTRIES, readDiagnostics, type DiagnosticEntry } from '@/shared/diagnostics';
 import { download } from './Transfer.tsx';
 
@@ -35,9 +36,9 @@ export function DiagnosticsSection({ api, now = Date.now }: { api: Browser; now?
 
   return (
     <section class="opt__section" id="diagnostics" aria-labelledby="diagnostics-h">
-      <h2 id="diagnostics-h">Diagnostics</h2>
+      <h2 id="diagnostics-h">{i18n.t('options.diagnostics.title')}</h2>
       <p class="opt__hint">
-        A log of the last {MAX_ENTRIES} translations and panel errors, kept on this device for bug reports: versions, the model, counts, tokens, timings and error kinds. It never holds the page's text, its address, or what the provider answered.
+        {i18n.t('options.diagnostics.intro', [String(MAX_ENTRIES)])}
       </p>
       <label class="opt__check">
         <input
@@ -50,10 +51,10 @@ export function DiagnosticsSection({ api, now = Date.now }: { api: Browser; now?
             void api.storage.local.set({ [DIAG_SITES_KEY]: on });
           }}
         />{' '}
-        Include site names (such as https://example.com) in new entries
+        {i18n.t('options.diagnostics.sites')}
       </label>
       <p class="opt__hint" data-testid="diag-count">
-        {entries === undefined ? 'Reading…' : entries.length === 1 ? '1 entry.' : `${entries.length} entries.`}
+        {entries === undefined ? i18n.t('options.reading') : i18n.t('options.diagnostics.count', entries.length)}
       </p>
       <div class="opt__row">
         <button
@@ -65,7 +66,7 @@ export function DiagnosticsSection({ api, now = Date.now }: { api: Browser; now?
             if (entries) setReview({ entries, sites: withSites(entries) });
           }}
         >
-          Review and export…
+          {i18n.t('options.diagnostics.review')}
         </button>
         <button
           type="button"
@@ -73,18 +74,18 @@ export function DiagnosticsSection({ api, now = Date.now }: { api: Browser; now?
           disabled={!entries?.length}
           onClick={() => {
             setReview(undefined);
-            void clearDiagnostics(api).then(() => setNote('The log is empty.'));
+            void clearDiagnostics(api).then(() => setNote(i18n.t('options.diagnostics.emptied')));
           }}
         >
-          Clear log
+          {i18n.t('options.diagnostics.clear')}
         </button>
       </div>
       {review ? (
-        <div data-testid="diag-export" role="group" aria-label="The diagnostics file">
-          <p>Nothing is sent automatically. Share this file privately.</p>
+        <div data-testid="diag-export" role="group" aria-label={i18n.t('options.diagnostics.fileLabel')}>
+          <p>{i18n.t('options.diagnostics.notSent')}</p>
           {withSites(review.entries) ? (
             <label class="opt__check">
-              <input type="checkbox" data-testid="diag-export-sites" checked={review.sites} onChange={(e) => setReview({ ...review, sites: (e.target as HTMLInputElement).checked })} /> Keep site names in this file
+              <input type="checkbox" data-testid="diag-export-sites" checked={review.sites} onChange={(e) => setReview({ ...review, sites: (e.target as HTMLInputElement).checked })} /> {i18n.t('options.diagnostics.keepSites')}
             </label>
           ) : null}
           <pre class="opt__preview" data-testid="diag-preview" tabIndex={0}>
@@ -97,13 +98,13 @@ export function DiagnosticsSection({ api, now = Date.now }: { api: Browser; now?
               onClick={() => {
                 download(file, fileName(now()));
                 setReview(undefined);
-                setNote('Saved. Nothing was sent.');
+                setNote(i18n.t('options.diagnostics.saved'));
               }}
             >
-              Save file
+              {i18n.t('options.diagnostics.save')}
             </button>{' '}
             <button type="button" data-testid="diag-cancel" onClick={() => setReview(undefined)}>
-              Cancel
+              {i18n.t('options.diagnostics.cancel')}
             </button>
           </p>
         </div>
