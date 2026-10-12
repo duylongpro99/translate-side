@@ -28,6 +28,7 @@ import { isOverflowed, onListChanged, OVERFLOW_NOTICE } from '@/shared/sync-quot
 import { openOnboarding } from '@/shared/onboarding';
 import { ProvidersSection, type AdapterFor } from './Providers.tsx';
 import { TransferSection } from './Transfer.tsx';
+import { DiagnosticsSection } from './Diagnostics.tsx';
 import { SCREEN_READER_NOTE, SHORTCUTS } from '@/shared/shortcuts';
 import { openShortcutSettings, toggleRow, useToggleShortcut } from '@/shared/toggle-shortcut';
 import { openTranslationCache, type CacheStats, type TranslationCache } from '@/shared/cache';
@@ -746,6 +747,7 @@ export function Options({ api, cache = openTranslationCache(), adapterFor }: { a
       <SpendSection api={api} />
       <CacheSection cache={cache} />
       <TransferSection api={api} />
+      <DiagnosticsSection api={api} />
     </main>
   );
 }

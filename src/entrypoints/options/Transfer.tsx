@@ -12,7 +12,7 @@ type Note = { text: string; warn: boolean };
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** The browser's download of `text` as a file (an anchor click: no `downloads` permission needed). */
-function download(text: string, name: string) {
+export function download(text: string, name: string) {
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
