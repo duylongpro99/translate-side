@@ -50,7 +50,7 @@ const SYNC = {
 function localeLaunch(lang: string): { env: Record<string, string>; executablePath?: string } {
   const env = { ...process.env, LANGUAGE: lang } as Record<string, string>;
   if (process.platform !== 'darwin') return { env };
-  const file = path.join(os.tmpdir(), `e2e-chromium-${lang}.sh`);
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-launcher-')), 'chromium.sh');
   const script = `#!/bin/sh\nfor a in "$@"; do shift; [ "$a" = about:blank ] || set -- "$@" "$a"; done\nexec "${chromium.executablePath()}" "$@" -AppleLanguages "(${lang})"\n`;
   fs.writeFileSync(file, script, { mode: 0o755 });
   return { env, executablePath: file };
