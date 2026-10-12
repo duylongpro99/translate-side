@@ -8,9 +8,9 @@ assets, and the steps in the Chrome Web Store developer dashboard.
 | | |
 |---|---|
 | File | `.output/translate-side-1.0.0-chrome.zip` (made by `pnpm run zip`; `.output/` is not committed) |
-| Size | 313 295 bytes |
-| SHA-256 | `a79ad1e138068ba8d467a62065e80869023fe7a56e52567b953aafaf6ad9ee1e` |
-| Built from | source at commit `98093d3` (version `1.0.0` from `package.json`) |
+| Size | 313 288 bytes |
+| SHA-256 | `934f78a41fb427f2abbe0385cdb793137ef9ebf9450711a4ca1e168856452432` |
+| Built from | source at commit `1aa308d` (version `1.0.0` from `package.json`) |
 
 The zip is reproducible: building the same source again gives the same hash. To rebuild it, run
 `pnpm install --frozen-lockfile && pnpm run zip` and compare the hash with the one above; if the source changed since
