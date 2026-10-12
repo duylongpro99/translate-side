@@ -1,0 +1,12 @@
+{
+  "sync": {
+    "prefs": {
+      "targetLang": "vi",
+      "sourceLang": "auto"
+    }
+  },
+  "local": {
+    "secret:gemini": "sk-test-fixture-1"
+  },
+  "session": {}
+}

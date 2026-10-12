@@ -166,3 +166,25 @@ describe('IndexedDB translation cache (M3-E2)', () => {
     expect((await (openTranslationCache({ factory }) as TranslationCache).getMany(['a'])).get('a')?.text).toBe('A');
   });
 });
+
+describe('the cache across an update (settings and cache versioning)', () => {
+  it('segments and briefs stored at database version 1 are still there when the next build opens it; the version stays 1', async () => {
+    const factory = new IDBFactory();
+    const before = openTranslationCache({ factory }) as TranslationCache;
+    await before.putMany(new Map([['seg-1', entry('Một')], ['seg-2', entry('Hai', 2, 1)]]));
+    await before.putBrief('brief-1', { genre: 'blog post' } as DocumentBrief);
+    const version = await new Promise<number>((resolve, reject) => {
+      const open = factory.open('translate-side-cache');
+      open.onsuccess = () => (resolve(open.result.version), open.result.close());
+      open.onerror = () => reject(open.error);
+    });
+    expect(version).toBe(1);
+    const after = openTranslationCache({ factory }) as TranslationCache;
+    const got = await after.getMany(['seg-1', 'seg-2']);
+    expect([...got].map(([k, v]) => [k, v.text, v.revision])).toEqual([
+      ['seg-1', 'Một', 1],
+      ['seg-2', 'Hai', 2],
+    ]);
+    expect(await after.getBrief('brief-1')).toMatchObject({ genre: 'blog post' });
+  });
+});

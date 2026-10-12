@@ -1,0 +1,45 @@
+{
+  "sync": {
+    "prefs": {
+      "targetLang": "vi",
+      "sourceLang": "auto",
+      "style": "faithful",
+      "gloss": "first",
+      "budgetTokens": 250000
+    },
+    "glossary": [
+      {
+        "term": "deploy",
+        "rendering": "deploy"
+      },
+      {
+        "term": "executor",
+        "rendering": "bộ thực thi",
+        "note": "core"
+      },
+      {
+        "term": "crate",
+        "rendering": "crate"
+      }
+    ]
+  },
+  "local": {
+    "secret:apibox": "sk-test-fixture-1",
+    "privacyNotice": {
+      "version": 1,
+      "at": 1759700000000
+    },
+    "spend": {
+      "since": 1759700000000,
+      "usd": 0.0123,
+      "input": 41000,
+      "cachedInput": 2000,
+      "output": 9000,
+      "unpricedTokens": 0,
+      "months": {
+        "2026-10": 0.0123
+      }
+    }
+  },
+  "session": {}
+}

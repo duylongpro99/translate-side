@@ -60,6 +60,7 @@ function fakeWorld() {
     return panelEnd;
   }
 
+  const local: Record<string, unknown> = {};
   let now = 1;
   const api = {
     windows: { getCurrent: () => Promise.resolve({ id: 1 }) },
@@ -72,9 +73,9 @@ function fakeWorld() {
       onDetached: on('detached'),
     },
     storage: {
-      sync: { onChanged: on('syncChanged') },
-      // No list kept on this device (src/shared/sync-quota.ts): the never list is read from sync.
-      local: { get: () => Promise.resolve({}), onChanged: on('localChanged') },
+      sync: { get: () => Promise.resolve({}), onChanged: on('syncChanged') },
+      // Lists kept on this device (src/shared/sync-quota.ts); none unless a test puts one here.
+      local: { get: (k: string) => Promise.resolve(k in local ? { [k]: local[k] } : {}), onChanged: on('localChanged') },
       session: {
         get: (k: string) => Promise.resolve(k in store ? { [k]: store[k] } : {}),
         onChanged: on('changed'),
@@ -88,7 +89,7 @@ function fakeWorld() {
     store[key] = { ...access, at: now++ };
     fire('changed', { [key]: { newValue: store[key] } });
   }
-  return { api, pages, connects, contentEnds, setAccess, fire, store };
+  return { api, pages, connects, contentEnds, setAccess, fire, store, local };
 }
 
 const ok = (n: number): ExtractResult => ({
@@ -621,6 +622,27 @@ describe('PanelController session hooks (plan M1-E8)', () => {
       emit(w.contentEnds[10] as PortLike, 'changed', at('https://bank.example.com/account', 3));
       await wait();
       expect(c.view.kind).toBe('blocked');
+    });
+
+    it('the same when the never list is too large to sync and kept on this device; sync edits made elsewhere then do not reach it', async () => {
+      const w = fakeWorld();
+      w.pages[10] = { docId: 'd1', result: at('https://bank.example.com/account', 2) };
+      w.store[accessKey(10)] = { status: 'ready', trigger: 'gesture', at: 0 };
+      w.local['overflow:siteNever'] = true;
+      w.local.siteNever = ['other.example.org'];
+      const { c } = await started(w);
+      await wait();
+      let closed = false;
+      (w.contentEnds[10] as PortLike).onDisconnect.addListener(() => (closed = true));
+      // Another device's sync edit: this device keeps its own list.
+      w.fire('syncChanged', { siteNever: { newValue: ['*.example.com'] } });
+      await wait();
+      expect(c.view.kind).toBe('ready');
+      w.local.siteNever = ['other.example.org', '*.example.com'];
+      w.fire('localChanged', { siteNever: { newValue: w.local.siteNever } });
+      await wait();
+      expect(c.view).toEqual({ kind: 'blocked', reason: 'never' });
+      expect(closed).toBe(true);
     });
 
     it('a re-read during a same-document load is kept for when the load ends', async () => {

@@ -1,0 +1,131 @@
+{
+  "sync": {
+    "schemaVersion": 1,
+    "conn:apibox": {
+      "id": "apibox",
+      "label": "APIBOX",
+      "presetId": "apibox",
+      "protocol": "openai-chat",
+      "baseUrl": "https://api.ai-box.vn/v1",
+      "auth": {
+        "style": "bearer"
+      },
+      "quirks": {
+        "maxTokensParam": "max_completion_tokens"
+      },
+      "status": "ok"
+    },
+    "conn:corp": {
+      "id": "corp",
+      "label": "Corp gateway",
+      "presetId": "custom",
+      "protocol": "openai-chat",
+      "baseUrl": "https://llm.corp.example.com/v1",
+      "auth": {
+        "style": "bearer"
+      },
+      "extraHeaders": {
+        "X-Team": "docs"
+      },
+      "quirks": {},
+      "status": "ok"
+    },
+    "conn:home": {
+      "id": "home",
+      "label": "Home Ollama",
+      "presetId": "ollama",
+      "protocol": "openai-chat",
+      "baseUrl": "http://localhost:11434/v1",
+      "auth": {
+        "style": "none"
+      },
+      "quirks": {},
+      "status": "ok"
+    },
+    "profile:corp-gpt": {
+      "id": "corp-gpt",
+      "connectionId": "corp",
+      "model": "gpt-5.2-mini",
+      "maxConcurrency": 3,
+      "chunkTokens": 1500,
+      "pricing": {
+        "inPerM": 0.25,
+        "cachedInPerM": 0.025,
+        "outPerM": 2
+      }
+    },
+    "profile:home-qwen": {
+      "id": "home-qwen",
+      "connectionId": "home",
+      "model": "qwen3:8b",
+      "maxConcurrency": 1,
+      "chunkTokens": 600
+    },
+    "routing": {
+      "translate": "corp-gpt",
+      "analyze": "home-qwen",
+      "fallback": [
+        "home-qwen"
+      ]
+    },
+    "siteRules": [
+      {
+        "pattern": "*.intranet.example.com",
+        "translate": "home-qwen",
+        "localOnly": true
+      }
+    ],
+    "prefs": {
+      "targetLang": "vi",
+      "sourceLang": "auto",
+      "style": "natural",
+      "gloss": "off",
+      "budgetTokens": 400000
+    },
+    "glossary": [
+      {
+        "term": "deploy",
+        "rendering": "deploy"
+      },
+      {
+        "term": "executor",
+        "rendering": "bộ thực thi",
+        "note": "core"
+      },
+      {
+        "term": "crate",
+        "rendering": "crate"
+      }
+    ]
+  },
+  "local": {
+    "secret:apibox": "sk-test-fixture-1",
+    "secret:corp": "sk-test-fixture-2",
+    "migratedRoute": {},
+    "privacyNotice": {
+      "version": 1,
+      "at": 1759700000000
+    },
+    "spend": {
+      "since": 1759700000000,
+      "usd": 0.0123,
+      "input": 41000,
+      "cachedInput": 2000,
+      "output": 9000,
+      "unpricedTokens": 0,
+      "months": {
+        "2026-10": 0.0123
+      }
+    },
+    "spendLimit": {
+      "monthlyUsd": 5
+    },
+    "onboarding": {
+      "status": "done",
+      "at": 1759900000000
+    }
+  },
+  "session": {
+    "tabRoute:4": "home-qwen"
+  }
+}
