@@ -127,7 +127,7 @@ Read only on an action, or on an allowlisted site
   src/shared/sites.ts:119 (autoTranslates), src/entrypoints/sidepanel/main.tsx:23 (autoInject).
 - Site access is requested on a click and given back on removal: src/shared/sites.ts:167 (requestSitePermission),
   :187 (permissions.remove); src/shared/sites.ts:65 (the two origins per site).
-- Selection: 20,000 characters, never stored for a denylisted site: src/shared/snippet.ts:12, :6-8.
+- Selection: 20,000 characters, never stored for a denylisted site: src/shared/snippet.ts:12, :4-6.
 
 Never read
 - Built-in denylist and browser pages: src/shared/denylist.ts:12 (hosts), :31 (classifyUrl: non-http(s), Web Store).

@@ -113,7 +113,7 @@ Reviewer-only: where each statement is implemented (paths relative to the reposi
 source, not a progress log).
 
 - Declared permissions and optional hosts, shortcut: wxt.config.ts:18 (permissions), :21 (optional_host_permissions),
-  :23-31 (commands, _execute_action, Alt+T). No host_permissions and no declared content scripts: the same file has
+  :25-32 (commands, _execute_action, Alt+T). No host_permissions and no declared content scripts: the same file has
   neither key; scripts/check-manifest.mjs asserts the built manifest.
 - sidePanel use: src/shared/panel.ts:25 (setPanelBehavior), :82 (action.onClicked opens and toggles),
   src/entrypoints/sidepanel/toggle.ts (close request).
