@@ -1,6 +1,8 @@
 import { render } from 'preact';
 import { browser } from 'wxt/browser';
 import { App } from './App.tsx';
+import { ErrorBoundary } from './ErrorBoundary.tsx';
+import { createDiagnosticsLog } from '@/shared/diagnostics';
 import { PanelController } from './controller.ts';
 import { createTranslator } from './translator.ts';
 import { injectInto } from '@/shared/inject';
@@ -27,4 +29,11 @@ controller.start().catch((err: unknown) => {
 });
 
 const root = document.getElementById('app');
-if (root) render(<App controller={controller} translator={{ ...translator, send: (tabId, name, body) => controller.send(tabId, name, body) }} />, root);
+if (root) {
+  render(
+    <ErrorBoundary name="App" log={createDiagnosticsLog(browser)} version={browser.runtime.getManifest().version}>
+      <App controller={controller} translator={{ ...translator, send: (tabId, name, body) => controller.send(tabId, name, body) }} />
+    </ErrorBoundary>,
+    root,
+  );
+}
