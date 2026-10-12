@@ -6,7 +6,7 @@ what the extension needs it for and the user action that triggers it. The manife
 build, so a permission cannot be added without this file being revisited.
 
 **The extension declares no `host_permissions` and no content scripts.** It has no access to any site until the
-user grants it. The content script is injected into one tab, on a user action.
+user grants it. The content script is injected into one tab, on a user action, or on a site the user allowlisted while the panel is open.
 
 ## Single purpose
 
@@ -58,8 +58,8 @@ rebound at `chrome://extensions/shortcuts`, and the setup guide and the README s
 ## Optional host permissions
 
 These are declared as `optional_host_permissions`: Chrome does not grant any of them at install. The extension asks
-for **one origin at a time**, with a Chrome prompt, in response to a click, and gives it back when the setting that
-needed it is removed. There are two reasons to ask, and the patterns below are the only ones the extension can ask
+for **one provider origin or one site at a time**, with a Chrome prompt, in response to a click, and gives the access
+back when the setting that needed it is removed, unless another setting still uses the same host. There are two reasons to ask, and the patterns below are the only ones the extension can ask
 for.
 
 1. **A provider endpoint.** The extension calls the AI provider the user configured, from the browser, with the
@@ -68,12 +68,14 @@ for.
    their own, a local model), so the origin cannot be known when the package is built.
 2. **A site the user allowlists.** When the user adds a site in Settings › Site rules (or chooses "Always translate
    <site>" in the panel), it asks for that site so that the panel can translate its pages on each visit
-   without a click. Removing the site gives the access back.
+   without a click. Chrome is asked for both the `https://` and `http://` addresses of that site, and for its
+   subdomains when the entry is `*.example.com`. Removing the site gives the access back, unless a provider connection
+   still uses that host.
 
 ### `https://*/*`
 
 Provider endpoints and allowlisted sites served over HTTPS. Required because providers and gateways are chosen by the
-user: a hosted API, a corporate gateway, a regional endpoint. Requested only for the one origin in question, on a
+user: a hosted API, a corporate gateway, a regional endpoint. Requested only for the one origin or site in question, on a
 click. Nothing is read from a site that is not allowlisted, and a page is not sent anywhere until a translation
 starts.
 
@@ -86,7 +88,7 @@ grants the Providers screen asks for in the local-model case.
 
 ### `http://*/*`
 
-Two uses, both on a click and for one origin: a gateway on the user's local network that serves plain HTTP (for
+Two uses, both on a click and for one origin or site: a gateway on the user's local network that serves plain HTTP (for
 example a model server at `http://192.168.1.20:8000`, or a `*.local` name), and a site the user allowlists that is
 itself served over plain HTTP.
 

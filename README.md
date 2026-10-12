@@ -59,7 +59,7 @@ Translate Side gives the model the **whole document's context** before it transl
 | | |
 |---|---|
 | 🪟 **Side-by-side reading** | Click the toolbar icon or press <kbd>Alt</kbd>+<kbd>T</kbd>. The panel opens for that tab and starts translating right away; the same key closes it again. |
-| ⚡ **Streaming output** | Segments appear as they're translated. The first one usually shows up in under 2 seconds. |
+| ⚡ **Streaming output** | Segments appear as they're translated. |
 | 🗂️ **Any provider, or none online** | Bring your own key for Anthropic, OpenAI, Google Gemini, OpenRouter or any OpenAI- or Anthropic-compatible service, or run a model on your own computer with Ollama or LM Studio. Route pages to different models per site, with fallbacks. See [Providers and local models](#-providers-and-local-models). |
 | 🧠 **"About this document"** | Before translating, the model writes a short brief covering genre, audience, purpose, tone and key terms. You can read it in the panel, and every chunk is translated with it. |
 | 🎨 **Style modes** | **Natural** reads as if it was written in your language. **Faithful** stays closer to the original wording. **Simplified** uses short sentences and plain words. |
@@ -73,7 +73,7 @@ Translate Side gives the model the **whole document's context** before it transl
 | ⌨️ **Keyboard and screen readers** | The panel is one Tab stop; the arrows (or <kbd>J</kbd>/<kbd>K</kbd>) move between blocks, and <kbd>O</kbd>, <kbd>R</kbd>, <kbd>E</kbd>, <kbd>C</kbd> show the original, retranslate, explain and copy the focused block. The translation is marked with its language. See [Keyboard shortcuts](#keyboard-shortcuts). |
 | 📦 **Portable settings** | Export your connections, models, routing, preferences, glossary and site lists to a JSON file and import it in another browser (Options › Export and import settings). API keys stay out of the file unless you tick "include keys" and confirm. |
 | 🩺 **Local diagnostics** | The last 50 translations (versions, model, counts, tokens, timings, error kinds; never page text or page addresses, and site names only if you turn them on) are logged on this device only. Options › Diagnostics shows the whole file before you save it to attach to a bug report. Nothing is sent automatically. |
-| 🔒 **Minimal permissions** | No blanket access to every site. The extension runs only on the tab where you open it (`activeTab`), and asks for access one provider or one allowlisted site at a time, on your click. Every permission is explained in [`docs/store/permission-justifications.md`](docs/store/permission-justifications.md). |
+| 🔒 **Minimal permissions** | No blanket access to every site. The extension runs only on the tab where you open it (`activeTab`), and asks for access to one provider or one allowlisted site at a time (a site's `http` and `https` addresses, and its subdomains for a `*.` entry), on your click. Every permission is explained in [`docs/store/permission-justifications.md`](docs/store/permission-justifications.md). |
 
 ## 🔍 How it works
 
@@ -175,12 +175,9 @@ opinion pieces, and the hard cases (idioms, humor, sarcasm, Swift's *A Modest Pr
 Each passage is scored 1–5 on **fidelity, naturalness, tone and terminology**. Human scores are
 the source of truth, and an LLM judge is calibrated against them. See [`eval/README.md`](eval/README.md).
 
-At the end of M2:
-
-- **0** segments lost after repair across the eval set
-- **100%** of code spans, markers and URLs kept on segments with code
-- The contextual strategy costs **1.17×** single-pass, against a ceiling of 1.3×
-- A broken brief never fails a job. The job just continues without one.
+The current numbers (segments lost after repair, code and marker retention, cost against single-pass) are in the eval
+gate's baseline, [`eval/gate.json`](eval/gate.json), and each run's summary under [`eval/runs/`](eval/runs/). A broken
+brief never fails a job: the job just continues without one.
 
 The [provider matrix](docs/provider-matrix.md) compares Gemini, APIBOX and Ollama cloud on the same set. Two of its
 rows were not measured: Anthropic direct (no key) and OpenRouter with Claude Haiku, so **no Haiku cost figure is

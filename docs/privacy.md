@@ -24,11 +24,11 @@ panel asks you to read its notice again.
   icon, choosing "Translate in side panel" in the context menu, or pressing "Translate this page" in the panel reads
   the visible text of that tab. Chrome gives the extension access to that one tab only for that action.
 - **Sites you allow.** If you add a site to the allowlist (Settings › Site rules), Chrome asks you to grant access to
-  that site. From then on, while the panel is open, each page you open on that site is translated automatically, so
+  that site (both its `https://` and `http://` addresses; an entry such as `*.example.com` covers the subdomains). From then on, while the panel is open, each page you open on that site is translated automatically, so
   its text goes to your provider without a click. Remove the site from the list to stop; the access is given back to
-  Chrome. Sites on your never-translate list are not read.
+  Chrome, unless a provider connection still uses that host. Sites on your never-translate list are not read.
 - **A selection.** "Translate in side panel" on selected text sends that text, up to 20,000 characters.
-- **Never read:** webmail and sign-in sites on a built-in list (for example Gmail, Outlook, Yahoo Mail, Proton Mail
+- **Never read:** webmail and sign-in sites on a built-in list (for example Gmail, Outlook, Yahoo Mail, Proton Mail,
   iCloud, and the Google and Microsoft sign-in pages), the sites on your never-translate list, browser pages
   (`chrome://` and similar), the Chrome Web Store, and any page while a password field has keyboard focus. Text
   fields, password fields and other form controls are skipped when a page is read, so what you type into a page is
@@ -45,8 +45,9 @@ saved. The panel names the provider in its first-run notice and in the job bar.
 
 A translation sends:
 
-- the text of the page's blocks (headings, paragraphs, list items, quotes, table cells and code), a few of the
-  blocks just before the ones being translated, and the target language and style;
+- the text of the page's blocks (headings, paragraphs, list items, quotes, table cells, code and figure and table
+  captions), and the descriptions of images (alt text) if you turn on "Translate image descriptions (alt text)" in Settings; a
+  few of the blocks just before the ones being translated; and the target language and style;
 - for the "About this document" brief: the page title, its headings and the opening of its text;
 - your glossary entries that apply (the term, how you want it rendered, your note);
 - the model name, and your API key as the credential, to that provider only.
@@ -56,7 +57,9 @@ other providers. The provider sees what any API call shows: your key, your netwo
 `chrome-extension://` origin.
 
 Your routing decides which provider gets a page: the model you picked, a rule for that site, or a fallback you
-listed if the first one is busy or down. A rule marked local-only never falls back to a cloud provider. The
+listed if the first one is busy or down. Chrome's own on-device translator ("Chrome basic translation") is the last
+fallback by default; it runs on your computer, and you can remove it in Settings › Providers › Routing. A rule
+marked local-only never falls back to a cloud provider. The
 provider's own terms and privacy policy govern what it does with the text. Use a local model for sensitive pages.
 
 **Plain HTTP.** Provider addresses must use HTTPS, with one exception: `http://` is accepted only for this computer
@@ -86,7 +89,9 @@ failure, the error kind and HTTP status with a fixed message of ours. It never h
 provider addresses, keys, or the provider's own error message. The site's name (for example `example.com`) is added
 only if you turn on "Include site names" in Settings › Diagnostics. The log stays on your device; the only way it
 leaves is that you save it as a file in Settings › Diagnostics and send that file yourself, for example with a bug
-report. Nothing is sent automatically. "Clear log" there deletes it.
+report. Nothing is sent automatically. "Clear log" there deletes it. If the panel itself crashes, the log also gets
+an entry with the name of the part that failed and the kind of error (for example `TypeError`), never its message or
+stack.
 
 ## No tracking, no sale, no other use
 
@@ -100,7 +105,7 @@ report. Nothing is sent automatically. "Clear log" there deletes it.
 ## Deleting your data
 
 - **Provider keys and a connection:** Settings › Providers › Remove (it removes the key, the connection's models
-  and the access Chrome granted for its address).
+  and the access Chrome granted for its address, unless a site you allowlisted still uses that address).
 - **Translations and briefs:** Settings › Translation cache › Clear cache.
 - **Diagnostics log:** Settings › Diagnostics › Clear log.
 - **Usage and cost totals:** Settings › Usage and cost › Reset total.

@@ -37,7 +37,7 @@ PRIVACY, PLAINLY
 • Page text goes only to the provider you chose, directly from your browser, when you start a translation. On a site you add to your allowlist, each page you open there is translated automatically while the panel is open, which sends its text to your provider without a click.
 • Mail and sign-in pages, browser pages and the Web Store are never read. Password fields and other form fields are never read.
 • Your API keys stay on your device. The extension has no analytics and no telemetry, and sends nothing to its developer.
-• Access to a site or a provider address is requested one origin at a time, only when you click, and given back when you remove the setting.
+• Access to a provider address or a site (both its http and https addresses, and its subdomains if you enter *.site) is requested one at a time, only when you click, and given back when you remove the setting, unless another setting still uses it.
 
 You need an API key from a provider (many have a free tier) or a local model. Translate Side does not include a translation service.
 

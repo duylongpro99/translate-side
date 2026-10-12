@@ -16,8 +16,8 @@ steps.
 - A computer with enough memory for the model you pick. A small model (about 7–8 B parameters, 4-bit) needs roughly
   5–8 GB free; larger ones need more.
 - Translate Side installed, and Chrome 138 or newer.
-- Small and reasoning-style models can lose blocks or answer slowly. If blocks fail, use **Retry failed**, pick a
-  larger or non-reasoning model, or lower the model's concurrency in Providers.
+- Small and reasoning-style models can lose blocks or answer slowly. If blocks fail, use **Retry failed**, or pick a
+  larger or non-reasoning model.
 
 ## Ollama
 
