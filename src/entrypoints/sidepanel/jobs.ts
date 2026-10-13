@@ -25,6 +25,11 @@
 //   entries on a miss, are shown at once as drafts and only reviewed. A review that is rejected,
 //   skipped or cannot run leaves the draft: it never fails a block. In lazy mode, once a round's
 //   drafts are done, the reader nearing the round's end drops its reviews not started.
+// - Edits (the translation memory, src/shared/memory.ts): a block the user corrected shows the
+//   correction, marked "edited", and is never sent again. Before a run, corrections of the same
+//   source and target language are shown first, before the cache and even on a retranslate; the
+//   engine's later events for such a block are ignored and it is never written to the cache.
+//   Retranslate page keeps edited blocks; a block's Retranslate replaces its edit only when asked.
 // - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
@@ -33,6 +38,7 @@ import type { ReviewReport, SnippetRequest } from '@/engine/types';
 import type { LLMClient, LLMError, LLMErrorKind, MTClient, NormalizedRequest } from '@/llm/types';
 import { BEST_MODE_RELEASED } from '@/shared/quality';
 import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
+import { cleanEditText, memoryKey, type MemoryEntry, type TranslationMemory } from '@/shared/memory';
 import { costUsd, formatUsd, type UsageTotals } from '@/shared/cost';
 import type { Detection } from '@/shared/language';
 import { entryId, type JobRecord } from '@/shared/diagnostics';
@@ -78,6 +84,14 @@ export interface SegState {
   refined?: true;
   draft?: string;
   reviewModel?: string;
+  /**
+   * The text is a correction from the translation memory, shown in place of the translation and
+   * never sent: the user's own (`user`, "edited") or an imported one they chose to apply
+   * (`import`). The engine's events for the block are ignored, and it is never cached.
+   */
+  edited?: MemoryEntry['by'];
+  /** The user's edit could not be stored in the memory: it shows in this session only. */
+  editUnsaved?: true;
 }
 
 /** The engine's review stage id (`producedBy.stage` of a review's final). */
@@ -139,6 +153,8 @@ export interface JobView {
    * earlier translation (M3 dogfood B2): they failed or were never reached. Retry redoes them.
    */
   kept?: number;
+  /** A Retranslate page left this many edited blocks as the user corrected them. */
+  editsKept?: number;
   /** USD for this page so far, across runs (cancel + resume, a language change); undefined without pricing or usage. */
   cost: number | undefined;
   /**
@@ -218,6 +234,8 @@ const BACKOFF_KINDS: ReadonlySet<LLMErrorKind> = new Set(['rate_limit', 'overloa
  * review sends nothing, so the draft stays.
  */
 export function applySegmentEvent(cur: SegState | undefined, e: EngineEvent): SegState | undefined {
+  // The user's correction stands: a late final, a review revision or a failure leaves it as it is.
+  if (cur?.edited) return cur;
   switch (e.type) {
     case 'segment.partial':
       if (cur?.status === 'final' || cur?.status === 'failed') return cur;
@@ -461,7 +479,9 @@ export interface JobDeps {
   mt?: MTClient | undefined;
   /** The translation cache (M3-E2). Absent: every run goes to the model. */
   cache?: TranslationCache | undefined;
-  /** How long a run waits for the cache before it goes to the model without it (default 1500). */
+  /** The translation memory: the user's corrections, shown before the cache. Absent: edits last for the session. */
+  memory?: TranslationMemory | undefined;
+  /** How long a run waits for the cache (and the memory) before it goes to the model without it (default 1500). */
   cacheTimeoutMs?: number;
   /** Every usage report, priced (the running total in settings, M3-E9), with the profile that spent it (M4-E10). */
   onSpend?: (delta: SpendDelta) => void;
@@ -637,6 +657,11 @@ interface Job {
   all: boolean;
   /** The last round ended with blocks of its window still pending (budget, skips): no more rounds until the reader asks. */
   stalled?: boolean;
+  /**
+   * A run of this page in this tab was routed under a local-only site rule: an edit made here is
+   * marked local-only (kept across runs, so an edit between runs is never under-marked).
+   */
+  localOnly: boolean;
   /** The document the job belongs to (content script `docId`). */
   docId: string;
   doc: JobDoc;
@@ -783,7 +808,7 @@ export class Jobs {
       if (screen.has(id)) continue;
       job.held.delete(id);
       const now = job.segs.get(id);
-      if (now?.status !== 'final' || now.text !== over?.text) continue;
+      if (now?.status !== 'final' || now.edited || now.text !== over?.text) continue;
       job.segs.set(id, next);
       shown = true;
     }
@@ -912,6 +937,11 @@ export class Jobs {
     const around = lazy && before !== undefined ? lazyWindow(translatable, this.screenOf(tabId, docId), {}, this.pinnedOf(tabId, docId)) : undefined;
     for (const s of translatable) {
       const old = keep?.segs.get(s.id) ?? before?.segs.get(s.id);
+      // An edited block stays as the user corrected it, a Retranslate page included.
+      if (old?.status === 'final' && old.edited) {
+        segs.set(s.id, old);
+        continue;
+      }
       const owed = before !== undefined && (keep === undefined || keep.earlier.has(s.id)) && (around === undefined || around.has(s.id));
       // Started while another retranslate runs: a block it had not redone yet (pending or
       // streaming) still owes its earlier translation, which that run holds.
@@ -936,6 +966,7 @@ export class Jobs {
       refinedKeys: new Set(),
       lazy,
       all,
+      localOnly: prev?.docId === docId && prev.localOnly,
       docId,
       doc,
       segs,
@@ -1014,7 +1045,10 @@ export class Jobs {
       return;
     }
     const { client, profile } = resolved;
-    if (resolved.localOnly !== undefined) this.patch(tabId, job, { localOnly: resolved.localOnly });
+    if (resolved.localOnly !== undefined) {
+      job.localOnly = true;
+      this.patch(tabId, job, { localOnly: resolved.localOnly });
+    }
     job.fallbackProfiles = resolved.fallback?.map((l) => l.profile) ?? [];
     this.patch(tabId, job, { model: client.model });
     // Best: the review route decides the cache scope (its model is in the key), so it is resolved
@@ -1040,6 +1074,11 @@ export class Jobs {
     const drafts = new Map<string, { text: string; revision: number }>();
     await this.fromCache(tabId, job, { todo, translatable, model: client.model, fresh, drafts });
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
+    if (fresh) {
+      let edited = 0;
+      for (const s of translatable) if (segs.get(s.id)?.edited) edited++;
+      if (edited > 0) this.patch(tabId, job, { editsKept: edited });
+    }
     // Best: finals kept from an earlier run (a lazy round, a resume) that no review has looked at
     // yet are drafts too, so the reviews dropped or never reached are made where the run goes.
     if (job.strategy === REFINE_ID) {
@@ -1154,6 +1193,7 @@ export class Jobs {
       refinedKeys: new Set(),
       lazy: false,
       all: false,
+      localOnly: prev?.docId === docId && prev.localOnly,
       docId,
       doc,
       segs,
@@ -1275,6 +1315,55 @@ export class Jobs {
   }
 
   /**
+   * The user's correction of a finished block: shown at once, marked "edited", and saved in the
+   * translation memory with where it was made (the page origin, and whether the page runs under a
+   * local-only site rule). From then on the engine's events for the block are ignored, and later
+   * runs show it instead of translating the block. A block's own request (an Explain) is aborted.
+   * A save that fails leaves the edit on screen for this session and says so.
+   */
+  async edit(tabId: number, id: string, text: string): Promise<void> {
+    const job = this.jobs.get(tabId);
+    const cur = job?.segs.get(id);
+    const segment = job?.view.segments.find((s) => s.id === id);
+    const target = cleanEditText(text);
+    if (!job || !segment || cur?.status !== 'final' || target === '') return;
+    job.retrying.get(id)?.abort(new DOMException('edited', 'AbortError'));
+    job.retrying.delete(id);
+    // A held review revision and a retranslate's earlier text are both replaced by the edit.
+    job.held.delete(id);
+    job.earlier.delete(id);
+    const next: SegState = { status: 'final', text: target, revision: cur.revision ?? 1, attempt: cur.attempt ?? 1, edited: 'user' };
+    job.segs.set(id, next);
+    this.patch(tabId, job, { counts: count(job.segs) });
+    let saved: boolean;
+    try {
+      await this.deps.memory?.put({
+        source: segment.inlineMarkup || segment.text,
+        target,
+        sourceLang: job.view.sourceLang,
+        targetLang: job.doc.targetLang,
+        origin: originOf(job.doc.url) ?? '',
+        localOnly: job.localOnly || job.view.localOnly !== undefined,
+      });
+      saved = this.deps.memory !== undefined;
+    } catch {
+      saved = false;
+    }
+    if (saved || this.jobs.get(tabId) !== job || job.segs.get(id) !== next) return;
+    job.segs.set(id, { ...next, editUnsaved: true });
+    this.patch(tabId, job, {});
+  }
+
+  /**
+   * Retranslate on an edited block, once the user confirmed it: the block is translated again
+   * and, when its new final arrives, the correction is deleted from the memory. A retranslate that
+   * fails (or a memory that cannot delete) keeps the edit, on screen and in the memory.
+   */
+  discardEdit(tabId: number, id: string): Promise<void> {
+    return this.jobs.get(tabId)?.segs.get(id)?.edited ? this.redoSegment(tabId, id, 'retranslate', true) : Promise.resolve();
+  }
+
+  /**
    * A short note on the idioms and cultural references of one finished block (its "Explain this",
    * plan M5-E8): one request through the engine's snippet path with the `explain` strategy, on the
    * job's translate route (so a local-only site stays local). The note streams into the block's
@@ -1341,11 +1430,13 @@ export class Jobs {
     }
   }
 
-  private async redoSegment(tabId: number, id: string, mode: 'retry' | 'retranslate'): Promise<void> {
+  private async redoSegment(tabId: number, id: string, mode: 'retry' | 'retranslate', discard = false): Promise<void> {
     const job = this.jobs.get(tabId);
     const before = job?.segs.get(id);
     const segment = job?.view.segments.find((s) => s.id === id);
     if (!job || !segment || before?.status !== (mode === 'retry' ? 'failed' : 'final') || job.retrying.has(id)) return;
+    // An edit is replaced only through discardEdit (the user confirmed it).
+    if (before.edited && !discard) return;
     const failedWith = (error: LLMError): SegState => (mode === 'retry' ? { ...before, error } : { ...before, redoError: error });
     const controller = new AbortController();
     const { signal } = controller;
@@ -1409,6 +1500,15 @@ export class Jobs {
       else {
         const key = this.keyFor(job, id, outcome.model);
         if (mode === 'retranslate' && key !== undefined) job.replaceKeys.add(key);
+        if (discard && outcome.status === 'final') {
+          const source = segment.inlineMarkup || segment.text;
+          try {
+            await this.deps.memory?.delete([memoryKey(job.doc.targetLang, source)]);
+          } catch (err) {
+            return settle(failedWith({ kind: 'unknown', message: `the edit could not be deleted: ${err instanceof Error ? err.message : String(err)}`, raw: err }));
+          }
+          if (this.jobs.get(tabId) !== job) return;
+        }
         if (outcome.status === 'final' && job.earlier.delete(id) && job.view.kept !== undefined) {
           const view = { ...job.view, kept: job.earlier.size };
           if (view.kept === 0) delete (view as Partial<JobView>).kept;
@@ -1627,42 +1727,57 @@ export class Jobs {
   }
 
   /**
-   * Shows what the translation cache has for the run's segments as final (never sent), and seeds
-   * the brief from the brief cache when the run has none. Any cache error just means a normal run.
-   * Mutates `todo`: the segments still to translate.
+   * Shows the user's corrections (the translation memory) and then what the translation cache has
+   * for the run's segments as final (never sent), and seeds the brief from the brief cache when the
+   * run has none. A retranslate (`fresh`) reads the corrections only. Both reads run together, each
+   * raced against the cache timeout; any error just means a normal run. Mutates `todo`: the
+   * segments still to translate.
    */
   private async fromCache(tabId: number, job: Job, run: { todo: Set<string>; translatable: readonly Segment[]; model: string; fresh: boolean; drafts: Map<string, { text: string; revision: number }> }): Promise<void> {
-    const cache = this.deps.cache;
-    if (!cache) return;
+    const { cache, memory } = this.deps;
     const { doc } = job;
     const segments = job.view.segments;
-    const scope = this.scopeOf(job, run.model);
-    for (const s of run.translatable) job.keys.set(s.id, segmentKey(scope, s));
-    job.briefKey = briefCacheKey({ url: doc.url, title: doc.title, targetLang: doc.targetLang, outline: segments.filter((s) => s.kind === 'heading').map((s) => s.text) }, segments);
-    if (run.fresh) return;
-    try {
-      const wanted = run.translatable.filter((s) => run.todo.has(s.id));
-      // Best: where it has no entry, Balanced's entry of the same block (same model, style and glossary) is a draft.
-      const refining = job.strategy === REFINE_ID;
-      const balanced = refining ? scopeHash(keyScope({ targetLang: doc.targetLang, model: run.model, style: doc.style, gloss: doc.gloss, strategy: contextual.id, glossary: doc.glossary })) : undefined;
-      const draftKey = (s: Segment) => (balanced === undefined ? undefined : segmentKey(balanced, s));
-      // A cache that never answers (a blocked or dead database) must not hold the translation.
-      const timedOut = Symbol('timeout');
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const lookup = Promise.all([
-        cache.getMany([...new Set(wanted.map((s) => job.keys.get(s.id) as string))]),
-        job.view.brief ?? cache.getBrief(job.briefKey),
-        balanced === undefined ? undefined : cache.getMany([...new Set(wanted.map((s) => draftKey(s) as string))]),
-      ]);
-      const found = await Promise.race([lookup, new Promise<typeof timedOut>((resolve) => (timer = setTimeout(() => resolve(timedOut), this.deps.cacheTimeoutMs ?? 1500)))]);
-      clearTimeout(timer);
-      lookup.catch(() => {});
-      if (found === timedOut) return;
+    if (cache) {
+      const scope = this.scopeOf(job, run.model);
+      for (const s of run.translatable) job.keys.set(s.id, segmentKey(scope, s));
+      job.briefKey = briefCacheKey({ url: doc.url, title: doc.title, targetLang: doc.targetLang, outline: segments.filter((s) => s.kind === 'heading').map((s) => s.text) }, segments);
+    }
+    const wanted = run.translatable.filter((s) => run.todo.has(s.id));
+    if (wanted.length === 0 && job.view.brief) return;
+    const memoryKeys = new Map(memory ? wanted.map((s) => [s.id, memoryKey(doc.targetLang, s.inlineMarkup || s.text)]) : []);
+    // Best: where it has no entry, Balanced's entry of the same block (same model, style and glossary) is a draft.
+    const refining = job.strategy === REFINE_ID;
+    const balanced = cache && refining ? scopeHash(keyScope({ targetLang: doc.targetLang, model: run.model, style: doc.style, gloss: doc.gloss, strategy: contextual.id, glossary: doc.glossary })) : undefined;
+    const draftKey = (s: Segment) => (balanced === undefined ? undefined : segmentKey(balanced, s));
+    const briefKey = job.briefKey;
+    const [overrides, found] = await Promise.all([
+      memory && memoryKeys.size > 0 ? this.timed(memory.getMany([...new Set(memoryKeys.values())])) : undefined,
+      cache && !run.fresh && briefKey !== undefined
+        ? this.timed(
+            Promise.all([
+              cache.getMany([...new Set(wanted.map((s) => job.keys.get(s.id) as string))]),
+              job.view.brief ?? cache.getBrief(briefKey),
+              balanced === undefined ? undefined : cache.getMany([...new Set(wanted.map((s) => draftKey(s) as string))]),
+            ]),
+          )
+        : undefined,
+    ]);
+    if (job.controller.signal.aborted || this.jobs.get(tabId) !== job) return;
+    const patch: Partial<JobView> = {};
+    let edited = 0;
+    // Corrections first: shown as they are, never sent. An imported one only when the user chose so.
+    for (const s of wanted) {
+      const entry = overrides?.get(memoryKeys.get(s.id) as string);
+      if (!entry?.override) continue;
+      job.segs.set(s.id, { status: 'final', text: entry.target, revision: 1, attempt: 1, edited: entry.by });
+      run.todo.delete(s.id);
+      edited++;
+    }
+    let shown = 0;
+    if (found !== undefined) {
       const [hits, brief, draftHits] = found;
-      if (job.controller.signal.aborted || this.jobs.get(tabId) !== job) return;
-      const patch: Partial<JobView> = {};
-      let shown = 0;
       for (const s of wanted) {
+        if (!run.todo.has(s.id)) continue;
         const hit = hits.get(job.keys.get(s.id) as string);
         // Best: an entry at the review revision was reviewed (refined, or kept as drafted); below it, it is a draft.
         if (hit && (!refining || hit.revision >= REVIEWED_REVISION)) {
@@ -1676,26 +1791,41 @@ export class Jobs {
         run.todo.delete(s.id);
         shown++;
       }
-      if (shown > 0) {
-        patch.cached = shown;
-        patch.counts = count(job.segs);
-        patch.firstVisibleAt = this.now();
-        this.screenDone(tabId, job, patch);
-      }
       if (brief && !job.view.brief) {
         patch.brief = brief;
         if (!job.view.sourceLang && brief.language) patch.sourceLang = brief.language;
       }
-      if (Object.keys(patch).length > 0) this.patch(tabId, job, patch);
+    }
+    if (shown > 0) patch.cached = shown;
+    if (shown + edited > 0) {
+      patch.counts = count(job.segs);
+      patch.firstVisibleAt = this.now();
+      this.screenDone(tabId, job, patch);
+    }
+    if (Object.keys(patch).length > 0) this.patch(tabId, job, patch);
+  }
+
+  /**
+   * A store read raced against the cache timeout: a store that never answers (a blocked or dead
+   * database) must not hold the translation. Undefined on a timeout or an error (a miss).
+   */
+  private async timed<T>(read: Promise<T>): Promise<T | undefined> {
+    read.catch(() => {});
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([read, new Promise<undefined>((resolve) => (timer = setTimeout(() => resolve(undefined), this.deps.cacheTimeoutMs ?? 1500)))]);
     } catch {
-      // A broken cache is a cache miss.
+      return undefined;
+    } finally {
+      clearTimeout(timer);
     }
   }
 
   /** Stores the final a segment now shows (the highest revision only), or drops the entry of one that failed. */
   private remember(job: Job, id: string, state: SegState): void {
     // A basic translation (M5-E7) is a stopgap: not stored, so the next run asks the model again.
-    if (state.basic) return;
+    // An edit is the user's, kept in the memory: the cache holds what the model translated.
+    if (state.basic || state.edited) return;
     // A final is stored under the model that produced it (§7); a failure drops the job model's entry.
     // A review's final goes under the job's own key (the reviewer is in its scope), so a reload finds it.
     const key = state.status === 'final' && !state.refined ? this.keyFor(job, id, state.model) : job.keys.get(id);
@@ -1766,7 +1896,7 @@ export class Jobs {
     }
     for (const id of [...report.unchanged, ...report.rejected]) {
       const state = job.segs.get(id);
-      if (state?.status !== 'final' || state.text === undefined || state.basic || (state.revision ?? 1) >= REVIEWED_REVISION) continue;
+      if (state?.status !== 'final' || state.text === undefined || state.basic || state.edited || (state.revision ?? 1) >= REVIEWED_REVISION) continue;
       // Under the key of the model that drafted it, as its draft was (a fallback's has its own, §7).
       this.store(job, this.keyFor(job, id, state.model), { text: state.text, revision: REVIEWED_REVISION, attempt: 1 });
     }
@@ -1774,7 +1904,7 @@ export class Jobs {
 
   /** Best: a final draft (below the review revision, not refined, not a basic translation) no review has looked at yet. */
   private unreviewed(job: Job, id: string, state: SegState | undefined): state is SegState & { text: string } {
-    return state?.status === 'final' && state.text !== undefined && !state.refined && !state.basic && (state.revision ?? 1) < REVIEWED_REVISION && !job.reviewTried.has(id);
+    return state?.status === 'final' && state.text !== undefined && !state.refined && !state.basic && !state.edited && (state.revision ?? 1) < REVIEWED_REVISION && !job.reviewTried.has(id);
   }
 
   private flushCache(job: Job): void {
@@ -1887,12 +2017,7 @@ export class Jobs {
     };
     if (job.view.stopError) add(job.view.stopError);
     for (const s of job.segs.values()) if (s.status === 'failed' && s.error) add(s.error);
-    let origin: string | undefined;
-    try {
-      origin = new URL(job.doc.url).origin;
-    } catch {
-      origin = undefined;
-    }
+    const origin = originOf(job.doc.url);
     const v = job.view;
     // Best: blocks sent for review that no chunk report covered (dropped before they started) were not reviewed.
     let review = job.log.review === undefined ? undefined : { ...job.log.review };
@@ -1921,7 +2046,7 @@ export class Jobs {
       failed: v.counts.failed,
       ...(review === undefined ? {} : { review }),
       errors: [...errors.values()],
-      ...(origin === undefined || origin === 'null' ? {} : { origin }),
+      ...(origin === undefined ? {} : { origin }),
     });
   }
 
@@ -1954,6 +2079,16 @@ export function withMedia(segments: readonly Segment[], media: JobDoc['media']):
     } else out.push(s.kind === 'caption' && !captions && s.translate ? { ...s, translate: false } : s);
   }
   return out;
+}
+
+/** The page's origin; undefined for a URL without one (`null`) or that does not parse. */
+function originOf(url: string): string | undefined {
+  try {
+    const origin = new URL(url).origin;
+    return origin === 'null' ? undefined : origin;
+  } catch {
+    return undefined;
+  }
 }
 
 function count(segs: ReadonlyMap<string, SegState>): JobView['counts'] {

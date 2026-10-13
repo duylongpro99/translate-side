@@ -17,6 +17,7 @@ import { addAllowlisted, cleanSiteList, hasSitePermission, isNeverTranslate, lis
 import { OfferStore } from './offers.ts';
 import type { JobActions } from './JobBar.tsx';
 import { openTranslationCache } from '@/shared/cache';
+import { openTranslationMemory } from '@/shared/memory';
 import { checkSpendLimit, continuePastLimit, SpendLedger } from '@/shared/spend';
 import { createDiagnosticsLog } from '@/shared/diagnostics';
 import { anyDenylisted, clearSnippet, readSnippet, tabIdFromSnippetKey, type SnippetRecord } from '@/shared/snippet';
@@ -112,10 +113,10 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   };
   // Chrome's Translator, the `basic` fallback's translator (M5-E7); undefined in a browser without it.
   const mt = 'mt' in deps ? deps.mt : chromeTranslator();
-  const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), featureAvailable, ...deps, mt });
-  // No cache: a selection is a one-off, and its text is not kept beyond the session.
+  const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), memory: openTranslationMemory(), featureAvailable, ...deps, mt });
+  // No cache and no translation memory: a selection is a one-off, and its text is not kept beyond the session.
   // Single-pass: one request per chunk, never the contextual brief (analyze) call for a selection.
-  const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target), ...deps, mt, strategy: 'single-pass', cache: undefined, lazyAbove: Infinity, onJobRecord: undefined });
+  const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target), ...deps, mt, strategy: 'single-pass', cache: undefined, memory: undefined, lazyAbove: Infinity, onJobRecord: undefined });
   const snippetStore = new SnippetStore();
   const viewports = new ViewportStore();
   const hovers = new HoverStore();
@@ -536,6 +537,14 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     },
   });
 
+  /** A page's actions, with its blocks' corrections (the translation memory): kept on this device, shown on later runs. */
+  const pageActions = (tabId: number): JobActions => ({
+    ...actions(tabId),
+    editSegment: (id, text) => void jobs.edit(tabId, id, text),
+    discardEdit: (id) => void jobs.discardEdit(tabId, id),
+  });
+
+  // A selection is not kept, so its blocks have no Edit.
   const snippetActions = (tabId: number): JobActions => ({
     ...actions(tabId),
     cancel: () => snippetJobs.cancel(tabId),
@@ -630,5 +639,5 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     };
   };
 
-  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, hovers, privacy, prefs, offers, translatePage, allowSite, hooks, actions, switcher, routed: (target) => routedSummary(api, target), watch };
+  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, hovers, privacy, prefs, offers, translatePage, allowSite, hooks, actions: pageActions, switcher, routed: (target) => routedSummary(api, target), watch };
 }

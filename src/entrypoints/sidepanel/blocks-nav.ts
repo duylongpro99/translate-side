@@ -46,6 +46,8 @@ export const coveredBy = (doc: Document): number => Math.max(0, ...[...doc.query
 /** Handles a keydown inside the list. Returns whether it was one of the list's keys. */
 export function handleBlockKey(e: KeyboardEvent, root: HTMLElement): boolean {
   if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return false;
+  // A block's own text field (the inline editor) keeps every key it is typed.
+  if (e.target instanceof Element && e.target.matches('textarea, input, select, [contenteditable]')) return false;
   const block = blockOf(e.target, root);
   if (!block) return false;
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;

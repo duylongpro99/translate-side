@@ -22,6 +22,10 @@ export interface JobActions {
   retranslateSegment(id: string): void;
   /** A short note on this block's idioms and cultural references (its Explain this, M5-E8). */
   explainSegment(id: string): void;
+  /** Saves the user's correction of a finished block (the translation memory). Absent: blocks cannot be edited. */
+  editSegment?(id: string, text: string): void;
+  /** Retranslates an edited block once the user confirmed it, replacing the correction. */
+  discardEdit?(id: string): void;
   /** The whole page again with the current settings, skipping the cache (the header, M3-E6; decision M3-D2). */
   retranslatePage(): void;
   /** Asks for the provider's host permission. Must run inside the click (a user gesture, §4.3.3). */
@@ -105,6 +109,12 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
       {i18n.t('panel.job.kept', job.kept)}
     </span>
   ) : null;
+  // Retranslate page left the user's corrections as they are.
+  const editsNote = job.editsKept ? (
+    <span class="job__kept" data-testid="job-edits-kept" role="note">
+      {i18n.t('panel.job.editsKept', job.editsKept)}
+    </span>
+  ) : null;
   // Lazy mode (M5-E4): the page is long, so only the part around the reader is translated.
   const restButton = job.lazy ? (
     <button type="button" class="job__button" data-testid="translate-rest" title={i18n.t('panel.job.restTitle', job.lazy.rest)} onClick={actions.translateRest}>
@@ -160,6 +170,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
             </button>
           ) : null}
           {job.backoff?.length ? <BackoffNote entries={job.backoff} /> : null}
+          {editsNote}
           {fallbackNote}
           {reviewNote}
         </div>
@@ -174,6 +185,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
           </span>
           {cost}
           {keptNote}
+          {editsNote}
           {restButton}
           {failed || job.kept ? (
             <button type="button" class="job__button" data-testid="retry-failed" onClick={actions.resume}>
@@ -192,6 +204,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
           </span>
           {cost}
           {keptNote}
+          {editsNote}
           <button type="button" class="job__button" data-testid="translate-rest" onClick={job.lazy ? actions.translateRest : actions.resume}>
             {i18n.t('panel.job.translateRest')}
           </button>

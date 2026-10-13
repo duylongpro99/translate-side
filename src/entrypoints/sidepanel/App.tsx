@@ -371,7 +371,7 @@ export function App({ controller, translator }: { controller: PanelController; t
             </p>
           )}
           {job?.brief ? <AboutDocument brief={job.brief} sourceLang={job.sourceLang} /> : null}
-          <SegmentList segments={job?.segments ?? view.result.segments} states={job?.segs} busy={job?.status === 'running'} {...(job ? { targetLang: job.targetLang, ...(job.sourceLang ? { sourceLang: job.sourceLang } : {}) } : {})} {...(job?.model ? { model: job.model } : {})} {...(job && pageActions ? { actions: { retry: pageActions.retrySegment, retranslate: pageActions.retranslateSegment, explain: pageActions.explainSegment } } : {})} />
+          <SegmentList segments={job?.segments ?? view.result.segments} states={job?.segs} busy={job?.status === 'running'} {...(job ? { targetLang: job.targetLang, ...(job.sourceLang ? { sourceLang: job.sourceLang } : {}) } : {})} {...(job?.model ? { model: job.model } : {})} {...(job && pageActions ? { actions: { retry: pageActions.retrySegment, retranslate: pageActions.retranslateSegment, explain: pageActions.explainSegment, ...(pageActions.editSegment ? { edit: pageActions.editSegment } : {}), ...(pageActions.discardEdit ? { discardEdit: pageActions.discardEdit } : {}) } } : {})} />
         </>
       )}
     </main>

@@ -656,6 +656,60 @@ body {
   color: var(--muted);
   font-size: 0.9em;
 }
+/* The user's correction (the translation memory), and one from an imported file. */
+.seg__badge--edited {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.seg__badge--imported {
+  border-style: dashed;
+  border-color: var(--hidden);
+  color: var(--hidden);
+}
+/* The inline editor and "Replace your edit?": blocks of their own under the block's text. */
+.seg__editor,
+.seg__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin-top: 2px;
+}
+.seg__edit-text {
+  flex-basis: 100%;
+  box-sizing: border-box;
+  width: 100%;
+  font: inherit;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 4px 6px;
+  resize: vertical;
+}
+.seg__edit-hint,
+.seg__note--warn {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.seg__note--warn {
+  color: var(--hidden);
+}
+.seg__note--warn:empty {
+  display: none;
+}
+.seg__edit-buttons {
+  display: flex;
+  gap: 4px;
+}
+.seg__confirm {
+  font-size: 0.8rem;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+}
 @media (prefers-reduced-motion: reduce) {
   .seg__actions {
     transition: none;

@@ -1,6 +1,7 @@
 // User flows over the extension, the fixture pages and the mock provider: the first-run privacy
 // notice, an SPA route change, a rate-limited provider and a malformed stream, and Best (refined
-// blocks, rejected reviews, a budget the review does not fit in, a reload, the first draft's time).
+// blocks, rejected reviews, a budget the review does not fit in, a reload, the first draft's time),
+// and inline edits (kept across a reload and a cleared cache, Retranslate page, a block's Retranslate).
 // Zero console errors apply here too, apart from what a flow provokes on purpose (fixtures.ts
 // `allowedConsole`).
 import fs from 'node:fs';
@@ -369,5 +370,95 @@ test.describe('Best', () => {
     const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] as number;
     console.log(`first visible draft (ms): Best ${times.best.join(', ')} (median ${median(times.best)}); Balanced ${times.balanced.join(', ')} (median ${median(times.balanced)})`);
     expect(median(times.best)).toBeLessThanOrEqual(median(times.balanced) * 1.1);
+  });
+});
+
+test.describe('Edits', () => {
+  const PAGE = 'sites/goblog-pipelines.html';
+  const EDIT = 'Bản dịch do tôi tự sửa';
+  /** Every source the mock was sent since call `from`. */
+  const sentSince = (calls: readonly MockCall[], from: number) => calls.slice(from).flatMap((c) => c.segments);
+
+  /** Translates the page, edits its second paragraph with the keyboard, and returns the block and its source. */
+  async function edited(extension: Extension) {
+    const page = await extension.open(PAGE);
+    const panel = await extension.panel();
+    await extension.translate(page);
+    expect(await jobSettled(panel)).toBe('done');
+    const block = panel.locator('.seg--p[data-status=final]').nth(1);
+    const id = (await block.getAttribute('data-id')) as string;
+    await block.getByTestId('seg-edit').click();
+    const area = block.getByTestId('seg-edit-text');
+    await expect(area).toBeFocused();
+    // The editor holds the shown text, light markers included; the mock's text is "vi:" + the source.
+    const shown = await area.inputValue();
+    expect(shown.startsWith('vi:')).toBe(true);
+    await area.fill(EDIT);
+    await area.press('Control+Enter');
+    await expect(block).toHaveAttribute('data-edited', 'user');
+    await expect(block.getByTestId('seg-edited')).toBeVisible();
+    await expect(block).toContainText(EDIT);
+    await expect(block).toBeFocused();
+    return { page, panel, id, source: shown.slice('vi:'.length) };
+  }
+
+  test('an edit survives a reload and a cleared cache, and its block is never sent again', async ({ extension, mock }) => {
+    await extension.seed();
+    const first = await edited(extension);
+    // "Clear cache" leaves the memory as it is.
+    const options = await extension.options();
+    await expect(options.getByTestId('memory-stats')).toHaveText('1 of 5,000 corrections.');
+    await options.getByTestId('cache-clear').click();
+    await expect(options.getByTestId('cache-stats')).toContainText('0 translated blocks');
+    await options.reload();
+    await expect(options.getByTestId('memory-stats')).toHaveText('1 of 5,000 corrections.');
+    await options.close();
+    await first.panel.close();
+    await first.page.close();
+
+    const sent = mock.calls.length;
+    const page = await extension.open(PAGE);
+    const panel = await extension.panel();
+    await extension.translate(page);
+    expect(await jobSettled(panel)).toBe('done');
+    const block = panel.locator(`.seg[data-id="${first.id}"]`);
+    await expect(block).toHaveAttribute('data-edited', 'user');
+    await expect(block).toContainText(EDIT);
+    // The cache was cleared, so the rest of the page went to the mock again; the edited block did not.
+    const again = sentSince(mock.calls, sent);
+    expect(again.length).toBeGreaterThan(0);
+    expect(again).not.toContain(first.source);
+  });
+
+  test('Retranslate page keeps the edit; a block Retranslate asks first, and replaces it only when confirmed', async ({ extension, mock }) => {
+    await extension.seed();
+    const { panel, id, source } = await edited(extension);
+    const block = panel.locator(`.seg[data-id="${id}"]`);
+
+    let sent = mock.calls.length;
+    await panel.getByTestId('page-retranslate').click();
+    await expect.poll(() => mock.calls.length).toBeGreaterThan(sent);
+    expect(await jobSettled(panel)).toBe('done');
+    await expect(panel.getByTestId('job-edits-kept')).toHaveText('1 edited block kept');
+    await expect(block).toContainText(EDIT);
+    expect(sentSince(mock.calls, sent)).not.toContain(source);
+
+    sent = mock.calls.length;
+    await block.getByTestId('seg-retranslate').click();
+    const confirm = block.getByTestId('seg-replace-confirm');
+    await expect(confirm).toContainText('Replace your edit?');
+    await expect(block.getByTestId('seg-replace-no')).toBeFocused();
+    await block.getByTestId('seg-replace-no').click();
+    await expect(confirm).toBeHidden();
+    await expect(block).toHaveAttribute('data-edited', 'user');
+    expect(mock.calls.length).toBe(sent);
+
+    await block.getByTestId('seg-retranslate').click();
+    await block.getByTestId('seg-replace-yes').click();
+    await expect(block).not.toHaveAttribute('data-edited', /.*/);
+    await expect(block).toContainText('vi:');
+    expect(sentSince(mock.calls, sent)).toEqual([source]);
+    const options = await extension.options();
+    await expect(options.getByTestId('memory-stats')).toHaveText('0 of 5,000 corrections.');
   });
 });

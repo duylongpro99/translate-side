@@ -1,11 +1,13 @@
 import { Component, createContext, type ComponentChildren } from 'preact';
 import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { checkSegment } from '@/engine/index';
 import type { Segment } from '@/engine/types';
+import { MAX_MEMORY_TEXT } from '@/shared/memory';
 import type { JobView, SegState } from './jobs.ts';
 import { markerKinds, parseMarkup, plainText, type MarkupNode } from './markup.ts';
 import { i18n } from '#i18n';
 import { failureText } from './status.ts';
-import { handleBlockKey, rove } from './blocks-nav.ts';
+import { blocksIn, handleBlockKey, rove } from './blocks-nav.ts';
 
 /** Per-segment actions (M3-E8, M3-E5); absent for a list with nothing to act on. */
 export interface SegmentActions {
@@ -14,6 +16,10 @@ export interface SegmentActions {
   retranslate?(id: string): void;
   /** A short note on this block's idioms and cultural references (M5-E8). Absent: no Explain button. */
   explain?(id: string): void;
+  /** Saves the user's correction of a finished block (the translation memory). Absent: no Edit button. */
+  edit?(id: string, text: string): void;
+  /** Retranslate on an edited block, once confirmed: its correction is replaced. */
+  discardEdit?(id: string): void;
 }
 
 // Segments rendered by kind (plan M0-E7), with the translation streaming in (plan M1-E10).
@@ -71,7 +77,32 @@ type Props = {
   onDraft?: ((id: string) => void) | undefined;
   /** The job's model: a final produced by another one (a fallback, M4-E9) gets a badge naming it. */
   model?: string | undefined;
+  /** The inline editor is open on this block. */
+  editing?: boolean;
+  /** This edited block's Retranslate asks "Replace your edit?". */
+  confirming?: boolean;
 };
+
+/** The list's one open editor and one open confirmation, and the way to open and close them. */
+interface ListUi {
+  edit(id: string | undefined): void;
+  confirm(id: string | undefined): void;
+}
+const Ui = createContext<ListUi>({ edit: () => undefined, confirm: () => undefined });
+
+/** What an edit lost of the source's code spans, links, web addresses or numbers (checkSegment), as words. */
+export function lostInEdit(source: string, text: string, targetLang: string): string[] {
+  const lost = new Set<string>();
+  for (const f of checkSegment(source, text, targetLang)) {
+    if (f.kind === 'code') lost.add('panel.segment.editLostCode');
+    else if (f.kind === 'url') lost.add('panel.segment.editLostUrls');
+    else if (f.kind === 'number') lost.add('panel.segment.editLostNumbers');
+    // The marker check names what it counts: links, or code spans and their backticks (emphasis is not reported).
+    else if (f.kind === 'markers' && f.detail.includes('link')) lost.add('panel.segment.editLostLinks');
+    else if (f.kind === 'markers' && /code|backtick/.test(f.detail)) lost.add('panel.segment.editLostCode');
+  }
+  return [...lost].map((key) => i18n.t(key as 'panel.segment.editLostCode'));
+}
 
 const translated = (state: SegState | undefined): state is SegState & { text: string } => state?.status === 'final' && state.text !== undefined;
 
@@ -97,12 +128,13 @@ export function blockName(seg: Segment): string {
   return words.slice(0, 6).join(' ') + (words.length > 6 ? '…' : '');
 }
 
-function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraft }: Props) {
+function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraft, editing }: Props) {
+  const ui = useContext(Ui);
   const [copied, setCopied] = useState<'ok' | 'failed' | undefined>();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
   const done = translated(state);
-  if (!done && seg.kind !== 'code') return null;
+  if ((!done && seg.kind !== 'code') || editing) return null;
   const name = blockName(seg);
   const copy = () => {
     writeClipboard(copyText(seg, state)).then(
@@ -140,9 +172,15 @@ function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraf
           aria-keyshortcuts="R"
           aria-label={i18n.t('panel.segment.retranslateFor', [name])}
           title={i18n.t('panel.segment.retranslateTitle')}
-          onClick={() => actions.retranslate?.(seg.id)}
+          // An edit is replaced only after the user confirms it.
+          onClick={() => (state.edited && actions.discardEdit ? ui.confirm(seg.id) : actions.retranslate?.(seg.id))}
         >
           {i18n.t('panel.segment.retranslate')}
+        </button>
+      ) : null}
+      {done && seg.translate && actions?.edit ? (
+        <button type="button" class="seg__action" data-testid="seg-edit" aria-label={i18n.t('panel.segment.editFor', [name])} title={i18n.t('panel.segment.editTitle')} onClick={() => ui.edit(seg.id)}>
+          {i18n.t('panel.segment.edit')}
         </button>
       ) : null}
       {done && actions?.explain ? (
@@ -194,14 +232,138 @@ function RefinedMark({ state }: Props) {
   return <span class="seg__refined" data-testid="seg-refined" role="img" aria-label={i18n.t('panel.segment.refined')} title={i18n.t('panel.segment.refinedTitle')} />;
 }
 
+/** A small label after a block that shows a correction: the user's ("edited") or an imported one. */
+function EditedMark({ state }: Props) {
+  if (state?.status !== 'final' || !state.edited) return null;
+  const imported = state.edited === 'import';
+  return (
+    <>
+      <span class={`seg__badge seg__badge--edited${imported ? ' seg__badge--imported' : ''}`} data-testid={imported ? 'seg-imported' : 'seg-edited'} title={i18n.t(imported ? 'panel.segment.importedTitle' : 'panel.segment.editedTitle')}>
+        {i18n.t(imported ? 'panel.segment.imported' : 'panel.segment.edited')}
+      </span>
+      {state.editUnsaved ? (
+        <span class="seg__note seg__note--failed" role="note" data-testid="seg-edit-unsaved">
+          {i18n.t('panel.segment.editUnsaved')}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * The inline editor of a finished block: the shown text, light markers included, in a labelled
+ * text field. Ctrl/Cmd+Enter or Save saves, Esc or Cancel closes; focus then goes back to the block.
+ * A text that lost the source's code spans, links or numbers is warned about, and can still be saved.
+ */
+function Editor({ seg, state, actions }: Props) {
+  const ui = useContext(Ui);
+  const { target } = useContext(Langs);
+  const [text, setText] = useState(state?.text ?? '');
+  const area = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => area.current?.focus(), []);
+  const lost = useMemo(() => lostInEdit(seg.inlineMarkup, text, target ?? ''), [seg, text, target]);
+  const empty = text.trim() === '';
+  const save = () => {
+    if (empty) return;
+    actions?.edit?.(seg.id, text);
+    ui.edit(undefined);
+  };
+  const id = `seg-edit-${seg.id}`;
+  return (
+    <span class="seg__editor" data-testid="seg-editor">
+      <textarea
+        id={id}
+        ref={area}
+        class="seg__edit-text"
+        data-testid="seg-edit-text"
+        aria-label={i18n.t('panel.segment.editLabel', [blockName(seg)])}
+        aria-describedby={`${id}-hint${lost.length > 0 ? ` ${id}-warn` : ''}`}
+        {...(target ? { lang: target } : {})}
+        rows={Math.min(10, Math.max(2, Math.ceil(text.length / 60)))}
+        maxLength={MAX_MEMORY_TEXT}
+        value={text}
+        onInput={(e) => setText((e.target as HTMLTextAreaElement).value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            ui.edit(undefined);
+          } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            save();
+          }
+        }}
+      />
+      <span class="seg__edit-hint" id={`${id}-hint`}>
+        {i18n.t('panel.segment.editHint')}
+      </span>
+      <span class="seg__note seg__note--warn" id={`${id}-warn`} role="status" data-testid="seg-edit-warning">
+        {lost.length > 0 ? i18n.t('panel.segment.editWarning', [lost.join(', ')]) : ''}
+      </span>
+      <span class="seg__edit-buttons">
+        <button type="button" class="seg__action" data-testid="seg-edit-save" disabled={empty} onClick={save}>
+          {i18n.t('panel.segment.editSave')}
+        </button>
+        <button type="button" class="seg__action" data-testid="seg-edit-cancel" onClick={() => ui.edit(undefined)}>
+          {i18n.t('panel.segment.editCancel')}
+        </button>
+      </span>
+    </span>
+  );
+}
+
+/** "Replace your edit?" before an edited block's Retranslate. "Keep it" has the focus; Esc keeps it too. */
+function ReplaceEdit({ seg, state, actions, confirming }: Props) {
+  const ui = useContext(Ui);
+  const keep = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (confirming) keep.current?.focus();
+  }, [confirming]);
+  if (!confirming || state?.status !== 'final' || !state.edited) return null;
+  const id = `seg-replace-${seg.id}`;
+  return (
+    <span
+      class="seg__confirm"
+      role="alertdialog"
+      aria-labelledby={`${id}-q`}
+      aria-describedby={`${id}-d`}
+      data-testid="seg-replace-confirm"
+      onKeyDown={(e) => {
+        if (e.key !== 'Escape') return;
+        e.preventDefault();
+        e.stopPropagation();
+        ui.confirm(undefined);
+      }}
+    >
+      <strong id={`${id}-q`}>{i18n.t(state.edited === 'import' ? 'panel.segment.replaceImported' : 'panel.segment.replaceEdit')}</strong> <span id={`${id}-d`}>{i18n.t('panel.segment.replaceText')}</span>{' '}
+      <button
+        type="button"
+        class="seg__action"
+        data-testid="seg-replace-yes"
+        onClick={() => {
+          ui.confirm(undefined);
+          actions?.discardEdit?.(seg.id);
+        }}
+      >
+        {i18n.t('panel.segment.replaceYes')}
+      </button>
+      <button type="button" class="seg__action" ref={keep} data-testid="seg-replace-no" onClick={() => ui.confirm(undefined)}>
+        {i18n.t('panel.segment.replaceNo')}
+      </button>
+    </span>
+  );
+}
+
 function statusAttrs(seg: Segment, state: SegState | undefined, extra = '') {
   const status = seg.translate ? (state?.status ?? 'original') : 'kept';
   const refined = status === 'final' && state?.refined === true;
+  const edited = status === 'final' ? state?.edited : undefined;
   return {
     'data-id': seg.id,
     'data-kind': seg.kind,
     'data-status': status,
     ...(refined ? { 'data-refined': 'true' } : {}),
+    ...(edited ? { 'data-edited': edited } : {}),
     // Focusable for the keyboard (src/entrypoints/sidepanel/blocks-nav.ts roves the one Tab stop); a block still arriving says so.
     tabIndex: -1,
     ...(status === 'streaming' || status === 'pending' ? { 'aria-busy': true } : {}),
@@ -236,6 +398,7 @@ function Notes(props: Props) {
   return (
     <>
       <RefinedMark {...props} />
+      <EditedMark {...props} />
       <ModelBadge {...props} />
       <Draft {...props} />
       <Original {...props} />
@@ -257,6 +420,7 @@ function Notes(props: Props) {
       ) : null}
       <ExplainNote {...props} />
       <BlockActions {...props} />
+      <ReplaceEdit {...props} />
     </>
   );
 }
@@ -287,10 +451,17 @@ function ExplainNote({ state }: Props) {
   );
 }
 
+const changed = (a: Props, b: Props) => a.seg !== b.seg || a.state !== b.state || a.original !== b.original || a.draft !== b.draft || a.model !== b.model || a.editing !== b.editing || a.confirming !== b.confirming;
+
+/** The block's text, or its editor while that is open. */
+function Shown(props: Props) {
+  return props.editing && translated(props.state) ? <Editor {...props} /> : <Text seg={props.seg} state={props.state} />;
+}
+
 /** Re-renders only when its segment's state object changes: a stream updates one block at a time. */
 class Block extends Component<Props> {
   override shouldComponentUpdate(next: Props): boolean {
-    return next.seg !== this.props.seg || next.state !== this.props.state || next.original !== this.props.original || next.draft !== this.props.draft || next.model !== this.props.model;
+    return changed(this.props, next);
   }
 
   override render(props: Props) {
@@ -300,7 +471,7 @@ class Block extends Component<Props> {
       case 'heading':
         return (
           <div {...common} role="heading" aria-level={seg.level ?? 2} data-level={seg.level ?? 2}>
-            <Text seg={seg} state={state} />
+            <Shown {...props} />
             <Notes {...props} />
           </div>
         );
@@ -321,14 +492,14 @@ class Block extends Component<Props> {
       case 'li':
         return (
           <div {...common} role="listitem">
-            <Text seg={seg} state={state} />
+            <Shown {...props} />
             <Notes {...props} />
           </div>
         );
       case 'quote':
         return (
           <blockquote {...common}>
-            <Text seg={seg} state={state} />
+            <Shown {...props} />
             <Notes {...props} />
           </blockquote>
         );
@@ -336,7 +507,7 @@ class Block extends Component<Props> {
         return (
           <p {...common}>
             {seg.alt ? <span class="seg__label seg__label--image">{i18n.t('panel.segment.image')} · </span> : null}
-            <Text seg={seg} state={state} />
+            <Shown {...props} />
             <Notes {...props} />
           </p>
         );
@@ -346,7 +517,7 @@ class Block extends Component<Props> {
 
 class Cell extends Component<Props> {
   override shouldComponentUpdate(next: Props): boolean {
-    return next.seg !== this.props.seg || next.state !== this.props.state || next.original !== this.props.original || next.draft !== this.props.draft || next.model !== this.props.model;
+    return changed(this.props, next);
   }
 
   override render(props: Props) {
@@ -354,7 +525,7 @@ class Cell extends Component<Props> {
     const { class: cls, ...attrs } = statusAttrs(seg, state);
     return (
       <div {...attrs} class={cls.replace(`seg--${seg.kind}`, 'seg--table-cell')} role="cell">
-        <Text seg={seg} state={state} />
+        <Shown {...props} />
         <Notes {...props} />
       </div>
     );
@@ -375,7 +546,7 @@ function tableOf(seg: Segment): string | undefined {
 type States = JobView['segs'] | undefined;
 
 /** Consecutive segments of one table, grouped into rows by groupId. */
-function Table({ cells, states, actions, originals, onOriginal, drafts, onDraft, model }: { cells: Segment[]; states: States; actions?: SegmentActions | undefined; originals: ReadonlySet<string>; onOriginal?: ((id: string) => void) | undefined; drafts: ReadonlySet<string>; onDraft?: ((id: string) => void) | undefined; model?: string | undefined }) {
+function Table({ cells, states, actions, originals, onOriginal, drafts, onDraft, model, editing, confirming }: { cells: Segment[]; states: States; actions?: SegmentActions | undefined; originals: ReadonlySet<string>; onOriginal?: ((id: string) => void) | undefined; drafts: ReadonlySet<string>; onDraft?: ((id: string) => void) | undefined; model?: string | undefined; editing: string | undefined; confirming: string | undefined }) {
   const rows: Segment[][] = [];
   for (const c of cells) {
     const row = rows[rows.length - 1];
@@ -387,7 +558,7 @@ function Table({ cells, states, actions, originals, onOriginal, drafts, onDraft,
       {rows.map((row) => (
         <div class="seg-row" role="row" key={row[0]?.id} data-group={row[0]?.groupId}>
           {row.map((c) => (
-            <Cell key={c.id} seg={c} state={states?.get(c.id)} actions={actions} original={originals.has(c.id)} onOriginal={onOriginal} draft={drafts.has(c.id)} onDraft={onDraft} model={model} />
+            <Cell key={c.id} seg={c} state={states?.get(c.id)} actions={actions} original={originals.has(c.id)} onOriginal={onOriginal} draft={drafts.has(c.id)} onDraft={onDraft} model={model} editing={editing === c.id} confirming={confirming === c.id} />
           ))}
         </div>
       ))}
@@ -423,6 +594,31 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
       }),
     [],
   );
+  // One editor and one "Replace your edit?" at a time; when either closes, focus goes back to its block.
+  const [editing, setEditing] = useState<string | undefined>();
+  const [confirming, setConfirming] = useState<string | undefined>();
+  const returnTo = useRef<string | undefined>(undefined);
+  const ui = useMemo<ListUi>(() => {
+    const open = (set: (id: string | undefined) => void, current: () => string | undefined) => (id: string | undefined) => {
+      if (id === undefined) returnTo.current = current();
+      set(id);
+    };
+    let edit: string | undefined;
+    let confirm: string | undefined;
+    return {
+      edit: open((id) => setEditing((edit = id)), () => edit),
+      confirm: open((id) => setConfirming((confirm = id)), () => confirm),
+    };
+  }, []);
+  useEffect(() => {
+    const id = returnTo.current;
+    if (id === undefined || !root.current) return;
+    returnTo.current = undefined;
+    const block = blocksIn(root.current).find((b) => b.dataset.id === id);
+    if (!block) return;
+    rove(root.current, block);
+    block.focus({ preventScroll: true });
+  }, [editing, confirming]);
   // Only a translated list has originals (and drafts) to show.
   const toggle = states ? onOriginal : undefined;
   const toggleDraft = states ? onDraft : undefined;
@@ -433,7 +629,7 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
     if (table !== undefined) {
       let j = i;
       while (j < segments.length && tableOf(segments[j] as Segment) === table) j++;
-      out.push(<Table key={seg.id} cells={segments.slice(i, j)} states={states} actions={actions} originals={originals} onOriginal={toggle} drafts={drafts} onDraft={toggleDraft} model={model} />);
+      out.push(<Table key={seg.id} cells={segments.slice(i, j)} states={states} actions={actions} originals={originals} onOriginal={toggle} drafts={drafts} onDraft={toggleDraft} model={model} editing={editing} confirming={confirming} />);
       i = j;
     } else if (seg.kind === 'li') {
       // List items sit in a list, so a screen reader announces "list, 3 items".
@@ -442,21 +638,23 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
       out.push(
         <div class="seg-list" role="list" key={seg.id}>
           {segments.slice(i, j).map((li) => (
-            <Block key={li.id} seg={li} state={states?.get(li.id)} actions={actions} original={originals.has(li.id)} onOriginal={toggle} draft={drafts.has(li.id)} onDraft={toggleDraft} model={model} />
+            <Block key={li.id} seg={li} state={states?.get(li.id)} actions={actions} original={originals.has(li.id)} onOriginal={toggle} draft={drafts.has(li.id)} onDraft={toggleDraft} model={model} editing={editing === li.id} confirming={confirming === li.id} />
           ))}
         </div>,
       );
       i = j;
     } else {
-      out.push(<Block key={seg.id} seg={seg} state={states?.get(seg.id)} actions={actions} original={originals.has(seg.id)} onOriginal={toggle} draft={drafts.has(seg.id)} onDraft={toggleDraft} model={model} />);
+      out.push(<Block key={seg.id} seg={seg} state={states?.get(seg.id)} actions={actions} original={originals.has(seg.id)} onOriginal={toggle} draft={drafts.has(seg.id)} onDraft={toggleDraft} model={model} editing={editing === seg.id} confirming={confirming === seg.id} />);
       i++;
     }
   }
   return (
     <Langs.Provider value={{ target: targetLang, source: sourceLang }}>
+      <Ui.Provider value={ui}>
       <div class="segments" ref={root} role="region" aria-label={i18n.t('panel.segment.region')} aria-busy={busy === true} onKeyDown={(e) => root.current && handleBlockKey(e, root.current)} onFocusIn={(e) => root.current && rove(root.current, (e.target as Element).closest<HTMLElement>('[data-id]') ?? undefined)}>
-        {out}
-      </div>
+          {out}
+        </div>
+      </Ui.Provider>
     </Langs.Provider>
   );
 }
