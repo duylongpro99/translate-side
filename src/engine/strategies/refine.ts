@@ -18,7 +18,7 @@ import { CONTEXTUAL_TRANSLATE_PROMPT_ID, createContextual } from './contextual.t
 import { ANALYZE_PROMPT_ID } from '../prompts/analyze.ts';
 import { REVIEW_PROMPT_ID } from '../prompts/review.ts';
 import { runStages } from '../runner.ts';
-import { createReviewStage, type ReviewWork } from '../stages/review.ts';
+import { REVIEWED_REVISION, createReviewStage, type ReviewWork } from '../stages/review.ts';
 import type { EngineEvent, StageContext, Strategy, TranslationJob } from '../types.ts';
 
 export { REVIEWED_REVISION } from '../stages/review.ts';
@@ -42,10 +42,14 @@ function seedDrafts(job: TranslationJob, ctx: StageContext): Set<string> {
   return seeded;
 }
 
-/** The review pass's chunks: the job's chunks (cut around the screen now), each with only its segments that have a draft. */
+/**
+ * The review pass's chunks: the job's chunks (cut around the screen now), each with only its
+ * segments that have a draft below REVIEWED_REVISION (a brought text at or above it was reviewed
+ * already).
+ */
 function reviewWorks(job: TranslationJob, ctx: StageContext): ReviewWork[] {
   return chunkJob(job, ctx.priority?.() ?? []).flatMap((chunk) => {
-    const segments = chunk.segments.filter((s) => ctx.memory.translated.has(s.id));
+    const segments = chunk.segments.filter((s) => (ctx.memory.translated.get(s.id)?.revision ?? REVIEWED_REVISION) < REVIEWED_REVISION);
     if (segments.length === 0) return [];
     return [{ chunk: { ...chunk, segments }, doc: job.doc, options: job.options, ...(job.reviewWanted === undefined ? {} : { reviewWanted: job.reviewWanted }) }];
   });

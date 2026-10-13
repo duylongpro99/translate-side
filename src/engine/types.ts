@@ -131,7 +131,8 @@ export interface TranslationJob {
   /**
    * `refine`: drafts the job already has, by segment id (e.g. cache hits below the review
    * revision). They seed working memory at their revision and are reviewed without being drafted
-   * again. Other strategies ignore it.
+   * again; one at or above the review revision was reviewed already and is not reviewed again.
+   * Other strategies ignore it.
    */
   drafts?: ReadonlyMap<string, { text: string; revision: number }>;
   /**
@@ -204,6 +205,8 @@ export type EngineEvent =
 /**
  * What `refine`'s review pass did with one chunk (for the shell's cache, the harness and
  * diagnostics). Every id of `ids` is in at most one list; an id in none was not reviewed (`skipped`).
+ * A chunk whose review was dropped before it started because the reader left it (a re-cut on a new
+ * focus, TranslationJob.within) sends no report at all: treat its ids as not reviewed.
  */
 export interface ReviewReport {
   /** The chunk's segments sent for review (or that would have been), in page order. */
