@@ -60,6 +60,35 @@ describe('renderReport', () => {
     expect(same).not.toContain('compared');
     expect(same).toContain('| translation cost | $0.0100 | $0.0200 (×2.00) |');
   });
+  it('shows refine against contextual: judge dimensions, cost and token ratios, and the review counts', () => {
+    const judge = (fidelity: number, naturalness: number, costUsd: number) => ({ judgeModel: 'j', prompt: 'judge@1', at: '', scores: { a: { fidelity, naturalness }, b: { fidelity, naturalness } }, failed: [], usage: { input: 1, output: 1 }, costUsd });
+    const counts = { chunks: 3, accepted: 6, unchanged: 10, rejected: 2, skipped: 1, input: 600, output: 150 };
+    const ctx = run({ judge: judge(4, 3.5, 0.1) }, { strategy: 'contextual', prompt: 'translate@2', prompts: { translate: 'translate@2', analyze: 'analyze@1' } }, 0.01);
+    const ref = run(
+      { judge: judge(4.5, 3.5, 0.1) },
+      { strategy: 'refine', prompt: 'translate@2', prompts: { translate: 'translate@2', analyze: 'analyze@1', review: 'review@1' }, review: counts, total: { translatable: 10, lost: 0, failed: 0, repaired: 1, calls: 6, input: 1600, cachedInput: 0, output: 650, wallMs: 8000, costUsd: 0.017 } },
+      0.017,
+    );
+    const md = renderReport({ runs: [ctx, ref], categories });
+    expect(md).toContain('| | contextual / translate@2+analyze@1 / x | refine / translate@2+analyze@1+review@1 / x |');
+    expect(md).toContain('| judge fidelity | 4.00 n=2 | 4.50 (+0.50) n=2 |');
+    expect(md).toContain('| judge naturalness | 3.50 n=2 | 3.50 (+0.00) n=2 |');
+    expect(md).toContain('| translation cost | $0.0100 | $0.0170 (×1.70) |');
+    expect(md).toContain('| tokens in + out | 1500 | 2250 (×1.50) |');
+    expect(md).toContain('| review segments accepted / unchanged / rejected / skipped | – | 6 / 10 / 2 / 1 (rejected 25% of changes) |');
+    expect(md).toContain('| review input / output tokens (in the totals) | – | 600 / 150 |');
+    // No review rows when no run has a review pass.
+    expect(renderReport({ runs: [ctx, run({})], categories })).not.toContain('review segments');
+  });
+  it('sums the review counts of the compared passages only', () => {
+    const doc = (slug: string, accepted: number) => ({ slug, translatable: 2, lost: 0, repaired: 0, calls: 2, input: 100, cachedInput: 0, output: 50, wallMs: 1000, costUsd: 0.01, review: { chunks: 1, accepted, unchanged: 1, rejected: 0, skipped: 0, input: 20, output: 5 } });
+    const total = { translatable: 6, lost: 0, failed: 0, repaired: 0, calls: 6, input: 300, cachedInput: 0, output: 150, wallMs: 3000, costUsd: 0.03 };
+    const ref = run({ outputs: { a: [], b: [], c: [] } }, { strategy: 'refine', docs: [doc('a', 1), doc('b', 2), doc('c', 4)], total, review: { chunks: 3, accepted: 7, unchanged: 3, rejected: 0, skipped: 0, input: 60, output: 15 } });
+    const ctx = run({ outputs: { a: [], b: [] } }, { strategy: 'contextual', docs: [{ slug: 'a' }, { slug: 'b' }] });
+    const md = renderReport({ runs: [ctx, ref], categories: { a: 'docs', b: 'humor', c: 'docs' } });
+    expect(md).toContain('| review segments accepted / unchanged / rejected / skipped | – | 3 / 2 / 0 / 0 (rejected 0% of changes) |');
+    expect(md).toContain('| review input / output tokens (in the totals) | – | 40 / 10 |');
+  });
   it('labels a run by strategy, its prompt versions (translate first) and model', () => {
     expect(runLabel(summary())).toBe('single-pass / translate@1 / x');
     expect(runLabel(summary({ strategy: 'single-pass', prompt: 'translate@1', prompts: { translate: 'translate@1' } }))).toBe('single-pass / translate@1 / x');

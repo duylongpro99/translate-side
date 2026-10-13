@@ -2,7 +2,7 @@
 // `translate@2` runs join the table later with no change here. The first run is the baseline: later columns show the change.
 import { DIMENSIONS, type Dimension } from './rubric.ts';
 import { agreement, aggregate, type Aggregate, type ScoreSet } from './scores.ts';
-import { runLabel, type Run, type RunSummary } from './runs.ts';
+import { runLabel, type ReviewCounts, type Run, type RunSummary } from './runs.ts';
 
 export interface ReportInput {
   runs: Run[];
@@ -73,6 +73,24 @@ export function totalsOn(r: Run, ids: readonly string[]): Totals {
   };
 }
 
+/** A refine run's review counts over `ids` (as totalsOn), or undefined for a run without a review pass. */
+export function reviewOn(r: Run, ids: readonly string[]): ReviewCounts | undefined {
+  const own = passagesOf(r);
+  if (own.length === ids.length && ids.every((id) => own.includes(id))) return r.summary.review ?? undefined;
+  const want = new Set(ids);
+  const docs = r.summary.docs.filter((d) => want.has(d.slug) && d.review !== undefined);
+  if (docs.length === 0) return undefined;
+  const sum = (k: keyof ReviewCounts) => docs.reduce((n, d) => n + (d.review?.[k] ?? 0), 0);
+  return { chunks: sum('chunks'), accepted: sum('accepted'), unchanged: sum('unchanged'), rejected: sum('rejected'), skipped: sum('skipped'), input: sum('input'), output: sum('output') };
+}
+
+/** `12 / 80 / 3 / 0 (rejected 20% of changes)`: the review's segments, and how many of the reviewer's changes failed a post-check. */
+function reviewCell(c: ReviewCounts | undefined): string {
+  if (c === undefined) return '–';
+  const changes = c.accepted + c.rejected;
+  return `${c.accepted} / ${c.unchanged} / ${c.rejected} / ${c.skipped}${changes ? ` (rejected ${Math.round((100 * c.rejected) / changes)}% of changes)` : ''}`;
+}
+
 /** The scores of `ids` only. */
 const pick = (set: ScoreSet | undefined, ids: readonly string[]): ScoreSet | undefined => (set === undefined ? undefined : Object.fromEntries(ids.filter((id) => id in set).map((id) => [id, set[id]])) as ScoreSet);
 
@@ -87,6 +105,9 @@ export function renderReport({ runs: all, categories }: ReportInput): string {
   const runs = all.map((r) => (partial ? { ...r, human: pick(r.human, common), judge: r.judge && { ...r.judge, scores: pick(r.judge.scores, common) ?? {} } } : r));
   const totals = all.map((r) => totalsOn(r, common));
   const baseCost = totals[0]?.costUsd;
+  const tokens = totals.map((t) => t.input + t.output);
+  const baseTokens = tokens[0];
+  const reviews = all.map((r) => reviewOn(r, common));
   const head = ['| |', ...runs.map((r) => ` ${runLabel(r.summary)} |`)].join('');
   const rule = `|---|${runs.map(() => '---|').join('')}`;
   const judgeSets = runs.map((r) => r.judge?.scores);
@@ -117,9 +138,16 @@ export function renderReport({ runs: all, categories }: ReportInput): string {
     `| segments repaired | ${totals.map((t) => t.repaired).join(' | ')} |`,
     `| LLM calls | ${totals.map((t) => t.calls).join(' | ')} |`,
     `| input / output tokens | ${totals.map((t) => `${t.input} / ${t.output}`).join(' | ')} |`,
+    `| tokens in + out | ${tokens.map((n, i) => `${n}${i > 0 && baseTokens ? ` (×${(n / baseTokens).toFixed(2)})` : ''}`).join(' | ')} |`,
     `| translation cost | ${totals.map((t, i) => `${money(t.costUsd)}${i > 0 && t.costUsd !== null && baseCost ? ` (×${(t.costUsd / baseCost).toFixed(2)})` : ''}`).join(' | ')} |`,
     `| wall time (s) | ${totals.map((t) => (t.wallMs / 1000).toFixed(0)).join(' | ')} |`,
   ];
+  if (reviews.some(Boolean)) {
+    lines.push(
+      `| review segments accepted / unchanged / rejected / skipped | ${reviews.map(reviewCell).join(' | ')} |`,
+      `| review input / output tokens (in the totals) | ${reviews.map((c) => (c ? `${c.input} / ${c.output}` : '–')).join(' | ')} |`,
+    );
+  }
   if (runs.some((r) => r.judge)) lines.push(`| judge cost${partial ? ' (whole run)' : ''} | ${runs.map((r) => (r.judge ? money(r.judge.costUsd) : '–')).join(' | ')} |`);
 
   const cats = [...new Set(Object.values(categories))].sort();
