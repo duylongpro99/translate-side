@@ -7,7 +7,7 @@
 // - LRU by `used`, evicting to stay under `maxBytes` (~50 MB).
 // - Briefs: by `url + contentHash + targetLang + analyze prompt` (engine briefCacheKey).
 import { hash53 as cyrb53 } from '@/segment/hash';
-import { CONTEXTUAL_CACHE_KEY, SINGLE_PASS_CACHE_KEY, glossaryHash, type DocumentBrief, type GlossaryEntry, type GlossMode, type Segment, type StrategyId, type StyleMode } from '@/engine/index';
+import { CONTEXTUAL_CACHE_KEY, REFINE_CACHE_KEY, SINGLE_PASS_CACHE_KEY, glossaryHash, type DocumentBrief, type GlossaryEntry, type GlossMode, type Segment, type StrategyId, type StyleMode } from '@/engine/index';
 
 export const CACHE_DB = 'translate-side-cache';
 export const CACHE_MAX_BYTES = 50 * 1024 * 1024;
@@ -18,6 +18,11 @@ export interface CachedSegment {
   text: string;
   revision: number;
   attempt: number;
+  /**
+   * `refine` (DESIGN.md §5.3): the text is the review's revision. An entry at the review revision
+   * without it was reviewed and kept as drafted (unchanged or a rejected candidate).
+   */
+  refined?: true;
 }
 
 export interface CacheStats {
@@ -31,8 +36,8 @@ export interface TranslationCache {
   /** The entries found for `keys` (their LRU stamp is refreshed). */
   getMany(keys: readonly string[]): Promise<Map<string, CachedSegment>>;
   /**
-   * Stores each entry unless a higher revision/attempt is already there. `replace` (a retranslate,
-   * which the user asked for) stores it whatever is there.
+   * Stores each entry unless a higher revision/attempt is already there (or, at the same one, a
+   * refined entry). `replace` (a retranslate, which the user asked for) stores it whatever is there.
    */
   putMany(entries: ReadonlyMap<string, CachedSegment>, options?: { replace?: boolean }): Promise<void>;
   delete(keys: readonly string[]): Promise<void>;
@@ -66,6 +71,7 @@ export interface StrategyKeyInfo {
 export function strategyKeyInfo(id: StrategyId): StrategyKeyInfo {
   if (id === CONTEXTUAL_CACHE_KEY.strategy) return { strategy: id, version: CONTEXTUAL_CACHE_KEY.version, promptIds: CONTEXTUAL_CACHE_KEY.promptIds };
   if (id === SINGLE_PASS_CACHE_KEY.strategy) return { strategy: id, version: SINGLE_PASS_CACHE_KEY.version, promptIds: [SINGLE_PASS_CACHE_KEY.promptId] };
+  if (id === REFINE_CACHE_KEY.strategy) return { strategy: id, version: REFINE_CACHE_KEY.version, promptIds: REFINE_CACHE_KEY.promptIds };
   return { strategy: id, version: 0, promptIds: [] };
 }
 
@@ -77,16 +83,21 @@ export interface KeyScope {
   gloss: GlossMode;
   strategy: StrategyKeyInfo;
   glossary: readonly GlossaryEntry[];
+  /** `refine` only: the model its review ran on ("Review with"), so another reviewer is another entry. */
+  reviewModel?: string;
 }
 
-export function keyScope(s: { targetLang: string; model: string; style?: StyleMode | undefined; gloss?: GlossMode | undefined; strategy: StrategyId; glossary?: readonly GlossaryEntry[] | undefined }): KeyScope {
-  return { targetLang: s.targetLang, model: s.model, style: s.style ?? 'natural', gloss: s.gloss ?? 'first', strategy: strategyKeyInfo(s.strategy), glossary: s.glossary ?? [] };
+export function keyScope(s: { targetLang: string; model: string; style?: StyleMode | undefined; gloss?: GlossMode | undefined; strategy: StrategyId; glossary?: readonly GlossaryEntry[] | undefined; reviewModel?: string | undefined }): KeyScope {
+  const scope: KeyScope = { targetLang: s.targetLang, model: s.model, style: s.style ?? 'natural', gloss: s.gloss ?? 'first', strategy: strategyKeyInfo(s.strategy), glossary: s.glossary ?? [] };
+  return s.strategy === REFINE_CACHE_KEY.strategy && s.reviewModel !== undefined ? { ...scope, reviewModel: s.reviewModel } : scope;
 }
 
-/** The scope part, hashed once per run. */
+/** The scope part, hashed once per run. The review model is hashed only when there is one, so other scopes keep their hash. */
 export function scopeHash(scope: KeyScope): string {
   const { strategy: st } = scope;
-  return cyrb53(JSON.stringify([scope.targetLang, scope.model, scope.style, scope.gloss, `${st.strategy}@${st.version}`, st.promptIds, glossaryHash(scope.glossary)])).toString(36);
+  const parts: unknown[] = [scope.targetLang, scope.model, scope.style, scope.gloss, `${st.strategy}@${st.version}`, st.promptIds, glossaryHash(scope.glossary)];
+  if (scope.reviewModel !== undefined) parts.push(scope.reviewModel);
+  return cyrb53(JSON.stringify(parts)).toString(36);
 }
 
 /** The cache key of one segment under a scope (`scopeHash(scope)`). Two hashes keep collisions out of reach. */
@@ -188,7 +199,7 @@ export function openTranslationCache(options: IdbCacheOptions = {}): Translation
         keys.map(async (key) => {
           const row = (await req(store.get(key))) as SegmentRow | undefined;
           if (!row) return;
-          found.set(key, { text: row.text, revision: row.revision, attempt: row.attempt });
+          found.set(key, { text: row.text, revision: row.revision, attempt: row.attempt, ...(row.refined ? { refined: true as const } : {}) });
           store.put({ ...row, used: stamp });
         }),
       );
@@ -205,10 +216,12 @@ export function openTranslationCache(options: IdbCacheOptions = {}): Translation
       const stamp = now();
       for (const [key, e] of entries) {
         const old = (await req(store.get(key))) as SegmentRow | undefined;
-        // §5.2: a higher revision always wins; for the same revision a higher attempt does.
-        if (!replace && old && (old.revision > e.revision || (old.revision === e.revision && old.attempt > e.attempt))) continue;
+        // §5.2: a higher revision always wins; for the same revision a higher attempt does. Two
+        // blocks with the same text share an entry: a refined one is not replaced by its twin that
+        // the review left as it was.
+        if (!replace && old && (old.revision > e.revision || (old.revision === e.revision && (old.attempt > e.attempt || (old.attempt === e.attempt && old.refined === true && e.refined !== true))))) continue;
         const bytes = rowBytes(key, e.text);
-        store.put({ key, text: e.text, revision: e.revision, attempt: e.attempt, bytes, used: stamp } satisfies SegmentRow);
+        store.put({ key, text: e.text, revision: e.revision, attempt: e.attempt, ...(e.refined ? { refined: true as const } : {}), bytes, used: stamp } satisfies SegmentRow);
         meta.bytes += bytes - (old?.bytes ?? 0);
         if (!old) meta.entries++;
       }

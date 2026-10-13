@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import type { DocumentBrief, Segment } from '@/engine/index';
-import { CONTEXTUAL_CACHE_KEY } from '@/engine/index';
-import { keyScope, normalizeForKey, openTranslationCache, rowBytes, scopeHash, segmentKey, type TranslationCache } from './cache.ts';
+import { CONTEXTUAL_CACHE_KEY, REFINE_CACHE_KEY } from '@/engine/index';
+import { keyScope, normalizeForKey, openTranslationCache, rowBytes, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from './cache.ts';
 
 const seg = (text: string, kind: Segment['kind'] = 'p', inlineMarkup = text): Pick<Segment, 'kind' | 'text' | 'inlineMarkup'> => ({ kind, text, inlineMarkup });
 const base = { targetLang: 'vi', model: 'm1', style: 'natural' as const, gloss: 'first' as const, strategy: 'contextual', glossary: [] };
@@ -41,6 +41,22 @@ describe('cache key (M3-D1)', () => {
     expect(new Set([scopeHash(scope), scopeHash(bumped), scopeHash(prompted)]).size).toBe(3);
   });
 
+  it('refine has its own version and prompt ids (analyze, translate and review), so it never shares a key with contextual', () => {
+    const scope = keyScope({ ...base, strategy: 'refine', reviewModel: 'm1' });
+    expect(scope.strategy).toMatchObject({ strategy: 'refine', version: REFINE_CACHE_KEY.version, promptIds: REFINE_CACHE_KEY.promptIds });
+    expect(scope.strategy.promptIds).toContain('review@1');
+    expect(keyOf({ strategy: 'refine', reviewModel: 'm1' })).not.toBe(keyOf());
+    expect(keyOf({ strategy: 'refine' })).not.toBe(keyOf());
+  });
+
+  it('the review model is part of a refine scope only: another reviewer is another key, other strategies keep their key', () => {
+    expect(keyOf({ strategy: 'refine', reviewModel: 'm1' })).not.toBe(keyOf({ strategy: 'refine', reviewModel: 'big' }));
+    expect(keyScope({ ...base, reviewModel: 'big' })).not.toHaveProperty('reviewModel');
+    expect(keyOf({ reviewModel: 'big' })).toBe(keyOf());
+    // The hash of a scope without a review model is what it was before refine existed.
+    expect(scopeHash(keyScope(base))).toBe(scopeHash({ targetLang: 'vi', model: 'm1', style: 'natural', gloss: 'first', strategy: { strategy: 'contextual', version: CONTEXTUAL_CACHE_KEY.version, promptIds: CONTEXTUAL_CACHE_KEY.promptIds }, glossary: [] }));
+  });
+
   it('a fixture re-extracted with different whitespace and ids hits every key', () => {
     const doc = JSON.parse(fs.readFileSync('fixtures/docs/goblog-pipelines.json', 'utf8')) as { segments: Segment[] };
     const scope = scopeHash(keyScope(base));
@@ -70,6 +86,22 @@ describe('IndexedDB translation cache (M3-E2)', () => {
     expect([...got.keys()].sort()).toEqual(['a', 'b']);
     expect(got.get('a')).toEqual(entry('A'));
     expect((await c.stats()).entries).toBe(2);
+  });
+
+  it('keeps the refined flag; a reviewed-unchanged entry at the review revision replaces its draft without it', async () => {
+    const c = newCache();
+    await c.putMany(new Map([['a', entry('draft', 1)], ['b', entry('draft b', 2)]]));
+    await c.putMany(new Map<string, CachedSegment>([['a', { ...entry('reviewed', 3), refined: true }], ['b', entry('draft b', 3)]]));
+    const got = await c.getMany(['a', 'b']);
+    expect(got.get('a')).toEqual({ text: 'reviewed', revision: 3, attempt: 1, refined: true });
+    expect(got.get('b')).toEqual(entry('draft b', 3));
+    // A later draft never replaces a reviewed entry, nor does a twin block the review left as it was.
+    await c.putMany(new Map([['a', entry('draft again', 1)]]));
+    await c.putMany(new Map([['a', entry('twin left as drafted', 3)]]));
+    expect((await c.getMany(['a'])).get('a')).toMatchObject({ text: 'reviewed', refined: true });
+    // A retranslate replaces it all the same.
+    await c.putMany(new Map([['a', entry('retranslated', 1)]]), { replace: true });
+    expect((await c.getMany(['a'])).get('a')).toEqual(entry('retranslated', 1));
   });
 
   it('keeps only the highest revision, and the highest attempt of a revision (§5.2)', async () => {
