@@ -11,6 +11,8 @@ web-ext.config.ts
 .impl-*-state.md
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+.claude
+.agentkit
 
 # Local-only skill symlink (user decision: keep outside git)
 .claude/skills/managed-session
