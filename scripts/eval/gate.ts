@@ -20,6 +20,8 @@ import { APIBOX_JUDGE_QUIRKS } from '@/llm/presets';
 import type { Quirks } from '@/llm/types';
 import { DEFAULT_CONNECTION, DEFAULT_PROFILE, withProfileQuirks } from '@/shared/settings';
 import { JUDGE_MODEL, JUDGE_PROMPT_ID } from './judge-core.ts';
+import { listPassageIds } from './passages.ts';
+import { reviewPromptHash, translatePromptHash } from './prompt-hash.ts';
 import { harnessQuirks, PROVIDERS } from './providers.ts';
 import { dimensionMeans } from './report-core.ts';
 import { DIMENSIONS, type Dimension } from './rubric.ts';
@@ -333,17 +335,21 @@ export type GateSummary = Omit<RunSummary, 'total' | 'docs'> & {
   docs: (RunSummary['docs'][number] & { briefedChunks?: number })[];
   concurrency?: number;
   /** The translate calls' thinking (null for a mock run). */
-  thinking?: { reasoning?: Quirks['reasoning'] } | null;
+  thinking?: { reasoning?: Quirks['reasoning']; maxTokensParam?: Quirks['maxTokensParam'] } | null;
 };
 
 /** Segments the review pass answered for in a refine run (accepted, unchanged or rejected). */
 export const reviewedSegments = (s: Pick<RunSummary, 'review'>): number => (s.review ? s.review.accepted + s.review.unchanged + s.review.rejected : 0);
 
 /**
- * How a finished harness run differs from the gate configuration (empty: it is a run of exactly that
- * configuration, so `--from` may use it as a baseline run).
+ * How a finished harness run differs from the gate configuration over `passages` (empty: it is a run of exactly
+ * that configuration, prompt texts included, over exactly those passages, so `--from` may use it as a baseline run).
  */
-export function runConfigMismatch(s: GateSummary, cfg: GateConfig): string[] {
+export function runConfigMismatch(s: GateSummary, cfg: GateConfig, passages: readonly string[]): string[] {
+  const vars = { targetLang: cfg.target, style: 'natural' as const, gloss: 'first' as const };
+  const have = new Set(s.docs.map((d) => d.slug));
+  const missing = passages.filter((id) => !have.has(id));
+  const extra = [...have].filter((id) => !passages.includes(id));
   const want: [string, unknown, unknown][] = [
     ['set', s.set, cfg.set],
     ['provider/model', s.label, `${cfg.provider}/${cfg.model}`],
@@ -358,8 +364,13 @@ export function runConfigMismatch(s: GateSummary, cfg: GateConfig): string[] {
     ['gloss', s.gloss ?? 'first', 'first'],
     ['personal glossary', s.glossary ?? 0, 0],
     ['thinking', s.thinking?.reasoning, cfg.quirks.reasoning],
+    ['max tokens parameter', s.thinking?.maxTokensParam, cfg.quirks.maxTokensParam],
+    ['translate prompt hash', s.promptHash, translatePromptHash(cfg.translatePrompt, vars)],
+    ['review prompt hash', s.reviewPromptHash, cfg.reviewPrompt === undefined ? undefined : reviewPromptHash(cfg.reviewPrompt, vars)],
   ];
-  return want.filter(([, got, exp]) => !isDeepStrictEqual(got, exp)).map(([name, got, exp]) => `${name} ${JSON.stringify(got) ?? 'none'}, not ${JSON.stringify(exp) ?? 'none'}`);
+  const out = want.filter(([, got, exp]) => !isDeepStrictEqual(got, exp)).map(([name, got, exp]) => `${name} ${JSON.stringify(got) ?? 'none'}, not ${JSON.stringify(exp) ?? 'none'}`);
+  if (missing.length || extra.length) out.push(`passages: ${[missing.length ? `missing ${missing.join(', ')}` : '', extra.length ? `not in the eval set ${extra.join(', ')}` : ''].filter(Boolean).join('; ')}`);
+  return out;
 }
 
 /** One translate-and-judge pass into `dir`, stopped at `deadline` or when its spend passes `budgetUsd`. `resume` keeps a finished translation. */
@@ -425,17 +436,22 @@ function keyCheck(cfg: GateConfig): string | undefined {
 
 /**
  * Why the finished runs in `dirs` cannot seed the baseline of `cfg` (`--from`), one line per problem; empty when
- * each is a run of exactly that configuration and its baseline folder is free (or already holds that run).
+ * each is a distinct run of exactly that configuration over every passage of the eval set, and its baseline folder
+ * is free (or already holds that run).
  */
-export function fromProblems(dirs: readonly string[], cfg: GateConfig, mode: GateMode, root = ROOT): string[] {
+export function fromProblems(dirs: readonly string[], cfg: GateConfig, mode: GateMode, root = ROOT, passages: readonly string[] = dirs.length ? listPassageIds(root) : []): string[] {
   const problems: string[] = [];
+  const seen = new Map<string, string>();
   dirs.forEach((dir, i) => {
     const summary = readJson<GateSummary>(path.resolve(root, dir, 'summary.json'));
     if (summary === undefined) {
       problems.push(`${dir}: no summary.json (not a finished harness run)`);
       return;
     }
-    for (const m of runConfigMismatch(summary, cfg)) problems.push(`${dir}: ${m}`);
+    const twin = seen.get(summary.run);
+    if (twin !== undefined) problems.push(`${dir}: the same run (${summary.run}) as ${twin}: the baseline needs distinct runs`);
+    else seen.set(summary.run, dir);
+    for (const m of runConfigMismatch(summary, cfg, passages)) problems.push(`${dir}: ${m}`);
     const target = readJson<GateSummary>(path.resolve(root, BASELINE_DIR(i + 1, mode), 'summary.json'));
     if (target !== undefined && target.run !== summary.run) problems.push(`${BASELINE_DIR(i + 1, mode)} already holds another run (${target.run}): delete the old baseline runs first`);
   });

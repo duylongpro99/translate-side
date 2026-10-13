@@ -8,6 +8,7 @@ import { APIBOX_JUDGE_QUIRKS, APIBOX_QWEN_QUIRKS } from '@/llm/presets';
 import { DEFAULT_CONNECTION, DEFAULT_PROFILE } from '@/shared/settings';
 import { BASELINE_DIR, belowM2, computeDimensions, fromProblems, GATE_BEST_FILE, GATE_CHUNK_TOKENS, GATE_FILE, gateFile, judgeMismatch, judgePass, lineCost, main, MIN_MARGIN, PINNED_JUDGE, renderPass, reviewedSegments, runConfigMismatch, runGate, sampleSd, shippedConfig, translateArgs, type GateConfig, type GateFile, type GateSummary, type PassResult } from './gate';
 import { JUDGE_MODEL, JUDGE_PROMPT_ID } from './judge-core';
+import { reviewPromptHash, translatePromptHash } from './prompt-hash';
 import { PROVIDERS } from './providers';
 
 const dims = (baseline: number, margin: number) => ({ baseline, sd: margin / 2, margin, m2c400: baseline, runs: [baseline] });
@@ -86,7 +87,11 @@ describe('best mode', () => {
   });
 });
 
-/** A finished harness run of exactly `cfg` (the fields run.ts writes that the gate compares). */
+/** The passages the seeding tests take as the eval set. */
+const PASSAGES = ['a', 'b'];
+const VARS = { targetLang: 'vi', style: 'natural' as const, gloss: 'first' as const };
+
+/** A finished harness run of exactly `cfg` over PASSAGES (the fields run.ts writes that the gate compares). */
 const runOf = (cfg: GateConfig, over: Partial<GateSummary> = {}): GateSummary => ({
   run: 'r1',
   set: cfg.set,
@@ -95,6 +100,8 @@ const runOf = (cfg: GateConfig, over: Partial<GateSummary> = {}): GateSummary =>
   strategy: cfg.strategy,
   strategyVersion: cfg.strategyVersion,
   prompt: cfg.translatePrompt,
+  promptHash: translatePromptHash(cfg.translatePrompt, VARS),
+  ...(cfg.reviewPrompt === undefined ? {} : { reviewPromptHash: reviewPromptHash(cfg.reviewPrompt, VARS) }),
   prompts: { translate: cfg.translatePrompt, analyze: 'analyze@1', ...(cfg.reviewPrompt === undefined ? {} : { review: cfg.reviewPrompt }) },
   style: 'natural',
   gloss: 'first',
@@ -102,44 +109,64 @@ const runOf = (cfg: GateConfig, over: Partial<GateSummary> = {}): GateSummary =>
   chunkTokens: cfg.chunkTokens,
   concurrency: cfg.concurrency,
   target: cfg.target,
-  thinking: { reasoning: cfg.quirks.reasoning },
+  thinking: { reasoning: cfg.quirks.reasoning, maxTokensParam: cfg.quirks.maxTokensParam },
   total: { translatable: 1, lost: 0, failed: 0, repaired: 0, calls: 1, input: 1, cachedInput: 0, output: 1, wallMs: 1, costUsd: 0.001 },
-  docs: [],
+  docs: PASSAGES.map((slug) => ({ slug })),
   ...over,
 });
 
 describe('seeding a baseline from finished runs', () => {
   const best = shippedConfig('best');
+  const mismatch = (s: GateSummary, cfg = best) => runConfigMismatch(s, cfg, PASSAGES);
   it('accepts a run of exactly the gate configuration', () => {
-    expect(runConfigMismatch(runOf(best), best)).toEqual([]);
-    expect(runConfigMismatch(runOf(shippedConfig()), shippedConfig())).toEqual([]);
+    expect(mismatch(runOf(best))).toEqual([]);
+    expect(mismatch(runOf(shippedConfig()), shippedConfig())).toEqual([]);
   });
   it('names every difference from the gate configuration', () => {
-    expect(runConfigMismatch(runOf(best, { label: 'mock', chunkTokens: 1500 }), best)).toEqual([`provider/model "mock", not "${best.provider}/${best.model}"`, 'chunk tokens 1500, not 400']);
-    expect(runConfigMismatch(runOf(best, { prompts: { translate: CONTEXTUAL_TRANSLATE_PROMPT_ID, review: 'review@0' } }), best)).toEqual(['review prompt "review@0", not "' + REVIEW_PROMPT_ID + '"']);
+    expect(mismatch(runOf(best, { label: 'mock', chunkTokens: 1500 }))).toEqual([`provider/model "mock", not "${best.provider}/${best.model}"`, 'chunk tokens 1500, not 400']);
+    expect(mismatch(runOf(best, { prompts: { translate: CONTEXTUAL_TRANSLATE_PROMPT_ID, review: 'review@0' } }))).toEqual([`review prompt "review@0", not "${REVIEW_PROMPT_ID}"`]);
     // A contextual run cannot seed the Best baseline.
-    expect(runConfigMismatch(runOf(shippedConfig()), best)).toContain('strategy "contextual", not "refine"');
-    expect(runConfigMismatch(runOf(best, { thinking: null }), best)[0]).toMatch(/^thinking none, not /);
-    expect(runConfigMismatch(runOf(best, { style: 'faithful', glossary: 2 }), best)).toEqual(['style "faithful", not "natural"', 'personal glossary 2, not 0']);
+    expect(mismatch(runOf(shippedConfig()))).toContain('strategy "contextual", not "refine"');
+    expect(mismatch(runOf(best, { thinking: null }))[0]).toMatch(/^thinking none, not /);
+    expect(mismatch(runOf(best, { thinking: { reasoning: best.quirks.reasoning, maxTokensParam: 'max_tokens' } }))).toEqual([`max tokens parameter "max_tokens", not "${best.quirks.maxTokensParam}"`]);
+    expect(mismatch(runOf(best, { style: 'faithful', glossary: 2 }))).toEqual(['style "faithful", not "natural"', 'personal glossary 2, not 0']);
   });
-  it('refuses missing runs, other configurations and a baseline folder holding another run', () => {
+  it('compares the prompt texts, not only their ids', () => {
+    expect(mismatch(runOf(best, { promptHash: '000000000000' }))).toEqual([`translate prompt hash "000000000000", not "${translatePromptHash(CONTEXTUAL_TRANSLATE_PROMPT_ID, VARS)}"`]);
+    expect(mismatch(runOf(best, { reviewPromptHash: '000000000000' }))).toEqual([`review prompt hash "000000000000", not "${reviewPromptHash(REVIEW_PROMPT_ID, VARS)}"`]);
+    const noReviewHash = runOf(best);
+    delete noReviewHash.reviewPromptHash;
+    expect(mismatch(noReviewHash)[0]).toMatch(/^review prompt hash none, not "/);
+    // The two hashes are of different prompts.
+    expect(reviewPromptHash(REVIEW_PROMPT_ID, VARS)).not.toBe(translatePromptHash(CONTEXTUAL_TRANSLATE_PROMPT_ID, VARS));
+  });
+  it('requires a run over exactly the eval set', () => {
+    expect(mismatch(runOf(best, { docs: [{ slug: 'a' }] }))).toEqual(['passages: missing b']);
+    expect(mismatch(runOf(best, { docs: [{ slug: 'a' }, { slug: 'b' }, { slug: 'z' }] }))).toEqual(['passages: not in the eval set z']);
+  });
+  it('refuses missing runs, other configurations, the same run twice and a baseline folder holding another run', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-from-'));
     try {
       const write = (dir: string, s: GateSummary) => {
         fs.mkdirSync(path.join(root, dir), { recursive: true });
         fs.writeFileSync(path.join(root, dir, 'summary.json'), JSON.stringify(s));
       };
+      const problems = (dirs: string[], cfg = best, mode: 'best' | 'balanced' = 'best') => fromProblems(dirs, cfg, mode, root, PASSAGES);
       write('r/a', runOf(best, { run: 'a' }));
       write('r/b', runOf(best, { run: 'b', concurrency: 1 }));
       write('r/c', runOf(best, { run: 'c' }));
-      expect(fromProblems(['r/a', 'r/c'], best, 'best', root)).toEqual([]);
-      expect(fromProblems(['r/a', 'r/b', 'r/none'], best, 'best', root)).toEqual([`r/b: concurrency 1, not ${best.concurrency}`, 'r/none: no summary.json (not a finished harness run)']);
+      write('r/c-copy', runOf(best, { run: 'c' }));
+      expect(problems(['r/a', 'r/c'])).toEqual([]);
+      expect(problems(['r/a', 'r/b', 'r/none'])).toEqual([`r/b: concurrency 1, not ${best.concurrency}`, 'r/none: no summary.json (not a finished harness run)']);
+      // The same run named twice, or a copy of it, is not a second baseline run.
+      expect(problems(['r/c', 'r/c', './r/c'])).toEqual(['r/c: the same run (c) as r/c: the baseline needs distinct runs', './r/c: the same run (c) as r/c: the baseline needs distinct runs']);
+      expect(problems(['r/c', 'r/c-copy'])).toEqual(['r/c-copy: the same run (c) as r/c: the baseline needs distinct runs']);
       // The second baseline folder already holds run c: seeding it again is fine, another run is refused.
       write(BASELINE_DIR(2, 'best'), runOf(best, { run: 'c' }));
-      expect(fromProblems(['r/a', 'r/c'], best, 'best', root)).toEqual([]);
-      expect(fromProblems(['r/c', 'r/a'], best, 'best', root)).toEqual([`${BASELINE_DIR(2, 'best')} already holds another run (c): delete the old baseline runs first`]);
+      expect(problems(['r/a', 'r/c'])).toEqual([]);
+      expect(problems(['r/c', 'r/a'])).toEqual([`${BASELINE_DIR(2, 'best')} already holds another run (c): delete the old baseline runs first`]);
       // The Balanced folders are another mode's: not in the way.
-      expect(fromProblems(['r/c', 'r/a'], shippedConfig(), 'balanced', root).some((p) => p.includes('already holds'))).toBe(false);
+      expect(problems(['r/c', 'r/a'], shippedConfig(), 'balanced').some((p) => p.includes('already holds'))).toBe(false);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
