@@ -593,6 +593,8 @@ interface Job {
   reviewProfile?: ModelProfile;
   /** Best: the model the review runs on (in the cache scope). */
   reviewModel?: string;
+  /** `strategy` is the one asked for: the best-mode answer has not come yet. */
+  unsettled?: boolean;
   /**
    * Best: blocks whose review ran or was given up (budget, a failed call) in this run or the runs it
    * resumes; the others (dropped as the reader moved on, never reached) are still drafts to review.
@@ -605,11 +607,16 @@ interface Job {
   refinedKeys: Set<string>;
   /**
    * Best in lazy mode: `reach` started the next round for drafts to review only (`forDrafts`); one
-   * such round that found nothing to send (`noDrafts`) keeps the next `reach` from starting another
-   * for drafts, so rounds never follow each other for nothing.
+   * such round that ends without any review tried (it found nothing to send, or every review was
+   * dropped before it started) keeps the next `reach` from starting another for drafts
+   * (`noDrafts`), so rounds never follow each other for nothing.
    */
   forDrafts?: boolean;
   noDrafts?: boolean;
+  /** This run is such a round (`forDrafts` of the run it resumes). */
+  draftsRound?: boolean;
+  /** Best: a review of this run ran or was given up (not only dropped). */
+  reviewedAny?: boolean;
   /**
    * What the soft limit stopped (M4-E10): "Continue anyway" carries it out, whether a run (with
    * its own options: a Retranslate page skips the cache) or one block's redo.
@@ -794,7 +801,9 @@ export class Jobs {
     const translatable = (job.translatable ??= job.view.segments.filter((s) => s.translate));
     const pinned = this.pinnedOf(tabId, job.docId);
     const screen = this.screenOf(tabId, job.docId);
-    const own = screen.filter((id) => !pinned.includes(id));
+    // The reader's own translatable blocks: a screen of code, or of text kept as it is, says
+    // nothing about where the reader is in the round.
+    const own = screen.filter((id) => !pinned.includes(id) && job.segs.has(id));
     if (own.length === 0) return;
     const left = !own.some((id) => current.has(id));
     const near = lazyWindow(translatable, screen, LAZY_LOW_WATER, pinned);
@@ -871,6 +880,7 @@ export class Jobs {
     // running one replaced) at once, as for any run; nothing reads `job.strategy` before it is settled.
     const requested = this.deps.strategy ?? doc.strategy ?? PANEL_STRATEGY;
     const access = requested === REFINE_ID ? this.bestMode() : undefined;
+    const unsettled = access !== undefined;
     const prev = this.jobs.get(tabId);
     const keep = resume && prev?.docId === docId && prev.view.status !== 'running' ? prev : undefined;
     const all = options.all ?? keep?.all ?? false;
@@ -916,6 +926,7 @@ export class Jobs {
     gate.set(tabId === this.activeTabId);
     const job: Job = {
       strategy: requested,
+      ...(unsettled ? { unsettled } : {}),
       reviewWanted: true,
       held: new Map(),
       reviewTried: new Set(keep?.reviewTried),
@@ -949,6 +960,7 @@ export class Jobs {
       apart: costFrom ? { usage: { ...costFrom.apart.usage }, usd: costFrom.apart.usd } : { usage: { input: 0, cachedInput: 0, output: 0 }, usd: undefined },
       fresh,
       ...((lazy && before !== undefined) || (resume && prev?.docId === docId && prev.redo) ? { redo: true } : {}),
+      ...(keep?.forDrafts ? { draftsRound: true } : {}),
       view: {
         ...(lazy && todo.size > 0 ? { lazy: { rest: todo.size } } : {}),
         status: 'running',
@@ -987,6 +999,7 @@ export class Jobs {
         return;
       }
       if (!allowed) job.strategy = contextual.id;
+      delete job.unsettled;
       this.record(job, 'started');
     }
     const refining = job.strategy === REFINE_ID;
@@ -1045,7 +1058,6 @@ export class Jobs {
     if (todo.size !== translatable.length && !job.lazy) job.briefKey = undefined;
     // Best: drafts from the cache are only reviewed; with none left either, nothing is sent.
     if (todo.size === 0 && drafts.size === 0) {
-      if (keep?.forDrafts) job.noDrafts = true;
       this.finish(tabId, job, 'done');
       return;
     }
@@ -1743,7 +1755,12 @@ export class Jobs {
     const reported = (job.reported ??= new Set());
     for (const id of report.ids) reported.add(id);
     // A review dropped as the reader moved on is still owed; one that ran, or was given up, is not.
-    if (report.skipped !== 'dropped') for (const id of report.ids) job.reviewTried.add(id);
+    // Given up for the budget or a failed call: not asked again in this session (that would loop
+    // on a provider that keeps failing); its row stays below the review revision, so a reload does.
+    if (report.skipped !== 'dropped') {
+      job.reviewedAny = true;
+      for (const id of report.ids) job.reviewTried.add(id);
+    }
     for (const id of [...report.unchanged, ...report.rejected]) {
       const state = job.segs.get(id);
       if (state?.status !== 'final' || state.text === undefined || state.basic || (state.revision ?? 1) >= REVIEWED_REVISION) continue;
@@ -1795,7 +1812,9 @@ export class Jobs {
     }
     // Best: a run that ended by itself, its reviews not dropped for the reader, reviewed what it
     // could; a block it sent that got no report is not asked for again in this session.
-    if (status === 'done' && job.reviewScope && job.reviewWanted && !job.within) for (const id of job.reviewScope) if (!job.reported?.has(id)) job.reviewTried.add(id);
+    // Only a block that is a final draft now: a failed one is drafted again by Retry, then reviewed.
+    if (status === 'done' && job.reviewScope && job.reviewWanted && !job.within) for (const id of job.reviewScope) if (!job.reported?.has(id) && job.segs.get(id)?.status === 'final') job.reviewTried.add(id);
+    if (status === 'done' && job.draftsRound && !job.reviewedAny) job.noDrafts = true;
     this.patch(tabId, job, { backoff: [], status, paused: false, counts: count(job.segs), endedAt: this.now(), ...kept, ...(stopError ? { stopError } : {}) });
     this.record(job, status);
     if (status === 'done') queueMicrotask(() => (job.wantRest ? void this.translateRest(tabId) : this.reach(tabId, job)));
@@ -1833,7 +1852,7 @@ export class Jobs {
     const next = job.strategy === REFINE_ID && !job.noDrafts ? lazyWindow(translatable, this.screenOf(tabId, job.docId), {}, this.pinnedOf(tabId, job.docId)) : undefined;
     const pending = [...near].some((id) => job.segs.get(id)?.status === 'pending');
     if (!pending && ![...near].some((id) => next?.has(id) === true && this.unreviewed(job, id, job.segs.get(id)))) return;
-    job.forDrafts = !pending;
+    if (job.strategy === REFINE_ID) job.forDrafts = !pending;
     void this.resume(tabId);
   }
 
@@ -1885,6 +1904,7 @@ export class Jobs {
       ...(outcome === 'started' ? {} : { endedAt: v.endedAt ?? this.now() }),
       outcome,
       strategy: job.strategy,
+      ...(job.unsettled ? { requested: true as const } : {}),
       promptIds: [...job.log.promptIds],
       ...(v.connection?.presetId === undefined ? {} : { presetId: v.connection.presetId }),
       ...(v.model ? { model: v.model } : {}),

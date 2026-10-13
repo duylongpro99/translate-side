@@ -458,6 +458,26 @@ describe('Jobs: Best in lazy mode', () => {
     expect(c.requests.length).toBe(sent);
   });
 
+  it('a screen of code only (nothing translatable on it) neither drops the reviews nor starts rounds without end', async () => {
+    const d = doc(300, 200);
+    d.segments.splice(150, 0, { id: 'code', kind: 'code', text: 'fn main() {}', inlineMarkup: 'fn main() {}', domPath: '/pre[1]', translate: false });
+    const c = client();
+    // A cap, so a loop fails the test instead of hanging it: past it, the route refuses.
+    let starts = 0;
+    const CAP = 12;
+    const refused = { ok: false as const, error: { kind: 'bad_request' as const, message: 'capped' } };
+    const jobs = jobsWith({ translateClient: () => (++starts > CAP ? Promise.resolve(refused) : ok(c)()), lazyAbove: 50 });
+    jobs.setViewport(1, 'd', ['code']);
+    await jobs.start(1, 'd', d);
+    await settle(200);
+    expect(starts).toBeLessThanOrEqual(2);
+    expect(jobs.get(1)?.status).toBe('done');
+    // The round (from the top: the screen names no block of its own) is drafted and reviewed.
+    expect(c.requests.filter(isReview).length).toBeGreaterThan(0);
+    expect(jobs.get(1)?.segs.get('s0')?.refined).toBe(true);
+    expect(jobs.get(1)?.segs.get('s10')?.refined).toBe(true);
+  });
+
   it('a reader who stays inside the round lets every review run', async () => {
     const c = client({ hold: true });
     const records: JobRecord[] = [];
@@ -559,7 +579,8 @@ describe('Jobs: Best across runs', () => {
     await settle(20);
     expect(jobs.get(1)?.status).toBe('cancelled');
     expect(c.requests).toEqual([]);
-    expect(records.map((r) => r.outcome)).toEqual(['cancelled']);
+    // Ended before the answer: the strategy logged is the one asked for, and says so.
+    expect(records.map((r) => [r.outcome, r.strategy, r.requested])).toEqual([['cancelled', 'refine', true]]);
   });
 
   it('a second start while the first waits for the feature check replaces it; the page cost is kept', async () => {
@@ -610,5 +631,32 @@ describe('Jobs: Best across runs', () => {
     await reload.start(1, 'd3', d);
     expect(third.requests).toEqual([]);
     expect(reload.get(1)?.segs.get('s1')?.refined).toBe(true);
+  });
+
+  it('a block that failed is not counted as reviewed: once Retry translates it, the next run reviews it', async () => {
+    const inner = client();
+    let failedOnce = false;
+    const c: LLMClient = {
+      ...inner,
+      async *stream(req) {
+        if (!failedOnce && isTranslate(req) && paragraphs(req).includes(5)) {
+          failedOnce = true;
+          await Promise.resolve();
+          yield { type: 'error', error: { kind: 'bad_request', status: 400, message: 'refused' } };
+          return;
+        }
+        yield* inner.stream(req);
+      },
+    };
+    const jobs = jobsWith({ translateClient: ok(c) });
+    await jobs.start(1, 'd', doc(8));
+    expect(jobs.get(1)?.segs.get('s5')?.status).toBe('failed');
+    await jobs.retrySegment(1, 's5');
+    expect(jobs.get(1)?.segs.get('s5')).toMatchObject({ status: 'final' });
+    expect(jobs.get(1)?.segs.get('s5')?.refined).toBeUndefined();
+    const reviews = inner.requests.filter(isReview).length;
+    await jobs.resume(1);
+    expect(jobs.get(1)?.segs.get('s5')?.refined).toBe(true);
+    expect(inner.requests.filter(isReview).length).toBeGreaterThan(reviews);
   });
 });

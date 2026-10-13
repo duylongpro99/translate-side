@@ -43,6 +43,8 @@ export interface JobRecord {
   endedAt?: number;
   outcome: 'started' | 'done' | 'cancelled' | 'stopped' | 'skipped' | 'replaced';
   strategy: string;
+  /** The run ended before its strategy was settled (the best-mode answer): `strategy` is the one asked for. */
+  requested?: true;
   promptIds: readonly string[];
   presetId?: string;
   model?: string;
@@ -76,6 +78,7 @@ export interface JobEntry {
   chrome: string;
   outcome: JobRecord['outcome'];
   strategy: string;
+  requested?: true;
   promptIds: string[];
   presetId?: string;
   model?: string;
@@ -153,6 +156,7 @@ export function jobEntry(api: Browser, record: JobRecord, sites: boolean): JobEn
     ...v,
     outcome: record.outcome,
     strategy: record.strategy,
+    ...(record.requested ? { requested: true as const } : {}),
     promptIds: [...record.promptIds],
     ...(record.presetId === undefined ? {} : { presetId: presetOf(record.presetId) }),
     ...(record.model ? { model: record.model } : {}),
