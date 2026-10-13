@@ -12,6 +12,9 @@
 // (fake-indexeddb here), then opened again in a new Jobs; it reports the second open's request count
 // (must be 0) and its screen / whole-page render time.
 // Run: pnpm run latency -- [--runs 2] [--scenarios top,middle,middle-old] [--words 3000] [--screen-words 250]
+//      [--strategy single-pass|contextual|refine]
+// `--strategy` runs the jobs with that strategy instead of the panel's (Jobs' strategy seam), so Balanced
+// (contextual) and Best (refine) can be timed alike; a refine run also times its review calls.
 // Key: AIBOX_API_KEY from .env (the default profile's connection, M2-D11/D16). Results go to
 // eval-results/latency-<stamp>.json (gitignored).
 import fs from 'node:fs';
@@ -20,9 +23,9 @@ import { parseArgs } from 'node:util';
 import { IDBFactory } from 'fake-indexeddb';
 import { createClient } from '@/llm';
 import type { LLMClient, NormalizedRequest } from '@/llm/types';
-import type { Segment } from '@/engine/index';
+import { contextual, refine, singlePass, type Segment, type StrategyId } from '@/engine/index';
 import { openTranslationCache, type TranslationCache } from '@/shared/cache';
-import { Jobs, type JobDoc, type JobView } from '@/entrypoints/sidepanel/jobs';
+import { Jobs, PANEL_STRATEGY, type JobDoc, type JobView } from '@/entrypoints/sidepanel/jobs';
 import { DEFAULT_CONNECTION, DEFAULT_PROFILE, withProfileQuirks } from '@/shared/settings';
 
 const ROOT = path.resolve(process.cwd());
@@ -34,8 +37,15 @@ const { values: opt } = parseArgs({
     words: { type: 'string', default: '3000' },
     'screen-words': { type: 'string', default: '250' },
     docs: { type: 'string', default: 'goblog-pipelines,docusaurus-code-blocks,mdn-promise-then' },
+    strategy: { type: 'string', default: PANEL_STRATEGY },
   },
 });
+const STRATEGIES: readonly StrategyId[] = [singlePass.id, contextual.id, refine.id];
+const strategy: StrategyId = (() => {
+  const id = STRATEGIES.find((s) => s === opt.strategy);
+  if (id === undefined) throw new Error(`--strategy expects ${STRATEGIES.join(', ')}, not "${opt.strategy}"`);
+  return id;
+})();
 
 if (fs.existsSync(path.join(ROOT, '.env'))) process.loadEnvFile(path.join(ROOT, '.env'));
 const key = process.env.AIBOX_API_KEY;
@@ -71,7 +81,7 @@ function screenAt(segments: Segment[], from: number): string[] {
 }
 
 interface Call {
-  kind: 'brief' | 'translate';
+  kind: 'brief' | 'translate' | 'review';
   chunkIndex?: number;
   start: number;
   firstText?: number;
@@ -79,14 +89,14 @@ interface Call {
   error?: string;
 }
 
-/** Records each call's timing; the brief call is the one whose user message is the `<document>`. */
+/** Records each call's timing; the brief call is the one whose user message is the `<document>`, a review call's the `<review>`. */
 function timed(inner: LLMClient, calls: Call[], t0: () => number): LLMClient {
   return {
     model: inner.model,
     reasoningReserveTokens: (req) => inner.reasoningReserveTokens(req),
     async *stream(req: NormalizedRequest) {
       const user = req.messages.find((m) => m.role === 'user')?.content ?? '';
-      const call: Call = { kind: user.startsWith('<document>') ? 'brief' : 'translate', ...(req.chunkIndex === undefined ? {} : { chunkIndex: req.chunkIndex }), start: t0() };
+      const call: Call = { kind: user.startsWith('<document>') ? 'brief' : user.startsWith('<review>') ? 'review' : 'translate', ...(req.chunkIndex === undefined ? {} : { chunkIndex: req.chunkIndex }), start: t0() };
       calls.push(call);
       try {
         for await (const e of inner.stream(req)) {
@@ -107,7 +117,7 @@ async function runOnce(scenario: string, segments: Segment[], cache?: Translatio
   let started = 0;
   const t0 = () => Date.now() - started;
   const client = timed(createClient(conn, DEFAULT_PROFILE.model), calls, t0);
-  const jobs = new Jobs({ translateClient: async () => ({ ok: true, client, profile: DEFAULT_PROFILE }), cache });
+  const jobs = new Jobs({ translateClient: async () => ({ ok: true, client, profile: DEFAULT_PROFILE }), cache, strategy });
   jobs.setActive(1);
   const translatable = segments.filter((s) => s.translate);
   const middle = segments.indexOf(translatable[Math.floor(translatable.length / 2)] as Segment);
@@ -152,7 +162,7 @@ async function runOnce(scenario: string, segments: Segment[], cache?: Translatio
 
 const segments = page();
 const words = segments.reduce((n, s) => n + wordsOf(s), 0);
-console.log(`page: ${segments.length} segments, ${words} words; profile ${DEFAULT_PROFILE.id} (c${DEFAULT_PROFILE.chunkTokens}, ×${DEFAULT_PROFILE.maxConcurrency})`);
+console.log(`page: ${segments.length} segments, ${words} words; profile ${DEFAULT_PROFILE.id} (c${DEFAULT_PROFILE.chunkTokens}, ×${DEFAULT_PROFILE.maxConcurrency}); strategy ${strategy}`);
 const results = [];
 for (let r = 0; r < Number(opt.runs); r++) {
   for (const scenario of (opt.scenarios as string).split(',')) {
@@ -175,5 +185,5 @@ for (let r = 0; r < Number(opt.runs); r++) {
 }
 const out = path.join(ROOT, 'eval-results', `latency-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
 fs.mkdirSync(path.dirname(out), { recursive: true });
-fs.writeFileSync(out, JSON.stringify({ words, segments: segments.length, profile: DEFAULT_PROFILE.id, results }, null, 2));
+fs.writeFileSync(out, JSON.stringify({ words, segments: segments.length, profile: DEFAULT_PROFILE.id, strategy, results }, null, 2));
 console.log(`written ${path.relative(ROOT, out)}`);
