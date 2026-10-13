@@ -279,6 +279,39 @@ test.describe('Best', () => {
     expect(await refined(panel).count()).toBe(0);
   });
 
+  test('Review with is set in Options, the header switches Balanced to Best on that model, and back to Balanced with no call', async ({ extension, mock, context }) => {
+    await extension.seed({ reviewWith: true });
+    const stored = () => extension.worker.evaluate(async () => (await chrome.storage.sync.get('routing')).routing as { review?: string });
+    const options = await context.newPage();
+    await options.goto(`chrome-extension://${extension.id}/options.html`);
+    const review = options.locator('#route-review');
+    await expect(review).toHaveValue('mock-review');
+    await review.selectOption('');
+    await expect.poll(async () => (await stored()).review).toBeUndefined();
+    await review.selectOption('mock-review');
+    await expect.poll(async () => (await stored()).review).toBe('mock-review');
+    await options.close();
+
+    const { panel } = await translated(extension);
+    expect(mock.calls.filter((c) => c.kind === 'review')).toEqual([]);
+    await expect(panel.getByTestId('quality-mode')).toHaveValue('balanced');
+    await panel.waitForTimeout(500);
+
+    await panel.getByTestId('quality-mode').selectOption('best');
+    await expect.poll(() => mock.calls.filter((c) => c.kind === 'review').length).toBeGreaterThan(0);
+    expect(await jobSettled(panel)).toBe('done');
+    expect(new Set(mock.calls.filter((c) => c.kind === 'review').map((c) => c.model))).toEqual(new Set([REVIEW_MODEL]));
+    await expect(refined(panel).first()).toBeVisible();
+    await panel.waitForTimeout(500);
+
+    const sent = mock.calls.length;
+    await panel.getByTestId('quality-mode').selectOption('balanced');
+    await expect.poll(async () => (await blockStatuses(panel)).final ?? 0).toBeGreaterThan(0);
+    expect(await jobSettled(panel)).toBe('done');
+    expect(await refined(panel).count()).toBe(0);
+    expect(mock.calls.length).toBe(sent);
+  });
+
   test('a reload of a refined page makes no call and shows the markers, with the review on another model', async ({ extension, mock }) => {
     await extension.seed({ quality: { mode: 'best' }, reviewWith: true });
     const first = await translated(extension);

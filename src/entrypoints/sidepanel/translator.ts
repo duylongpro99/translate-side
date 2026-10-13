@@ -7,7 +7,9 @@
 import type { browser } from 'wxt/browser';
 import { i18n } from '#i18n';
 import { chromeLanguageDetector, detectionSample, detectSourceLanguage, MIXED_LANGUAGE_DETECTION, sameLanguage, segmentsInLanguage, type LanguageDetectorPort } from '@/shared/language';
-import type { GlossaryEntry, StrategyId } from '@/engine/types';
+import type { GlossaryEntry } from '@/engine/types';
+import { featureAvailable } from '@/shared/features';
+import { QUALITY_KEY, readQuality, requestedStrategy, type Quality } from '@/shared/quality';
 import { GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences, SECRET_PREFIX, type Preferences } from '@/shared/settings';
 import type { ReadInfo, SessionHooks } from './controller.ts';
 import type { ExtractResult } from '@/shared/protocol';
@@ -81,34 +83,12 @@ export interface TranslatorOptions {
 interface Settings {
   prefs: Preferences;
   glossary: GlossaryEntry[];
-  quality: Pick<JobDoc, 'strategy' | 'keepDraftsOnScreen'>;
+  quality: Quality;
 }
 
 async function readSettings(api: Browser): Promise<Settings> {
   const [prefs, glossary, quality] = await Promise.all([readPreferences(api), readGlossary(api), readQuality(api)]);
   return { prefs, glossary, quality };
-}
-
-/** The sync item of the quality setting: `{ mode, strategy?, keepDraftsOnScreen }`, its own item so v1.0 builds never erase it. */
-const QUALITY_KEY = 'quality';
-const MODE_STRATEGIES: Readonly<Record<string, StrategyId>> = { fast: 'single-pass', balanced: 'contextual', best: 'refine' };
-const STRATEGIES: ReadonlySet<string> = new Set(Object.values(MODE_STRATEGIES));
-
-/**
- * The strategy a page job asks for (the advanced override, else the mode's) and whether refined
- * text waits for its block to leave the screen. Unknown values, or none, ask for nothing: the
- * panel's default. Whether `refine` may run is decided when the job starts (Jobs.start).
- */
-async function readQuality(api: Browser): Promise<Settings['quality']> {
-  try {
-    const raw: unknown = (await api.storage.sync.get(QUALITY_KEY))[QUALITY_KEY];
-    if (typeof raw !== 'object' || raw === null) return {};
-    const { mode, strategy, keepDraftsOnScreen } = raw as Record<string, unknown>;
-    const requested = typeof strategy === 'string' && STRATEGIES.has(strategy) ? strategy : typeof mode === 'string' ? MODE_STRATEGIES[mode] : undefined;
-    return { ...(requested === undefined ? {} : { strategy: requested }), ...(keepDraftsOnScreen === true ? { keepDraftsOnScreen: true } : {}) };
-  } catch {
-    return {};
-  }
 }
 
 /** Why "Continue anyway" could not go on (review 3 #3): the bar shows it instead of nothing. */
@@ -132,7 +112,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   };
   // Chrome's Translator, the `basic` fallback's translator (M5-E7); undefined in a browser without it.
   const mt = 'mt' in deps ? deps.mt : chromeTranslator();
-  const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), ...deps, mt });
+  const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), featureAvailable, ...deps, mt });
   // No cache: a selection is a one-off, and its text is not kept beyond the session.
   // Single-pass: one request per chunk, never the contextual brief (analyze) call for a selection.
   const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target), ...deps, mt, strategy: 'single-pass', cache: undefined, lazyAbove: Infinity, onJobRecord: undefined });
@@ -155,7 +135,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
    */
   const docFor = async ({ prefs, glossary, quality }: Settings, url: string, title: string, pageLang: string | undefined, segments: JobDoc['segments']): Promise<{ doc: JobDoc; skip: boolean }> => {
     const detection = await detectSourceLanguage({ override: prefs.sourceLang === 'auto' ? undefined : prefs.sourceLang, sample: detectionSample(segments), pageLang }, detector);
-    const base = { url, title, ...(pageLang === undefined ? {} : { pageLang }), sourceLang: detection.lang, targetLang: prefs.targetLang, detection, segments, style: prefs.style, gloss: prefs.gloss, glossary, budgetTokens: prefs.budgetTokens, media: { captions: prefs.captions, altText: prefs.altText }, ...quality };
+    const base = { url, title, ...(pageLang === undefined ? {} : { pageLang }), sourceLang: detection.lang, targetLang: prefs.targetLang, detection, segments, style: prefs.style, gloss: prefs.gloss, glossary, budgetTokens: prefs.budgetTokens, media: { captions: prefs.captions, altText: prefs.altText }, strategy: requestedStrategy(quality), ...(quality.keepDraftsOnScreen ? { keepDraftsOnScreen: true } : {}) };
     if (!mixed) return { doc: base, skip: sameLanguage(detection.lang, prefs.targetLang) };
     const keep = await segmentsInLanguage(segments, prefs.targetLang, detector);
     const left = segments.some((s) => s.translate && !keep.has(s.id));
@@ -169,7 +149,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
    * back when the job was not rebuilt after all.
    */
   const used = new Map<number, string>();
-  const settingsKey = (settings: Settings) => JSON.stringify([settings.prefs, settings.glossary]);
+  const settingsKey = (settings: Settings) => JSON.stringify([settings.prefs, settings.glossary, settings.quality]);
   const mark = (tabId: number, key: string) => {
     const before = used.get(tabId);
     used.set(tabId, key);
@@ -205,6 +185,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   const changes = (doc: JobDoc, next: JobDoc) => ({
     languages: next.targetLang !== doc.targetLang || next.sourceLang !== doc.sourceLang,
     output: next.style !== doc.style || next.gloss !== doc.gloss || next.media?.captions !== doc.media?.captions || next.media?.altText !== doc.media?.altText || JSON.stringify(next.glossary ?? []) !== JSON.stringify(doc.glossary ?? []),
+    quality: next.strategy !== doc.strategy || (next.keepDraftsOnScreen ?? false) !== (doc.keepDraftsOnScreen ?? false),
   });
 
   /** The document each tab's session holds now: a job starts only for a page that is still there. */
@@ -234,9 +215,9 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       const got = await prepare(tabId, settings, doc);
       if (got === undefined) return;
       const { prepared: next, unmark } = got;
-      const { languages, output } = changes(doc, next.doc);
+      const { languages, output, quality } = changes(doc, next.doc);
       // Same job either way (e.g. an unrelated preference): the key stays, no detection next time.
-      if (!languages && !output) return;
+      if (!languages && !output && !quality) return;
       if (stillThere()) void begin(tabId, docId, next, { keepCost: true, keepBrief: !languages });
       else unmark();
     });
@@ -261,8 +242,8 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       if (got === undefined) return;
       const { prepared: next, unmark } = got;
       if (jobs.docOf(tabId) !== docId || jobs.get(tabId)?.status === 'running') return unmark();
-      const { languages, output } = changes(doc, next.doc);
-      if (!languages && !output) return void jobs.resume(tabId);
+      const { languages, output, quality } = changes(doc, next.doc);
+      if (!languages && !output && !quality) return void jobs.resume(tabId);
       void jobs.start(tabId, docId, next.doc, { keepCost: true, keepBrief: true });
     });
   };
@@ -612,7 +593,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       if (tabId !== undefined) refresh(tabId);
     };
     const onSync = (changes: Record<string, unknown>) => {
-      if (PREFS_KEY in changes) refreshActive();
+      if (PREFS_KEY in changes || QUALITY_KEY in changes) refreshActive();
     };
     // The lists as this device keeps them: in sync, or here when too large to sync (sync-quota.ts).
     const onList = (key: string, value: unknown) => {

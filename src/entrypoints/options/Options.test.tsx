@@ -2,7 +2,7 @@
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { IDBFactory } from 'fake-indexeddb';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CONNECTION, DEFAULT_PROFILE, GLOSSARY_KEY } from '@/shared/settings';
 import { overflowNotice, SYNC_QUOTA_BYTES_PER_ITEM, syncItemBytes } from '@/shared/sync-quota';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
@@ -10,6 +10,12 @@ import { openTranslationCache, type TranslationCache } from '@/shared/cache';
 import { dayKey, estimateSpend, monthKey } from '@/shared/spend';
 import { formatUsd } from '@/shared/cost';
 import { Options } from './Options.tsx';
+
+const flags = vi.hoisted(() => ({ released: true }));
+vi.mock('@/shared/quality', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/shared/quality')>();
+  return Object.defineProperty({ ...real }, 'BEST_MODE_RELEASED', { get: () => flags.released, enumerable: true });
+});
 
 type Api = Parameters<typeof Options>[0]['api'];
 
@@ -54,6 +60,7 @@ function fakeApi({ grant = true, answer = Promise.resolve() } = {}) {
 
 let root: HTMLElement;
 beforeEach(() => {
+  flags.released = true;
   root = document.createElement('div');
   document.body.replaceChildren(root);
 });
@@ -554,5 +561,57 @@ describe('options: keyboard shortcuts (plan M5-E10)', () => {
     expect(text).toContain('chrome://extensions/shortcuts');
     act(() => root.querySelector<HTMLButtonElement>('[data-testid="shortcut-settings"]')?.click());
     expect(g.log).toContain('tab chrome://extensions/shortcuts');
+  });
+});
+
+describe('options: translation quality', () => {
+  const input = (id: string) => root.querySelector(`#${id}`) as HTMLInputElement;
+  const change = (el: HTMLElement) => act(() => void el.dispatchEvent(new Event('change', { bubbles: true })));
+
+  it('shows Balanced selected by default, with no lock or Pro wording anywhere', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => root.querySelector('#quality-balanced') !== null);
+    expect([...root.querySelectorAll('[data-testid=quality-modes] input')].map((i) => (i as HTMLInputElement).value)).toEqual(['fast', 'balanced', 'best']);
+    expect(input('quality-balanced').checked).toBe(true);
+    expect(root.textContent).not.toMatch(/Pro\b/);
+    expect(f.sync.has('quality')).toBe(false);
+  });
+
+  it('saves a mode to its own item, and a mode clears the override', async () => {
+    const f = fakeApi();
+    f.sync.set('quality', { mode: 'balanced', strategy: 'single-pass', keepDraftsOnScreen: true });
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => root.querySelector('#quality-fast') !== null);
+    expect((root.querySelector('#quality-strategy') as HTMLSelectElement).value).toBe('single-pass');
+    act(() => input('quality-best').click());
+    await waitFor(() => (f.sync.get('quality') as { mode: string } | undefined)?.mode === 'best');
+    expect(f.sync.get('quality')).toEqual({ mode: 'best', keepDraftsOnScreen: true });
+    expect((root.querySelector('#quality-strategy') as HTMLSelectElement).value).toBe('');
+  });
+
+  it('the advanced section sets the strategy and keep-drafts through the same item, and leaves the preferences alone', async () => {
+    const f = fakeApi();
+    f.sync.set('prefs', { targetLang: 'vi', sourceLang: 'auto' });
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => root.querySelector('#quality-strategy') !== null);
+    const select = root.querySelector('#quality-strategy') as HTMLSelectElement;
+    expect([...select.options].map((o) => o.value)).toEqual(['', 'single-pass', 'contextual', 'refine']);
+    select.value = 'refine';
+    change(select);
+    const keep = input('quality-keep-drafts');
+    act(() => keep.click());
+    await waitFor(() => (f.sync.get('quality') as { keepDraftsOnScreen: boolean } | undefined)?.keepDraftsOnScreen === true);
+    expect(f.sync.get('quality')).toEqual({ mode: 'balanced', strategy: 'refine', keepDraftsOnScreen: true });
+    expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'auto' });
+  });
+
+  it('with Best not released it is offered nowhere, not as a mode and not as a strategy', async () => {
+    flags.released = false;
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => root.querySelector('#quality-fast') !== null);
+    expect(root.querySelector('#quality-best')).toBeNull();
+    expect([...(root.querySelector('#quality-strategy') as HTMLSelectElement).options].map((o) => o.value)).toEqual(['', 'single-pass', 'contextual']);
   });
 });

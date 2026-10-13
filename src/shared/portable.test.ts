@@ -3,6 +3,7 @@ import { applyImport, buildExport, EXPORT_FORMAT, EXPORT_VERSION, MAX_IMPORT_BYT
 import { readProviderSettings, saveConnection, saveProfile, saveRouting } from './providers.ts';
 import { readApiKey, saveApiKey, savePreferences, saveGlossary, readPreferences, readGlossary, DEFAULT_PROFILE } from './settings.ts';
 import { readSiteLists } from './sites.ts';
+import { QUALITY_KEY, readQuality, updateQuality } from './quality.ts';
 
 type Api = Parameters<typeof buildExport>[0];
 
@@ -336,5 +337,54 @@ describe('routing round trip (N4)', () => {
     await saveConnection(t.api, conn({ baseUrl: 'https://llm.example.com/v1/abcdefghijklmnopqrstuvwxyz0123456789' }));
     const out = await buildExport(t.api);
     expect(out.suspects).toEqual(['Company gateway: base URL']);
+  });
+});
+
+describe('the quality setting travels with the file', () => {
+  const file = (settings: Record<string, unknown>, extra: Record<string, unknown> = {}) => JSON.stringify({ format: EXPORT_FORMAT, formatVersion: EXPORT_VERSION, settings, ...extra });
+  const planOf = (text: string): ImportPlan => {
+    const parsed = parseImport(text);
+    if (!parsed.ok) throw new Error(parsed.error);
+    return parsed.plan;
+  };
+
+  it('is exported next to the preferences, and imports into a fresh profile', async () => {
+    const src = fakeApi();
+    await updateQuality(src.api, { mode: 'best', strategy: 'contextual', keepDraftsOnScreen: true });
+    const out = await buildExport(src.api);
+    expect(out.file.settings.quality).toEqual({ mode: 'best', strategy: 'contextual', keepDraftsOnScreen: true });
+    expect(out.file.formatVersion).toBe(1);
+
+    const fresh = fakeApi();
+    const report = await applyImport(fresh.api, planOf(out.json), { withKeys: false });
+    expect(report.quality).toBe(true);
+    expect(await readQuality(fresh.api)).toEqual({ mode: 'best', strategy: 'contextual', keepDraftsOnScreen: true });
+    expect(fresh.sync.has(QUALITY_KEY)).toBe(true);
+  });
+
+  it('a file from before it existed still imports and leaves the stored setting alone', async () => {
+    const t = fakeApi();
+    await updateQuality(t.api, { mode: 'fast' });
+    const plan = planOf(file({ prefs: { targetLang: 'de' } }));
+    expect(plan.quality).toBeUndefined();
+    const report = await applyImport(t.api, plan, { withKeys: false });
+    expect(report.quality).toBe(false);
+    expect((await readPreferences(t.api)).targetLang).toBe('de');
+    expect((await readQuality(t.api)).mode).toBe('fast');
+  });
+
+  it('reads only the fields it knows, so a file with an extra field imports at the same format version', () => {
+    expect(EXPORT_VERSION).toBe(1);
+    const plan = planOf(file({ prefs: { targetLang: 'de' }, somethingNew: { a: 1 } }, { alsoNew: true }));
+    expect(plan.prefs).toEqual({ targetLang: 'de' });
+    expect(Object.keys(plan).sort()).toEqual(['connections', 'keys', 'notes', 'prefs', 'profiles', 'siteRules']);
+  });
+
+  it('cleans an imported setting, keeps an imported refine as written, and says when it is unreadable', () => {
+    expect(planOf(file({ quality: { mode: 'turbo', strategy: 'magic', keepDraftsOnScreen: 'yes' } })).quality).toEqual({ mode: 'balanced', keepDraftsOnScreen: false });
+    expect(planOf(file({ quality: { mode: 'fast', strategy: 'refine', keepDraftsOnScreen: false } })).quality).toEqual({ mode: 'fast', strategy: 'refine', keepDraftsOnScreen: false });
+    const bad = planOf(file({ quality: 'best' }));
+    expect(bad.quality).toBeUndefined();
+    expect(bad.notes.join(' ')).toContain('quality');
   });
 });

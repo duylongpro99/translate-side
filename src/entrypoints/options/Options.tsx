@@ -25,6 +25,7 @@ import {
   type Preferences,
   type ProviderConnection,
 } from '@/shared/settings';
+import { BEST_MODE_RELEASED, QUALITY_MODES, QUALITY_STRATEGIES, readQuality, updateQuality, type Quality, type QualityMode, type QualityStrategy } from '@/shared/quality';
 import { languageName } from '@/shared/language-name';
 import { onProviderSettingsChanged, readProviderSettings, resolveRoute, type ProviderSettings } from '@/shared/providers';
 import { isOverflowed, onListChanged, overflowNotice } from '@/shared/sync-quota';
@@ -200,6 +201,66 @@ function StyleSection({ api }: { api: Browser }) {
       <p class="opt__hint" data-testid="budget-hint">
         {i18n.t('options.style.budgetHint')}
       </p>
+    </section>
+  );
+}
+
+const modeText = (mode: QualityMode): { label: string; hint: string } =>
+  mode === 'fast'
+    ? { label: i18n.t('options.quality.fast'), hint: i18n.t('options.quality.fastHint') }
+    : mode === 'balanced'
+      ? { label: i18n.t('options.quality.balanced'), hint: i18n.t('options.quality.balancedHint') }
+      : { label: i18n.t('options.quality.best'), hint: i18n.t('options.quality.bestHint') };
+const strategyText = (strategy: QualityStrategy): string =>
+  strategy === 'single-pass' ? i18n.t('options.quality.strategySinglePass') : strategy === 'contextual' ? i18n.t('options.quality.strategyContextual') : i18n.t('options.quality.strategyRefine');
+
+function QualitySection({ api }: { api: Browser }) {
+  const [quality, setQuality] = useState<Quality | undefined>();
+  useEffect(() => {
+    void readQuality(api).then(setQuality);
+  }, []);
+  if (!quality) return null;
+  // Queued on what was stored last, like the preferences; `strategy: undefined` clears the override.
+  const update = (patch: Partial<Quality>) => {
+    setQuality({ ...quality, ...patch });
+    void updateQuality(api, patch);
+  };
+  const modes = QUALITY_MODES.filter((m) => m !== 'best' || BEST_MODE_RELEASED);
+  const shown = quality.mode === 'best' && !BEST_MODE_RELEASED ? 'balanced' : quality.mode;
+  const strategies = QUALITY_STRATEGIES.filter((x) => x !== 'refine' || BEST_MODE_RELEASED);
+  return (
+    <section class="opt__section" aria-labelledby="quality-h">
+      <h2 id="quality-h">{i18n.t('options.quality.title')}</h2>
+      <div role="radiogroup" aria-label={i18n.t('options.quality.mode')} data-testid="quality-modes">
+        {modes.map((m) => (
+          <div class="opt__row" key={m}>
+            <input id={`quality-${m}`} type="radio" name="quality-mode" value={m} checked={shown === m} onChange={() => update({ mode: m, strategy: undefined })} />
+            <label for={`quality-${m}`}>{modeText(m).label}</label>
+            <span class="opt__hint">{modeText(m).hint}</span>
+          </div>
+        ))}
+      </div>
+      <p class="opt__hint">{i18n.t('options.quality.retranslates')}</p>
+      <details data-testid="quality-advanced" open={quality.strategy !== undefined || quality.keepDraftsOnScreen}>
+        <summary>{i18n.t('options.quality.advanced')}</summary>
+        <div class="opt__row">
+          <label for="quality-strategy">{i18n.t('options.quality.strategy')}</label>
+          <select id="quality-strategy" value={quality.strategy ?? ''} onChange={(e) => update({ strategy: ((v) => (v === '' ? undefined : (v as QualityStrategy)))((e.target as HTMLSelectElement).value) })}>
+            <option value="">{i18n.t('options.quality.strategyMode')}</option>
+            {strategies.map((x) => (
+              <option key={x} value={x}>
+                {strategyText(x)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p class="opt__hint">{i18n.t('options.quality.strategyHint')}</p>
+        <div class="opt__row">
+          <input id="quality-keep-drafts" type="checkbox" checked={quality.keepDraftsOnScreen} onChange={(e) => update({ keepDraftsOnScreen: (e.target as HTMLInputElement).checked })} />
+          <label for="quality-keep-drafts">{i18n.t('options.quality.keepDrafts')}</label>
+        </div>
+        <p class="opt__hint">{i18n.t('options.quality.keepDraftsHint')}</p>
+      </details>
     </section>
   );
 }
@@ -740,6 +801,7 @@ export function Options({ api, cache = openTranslationCache(), adapterFor }: { a
       <ProvidersSection api={api} {...(adapterFor ? { adapterFor } : {})} />
       <LanguageSection api={api} />
       <StyleSection api={api} />
+      <QualitySection api={api} />
       <GlossarySection api={api} />
       <SitesSection api={api} />
       <ShortcutsSection api={api} />

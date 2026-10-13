@@ -41,6 +41,18 @@ panel:
     cancel: Cancel
     retranslatePage: ↻ Retranslate page
     retranslatePageTitle: Translate the whole page again, skipping saved translations
+    qualityLabel: Quality
+    quality:
+      fast: Fast
+      balanced: Balanced
+      best: Best
+    qualityTitle:
+      fast: One pass, the lowest cost
+      balanced: Reads the page first, then translates with its context
+      best: Translates, then a second look fixes faults in each block
+    qualityOverride: "Set to $1 in settings"
+    proOption: "$1 (Pro)"
+    qualityLocked: Best is part of Pro.
   switcher:
     label: Translate this tab with
     selectTitle: $1 (applies to this tab only; your default stays the same)
@@ -303,6 +315,25 @@ options:
     altText: "Translate image descriptions (alt text)"
     mediaHint: "Image descriptions are page text too: with this on they are sent to your provider with the rest of the page. Off, they are not shown in the panel and never sent."
     budgetHint: "Input and output tokens for one page, every model call included; 0 for no limit, empty for the default. What is left untranslated when it runs out is marked as skipped."
+  quality:
+    title: "Translation quality"
+    mode: "Quality"
+    fast: "Fast"
+    fastHint: "One pass over each part of the page: the lowest cost and the quickest."
+    balanced: "Balanced"
+    balancedHint: "Reads the page first, then translates with what it learned. The default."
+    best: "Best"
+    bestHint: "Translates like Balanced, then a second look fixes faults in each block. It costs more."
+    advanced: "Advanced"
+    strategy: "Strategy"
+    strategyMode: "The mode's own"
+    strategySinglePass: "Single pass"
+    strategyContextual: "Contextual"
+    strategyRefine: "Refine (draft, then review)"
+    strategyHint: "Pick a strategy to use instead of the mode's. Choosing a mode in the panel header clears it."
+    keepDrafts: "Keep drafts on screen until the block scrolls away"
+    keepDraftsHint: "Best only. A refined block that is on screen keeps its draft until you scroll past it, so the text you are reading does not change under you."
+    retranslates: "A change retranslates the page open in the panel."
   glossary:
     duplicate: "\"$1\" is already in the glossary."
     title: "Personal glossary"
@@ -433,6 +464,7 @@ options:
       1: "Per-site models: 1 rule added or replaced."
       n: "Per-site models: $1 rules added or replaced."
     prefs: "Preferences: the ones in the file replace yours."
+    quality: "Quality: the mode and options in the file replace yours."
     glossary:
       1: "Glossary: 1 entry added or replaced; yours stay."
       n: "Glossary: $1 entries added or replaced; yours stay."
@@ -533,6 +565,10 @@ options:
     briefSaved: "Document brief route saved."
     sameAsTranslate: "Same as translate"
     briefHint: "The document brief is one short call per page that finds its topic, tone and key terms; a cheaper model often does it well."
+    reviewWith: "Review with"
+    reviewSaved: "Review route saved."
+    reviewHint: "Best's second look at each block. Keep it on the translate model, or pick a stronger one for review only."
+    roleReview: "Review"
     needsLocal: "Local only needs a model on this device (Ollama, LM Studio). Add one above first."
     localOnlyPick: "$1 is local only: pick a model on this device, or untick Local only first."
     hasRule: "$1 already has a rule."
@@ -651,6 +687,7 @@ options:
     skipProfile: "Skipped a model profile that is not valid ({id})."
     ignorePref: "Ignored the preference \"{name}\": not a valid value."
     skipRouting: "Skipped the routing: it names no valid model to translate with."
+    skipQuality: "Skipped the quality setting: it could not be read."
     dropRoutingIds: "Dropped model ids in the routing that are not valid."
     cappedConnections: "The file lists {count} connections; only the first {max} were read."
     cappedProfiles: "The file lists {count} model profiles; only the first {max} were read."

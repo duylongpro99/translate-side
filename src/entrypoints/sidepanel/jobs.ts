@@ -31,6 +31,7 @@
 import { BASIC_ID, BASIC_SWITCH_STAGE, DRAFTS_STAGE, REFINE_ID, REVIEWED_REVISION, basic, briefCacheKey, contextual, estimateTokens, createDefaultPromptRegistry, createEngine, decideRetry, explain, normalizeBrief, refine, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy, type BasicSwitchInfo } from '@/engine/index';
 import type { ReviewReport, SnippetRequest } from '@/engine/types';
 import type { LLMClient, LLMError, LLMErrorKind, MTClient, NormalizedRequest } from '@/llm/types';
+import { BEST_MODE_RELEASED } from '@/shared/quality';
 import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
 import { costUsd, formatUsd, type UsageTotals } from '@/shared/cost';
 import type { Detection } from '@/shared/language';
@@ -878,7 +879,9 @@ export class Jobs {
     const { resume = false, keepCost = false, keepBrief = false, fresh = false } = options;
     // The one async read of the strategy, awaited with the route below: the job is set up (and a
     // running one replaced) at once, as for any run; nothing reads `job.strategy` before it is settled.
-    const requested = this.deps.strategy ?? doc.strategy ?? PANEL_STRATEGY;
+    const asked = this.deps.strategy ?? doc.strategy ?? PANEL_STRATEGY;
+    // A build that does not release Best runs Balanced for a refine request, whatever its source.
+    const requested = asked === REFINE_ID && !BEST_MODE_RELEASED ? contextual.id : asked;
     const access = requested === REFINE_ID ? this.bestMode() : undefined;
     const unsettled = access !== undefined;
     const prev = this.jobs.get(tabId);

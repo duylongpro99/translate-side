@@ -198,6 +198,15 @@ function usePrefs(store: PrefsStore | undefined) {
   return prefs;
 }
 
+function useQuality(store: PrefsStore | undefined) {
+  const [quality, setQuality] = useState(() => store?.quality());
+  useEffect(() => {
+    setQuality(store?.quality());
+    return store?.subscribeQuality(setQuality);
+  }, [store]);
+  return quality;
+}
+
 export function App({ controller, translator }: { controller: PanelController; translator?: TranslatorProps }) {
   const [view, setView] = useState<PanelView>(controller.view);
   const [tabId, setTabId] = useState<number | undefined>(controller.tabId);
@@ -215,6 +224,7 @@ export function App({ controller, translator }: { controller: PanelController; t
   const offer = useOffer(translator?.offers, tabId, view.kind === 'ready' ? view.docId : undefined);
   const privacy = usePrivacy(translator?.privacy);
   const prefs = usePrefs(translator?.prefs);
+  const quality = useQuality(translator?.prefs);
   const routed = useRouted(translator, tabId, view.kind === 'ready' ? view.result.url : undefined, job);
   const [switcherVersion, setSwitcherVersion] = useState(0);
   const switcherState = useSwitcher(translator, tabId, view.kind === 'ready' ? view.result.url : undefined, job, switcherVersion);
@@ -275,17 +285,18 @@ export function App({ controller, translator }: { controller: PanelController; t
    * that listener (translator.ts refresh), so the switch, an explicit ask, restarts it here.
    */
   const [prefsError, setPrefsError] = useState(false);
-  const switchPrefs = (patch: Parameters<PrefsStore['update']>[0]) => {
+  const switchSetting = (save: Promise<unknown> | undefined) => {
     const status = job?.status;
     setPrefsError(false);
-    void translator?.prefs
-      ?.update(patch)
-      .then(() => {
+    void save
+      ?.then(() => {
         if (status === 'cancelled') pageActions?.resume();
       })
       // The store put the saved value back; say why the switch did not stick.
       .catch(() => setPrefsError(true));
   };
+  const switchPrefs = (patch: Parameters<PrefsStore['update']>[0]) => switchSetting(translator?.prefs?.update(patch));
+  const switchQuality = (patch: Parameters<PrefsStore['updateQuality']>[0]) => switchSetting(translator?.prefs?.updateQuality(patch));
 
   const openOptions = () => {
     void browser.runtime.openOptionsPage();
@@ -330,7 +341,7 @@ export function App({ controller, translator }: { controller: PanelController; t
             ✕
           </button>
         </div>
-        {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} routedModel={routed?.model} switcher={switcherActions} actions={job ? pageActions : undefined} onPrefs={switchPrefs} error={prefsError ? i18n.t('panel.header.prefsFailed') : undefined} /> : null}
+        {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} quality={quality} routedModel={routed?.model} switcher={switcherActions} actions={job ? pageActions : undefined} onPrefs={switchPrefs} onQuality={switchQuality} error={prefsError ? i18n.t('panel.header.prefsFailed') : undefined} /> : null}
       </header>
       {help ? <ShortcutList id="shortcuts" onClose={closeHelp} /> : null}
       {offerSetup ? (

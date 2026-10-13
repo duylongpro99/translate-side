@@ -1,33 +1,91 @@
-// The preferences as the panel header shows and switches them (plan M3-E6): target language and
-// style mode. A switch writes storage.sync like the options page does; the translator's settings
-// listener then translates the page again (from the cache where it can, translator.ts refresh).
+// The preferences and the quality setting as the panel header shows and switches them (plan
+// M3-E6): target language, style mode and quality mode. A switch writes storage.sync like the
+// options page does; the translator's settings listener then translates the page again (from the
+// cache where it can, translator.ts refresh).
 import type { browser } from 'wxt/browser';
+import { readQuality, updateQuality, QUALITY_KEY, type Quality } from '@/shared/quality';
 import { PREFS_KEY, readPreferences, updatePreferences, type Preferences } from '@/shared/settings';
 
 type Browser = typeof browser;
 
+/** One stored value kept in step with storage.sync: read once subscribed, shown at once on a write, put back when it fails. */
+class Watched<T> {
+  private value: T | undefined;
+  private readonly listeners = new Set<(value: T) => void>();
+
+  constructor(
+    private readonly read: () => Promise<T>,
+    private readonly write: (patch: Partial<T>) => Promise<T>,
+  ) {}
+
+  get(): T | undefined {
+    return this.value;
+  }
+
+  subscribe(fn: (value: T) => void, start: () => void): () => void {
+    this.listeners.add(fn);
+    start();
+    return () => this.listeners.delete(fn);
+  }
+
+  async update(patch: Partial<T>): Promise<T> {
+    const before = this.value;
+    if (before) this.set({ ...before, ...patch });
+    try {
+      const next = await this.write(patch);
+      this.set(next);
+      return next;
+    } catch (err) {
+      const stored = await this.read().catch(() => before);
+      if (stored) this.set(stored);
+      throw err;
+    }
+  }
+
+  reload(): void {
+    this.read()
+      .then((value) => this.set(value))
+      .catch(() => {});
+  }
+
+  private set(value: T): void {
+    this.value = value;
+    for (const fn of this.listeners) fn(value);
+  }
+}
+
 export class PrefsStore {
-  private value: Preferences | undefined;
-  private readonly listeners = new Set<(prefs: Preferences) => void>();
+  private readonly preferences: Watched<Preferences>;
+  private readonly qualitySetting: Watched<Quality>;
   private watching = false;
 
-  constructor(private readonly api: Browser) {}
+  constructor(private readonly api: Browser) {
+    this.preferences = new Watched(
+      () => readPreferences(api),
+      (patch) => updatePreferences(api, patch),
+    );
+    this.qualitySetting = new Watched(
+      () => readQuality(api),
+      (patch) => updateQuality(api, patch),
+    );
+  }
 
   get(): Preferences | undefined {
-    return this.value;
+    return this.preferences.get();
+  }
+
+  quality(): Quality | undefined {
+    return this.qualitySetting.get();
   }
 
   /** Reads the stored preferences on the first subscription, and follows their changes. */
   subscribe(fn: (prefs: Preferences) => void): () => void {
-    this.listeners.add(fn);
-    if (!this.watching) {
-      this.watching = true;
-      this.api.storage.sync.onChanged.addListener((changes: Record<string, unknown>) => {
-        if (PREFS_KEY in changes) this.reload();
-      });
-      this.reload();
-    }
-    return () => this.listeners.delete(fn);
+    return this.preferences.subscribe(fn, () => this.start());
+  }
+
+  /** The quality setting, read and followed the same way. */
+  subscribeQuality(fn: (quality: Quality) => void): () => void {
+    return this.qualitySetting.subscribe(fn, () => this.start());
   }
 
   /**
@@ -35,28 +93,27 @@ export class PrefsStore {
    * write that fails puts the stored preferences back on screen and rejects, so a switch never
    * shows a language or style that was not saved.
    */
-  async update(patch: Partial<Preferences>): Promise<Preferences> {
-    const before = this.value;
-    if (before) this.set({ ...before, ...patch });
-    try {
-      const next = await updatePreferences(this.api, patch);
-      this.set(next);
-      return next;
-    } catch (err) {
-      const stored = await readPreferences(this.api).catch(() => before);
-      if (stored) this.set(stored);
-      throw err;
-    }
+  update(patch: Partial<Preferences>): Promise<Preferences> {
+    return this.preferences.update(patch);
   }
 
-  private reload(): void {
-    readPreferences(this.api)
-      .then((prefs) => this.set(prefs))
-      .catch(() => {});
+  /** The same for the quality setting (quality.ts updateQuality); `strategy: undefined` clears the override. */
+  updateQuality(patch: Partial<Quality>): Promise<Quality> {
+    return this.qualitySetting.update(patch);
   }
 
-  private set(prefs: Preferences): void {
-    this.value = prefs;
-    for (const fn of this.listeners) fn(prefs);
+  private start(): void {
+    if (this.watching) return;
+    this.watching = true;
+    this.api.storage.sync.onChanged.addListener((changes: Record<string, unknown>) => {
+      if (PREFS_KEY in changes) this.preferences.reload();
+      if (QUALITY_KEY in changes) this.qualitySetting.reload();
+    });
+    this.reloadAll();
+  }
+
+  private reloadAll(): void {
+    this.preferences.reload();
+    this.qualitySetting.reload();
   }
 }

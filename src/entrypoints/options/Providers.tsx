@@ -72,7 +72,7 @@ export async function load(api: Browser): Promise<Loaded> {
 }
 
 const isImplicit = (s: ProviderSettings, id: string) => s.implicit?.connections.includes(id) === true;
-const routedIds = (s: ProviderSettings) => new Set([s.routing.translate, s.routing.analyze, ...(s.routing.fallback ?? [])].filter((x): x is string => x !== undefined));
+const routedIds = (s: ProviderSettings) => new Set([s.routing.translate, s.routing.analyze, s.routing.review, ...(s.routing.fallback ?? [])].filter((x): x is string => x !== undefined));
 
 /**
  * The connections the list shows: every stored one, and a built-in one that applies only at read
@@ -301,7 +301,7 @@ function Models({ api, loaded, onAdd, onNote }: { api: Browser; loaded: Loaded; 
       <ul class="prov__list">
         {rows.map((p) => {
           const c = settings.connections.find((x) => x.id === p.connectionId);
-          const roles = [settings.routing.translate === p.id ? i18n.t('options.providers.roleTranslate') : '', settings.routing.analyze === p.id ? i18n.t('options.providers.brief') : ''].filter(Boolean);
+          const roles = [settings.routing.translate === p.id ? i18n.t('options.providers.roleTranslate') : '', settings.routing.analyze === p.id ? i18n.t('options.providers.brief') : '', settings.routing.review === p.id ? i18n.t('options.providers.roleReview') : ''].filter(Boolean);
           const dual = (c?.detectedProtocols?.length ?? 0) > 1;
           const implicit = settings.implicit?.profiles.includes(p.id) === true;
           return (
@@ -355,9 +355,9 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
       ))}
     </>
   );
-  const save = (patch: { translate?: string; analyze?: string | undefined; fallback?: string[] }, said: string) => {
-    const { analyze, fallback, ...rest } = { ...settings.routing, ...patch };
-    const next: ProviderSettings['routing'] = { ...rest, ...(analyze === undefined ? {} : { analyze }), ...(fallback?.length ? { fallback } : {}) };
+  const save = (patch: { translate?: string; analyze?: string | undefined; review?: string | undefined; fallback?: string[] }, said: string) => {
+    const { analyze, review, fallback, ...rest } = { ...settings.routing, ...patch };
+    const next: ProviderSettings['routing'] = { ...rest, ...(analyze === undefined ? {} : { analyze }), ...(review === undefined ? {} : { review }), ...(fallback?.length ? { fallback } : {}) };
     saveRouting(api, next).then(
       () => onNote(said),
       (err: unknown) => onNote(err instanceof Error ? err.message : String(err), true),
@@ -393,6 +393,21 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
         </select>
       </div>
       <p class="opt__hint">{i18n.t('options.providers.briefHint')}</p>
+      <div class="opt__row">
+        <label for="route-review">{i18n.t('options.providers.reviewWith')}</label>
+        <select
+          id="route-review"
+          value={settings.routing.review ?? ''}
+          onChange={(e) => {
+            const v = (e.target as HTMLSelectElement).value;
+            save({ review: v === '' ? undefined : v }, i18n.t('options.providers.reviewSaved'));
+          }}
+        >
+          <option value="">{i18n.t('options.providers.sameAsTranslate')}</option>
+          {options(settings.routing.review)}
+        </select>
+      </div>
+      <p class="opt__hint">{i18n.t('options.providers.reviewHint')}</p>
       <FallbackChain settings={settings} profiles={profiles} options={options} onSave={(fallback, said) => save({ fallback }, said)} />
       <SiteModelRules settings={settings} profiles={profiles} options={options} onSave={(siteOverrides, said) => saveSites(siteOverrides, said)} />
     </div>

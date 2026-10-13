@@ -4,7 +4,7 @@
 import { IDBFactory } from 'fake-indexeddb';
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Segment } from '@/engine/index';
 import { renderLines, translatorClient } from '@/engine/testing';
 import { openTranslationCache, type TranslationCache } from '@/shared/cache';
@@ -14,11 +14,19 @@ import type { PanelController, PanelView, SessionHooks } from './controller.ts';
 import { createTranslator } from './translator.ts';
 import { ViewportStore } from './viewport.ts';
 
+// Whether Best is released and whether the feature check allows it, per test.
+const flags = vi.hoisted(() => ({ released: true, available: true }));
+vi.mock('@/shared/features', () => ({ featureAvailable: () => Promise.resolve(flags.available) }));
+vi.mock('@/shared/quality', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/shared/quality')>();
+  return Object.defineProperty({ ...real }, 'BEST_MODE_RELEASED', { get: () => flags.released, enumerable: true });
+});
+
 type Api = Parameters<typeof createTranslator>[0];
 type Ready = Extract<PanelView, { kind: 'ready' }>['result'];
 
-function fakeApi(prefs: Record<string, unknown> = { targetLang: 'vi', sourceLang: 'auto', style: 'natural' }, failWrites = false) {
-  const sync = new Map<string, unknown>([['prefs', prefs]]);
+function fakeApi(prefs: Record<string, unknown> = { targetLang: 'vi', sourceLang: 'auto', style: 'natural' }, failWrites = false, stored: Record<string, unknown> = {}) {
+  const sync = new Map<string, unknown>([['prefs', prefs], ...Object.entries(stored)]);
   const onSync = new Set<(c: Record<string, unknown>) => void>();
   const none = { addListener: () => {}, removeListener: () => {} };
   const api = {
@@ -71,12 +79,14 @@ function client() {
 
 let root: HTMLElement;
 beforeEach(() => {
+  flags.released = true;
+  flags.available = true;
   root = document.createElement('div');
   document.body.replaceChildren(root);
 });
 
-function setup(cache?: TranslationCache) {
-  const f = fakeApi();
+function setup(cache?: TranslationCache, stored?: Record<string, unknown>) {
+  const f = fakeApi(undefined, false, stored);
   const c = client();
   const t = createTranslator(f.api, { translateClient: () => Promise.resolve({ ok: true as const, client: c, profile: GEMINI_PROFILE }), strategy: 'single-pass', cache }, { detector: undefined });
   const hooks = t.hooks as Required<SessionHooks>;
@@ -245,5 +255,63 @@ describe('panel header (M3-E6)', () => {
     await act(() => settle(30));
     expect(q<HTMLSelectElement>('target-lang')?.value).toBe('vi');
     expect(q('prefs-error')?.textContent).toContain("Couldn't save that setting");
+  });
+
+  describe('quality mode', () => {
+    const modes = () => [...(q<HTMLSelectElement>('quality-mode')?.options ?? [])];
+
+    it('offers Fast, Balanced and Best, Balanced selected, and saves a switch to its own sync item', async () => {
+      const { f, t } = setup();
+      await until(() => t.jobs.get(1)?.status === 'done');
+      await act(() => settle(30));
+      expect(modes().map((o) => [o.textContent, o.disabled])).toEqual([
+        ['Fast', false],
+        ['Balanced', false],
+        ['Best', false],
+      ]);
+      expect(q<HTMLSelectElement>('quality-mode')?.value).toBe('balanced');
+      expect(q('quality-lock-note')).toBeNull();
+      choose('quality-mode', 'best');
+      await until(() => f.sync.has('quality'));
+      expect(f.sync.get('quality')).toEqual({ mode: 'best', keepDraftsOnScreen: false });
+      expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'auto', style: 'natural' });
+    });
+
+    it('with an override set it shows the mode, names the override in its title, and choosing a mode clears it', async () => {
+      const { f, t } = setup(undefined, { quality: { mode: 'balanced', strategy: 'single-pass', keepDraftsOnScreen: true } });
+      await until(() => t.jobs.get(1)?.status === 'done');
+      await act(() => settle(30));
+      expect(q<HTMLSelectElement>('quality-mode')?.value).toBe('balanced');
+      expect(q('quality-mode')?.getAttribute('title')).toBe('Set to single-pass in settings');
+      choose('quality-mode', 'fast');
+      await until(() => (f.sync.get('quality') as { mode: string }).mode === 'fast');
+      expect(f.sync.get('quality')).toEqual({ mode: 'fast', keepDraftsOnScreen: true });
+    });
+
+    it('a locked Best is disabled with a (Pro) suffix and the note sits beside the select only', async () => {
+      flags.available = false;
+      const { t } = setup();
+      await until(() => t.jobs.get(1)?.status === 'done');
+      await act(() => settle(30));
+      const best = modes().find((o) => o.value === 'best');
+      expect(best?.disabled).toBe(true);
+      expect(best?.textContent).toBe('Best (Pro)');
+      expect(modes().filter((o) => o.disabled)).toHaveLength(1);
+      const note = q('quality-lock-note');
+      expect(note?.textContent).toBe('Best is part of Pro.');
+      expect(q('quality-control')?.contains(note)).toBe(true);
+      expect(q('quality-mode')?.getAttribute('aria-describedby')).toBe(note?.id);
+      expect(root.querySelectorAll('[data-testid=quality-lock-note]')).toHaveLength(1);
+    });
+
+    it('with Best not released it is listed nowhere, not even locked', async () => {
+      flags.released = false;
+      flags.available = false;
+      const { t } = setup();
+      await until(() => t.jobs.get(1)?.status === 'done');
+      await act(() => settle(30));
+      expect(modes().map((o) => o.value)).toEqual(['fast', 'balanced']);
+      expect(q('quality-lock-note')).toBeNull();
+    });
   });
 });

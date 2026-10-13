@@ -360,6 +360,40 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     expect($('[data-testid=providers-note]').textContent).toBe('Document brief route saved.');
   });
 
+  it('routing: the Review with row saves its own model, keeps the others, and goes back to "same as translate"', async () => {
+    const conn = { id: 'o1', label: 'Home Ollama', presetId: 'ollama', protocol: 'openai-chat', baseUrl: 'http://localhost:11434/v1', auth: { style: 'none' }, quirks: {}, status: 'ok' };
+    const f = fakeApi({ sync: { schemaVersion: 1, 'conn:o1': conn, 'profile:q': { id: 'q', connectionId: 'o1', model: 'qwen3:8b', maxConcurrency: 1, chunkTokens: 600 }, routing: { translate: 'q', analyze: 'q', fallback: ['basic'], basicMigrated: true } } });
+    await mount(f, server(() => openaiList()));
+    expect($('label[for=route-review]').textContent).toBe('Review with');
+    expect($<HTMLSelectElement>('#route-review').value).toBe('');
+    expect($<HTMLSelectElement>('#route-review').options[0]?.textContent).toBe('Same as translate');
+    const choose = (value: string) =>
+      act(() => {
+        const sel = $<HTMLSelectElement>('#route-review');
+        sel.value = value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    choose('q');
+    await waitFor(() => (f.sync.get('routing') as { review?: string }).review === 'q');
+    expect(f.sync.get('routing')).toEqual({ translate: 'q', analyze: 'q', review: 'q', fallback: ['basic'], basicMigrated: true });
+    expect($('[data-testid=providers-note]').textContent).toBe('Review route saved.');
+    choose('');
+    await waitFor(() => (f.sync.get('routing') as { review?: string }).review === undefined);
+    expect(f.sync.get('routing')).toEqual({ translate: 'q', analyze: 'q', fallback: ['basic'], basicMigrated: true });
+  });
+
+  it('a built-in model used only for review keeps its connection listed, as one used for translate does', async () => {
+    const conn = { id: 'o1', label: 'Home Ollama', presetId: 'ollama', protocol: 'openai-chat', baseUrl: 'http://localhost:11434/v1', auth: { style: 'none' }, quirks: {}, status: 'ok' };
+    const base = { schemaVersion: 1, 'conn:o1': conn, 'profile:q': { id: 'q', connectionId: 'o1', model: 'qwen3:8b', maxConcurrency: 1, chunkTokens: 600 } };
+    const without = fakeApi({ sync: { ...base, routing: { translate: 'q', basicMigrated: true } } });
+    await mount(without, server(() => openaiList()));
+    expect(rowOf('APIBOX')).toBeUndefined();
+    act(() => render(null, root));
+    const used = fakeApi({ sync: { ...base, routing: { translate: 'q', review: 'apibox-qwen3.8-flash', basicMigrated: true } } });
+    await mount(used, server(() => openaiList()));
+    expect(rowOf('APIBOX')).toBeDefined();
+  });
+
   it('routing: "If it fails" adds and removes fallback models; the terminal `basic` entry (M5-E7) stays last and can be added back (plan M4-E9)', async () => {
     const conn = { id: 'o1', label: 'Home Ollama', presetId: 'ollama', protocol: 'openai-chat', baseUrl: 'http://localhost:11434/v1', auth: { style: 'none' }, quirks: {}, status: 'ok' };
     const f = fakeApi({
