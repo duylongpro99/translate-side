@@ -41,6 +41,8 @@ interface TestClient extends LLMClient {
   waiting: { req: NormalizedRequest; go: () => void }[];
   /** Every call in order: `translate`, `analyze` or `review`. */
   log: string[];
+  /** The paragraphs of each translate call, as it started. */
+  drafted: number[][];
 }
 
 /** One client for every role: drafts are `vi:` + source, the brief is fixed, the review is `reviewer` (or a failed call). */
@@ -60,14 +62,17 @@ function client(opts: { model?: string; reviewer?: Reviewer | 'error'; hold?: bo
   );
   const waiting: TestClient['waiting'] = [];
   const log: string[] = [];
+  const drafted: number[][] = [];
   return {
     model: inner.model,
     reasoningReserveTokens: inner.reasoningReserveTokens,
     requests: inner.requests,
     waiting,
     log,
+    drafted,
     async *stream(req) {
       log.push(isAnalyze(req) ? 'analyze' : isReview(req) ? 'review' : 'translate');
+      if (isTranslate(req)) drafted.push(paragraphs(req));
       if (isReview(req) && opts.reviewer === 'error') {
         inner.requests.push(req);
         await Promise.resolve();
@@ -142,14 +147,14 @@ describe('Jobs: the strategy of a run', () => {
     expect(records.at(-1)).toMatchObject({ outcome: 'done', strategy: 'refine', review: { accepted: 8, unchanged: 0, rejected: 0, skipped: 0 } });
   });
 
-  it('without best-mode a refine request runs contextual: no review route, no review call', async () => {
+  it('without best-mode a refine request runs contextual: the review route is never resolved, no review call', async () => {
     const c = client();
-    const targets: ClientTarget[] = [];
     const records: JobRecord[] = [];
-    const jobs = jobsWith({ translateClient: (t) => (targets.push(t), ok(c)()), featureAvailable: () => Promise.resolve(false), onJobRecord: (r) => records.push(r) });
+    const review = vi.fn(routedReview(client({ model: 'review-model' })));
+    const jobs = jobsWith({ translateClient: ok(c, { review }), featureAvailable: () => Promise.resolve(false), onJobRecord: (r) => records.push(r) });
     await jobs.start(1, 'd', doc(8));
     expect(jobs.get(1)?.counts.final).toBe(8);
-    expect(targets[0]).toEqual({ tabId: 1, url: 'https://example.com/', analyze: true });
+    expect(review).not.toHaveBeenCalled();
     expect(c.requests.filter(isReview)).toEqual([]);
     expect(refinedIds(jobs.get(1))).toEqual([]);
     expect(records.map((r) => r.strategy)).toEqual(['contextual', 'contextual']);
@@ -401,11 +406,13 @@ describe('Jobs: Best in lazy mode', () => {
   ] as const) {
     it(`a reader who ${name} once the drafts are done waits only for the reviews in flight`, async () => {
       const c = client({ hold: true });
-      const jobs = jobsWith({ translateClient: ok(c), lazyAbove: 50 });
+      const records: JobRecord[] = [];
+      const jobs = jobsWith({ translateClient: ok(c), lazyAbove: 50, onJobRecord: (r) => records.push(r) });
       void jobs.start(1, 'd', doc(300, 200));
       await until(() => c.waiting.length === GEMINI_PROFILE.maxConcurrency);
       const reviewsInFlight = c.log.filter((k) => k === 'review').length;
       const roundOne = c.log.length;
+      const roundOneDrafts = new Set(c.drafted.flat()).size;
       jobs.setViewport(1, 'd', screen);
       await releaseUntil(c, () => c.log.slice(roundOne).includes('translate'));
       // Between the scroll and the next round's first request, no review started: only those in flight finished.
@@ -419,8 +426,37 @@ describe('Jobs: Best in lazy mode', () => {
       // Dropped blocks stay drafts: final, not failed.
       expect(jobs.get(1)?.counts.failed).toBe(0);
       expect(jobs.get(1)?.segs.get('s10')).toMatchObject({ status: 'final' });
+      // The first round's record counts every block it drafted: reviewed, or not (dropped, with or without a report).
+      const first = records.find((r) => r.outcome === 'done');
+      const r = first?.review;
+      expect(r?.accepted).toBeGreaterThan(0);
+      expect(r?.skipped).toBeGreaterThan(0);
+      expect((r?.accepted ?? 0) + (r?.unchanged ?? 0) + (r?.rejected ?? 0) + (r?.skipped ?? 0)).toBe(roundOneDrafts);
     });
   }
+
+  it("Balanced's entries for the whole page: each window the reader reaches has its drafts reviewed, none drafted again", async () => {
+    const cache = newCache();
+    const balanced = jobsWith({ translateClient: ok(client()), cache, lazyAbove: Infinity });
+    await balanced.start(1, 'd', doc(300, 200, { strategy: 'contextual' }));
+    await balanced.cacheIdle();
+    const c = client();
+    const jobs = jobsWith({ translateClient: ok(c), cache, lazyAbove: 50 });
+    await jobs.start(1, 'd2', doc(300, 200));
+    expect(jobs.get(1)?.counts.final).toBe(300);
+    expect(jobs.get(1)?.segs.get('s0')?.refined).toBe(true);
+    expect(jobs.get(1)?.segs.get('s80')?.refined).toBeUndefined();
+    // The third window: nothing pending there, only drafts to review.
+    jobs.setViewport(1, 'd2', ['s80', 's81']);
+    await until(() => jobs.get(1)?.status === 'done' && jobs.get(1)?.segs.get('s80')?.refined === true);
+    expect(c.requests.filter(isTranslate)).toEqual([]);
+    expect(c.requests.filter(isReview).flatMap(paragraphs)).toEqual(expect.arrayContaining([80, 81]));
+    // Reviewed once: back on the same screen, nothing more is sent.
+    const sent = c.requests.length;
+    jobs.setViewport(1, 'd2', ['s81']);
+    await settle(30);
+    expect(c.requests.length).toBe(sent);
+  });
 
   it('a reader who stays inside the round lets every review run', async () => {
     const c = client({ hold: true });
@@ -483,5 +519,96 @@ describe('Jobs: keep drafts on screen', () => {
     jobs.subscribe((_, v) => v?.status === 'running' && seen.push(v.segs.get('s0')?.refined));
     await jobs.start(1, 'd', doc(8));
     expect(seen).toContain(true);
+  });
+});
+
+describe('Jobs: Best across runs', () => {
+  it('a run cancelled during its reviews, then resumed, reviews the drafts it kept and drafts nothing again', async () => {
+    const c = client({ hold: true });
+    const jobs = jobsWith({ translateClient: ok(c) });
+    const run = jobs.start(1, 'd', doc(8));
+    await until(() => c.waiting.length > 0);
+    jobs.cancel(1);
+    await run;
+    expect(jobs.get(1)?.status).toBe('cancelled');
+    expect(jobs.get(1)?.counts.final).toBe(8);
+    const translated = c.requests.filter(isTranslate).length;
+    const resumed = jobs.resume(1);
+    for (let i = 0; i < 200 && jobs.get(1)?.status !== 'done'; i++) {
+      c.waiting.splice(0).forEach((w) => w.go());
+      await settle(5);
+    }
+    await resumed;
+    expect(jobs.get(1)?.status).toBe('done');
+    expect(c.requests.filter(isTranslate).length).toBe(translated);
+    expect(refinedIds(jobs.get(1))).toHaveLength(8);
+  });
+
+  it('the feature check does not hold the job: it is there at once, and a cancel meanwhile sends nothing', async () => {
+    let answer: (v: boolean) => void = () => {};
+    const featureAvailable = () => new Promise<boolean>((resolve) => (answer = resolve));
+    const c = client();
+    const records: JobRecord[] = [];
+    const jobs = jobsWith({ translateClient: ok(c), featureAvailable, onJobRecord: (r) => records.push(r) });
+    const run = jobs.start(1, 'd', doc(8));
+    // Set up (and the tab's job replaced) before the answer.
+    expect(jobs.get(1)?.status).toBe('running');
+    jobs.cancel(1);
+    answer(true);
+    await run;
+    await settle(20);
+    expect(jobs.get(1)?.status).toBe('cancelled');
+    expect(c.requests).toEqual([]);
+    expect(records.map((r) => r.outcome)).toEqual(['cancelled']);
+  });
+
+  it('a second start while the first waits for the feature check replaces it; the page cost is kept', async () => {
+    const answers: ((v: boolean) => void)[] = [];
+    const featureAvailable = () => new Promise<boolean>((resolve) => answers.push(resolve));
+    const c = client();
+    const jobs = jobsWith({ translateClient: ok(c), featureAvailable });
+    await (async () => {
+      const first = jobs.start(1, 'd', doc(8));
+      answers.shift()?.(true);
+      await first;
+    })();
+    const cost = jobs.get(1)?.usage;
+    expect(cost?.input).toBeGreaterThan(0);
+    // Two restarts that keep the cost, the first overtaken while it waits.
+    const a = jobs.start(1, 'd', doc(8, 120, { style: 'faithful' }), { keepCost: true });
+    const b = jobs.start(1, 'd', doc(8, 120, { style: 'faithful' }), { keepCost: true });
+    answers.splice(0).forEach((go) => go(true));
+    await Promise.all([a, b]);
+    const v = jobs.get(1) as JobView;
+    expect(v.status).toBe('done');
+    expect(v.usage.input).toBeGreaterThan(cost?.input ?? 0);
+    expect(refinedIds(v)).toHaveLength(8);
+  });
+
+  it('two blocks with the same text share an entry: the refined one is kept over its twin left as drafted', async () => {
+    const cache = newCache();
+    const d = doc(8);
+    // s1 repeats s0's text; the reviewer refines only the first item of each call.
+    d.segments[1] = { ...(d.segments[0] as Segment), id: 's1', domPath: '/p[2]' };
+    const twinReviewer: Reviewer = (draft, n) => (n === 1 ? `rv:${draft}` : undefined);
+    const first = jobsWith({ translateClient: ok(client({ reviewer: twinReviewer })), cache });
+    await first.start(1, 'd', d);
+    await first.cacheIdle();
+    expect(first.get(1)?.segs.get('s0')?.refined).toBe(true);
+    const again = client({ reviewer: twinReviewer });
+    const second = jobsWith({ translateClient: ok(again), cache });
+    await second.start(1, 'd2', d);
+    expect(again.requests).toEqual([]);
+    expect(second.get(1)?.segs.get('s0')?.refined).toBe(true);
+    expect(second.get(1)?.segs.get('s1')?.refined).toBe(true);
+
+    // A Retranslate page replaces stored entries: there too the twin left as drafted does not replace the refined one.
+    await second.start(1, 'd2', d, { fresh: true });
+    await second.cacheIdle();
+    const third = client();
+    const reload = jobsWith({ translateClient: ok(third), cache });
+    await reload.start(1, 'd3', d);
+    expect(third.requests).toEqual([]);
+    expect(reload.get(1)?.segs.get('s1')?.refined).toBe(true);
   });
 });

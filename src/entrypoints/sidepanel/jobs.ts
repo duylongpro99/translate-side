@@ -594,6 +594,23 @@ interface Job {
   /** Best: the model the review runs on (in the cache scope). */
   reviewModel?: string;
   /**
+   * Best: blocks whose review ran or was given up (budget, a failed call) in this run or the runs it
+   * resumes; the others (dropped as the reader moved on, never reached) are still drafts to review.
+   */
+  reviewTried: Set<string>;
+  /** Best: the blocks this run sent for review, and those a chunk report covered (diagnostics). */
+  reviewScope?: ReadonlySet<string>;
+  reported?: Set<string>;
+  /** Cache keys this run stored a refined text under: a twin block left as drafted does not replace it. */
+  refinedKeys: Set<string>;
+  /**
+   * Best in lazy mode: `reach` started the next round for drafts to review only (`forDrafts`); one
+   * such round that found nothing to send (`noDrafts`) keeps the next `reach` from starting another
+   * for drafts, so rounds never follow each other for nothing.
+   */
+  forDrafts?: boolean;
+  noDrafts?: boolean;
+  /**
    * What the soft limit stopped (M4-E10): "Continue anyway" carries it out, whether a run (with
    * its own options: a Retranslate page skips the cache) or one block's redo.
    */
@@ -850,9 +867,10 @@ export class Jobs {
    */
   async start(tabId: number, docId: string, doc: JobDoc, options: { resume?: boolean; keepCost?: boolean; keepBrief?: boolean; fresh?: boolean; all?: boolean } = {}): Promise<void> {
     const { resume = false, keepCost = false, keepBrief = false, fresh = false } = options;
-    // The one async read of the strategy: everything later in the run reads `job.strategy`.
+    // The one async read of the strategy, awaited with the route below: the job is set up (and a
+    // running one replaced) at once, as for any run; nothing reads `job.strategy` before it is settled.
     const requested = this.deps.strategy ?? doc.strategy ?? PANEL_STRATEGY;
-    const strategy = requested === REFINE_ID && !(await this.bestMode()) ? contextual.id : requested;
+    const access = requested === REFINE_ID ? this.bestMode() : undefined;
     const prev = this.jobs.get(tabId);
     const keep = resume && prev?.docId === docId && prev.view.status !== 'running' ? prev : undefined;
     const all = options.all ?? keep?.all ?? false;
@@ -897,9 +915,11 @@ export class Jobs {
     const gate = new Gate();
     gate.set(tabId === this.activeTabId);
     const job: Job = {
-      strategy,
+      strategy: requested,
       reviewWanted: true,
       held: new Map(),
+      reviewTried: new Set(keep?.reviewTried),
+      refinedKeys: new Set(),
       lazy,
       all,
       docId,
@@ -955,11 +975,22 @@ export class Jobs {
     };
     this.jobs.set(tabId, job);
     this.emit(tabId, job.view);
-    this.record(job, 'started');
+    if (access === undefined) this.record(job, 'started');
 
     const signal = job.controller.signal;
+    // A refine request asks for the review resolver too; it is called only if the run stays refine.
+    const routing = this.deps.translateClient({ tabId, url: doc.url, analyze: requested !== 'single-pass', ...(access ? { review: true } : {}) });
+    if (access) {
+      const allowed = await access;
+      if (signal.aborted || this.jobs.get(tabId) !== job) {
+        routing.catch(() => {});
+        return;
+      }
+      if (!allowed) job.strategy = contextual.id;
+      this.record(job, 'started');
+    }
     const refining = job.strategy === REFINE_ID;
-    const resolved = await this.deps.translateClient({ tabId, url: doc.url, analyze: job.strategy !== 'single-pass', ...(refining ? { review: true } : {}) });
+    const resolved = await routing;
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
     if (resolved.connection) this.patch(tabId, job, { connection: resolved.connection });
     if (!resolved.ok) {
@@ -976,6 +1007,8 @@ export class Jobs {
     let analyzeAhead: Promise<AnalyzeResult | undefined> | undefined;
     if (refining) {
       analyzeAhead = resolved.analyze?.();
+      // Used only if a brief is asked for; a run that never awaits it must not leave a rejection behind.
+      analyzeAhead?.catch(() => {});
       review = resolved.review ? await resolved.review() : undefined;
       if (signal.aborted || this.jobs.get(tabId) !== job) return;
       if (review && !review.ok) {
@@ -991,6 +1024,14 @@ export class Jobs {
     const drafts = new Map<string, { text: string; revision: number }>();
     await this.fromCache(tabId, job, { todo, translatable, model: client.model, fresh, drafts });
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
+    // Best: finals kept from an earlier run (a lazy round, a resume) that no review has looked at
+    // yet are drafts too, so the reviews dropped or never reached are made where the run goes.
+    if (job.strategy === REFINE_ID) {
+      for (const s of translatable) {
+        const state = segs.get(s.id);
+        if (!drafts.has(s.id) && this.unreviewed(job, s.id, state)) drafts.set(s.id, { text: state.text, revision: state.revision ?? 1 });
+      }
+    }
     // Lazy mode: this round covers the screen and what follows it, the rest waits (M5-E4).
     if (job.lazy) {
       const window = lazyWindow(translatable, this.screenOf(tabId, docId), {}, this.pinnedOf(tabId, docId));
@@ -1004,6 +1045,7 @@ export class Jobs {
     if (todo.size !== translatable.length && !job.lazy) job.briefKey = undefined;
     // Best: drafts from the cache are only reviewed; with none left either, nothing is sent.
     if (todo.size === 0 && drafts.size === 0) {
+      if (keep?.forDrafts) job.noDrafts = true;
       this.finish(tabId, job, 'done');
       return;
     }
@@ -1028,6 +1070,7 @@ export class Jobs {
     }
     if (analyze) job.analyzeProfile = analyze.profile;
     const engine = this.engineFor(tabId, job, { client, profile, ...(resolved.connection ? { connection: resolved.connection } : {}) }, undefined, analyze, resolved.fallback, review?.ok ? review : undefined);
+    if (job.strategy === REFINE_ID) job.reviewScope = new Set([...todo, ...drafts.keys()]);
     const engineJob: TranslationJob = {
       doc: {
         url: doc.url,
@@ -1088,9 +1131,12 @@ export class Jobs {
     const keepCost = prev?.docId === docId ? prev : undefined;
     const now = this.now();
     const job: Job = {
-      strategy: this.deps.strategy ?? doc.strategy ?? PANEL_STRATEGY,
+      // Nothing runs, so the gate is not read: Best counts as Balanced here (a resume runs `start`).
+      strategy: ((s) => (s === REFINE_ID ? contextual.id : s))(this.deps.strategy ?? doc.strategy ?? PANEL_STRATEGY),
       reviewWanted: true,
       held: new Map(),
+      reviewTried: new Set(),
+      refinedKeys: new Set(),
       lazy: false,
       all: false,
       docId,
@@ -1430,8 +1476,7 @@ export class Jobs {
     const gatedFallback = fallback.map((l, i) => wrap(l, i + 1, chain[i + 2]));
     const gatedAnalyze = analyze ? wrap(analyze, chain.findIndex((l) => l.profile.id === analyze.profile.id), fallback[0]) : undefined;
     const gatedReview = review ? wrap(review, chain.findIndex((l) => l.profile.id === review.profile.id), fallback[0]) : undefined;
-    if (this.deps.engine) return gatedReview ? this.deps.engine(gated, gatedAnalyze, gatedFallback, gatedReview) : this.deps.engine(gated, gatedAnalyze, gatedFallback);
-    return this.defaultEngine(gated, gatedAnalyze, gatedFallback, gatedReview);
+    return this.deps.engine?.(gated, gatedAnalyze, gatedFallback, gatedReview) ?? this.defaultEngine(gated, gatedAnalyze, gatedFallback, gatedReview);
   }
 
   /** `best-mode` for this run (JobDeps.featureAvailable); an answer that fails is "no". */
@@ -1646,6 +1691,10 @@ export class Jobs {
   /** Queues a cache write of `entry` under `key`, or the entry's removal (undefined). */
   private store(job: Job, key: string | undefined, entry: CachedSegment | undefined): void {
     if (key === undefined || !this.deps.cache) return;
+    // Two blocks with the same text share a key: the refined one's entry is kept over its twin's
+    // draft, in this flush and in a run that replaces entries (as the cache does across runs).
+    if (entry?.refined) job.refinedKeys.add(key);
+    else if (entry && job.refinedKeys.has(key) && !job.replaceKeys.has(key)) return;
     if (entry) {
       job.drops.delete(key);
       job.writes.set(key, entry);
@@ -1691,11 +1740,21 @@ export class Jobs {
     log.unchanged += report.unchanged.length;
     log.rejected += report.rejected.length;
     if (report.skipped !== undefined) log.skipped += report.ids.length;
+    const reported = (job.reported ??= new Set());
+    for (const id of report.ids) reported.add(id);
+    // A review dropped as the reader moved on is still owed; one that ran, or was given up, is not.
+    if (report.skipped !== 'dropped') for (const id of report.ids) job.reviewTried.add(id);
     for (const id of [...report.unchanged, ...report.rejected]) {
       const state = job.segs.get(id);
       if (state?.status !== 'final' || state.text === undefined || state.basic || (state.revision ?? 1) >= REVIEWED_REVISION) continue;
-      this.store(job, job.keys.get(id), { text: state.text, revision: REVIEWED_REVISION, attempt: 1 });
+      // Under the key of the model that drafted it, as its draft was (a fallback's has its own, §7).
+      this.store(job, this.keyFor(job, id, state.model), { text: state.text, revision: REVIEWED_REVISION, attempt: 1 });
     }
+  }
+
+  /** Best: a final draft (below the review revision, not refined, not a basic translation) no review has looked at yet. */
+  private unreviewed(job: Job, id: string, state: SegState | undefined): state is SegState & { text: string } {
+    return state?.status === 'final' && state.text !== undefined && !state.refined && !state.basic && (state.revision ?? 1) < REVIEWED_REVISION && !job.reviewTried.has(id);
   }
 
   private flushCache(job: Job): void {
@@ -1734,6 +1793,9 @@ export class Jobs {
     if (job.lazy) {
       if (status === 'done' && job.round && !job.within) job.stalled = [...job.round].some((id) => job.segs.get(id)?.status === 'pending');
     }
+    // Best: a run that ended by itself, its reviews not dropped for the reader, reviewed what it
+    // could; a block it sent that got no report is not asked for again in this session.
+    if (status === 'done' && job.reviewScope && job.reviewWanted && !job.within) for (const id of job.reviewScope) if (!job.reported?.has(id)) job.reviewTried.add(id);
     this.patch(tabId, job, { backoff: [], status, paused: false, counts: count(job.segs), endedAt: this.now(), ...kept, ...(stopError ? { stopError } : {}) });
     this.record(job, status);
     if (status === 'done') queueMicrotask(() => (job.wantRest ? void this.translateRest(tabId) : this.reach(tabId, job)));
@@ -1758,14 +1820,20 @@ export class Jobs {
 
   /**
    * Lazy mode (M5-E4): a finished round whose reader has since moved on to blocks nobody translated
-   * yet starts the next round, over the screen now. Failed blocks are left to Retry; a round that
+   * yet (or, in Best, reviewed yet) starts the next round, over the screen now. Failed blocks are left to Retry; a round that
    * left part of its own window pending (a budget that ran out) is not repeated.
    */
   private reach(tabId: number, job: Job): void {
     if (!job.lazy || job.stalled || this.jobs.get(tabId) !== job || job.view.status !== 'done' || job.view.limit) return;
     const translatable = (job.translatable ??= job.view.segments.filter((s) => s.translate));
     const near = lazyWindow(translatable, this.screenOf(tabId, job.docId), LAZY_LOW_WATER, this.pinnedOf(tabId, job.docId));
-    if (![...near].some((id) => job.segs.get(id)?.status === 'pending')) return;
+    // Best: a draft near the reader that no review has looked at yet is work too (its review was
+    // dropped as the reader moved on, or it came from the cache outside the round), when the next
+    // round's window, cut as `start` cuts it, takes it: a round never starts for nothing.
+    const next = job.strategy === REFINE_ID && !job.noDrafts ? lazyWindow(translatable, this.screenOf(tabId, job.docId), {}, this.pinnedOf(tabId, job.docId)) : undefined;
+    const pending = [...near].some((id) => job.segs.get(id)?.status === 'pending');
+    if (!pending && ![...near].some((id) => next?.has(id) === true && this.unreviewed(job, id, job.segs.get(id)))) return;
+    job.forDrafts = !pending;
     void this.resume(tabId);
   }
 
@@ -1804,6 +1872,13 @@ export class Jobs {
       origin = undefined;
     }
     const v = job.view;
+    // Best: blocks sent for review that no chunk report covered (dropped before they started) were not reviewed.
+    let review = job.log.review === undefined ? undefined : { ...job.log.review };
+    if (outcome !== 'started' && job.strategy === REFINE_ID && job.draftsDone && job.reviewScope) {
+      let unreported = 0;
+      for (const id of job.reviewScope) if (job.segs.get(id)?.status === 'final' && !job.reported?.has(id)) unreported++;
+      if (unreported > 0) review = { ...(review ?? { accepted: 0, unchanged: 0, rejected: 0, skipped: 0 }), skipped: (review?.skipped ?? 0) + unreported };
+    }
     report({
       id: job.log.id,
       startedAt: v.startedAt,
@@ -1821,7 +1896,7 @@ export class Jobs {
       tokens: { ...job.log.tokens },
       ...(v.firstVisibleAt === undefined ? {} : { firstTextAt: v.firstVisibleAt }),
       failed: v.counts.failed,
-      ...(job.log.review === undefined ? {} : { review: { ...job.log.review } }),
+      ...(review === undefined ? {} : { review }),
       errors: [...errors.values()],
       ...(origin === undefined || origin === 'null' ? {} : { origin }),
     });
