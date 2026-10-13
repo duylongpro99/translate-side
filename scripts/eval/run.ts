@@ -24,17 +24,18 @@
 // summary.json records `promptHash` (the translate system prompt rendered with no context, so a
 // rule edited in place shows as a new hash), `strategyVersion` and `thinking` (the translate calls'
 // policy); calls.jsonl records each call's chunk and reasoning tokens, and summary.md flags outliers.
-import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { createClient } from '@/llm';
 import type { LLMClient, Quirks, ResolvedConnection, StopReason } from '@/llm/types';
-import { ANALYZE_PROMPT_ID, chunkLimits, chunkSegments, createContextual, createRefine, CONTEXTUAL_ID, REFINE_ID, REVIEW_PROMPT_ID, REVIEWED_REVISION, CONTEXTUAL_TRANSLATE_PROMPT_ID, TRANSLATE_V2_PROMPT_ID, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, SINGLE_PASS_ID, toWire, renderSystemPrompt, renderSystemPromptV2, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, checkDuplicates, checkSegment, codeSpans, type CheckKind, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type Segment, type StyleMode, type TranslationJob } from '@/engine/index';
+import { ANALYZE_PROMPT_ID, chunkLimits, chunkSegments, createContextual, createRefine, CONTEXTUAL_ID, REFINE_ID, REVIEW_PROMPT_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, TRANSLATE_V2_PROMPT_ID, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, SINGLE_PASS_ID, toWire, renderSystemPrompt, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, checkDuplicates, checkSegment, codeSpans, type CheckKind, type EngineEvent, type GlossaryEntry, type GlossMode, type Segment, type StyleMode, type TranslationJob } from '@/engine/index';
 import type { ModelRole } from '@/llm/types';
 import { costUsd, priceFor } from './pricing.ts';
 import { EVAL_SLUGS } from './docs.ts';
 import { listPassageIds, loadPassage } from './passages.ts';
+import { newTally, rejectedKinds, revisedCount, tallyEvent } from './doc-tally.ts';
+import { reviewPromptHash, translatePromptHash } from './prompt-hash.ts';
 import { parseGlossaryArg, type ReviewCounts } from './runs.ts';
 import { harnessQuirks, PROVIDERS } from './providers.ts';
 
@@ -159,14 +160,18 @@ function connection(): { client: LLMClient; label: string; translateClient?: LLM
 const MOCK_REVIEW_SUFFIX = ' (đã rà soát)';
 
 /**
- * The mock reviewer: leaves the odd items alone and returns each even item's draft with
- * MOCK_REVIEW_SUFFIX, so a mock run goes through both the unchanged and the accepted paths (and the
- * rejected one wherever the suffix fails a post-check). `<none/>` when nothing changes.
+ * The mock reviewer, so a mock run goes through every path of the review: odd items are left alone
+ * (unchanged); every fourth item comes back cut to its first word, a candidate the length check
+ * rejects on all but the shortest segments; the other even items come back as the draft with
+ * MOCK_REVIEW_SUFFIX (accepted). `<none/>` when nothing changes.
  */
 function mockReview(user: string): string {
   const changed = [...user.matchAll(/<item id="(\d+)">\n<source>[\s\S]*?<\/source>\n<translation>([\s\S]*?)<\/translation>\n<\/item>/g)]
     .filter((m) => Number(m[1]) % 2 === 0)
-    .map((m) => `<seg id="${m[1]}">${m[2]}${MOCK_REVIEW_SUFFIX}</seg>`);
+    .map((m) => {
+      const draft = m[2] ?? '';
+      return `<seg id="${m[1]}">${Number(m[1]) % 4 === 0 ? (draft.split(/\s/)[0] ?? '') : `${draft}${MOCK_REVIEW_SUFFIX}`}</seg>`;
+    });
   return changed.length ? changed.join('\n') : '<none/>';
 }
 
@@ -230,6 +235,9 @@ function loadDoc(slug: string): FixtureDoc {
   const p = loadPassage(ROOT, slug);
   return { slug, url: p.meta.url, title: p.meta.title, lang: p.lang, segments: p.segments };
 }
+const registry = createDefaultPromptRegistry();
+// An unknown review prompt fails here, before any call or output folder, not at the first review.
+if (REFINE) registry.get(REVIEW_PROMPT);
 const { client: baseClient, label, translateClient, thinking } = connection();
 const price = priceFor(baseClient.model, opt.price);
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -240,20 +248,11 @@ const calls: CallRecord[] = [];
 let current = '';
 // One recording client per role, as the shell routes them (analyze defaults to translate, §4.3.1).
 const strategies = [singlePass, createContextual(TRANSLATE_PROMPT), createRefine({ translatePrompt: TRANSLATE_PROMPT, reviewPrompt: REVIEW_PROMPT })];
-const registry = createDefaultPromptRegistry();
-// An unknown review prompt fails here, before any call, not at the first review.
-if (REFINE) registry.get(REVIEW_PROMPT);
 const engine = createEngine({ llm: (role) => recording(role === 'translate' ? (translateClient ?? baseClient) : baseClient, calls, () => current, role), now: Date.now, sleep, strategies, prompts: registry });
-/**
- * The translate system prompt as this run renders it with no context (English source, the run's
- * target, style and gloss setting): a rule changed in place, under the same prompt id, gets a new
- * hash (review). 12 hex digits of SHA-256.
- */
-const promptHash = (() => {
-  const render = registry.get(TRANSLATE_PROMPT).render;
-  const system = TRANSLATE_PROMPT === TRANSLATE_PROMPT_ID ? renderSystemPrompt(render, { sourceLang: 'en', targetLang: opt.target as string, style: STYLE }) : renderSystemPromptV2(render, { sourceLang: 'en', targetLang: opt.target as string, style: STYLE, gloss: GLOSS, snippets: [] });
-  return createHash('sha256').update(system).digest('hex').slice(0, 12);
-})();
+/** The run's translate (and, for refine, review) system prompts, hashed (prompt-hash.ts). */
+const hashVars = { targetLang: opt.target as string, style: STYLE, gloss: GLOSS };
+const promptHash = translatePromptHash(TRANSLATE_PROMPT, hashVars, registry);
+const reviewHash = REFINE ? reviewPromptHash(REVIEW_PROMPT, hashVars, registry) : undefined;
 const strategyVersion = strategies.find((st) => st.id === STRATEGY)?.version;
 const chunkTokens = Number(opt['chunk-tokens']);
 
@@ -327,19 +326,9 @@ async function runDoc(slug: string): Promise<DocResult> {
     strategy: STRATEGY,
     options: { style: STYLE, gloss: GLOSS, glossary: GLOSSARY, maxConcurrency: Number(opt.concurrency), chunkTokens },
   };
-  // The panel's rule (§5.2): a higher revision wins, then a higher attempt; `draft` keeps the
-  // revision-1 text a revision 2 (contextual's chunk-0 second pass, M2-D17) replaced.
-  const finals = new Map<string, { text: string; attempt: number; revision: number; draft?: string }>();
-  const failed = new Map<string, string>();
-  const usage = { input: 0, cachedInput: 0, output: 0 };
-  const analyzeUsage = { input: 0, output: 0 };
-  let brief: DocumentBrief | null = null;
+  const t = newTally();
+  const { finals, failed } = t;
   let firstFinalMs: number | null = null;
-  const briefedChunks = new Set<number>();
-  let reviseKept = 0;
-  /** Segments that got a revision 2 (refine may replace it by its review's revision after). */
-  const revisedIds = new Set<string>();
-  const review: ReviewCounts = { chunks: 0, accepted: 0, unchanged: 0, rejected: 0, skipped: 0, input: 0, output: 0 };
   let inCheck = false;
   const check: DocResult['check'] = { rerequested: 0, kinds: {}, repaired: 0, failed: 0, input: 0, output: 0, codeBearing: 0, codePreserved: 0, finalsFailingChecks: 0 };
   const t0 = Date.now();
@@ -358,50 +347,8 @@ async function runDoc(slug: string): Promise<DocResult> {
       check.input += e.input;
       check.output += e.output;
     }
-    if (e.type === 'segment.final') {
-      if (e.revision === 2) revisedIds.add(e.id);
-      const cur = finals.get(e.id);
-      const attempt = e.attempt ?? 1;
-      if (cur === undefined || e.revision > cur.revision || (e.revision === cur.revision && attempt > cur.attempt)) {
-        const draft = cur === undefined ? undefined : e.revision > cur.revision && cur.revision === 1 ? cur.text : cur.draft;
-        finals.set(e.id, { text: e.text, attempt, revision: e.revision, ...(draft === undefined ? {} : { draft }) });
-      } else if (e.revision < cur.revision && e.revision === 1) {
-        // A repaired draft landing after its revision 2: kept as the draft, never shown.
-        cur.draft = e.text;
-      }
-      failed.delete(e.id);
-      firstFinalMs ??= Date.now() - t0;
-    } else if (e.type === 'segment.failed') {
-      // As in the panel: a failure of the first pass does not undo a revision 2; one naming that
-      // revision (the check stage's) does.
-      if ((finals.get(e.id)?.revision ?? 1) > (e.revision ?? 1)) continue;
-      failed.set(e.id, `${e.error.kind}: ${e.error.message}`);
-      finals.delete(e.id);
-    } else if (e.type === 'chunk') {
-      // The second pass's report (M2-D17) is not a chunk of the first pass.
-      if (e.revise !== undefined) reviseKept += e.revise.kept.length;
-      else if (e.review !== undefined) {
-        // refine's review report of a chunk: not a chunk of the first pass either.
-        review.chunks++;
-        review.accepted += e.review.accepted.length;
-        review.unchanged += e.review.unchanged.length;
-        review.rejected += e.review.rejected.length;
-        if (e.review.skipped !== undefined) review.skipped += e.review.ids.length;
-      } else if (e.briefed) briefedChunks.add(e.index);
-    } else if (e.type === 'artifact' && e.kind === 'brief') {
-      brief = e.data as DocumentBrief;
-    } else if (e.type === 'usage') {
-      if (e.role === 'analyze') {
-        analyzeUsage.input += e.input;
-        analyzeUsage.output += e.output;
-      } else if (e.role === 'review') {
-        review.input += e.input;
-        review.output += e.output;
-      }
-      usage.input += e.input;
-      usage.cachedInput += e.cachedInput ?? 0;
-      usage.output += e.output;
-    }
+    if (e.type === 'segment.final') firstFinalMs ??= Date.now() - t0;
+    tallyEvent(t, e);
   }
   const wallMs = Date.now() - t0;
   const want = doc.segments.filter((s) => s.translate);
@@ -415,9 +362,11 @@ async function runDoc(slug: string): Promise<DocResult> {
   }
   const analyzeCall = calls.slice(callsBefore).find((c) => c.role === 'analyze');
   const chunkWires = chunkSegments(doc.segments, chunkLimits(chunkTokens)).map((ch) => formatWire(toWire(ch.segments)));
-  // A chunk is counted once: contextual's second pass of chunk 0 (M2-D17) sends the same wire.
+  // A chunk is counted once: contextual's second pass of chunk 0 sends the same wire.
   const firstPass = chunkWires.filter((w) => calls.slice(callsBefore).some((c) => c.role === 'translate' && c.user.endsWith(w)));
-  if (BRIEFED) fs.writeFileSync(path.join(outDir, `${slug}.brief.json`), `${JSON.stringify(brief, null, 1)}\n`);
+  if (BRIEFED) fs.writeFileSync(path.join(outDir, `${slug}.brief.json`), `${JSON.stringify(t.brief, null, 1)}\n`);
+  const reviewCalls = calls.slice(callsBefore).filter((c) => c.role === 'review');
+  const review = { ...t.review, rejectedKinds: rejectedKinds(t.reviewReports, reviewCalls, doc.segments, opt.target as string) };
   fs.writeFileSync(
     path.join(outDir, `${slug}.output.json`),
     `${JSON.stringify(
@@ -439,19 +388,18 @@ async function runDoc(slug: string): Promise<DocResult> {
     failed: failed.size,
     lost: want.filter((s) => !finals.has(s.id)).length,
     repaired: [...finals.values()].filter((f) => f.attempt > 1).length,
-    // A revision 2 that a review replaced still counts: this is the chunk-0 pass's count (the gate checks it ran).
-    revised: [...finals].filter(([id, f]) => f.revision === 2 || (f.revision === REVIEWED_REVISION && revisedIds.has(id))).length,
-    reviseKept,
+    revised: revisedCount(t),
+    reviseKept: t.reviseKept,
     calls: calls.length - callsBefore,
-    ...usage,
+    ...t.usage,
     wallMs,
     firstFinalMs,
-    costUsd: price ? costUsd(price, usage) : null,
+    costUsd: price ? costUsd(price, t.usage) : null,
     errors: [...new Set(failed.values())],
-    ...(BRIEFED ? { brief: { ok: brief !== null, skipped: analyzeCall === undefined && !job.options.brief, ms: analyzeCall?.ms ?? null, ...analyzeUsage } } : {}),
+    ...(BRIEFED ? { brief: { ok: t.brief !== null, skipped: analyzeCall === undefined && !job.options.brief, ms: analyzeCall?.ms ?? null, ...t.analyzeUsage } } : {}),
     chunks: firstPass.length,
     // Engine-reported (ChunkOutcome.briefed, via the `chunk` event), not read off the prompt text.
-    briefedChunks: briefedChunks.size,
+    briefedChunks: t.briefedChunks.size,
     check,
     ...(REFINE ? { review } : {}),
   };
@@ -529,8 +477,10 @@ const total = { translatable: sum((r) => r.translatable), lost: sum((r) => r.los
 const checkKinds: Partial<Record<CheckKind, number>> = {};
 for (const r of results) for (const [k, n] of Object.entries(r.check.kinds)) checkKinds[k as CheckKind] = (checkKinds[k as CheckKind] ?? 0) + (n ?? 0);
 const checkTotal = { rerequested: sum((r) => r.check.rerequested), kinds: checkKinds, repaired: sum((r) => r.check.repaired), failed: sum((r) => r.check.failed), input: sum((r) => r.check.input), output: sum((r) => r.check.output), codeBearing: sum((r) => r.check.codeBearing), codePreserved: sum((r) => r.check.codePreserved), finalsFailingChecks: sum((r) => r.check.finalsFailingChecks) };
-const reviewTotal: ReviewCounts | null = REFINE ? { chunks: sum((r) => r.review?.chunks ?? 0), accepted: sum((r) => r.review?.accepted ?? 0), unchanged: sum((r) => r.review?.unchanged ?? 0), rejected: sum((r) => r.review?.rejected ?? 0), skipped: sum((r) => r.review?.skipped ?? 0), input: sum((r) => r.review?.input ?? 0), output: sum((r) => r.review?.output ?? 0) } : null;
-if (reviewTotal) console.log(`review (${REVIEW_PROMPT}): ${reviewTotal.chunks} chunks; segments accepted ${reviewTotal.accepted}, unchanged ${reviewTotal.unchanged}, rejected ${reviewTotal.rejected}, skipped ${reviewTotal.skipped}; tokens in ${reviewTotal.input} out ${reviewTotal.output}`);
+const rejectedTotal: Record<string, number> = {};
+for (const r of results) for (const [k, n] of Object.entries(r.review?.rejectedKinds ?? {})) rejectedTotal[k] = (rejectedTotal[k] ?? 0) + n;
+const reviewTotal: ReviewCounts | null = REFINE ? { chunks: sum((r) => r.review?.chunks ?? 0), accepted: sum((r) => r.review?.accepted ?? 0), unchanged: sum((r) => r.review?.unchanged ?? 0), rejected: sum((r) => r.review?.rejected ?? 0), skipped: sum((r) => r.review?.skipped ?? 0), input: sum((r) => r.review?.input ?? 0), output: sum((r) => r.review?.output ?? 0), rejectedKinds: rejectedTotal } : null;
+if (reviewTotal) console.log(`review (${REVIEW_PROMPT}): ${reviewTotal.chunks} chunks; segments accepted ${reviewTotal.accepted}, unchanged ${reviewTotal.unchanged}, rejected ${reviewTotal.rejected} ${JSON.stringify(rejectedTotal)}, skipped ${reviewTotal.skipped}; tokens in ${reviewTotal.input} out ${reviewTotal.output}`);
 console.log(`check: re-requested ${checkTotal.rerequested} ${JSON.stringify(checkKinds)} → repaired ${checkTotal.repaired}, failed ${checkTotal.failed}; extra tokens in ${checkTotal.input} out ${checkTotal.output}; code-bearing preserved ${checkTotal.codePreserved}/${checkTotal.codeBearing}; finals failing checks ${checkTotal.finalsFailingChecks}; lost ${total.lost}/${total.translatable}`);
 // chars/3.5 check (tokens.ts): characters per token as the provider counted them, over the
 // translation calls (system + user text in, answer text out). Nonce probes are left out.
@@ -591,7 +541,7 @@ const nonce = probes.length ? { echoed: probes.reduce((n, p) => n + p.echoed, 0)
 const briefs = results.flatMap((r) => (r.brief ? [r.brief] : []));
 // M2-D9: one-chunk documents make no brief call (`skipped`); they are counted apart.
 const briefTotals = briefs.length ? { docs: briefs.length, ok: briefs.filter((b) => b.ok).length, skipped: briefs.filter((b) => b.skipped).length, input: briefs.reduce((n, b) => n + b.input, 0), output: briefs.reduce((n, b) => n + b.output, 0), costUsd: price ? costUsd(price, { input: briefs.reduce((n, b) => n + b.input, 0), cachedInput: 0, output: briefs.reduce((n, b) => n + b.output, 0) }) : null } : null;
-const summary = { run: stamp, set: opt.set, strategy: STRATEGY, strategyVersion, prompt: TRANSLATE_PROMPT, promptHash, prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, label, thinking, reasoning: reasoningStats, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, check: checkTotal, review: reviewTotal, nonce, charsPerToken, thresholds };
+const summary = { run: stamp, set: opt.set, strategy: STRATEGY, strategyVersion, prompt: TRANSLATE_PROMPT, promptHash, ...(reviewHash === undefined ? {} : { reviewPromptHash: reviewHash }), prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, label, thinking, reasoning: reasoningStats, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, check: checkTotal, review: reviewTotal, nonce, charsPerToken, thresholds };
 fs.writeFileSync(path.join(outDir, 'summary.json'), `${JSON.stringify(summary, null, 1)}\n`);
 const money = (n: number | null): string => (n === null ? 'n/a' : `$${n.toFixed(5)}`);
 const md = [
@@ -605,7 +555,7 @@ const md = [
   `| **total** | ${total.translatable} | ${total.lost} | ${total.repaired} | ${sum((r) => r.chunks)} (${sum((r) => r.briefedChunks)}) | ${total.calls} | ${total.input} | ${total.cachedInput} | ${total.output} | ${(total.wallMs / 1000).toFixed(1)} | | ${money(total.costUsd)} |`,
   '',
   ...(briefTotals ? [`Brief (${ANALYZE_PROMPT_ID}): parsed for ${briefTotals.ok}/${briefTotals.docs - briefTotals.skipped} docs asked (${briefTotals.skipped} one-chunk docs skipped, M2-D9); ${briefTotals.input} in / ${briefTotals.output} out tokens, ${money(briefTotals.costUsd)} (in the totals above). Per doc: ${results.map((r) => `${r.slug} ${r.brief?.ok ? 'ok' : r.brief?.skipped ? 'skipped' : 'none'} ${r.brief?.ms === null || r.brief === undefined ? '–' : `${(r.brief.ms / 1000).toFixed(1)}s`}`).join(', ')}.`] : []),
-  ...(reviewTotal ? [`Review (${REVIEW_PROMPT}): ${reviewTotal.chunks} chunks; segments accepted ${reviewTotal.accepted}, unchanged ${reviewTotal.unchanged}, rejected ${reviewTotal.rejected}, skipped ${reviewTotal.skipped}; ${reviewTotal.input} in / ${reviewTotal.output} out tokens (in the totals above). Per doc (accepted/unchanged/rejected/skipped): ${results.map((r) => `${r.slug} ${r.review ? reviewLine(r.review) : '–'}`).join(', ')}.`] : []),
+  ...(reviewTotal ? [`Review (${REVIEW_PROMPT}): ${reviewTotal.chunks} chunks; segments accepted ${reviewTotal.accepted}, unchanged ${reviewTotal.unchanged}, rejected ${reviewTotal.rejected} ${JSON.stringify(rejectedTotal)}, skipped ${reviewTotal.skipped}; ${reviewTotal.input} in / ${reviewTotal.output} out tokens (in the totals above). Per doc (accepted/unchanged/rejected/skipped): ${results.map((r) => `${r.slug} ${r.review ? reviewLine(r.review) : '–'}`).join(', ')}.`] : []),
   `Characters per token (provider-counted; the engine assumes ${CHARS_PER_TOKEN}): input ${charsPerToken.input?.toFixed(2) ?? '–'}, output ${charsPerToken.output?.toFixed(2) ?? '–'} over ${charsPerToken.calls} calls.`,
   `S2 thresholds on ${thresholds.chunks} chunks / ${thresholds.segments} segments: ${thresholds.chunksWithFixes} chunks with parser fixes ${JSON.stringify(thresholds.fixKinds)}, ${thresholds.rerequested} re-requested, ${thresholds.merged} flagged merged; length ratio vs chunk median: max ${thresholds.maxRatio.toFixed(2)}, over 1.2/1.4/${MERGE_FACTOR}: ${Object.values(thresholds.over).join('/')}; ${MAX_TAG}-char tag hold-back: ${thresholds.partialTag} partial tags; highest answer/max_tokens ${thresholds.maxBudgetUse.toFixed(2)}.`,
   thinking?.reasoning ? `Thinking (translate calls): ${JSON.stringify(thinking.reasoning)}${thinking.maxTokensParam ? `, cap via ${thinking.maxTokensParam}` : ''}. Reasoning: ${reasoningStats.tokens} tokens over ${reasoningStats.calls} calls, max ${reasoningStats.max}; ${reasoningStats.outliers.length ? `OUTLIERS (≥ ${REASONING_OUTLIER_TOKENS} reasoning tokens or cut by the cap): ${reasoningStats.outliers.map((o) => `${o.doc} call ${o.n} (chunk ${o.chunkIndex ?? '–'}) ${o.reasoningTokens} tokens, ${(o.ms / 1000).toFixed(1)}s, stop ${o.stop}`).join('; ')}` : `no outliers (≥ ${REASONING_OUTLIER_TOKENS})`}.` : 'Thinking: none.',

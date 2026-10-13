@@ -27,6 +27,8 @@ export interface ReviewCounts {
   skipped: number;
   input: number;
   output: number;
+  /** Rejected candidates by the check that failed them (a candidate may fail several); see doc-tally.ts rejectedKinds. */
+  rejectedKinds?: Record<string, number>;
 }
 
 export interface RunSummary {
@@ -38,6 +40,8 @@ export interface RunSummary {
   prompt?: string;
   /** 12 hex digits of SHA-256 over the translate system prompt rendered with no context (run.ts). */
   promptHash?: string;
+  /** refine runs: the same hash over the review system prompt. */
+  reviewPromptHash?: string;
   /** Every prompt version the run sent, by role (M2 Phase B on); `prompt` is the translate one. */
   prompts?: Record<string, string>;
   label: string;

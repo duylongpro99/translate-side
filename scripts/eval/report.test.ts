@@ -62,7 +62,7 @@ describe('renderReport', () => {
   });
   it('shows refine against contextual: judge dimensions, cost and token ratios, and the review counts', () => {
     const judge = (fidelity: number, naturalness: number, costUsd: number) => ({ judgeModel: 'j', prompt: 'judge@1', at: '', scores: { a: { fidelity, naturalness }, b: { fidelity, naturalness } }, failed: [], usage: { input: 1, output: 1 }, costUsd });
-    const counts = { chunks: 3, accepted: 6, unchanged: 10, rejected: 2, skipped: 1, input: 600, output: 150 };
+    const counts = { chunks: 3, accepted: 6, unchanged: 10, rejected: 2, skipped: 1, input: 600, output: 150, rejectedKinds: { number: 1, length: 2 } };
     const ctx = run({ judge: judge(4, 3.5, 0.1) }, { strategy: 'contextual', prompt: 'translate@2', prompts: { translate: 'translate@2', analyze: 'analyze@1' } }, 0.01);
     const ref = run(
       { judge: judge(4.5, 3.5, 0.1) },
@@ -76,6 +76,7 @@ describe('renderReport', () => {
     expect(md).toContain('| translation cost | $0.0100 | $0.0170 (×1.70) |');
     expect(md).toContain('| tokens in + out | 1500 | 2250 (×1.50) |');
     expect(md).toContain('| review segments accepted / unchanged / rejected / skipped | – | 6 / 10 / 2 / 1 (rejected 25% of changes) |');
+    expect(md).toContain('| review rejections by check | – | length 2, number 1 |');
     expect(md).toContain('| review input / output tokens (in the totals) | – | 600 / 150 |');
     // No review rows when no run has a review pass.
     expect(renderReport({ runs: [ctx, run({})], categories })).not.toContain('review segments');
@@ -88,6 +89,7 @@ describe('renderReport', () => {
     const md = renderReport({ runs: [ctx, ref], categories: { a: 'docs', b: 'humor', c: 'docs' } });
     expect(md).toContain('| review segments accepted / unchanged / rejected / skipped | – | 3 / 2 / 0 / 0 (rejected 0% of changes) |');
     expect(md).toContain('| review input / output tokens (in the totals) | – | 40 / 10 |');
+    expect(md).toContain('| review rejections by check | – | none |');
   });
   it('labels a run by strategy, its prompt versions (translate first) and model', () => {
     expect(runLabel(summary())).toBe('single-pass / translate@1 / x');

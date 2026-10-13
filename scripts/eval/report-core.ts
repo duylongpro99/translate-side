@@ -80,8 +80,10 @@ export function reviewOn(r: Run, ids: readonly string[]): ReviewCounts | undefin
   const want = new Set(ids);
   const docs = r.summary.docs.filter((d) => want.has(d.slug) && d.review !== undefined);
   if (docs.length === 0) return undefined;
-  const sum = (k: keyof ReviewCounts) => docs.reduce((n, d) => n + (d.review?.[k] ?? 0), 0);
-  return { chunks: sum('chunks'), accepted: sum('accepted'), unchanged: sum('unchanged'), rejected: sum('rejected'), skipped: sum('skipped'), input: sum('input'), output: sum('output') };
+  const sum = (k: Exclude<keyof ReviewCounts, 'rejectedKinds'>) => docs.reduce((n, d) => n + (d.review?.[k] ?? 0), 0);
+  const rejectedKinds: Record<string, number> = {};
+  for (const d of docs) for (const [k, n] of Object.entries(d.review?.rejectedKinds ?? {})) rejectedKinds[k] = (rejectedKinds[k] ?? 0) + n;
+  return { chunks: sum('chunks'), accepted: sum('accepted'), unchanged: sum('unchanged'), rejected: sum('rejected'), skipped: sum('skipped'), input: sum('input'), output: sum('output'), rejectedKinds };
 }
 
 /** `12 / 80 / 3 / 0 (rejected 20% of changes)`: the review's segments, and how many of the reviewer's changes failed a post-check. */
@@ -145,6 +147,7 @@ export function renderReport({ runs: all, categories }: ReportInput): string {
   if (reviews.some(Boolean)) {
     lines.push(
       `| review segments accepted / unchanged / rejected / skipped | ${reviews.map(reviewCell).join(' | ')} |`,
+      `| review rejections by check | ${reviews.map((c) => (c === undefined ? '–' : c.rejectedKinds === undefined ? 'n/a' : Object.keys(c.rejectedKinds).length === 0 ? 'none' : Object.entries(c.rejectedKinds).sort(([a], [b]) => a.localeCompare(b)).map(([k, n]) => `${k} ${n}`).join(', '))).join(' | ')} |`,
       `| review input / output tokens (in the totals) | ${reviews.map((c) => (c ? `${c.input} / ${c.output}` : '–')).join(' | ')} |`,
     );
   }
