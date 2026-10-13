@@ -6,7 +6,7 @@ import { ANALYZE_PROMPT_ID } from '../prompts/analyze.ts';
 import { createDefaultPromptRegistry } from '../prompts/index.ts';
 import { REVIEW_PROMPT_ID } from '../prompts/review.ts';
 import { failed, fakeClient, fakeSleep, rateLimited, renderLines, success, translatorClient, wireLines, type FakeClient } from '../testing.ts';
-import type { EngineEvent, ReviewReport, Segment, TranslationJob } from '../types.ts';
+import type { EngineEvent, Segment, TranslationJob } from '../types.ts';
 import { CONTEXTUAL_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, REVISED_REVISION, contextual } from './contextual.ts';
 import { DRAFTS_STAGE, REFINE_CACHE_KEY, REFINE_ID, REFINE_VERSION, REVIEWED_REVISION, createRefine, refine } from './refine.ts';
 
@@ -174,6 +174,20 @@ describe('refine: contextual draft, then review', () => {
     expect(reports(events).flatMap((r) => r.ids).sort()).toEqual(['a', 'h']);
   });
 
+  it('does not review again a brought text that is already at the reviewed revision', async () => {
+    const translate = translatorClient();
+    const review = reviewer();
+    const brought = new Map([
+      ['h', { text: 'vi+:reviewed heading', revision: REVIEWED_REVISION }],
+      ['a', { text: 'vi:cached sentence.', revision: 1 }],
+    ]);
+    const events = await run(job({ drafts: brought }), { translate, review });
+    noFailures(events);
+    expect(review.requests.flatMap(drafts).map((d) => d.draft).sort()).toEqual(['vi:Two sentences here.', 'vi:cached sentence.']);
+    expect(reports(events).flatMap((r) => r.ids).sort()).toEqual(['a', 'b']);
+    expect(finals(events).some((e) => e.id === 'h')).toBe(false);
+  });
+
   it('ignores brought drafts of segments it does not translate or does not know', async () => {
     const translate = translatorClient();
     const review = reviewer();
@@ -266,7 +280,5 @@ describe('refine: contextual draft, then review', () => {
     expect(engineIndex.REVIEW_PROMPT_ID).toBe(REVIEW_PROMPT_ID);
     expect(engineIndex.PROMPTS).toContain(engineIndex.reviewV1);
     expect(typeof engineIndex.createReviewStage).toBe('function');
-    const report: ReviewReport = { ids: [], accepted: [], unchanged: [], rejected: [] };
-    expect(report.skipped).toBeUndefined();
   });
 });

@@ -39,8 +39,10 @@ export const REVIEWED_REVISION = 3;
 
 export const REVIEW_TEMPERATURE = 0.2;
 
-/** The character `neutralizeContextTags` puts for `<` in page text. */
-const NEUTRALIZED = '‹';
+/** A data-block or `<seg>` tag as `neutralizeContextTags` leaves it in page text (`<` → `‹`). */
+const NEUTRALIZED_TAG = /‹\s*\/?\s*(context|source|translation|seg|brief|glossary|review|item)\b/gi;
+
+const neutralizedTags = (text: string): number => text.match(NEUTRALIZED_TAG)?.length ?? 0;
 
 /** One chunk of the review pass: its segments that have a draft, in page order. */
 export interface ReviewWork {
@@ -80,12 +82,13 @@ export function parseReview(answer: string, ids: readonly number[], stopReason: 
 
 /**
  * Whether `candidate` may replace the draft of `source`: it passes every post-check against the
- * source, does not copy one of `neighbours`, and brings no neutralised tag back that the page did
- * not have (the reviewer saw `‹` for `<` in page text).
+ * source, does not copy one of `neighbours`, and holds no more neutralised tags than the source
+ * (the reviewer saw `‹seg`, `‹/item`… for the tags in page text; such a text must not reach the
+ * page). Other `‹` (French or Swiss quotes) are text.
  */
 export function acceptable(source: string, candidate: string, targetLang: string, neighbours: readonly Rendered[]): boolean {
   if (checkSegment(source, candidate, targetLang).length > 0) return false;
-  if (candidate.includes(NEUTRALIZED) && !source.includes(NEUTRALIZED)) return false;
+  if (neutralizedTags(candidate) > neutralizedTags(source)) return false;
   return !copiesNeighbour(source, candidate, neighbours);
 }
 
@@ -180,6 +183,13 @@ export function createReviewStage(reviewPrompt: string = REVIEW_PROMPT_ID, strat
       const sourceTokens = items.reduce((n, i) => n + estimateTokens(i.segment.inlineMarkup), 0);
       const maxOut = maxOutputTokens({ sourceTokens, segments: items.length, reasoningReserveTokens: client.reasoningReserveTokens({}) });
       const estimate = estimateTokens(system) + estimateTokens(user) + maxOut;
+      // Asked again after the awaits above: the job may have stopped wanting reviews meanwhile.
+      // Nothing awaits between these checks and the reservation below.
+      if (work.reviewWanted?.() === false) {
+        report.skipped = 'dropped';
+        yield done();
+        return;
+      }
       if (ctx.budget.exhausted() || ctx.budget.remainingTokens() - reserved < estimate) {
         report.skipped = 'budget';
         yield done();
@@ -230,7 +240,8 @@ export function createReviewStage(reviewPrompt: string = REVIEW_PROMPT_ID, strat
       const finals: EngineEvent[] = [];
       for (const { n, segment, draft } of items) {
         const candidate = candidates.get(n);
-        if (candidate === undefined || candidate === draft.trim()) {
+        // The draft given back, also with the page's tags as the reviewer saw them (neutralised).
+        if (candidate === undefined || candidate === draft.trim() || candidate === neutralizeContextTags(draft).trim()) {
           report.unchanged.push(segment.id);
           continue;
         }

@@ -303,7 +303,6 @@ describe('review stage', () => {
       [1, { ids: ['b'], accepted: [], unchanged: [], rejected: [], skipped: 'budget' }],
       [0, { ids: ['a'], accepted: ['a'], unchanged: [], rejected: [] }],
     ]);
-    // The reservation is released once the call is over: a later chunk may use what is left.
     expect(ctx.budget.remainingTokens()).toBe(one + 100 - 30);
   });
 
@@ -405,7 +404,57 @@ describe('review stage', () => {
   });
 
   it('rejects a candidate that brings back a neutralised tag the page did not have', () => {
-    expect(acceptable('Use the tag here in the page.', 'Dùng thẻ ‹seg ở đây trong trang.', 'vi', [])).toBe(false);
-    expect(acceptable('Keep the ‹ sign here in the page.', 'Giữ dấu ‹ ở đây trong trang.', 'vi', [])).toBe(true);
+    expect(acceptable('Use the tag here in the page.', 'Dùng thẻ ‹seg> ở đây trong trang.', 'vi', [])).toBe(false);
+    expect(acceptable('Close the list here.', 'Đóng danh sách ‹/ item> ở đây.', 'vi', [])).toBe(false);
+    // The page had that text itself: as many as the source is fine.
+    expect(acceptable('The ‹seg marker stays here.', 'Dấu ‹seg vẫn ở đây.', 'vi', [])).toBe(true);
+  });
+
+  it('accepts French and Swiss quotation marks', () => {
+    expect(acceptable('He called it "fast" and moved on quickly.', 'Il l’a qualifié de ‹ rapide › et est vite passé à autre chose.', 'fr', [])).toBe(true);
+    expect(acceptable('He called it "fast" and moved on quickly.', 'Il l’a qualifié de « rapide » et est vite passé à autre chose.', 'fr', [])).toBe(true);
+  });
+
+  it('a draft given back with the page\'s tags as the reviewer saw them is unchanged, not rejected', async () => {
+    const tagged = seg('t', 'The <item> tag marks one entry in the list.');
+    const draft = 'Thẻ <item> đánh dấu một mục trong danh sách.';
+    const client = reviewer((items) => segLine(1, ` ${items[0]?.draft ?? ''} `));
+    const ctx = context(client);
+    ctx.memory.translated.set('t', { text: draft, revision: 1 });
+    const events = await drive([{ chunk: { index: 0, segments: [tagged], tokens: 12 }, doc: { ...DOC, segments: [...SEGMENTS, tagged] }, options: OPTIONS }], ctx);
+    expect(itemsOf(client.requests[0] as NormalizedRequest)[0]?.draft).toBe('Thẻ ‹item> đánh dấu một mục trong danh sách.');
+    expect(finals(events)).toEqual([]);
+    expect(reports(events)).toEqual([[0, { ids: ['t'], accepted: [], unchanged: ['t'], rejected: [] }]]);
+  });
+
+  it('a truncated answer keeps the segments closed before the cut; the cut one is unchanged', async () => {
+    const ctx = context(reviewer(() => ({ text: `${segLine(1, BETTER.a ?? '')}\n<seg id="2">${(BETTER.b ?? '').slice(0, 15)}`, stopReason: 'max_tokens' })));
+    const events = await drive([work(0, ['a', 'b'])], ctx);
+    expect(finals(events).map((e) => [e.id, e.text])).toEqual([['a', BETTER.a]]);
+    expect(reports(events)).toEqual([[0, { ids: ['a', 'b'], accepted: ['a'], unchanged: ['b'], rejected: [] }]]);
+  });
+
+  it('reviewWanted turning false while the prompt is being built: no call, the chunk dropped', async () => {
+    let wanted = true;
+    const client = reviewer(improveAll);
+    const ctx = context(client);
+    ctx.context = [{ id: 'flip', provide: async () => ((wanted = false), []) }, ...ctx.context];
+    const events = await drive([work(0, ['a'], { reviewWanted: () => wanted })], ctx);
+    expect(client.requests).toHaveLength(0);
+    expect(reports(events)).toEqual([[0, { ids: ['a'], accepted: [], unchanged: [], rejected: [], skipped: 'dropped' }]]);
+  });
+
+  it('releases a call\'s reservation once it is over: later chunks review in what is left', async () => {
+    const probe = reviewer(() => '<none/>');
+    await drive([work(0, ['a'])], context(probe));
+    const req = probe.requests[0] as NormalizedRequest;
+    const one = estimateTokens(req.system) + estimateTokens(req.messages[0]?.content ?? '') + req.maxOutputTokens;
+    // Each call spends 30 tokens: the budget covers one estimate at a time and three calls in turn.
+    const client = reviewer(() => '<none/>');
+    const ctx = context(client, { budget: { maxTokens: one + 100 } });
+    const events = await drive([work(0, ['a']), work(1, ['a']), work(2, ['a'])], ctx, 1);
+    expect(client.requests).toHaveLength(3);
+    expect(reports(events).map(([, r]) => r.skipped)).toEqual([undefined, undefined, undefined]);
+    expect(ctx.budget.remainingTokens()).toBe(one + 100 - 90);
   });
 });
