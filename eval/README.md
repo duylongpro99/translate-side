@@ -20,12 +20,25 @@ The human sheet is the source of truth: fill in `fidelity`, `naturalness`, `tone
 
 A column is named `strategy / prompt / model` from the run's `summary.json`, so `contextual` and `translate@2` runs join the report without changing it.
 
+## Refine (Best) against contextual (Balanced)
+
+```
+pnpm run eval -- --set eval --strategy contextual --chunk-tokens 400 --out eval-results/<c>
+pnpm run eval -- --set eval --strategy refine --chunk-tokens 400 [--review-prompt review@N] --out eval-results/<r>
+pnpm run eval:judge -- eval-results/<c>  &&  pnpm run eval:judge -- eval-results/<r>
+pnpm run eval:report -- eval-results/<c> eval-results/<r>     # contextual first: refine's column shows the change
+```
+
+`refine` drafts exactly as `contextual` does (translate@2 only), then reviews each chunk of drafts with `--review-prompt` (default: the shipped review prompt). `summary.json` counts, per passage and in total, the segments the review accepted (replaced by a revision that passed every post-check), left unchanged, rejected (the candidate failed a post-check; the draft stays) or skipped, and the review calls' tokens. Each rejected candidate is read back from the recorded review answer and checked again, so `summary.json` also counts the rejections by the check that failed them (`rejectedKinds`: the post-check kinds, `tag` for a page tag brought back, `duplicate` for a copied neighbour). `summary.json` records `reviewPromptHash` beside `promptHash`, so a review prompt edited under the same id shows. The report adds, beside the judge dimensions and the cost ratio, the ratio of input plus output tokens (the APIBOX prices are nominal), those review counts with the share of the reviewer's changes that were rejected, and the rejections by check. With `--mock`, the reviewer leaves odd items unchanged, cuts every fourth item to its first word (the length check rejects it, except on the shortest segments) and returns the other even items' drafts with a fixed suffix (accepted), so a mock run goes through the unchanged, accepted and rejected paths without a key.
+
 ## Regression gate
 
 ```
 pnpm run eval:gate                          # one translate + judge pass against eval/gate.json; once more if it fails
 pnpm run eval:gate -- --baseline 5          # re-baseline: eval/runs/gate-baseline-<n>/ and eval/gate.json
 pnpm run eval:gate -- --timeout-min 25      # the per-pass timeout (default 25)
+pnpm run eval:gate -- --mode best           # the Best gate: refine against eval/gate-best.json
+pnpm run eval:gate -- --mode best --baseline 5 [--from <run>,<run>,…]   # Best re-baseline: eval/runs/gate-best-baseline-<n>/ and eval/gate-best.json
 ```
 
 **What it checks.** The gate translates the 23 passages with the configuration the extension ships:
@@ -58,6 +71,16 @@ A failed pass is run once more, and the gate is red (exit 1) only when both pass
 3. Commit the new `gate.json` with the runs.
 
 Re-baseline when the judge changes (a new judge model, prompt id or thinking effort is refused until you do), or when a quality change is accepted. Never re-baseline to turn a red gate green. When the shipped model, quirks or strategy differ from the baseline's, the gate prints a note and compares against the baseline all the same. The baseline stays the quality bar.
+
+**Best gate (`--mode best`).** The same configuration with the `refine` strategy and the shipped review prompt, gated against its own baseline, `eval/gate-best.json` (runs in `eval/runs/gate-best-baseline-*`). The two modes never share a baseline, and the default mode is unchanged. A Best pass also fails when no segment was reviewed (the review pass did not run). Run it beside the Balanced gate whenever the Best mode can ship, once `eval/gate-best.json` exists. A refine pass makes the review calls on top of the Balanced ones, so expect up to twice the translate spend of a Balanced pass; the judge's share is the same.
+
+**When to write `eval/gate-best.json`.** Run `pnpm run eval:gate -- --mode best --baseline 5` only after the refine margin decision (refine against contextual in one paired session, and the blind sheet) is recorded. A Best baseline written before that would gate against an unaccepted quality bar.
+
+**Seeding a baseline from finished runs (`--from`).** `--baseline n --from a,b,…` takes n finished harness runs instead of translating anew. The gate refuses before any call, naming each problem, unless every run is:
+- a run of exactly the gate configuration: provider and model, strategy and version, prompt ids, chunk 400, the profile's concurrency, natural style, gloss first, no personal glossary, the shipped thinking and max-tokens parameter;
+- a run of the same prompt texts: its `promptHash` (and, for refine, `reviewPromptHash`) equals the hash of the gate's prompts rendered now;
+- a run over every passage of the eval set, no more and no fewer;
+- a distinct run: two folders holding the same run (the same `run` stamp in `summary.json`) count once and are refused. Each run is copied without its `calls.jsonl` into the mode's baseline folder, judged by the pinned judge if it is not yet, and then the baseline is computed as usual. To let a paired refine-against-contextual session seed the Best baseline, run its refine passes with the gate's own arguments (`translateArgs` in `scripts/eval/gate.ts`): `--set eval --provider apibox --model <the default profile's model> --strategy refine --prompt translate@2 --review-prompt <the shipped review prompt> --chunk-tokens 400 --concurrency <the default profile's>`.
 
 ## Passages
 

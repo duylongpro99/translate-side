@@ -6,16 +6,22 @@
 // a dimension below its baseline mean minus its margin fails the pass. A failed pass is run once more; the gate
 // is red only when both fail. It refuses (exit 2) when gate.json's judge differs from judge-core.ts, and stops a
 // pass at the spend cap or the timeout with a verdict. Runs locally with the keys in .env (eval/README.md says when).
+// `--mode best` gates the Best quality mode instead: the same configuration with the `refine` strategy and the shipped
+// review prompt, against its own baseline in eval/gate-best.json (eval/runs/gate-best-baseline-<n>/); a pass in which
+// no segment was reviewed fails. `--baseline n --from a,b,…` seeds the n baseline runs from finished harness runs of
+// exactly that configuration (copied without calls.jsonl, then judged if they are not yet) instead of translating anew.
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, isDeepStrictEqual } from 'node:util';
-import { contextual, CONTEXTUAL_TRANSLATE_PROMPT_ID, singlePass, TRANSLATE_PROMPT_ID } from '@/engine/index';
+import { contextual, CONTEXTUAL_TRANSLATE_PROMPT_ID, refine, REVIEW_PROMPT_ID, singlePass, TRANSLATE_PROMPT_ID } from '@/engine/index';
 import { PANEL_STRATEGY } from '@/entrypoints/sidepanel/jobs';
 import { APIBOX_JUDGE_QUIRKS } from '@/llm/presets';
 import type { Quirks } from '@/llm/types';
 import { DEFAULT_CONNECTION, DEFAULT_PROFILE, withProfileQuirks } from '@/shared/settings';
 import { JUDGE_MODEL, JUDGE_PROMPT_ID } from './judge-core.ts';
+import { listPassageIds } from './passages.ts';
+import { reviewPromptHash, translatePromptHash } from './prompt-hash.ts';
 import { harnessQuirks, PROVIDERS } from './providers.ts';
 import { dimensionMeans } from './report-core.ts';
 import { DIMENSIONS, type Dimension } from './rubric.ts';
@@ -34,10 +40,18 @@ export const MIN_MARGIN = 0.2;
 /** USD at the nominal prices of pricing.ts (the APIBOX ones are unverified); a gate run stops above it. */
 export const SPEND_CAP_USD = 0.5;
 export const GATE_FILE = 'eval/gate.json';
+export const GATE_BEST_FILE = 'eval/gate-best.json';
+
+/** `balanced`: the panel's strategy, against eval/gate.json. `best`: `refine`, against eval/gate-best.json. The two never share a baseline. */
+export type GateMode = 'balanced' | 'best';
+export const GATE_MODES: readonly GateMode[] = ['balanced', 'best'];
+
+/** The baseline file a mode gates against. */
+export const gateFile = (mode: GateMode): string => (mode === 'best' ? GATE_BEST_FILE : GATE_FILE);
 /** Fewer baseline runs give no usable standard deviation (the plan takes 5). */
 export const MIN_BASELINE_RUNS = 3;
 export const M2_C400_RUN = 'eval/runs/baseline-contextual-translate2-qwen3.8-flash-c400';
-export const BASELINE_DIR = (n: number): string => `eval/runs/gate-baseline-${n}`;
+export const BASELINE_DIR = (n: number, mode: GateMode = 'balanced'): string => (mode === 'best' ? `eval/runs/gate-best-baseline-${n}` : `eval/runs/gate-baseline-${n}`);
 
 /** What makes judge scores comparable: the model, the prompt id and the thinking effort (judge.ts resumes only on all three). */
 export interface JudgeIdentity {
@@ -59,6 +73,8 @@ export interface GateConfig {
   strategy: string;
   strategyVersion: number;
   translatePrompt: string;
+  /** `refine` only: the review prompt it sends. */
+  reviewPrompt?: string;
   chunkTokens: number;
   concurrency: number;
   set: 'eval';
@@ -90,17 +106,17 @@ export interface GateFile {
 
 /**
  * The configuration the extension ships: the default profile's model and quirks over the default connection's
- * (as the app builds its client), the panel's strategy and its translate prompt. Throws when the harness cannot
- * send exactly that (no provider with the default connection, or different quirks).
+ * (as the app builds its client), the panel's strategy (`best`: refine) and its prompts. Throws when the harness
+ * cannot send exactly that (no provider with the default connection, or different quirks).
  */
-export function shippedConfig(): GateConfig {
+export function shippedConfig(mode: GateMode = 'balanced'): GateConfig {
   const provider = Object.entries(PROVIDERS).find(([, p]) => p.conn.baseUrl === DEFAULT_CONNECTION.baseUrl && p.conn.protocol === DEFAULT_CONNECTION.protocol);
   if (provider === undefined) throw new Error(`no harness provider for the default connection ${DEFAULT_CONNECTION.baseUrl} (scripts/eval/providers.ts)`);
   const [name, preset] = provider;
   const app = withProfileQuirks({ ...DEFAULT_CONNECTION, apiKey: '', hasHostPermission: async () => true }, DEFAULT_PROFILE).quirks;
   const harness = harnessQuirks(preset, DEFAULT_PROFILE.model);
   if (!isDeepStrictEqual(app, harness)) throw new Error(`the harness would send other quirks for ${DEFAULT_PROFILE.model} than the extension (providers.ts vs settings.ts): ${JSON.stringify(harness)} vs ${JSON.stringify(app)}`);
-  const strategy = [singlePass, contextual].find((s) => s.id === PANEL_STRATEGY);
+  const strategy = mode === 'best' ? refine : [singlePass, contextual, refine].find((s) => s.id === PANEL_STRATEGY);
   if (strategy === undefined) throw new Error(`the harness cannot run the panel's strategy ${PANEL_STRATEGY}`);
   return {
     provider: name,
@@ -108,7 +124,8 @@ export function shippedConfig(): GateConfig {
     quirks: app,
     strategy: strategy.id,
     strategyVersion: strategy.version,
-    translatePrompt: strategy.id === contextual.id ? CONTEXTUAL_TRANSLATE_PROMPT_ID : TRANSLATE_PROMPT_ID,
+    translatePrompt: strategy.id === singlePass.id ? TRANSLATE_PROMPT_ID : CONTEXTUAL_TRANSLATE_PROMPT_ID,
+    ...(strategy.id === refine.id ? { reviewPrompt: REVIEW_PROMPT_ID } : {}),
     chunkTokens: GATE_CHUNK_TOKENS,
     concurrency: DEFAULT_PROFILE.maxConcurrency,
     set: 'eval',
@@ -118,13 +135,13 @@ export function shippedConfig(): GateConfig {
 
 /** The harness arguments of a gate pass. */
 export function translateArgs(cfg: GateConfig, out: string): string[] {
-  return ['--set', cfg.set, '--provider', cfg.provider, '--model', cfg.model, '--strategy', cfg.strategy, '--prompt', cfg.translatePrompt, '--chunk-tokens', String(cfg.chunkTokens), '--concurrency', String(cfg.concurrency), '--target', cfg.target, '--out', out];
+  return ['--set', cfg.set, '--provider', cfg.provider, '--model', cfg.model, '--strategy', cfg.strategy, '--prompt', cfg.translatePrompt, ...(cfg.reviewPrompt === undefined ? [] : ['--review-prompt', cfg.reviewPrompt]), '--chunk-tokens', String(cfg.chunkTokens), '--concurrency', String(cfg.concurrency), '--target', cfg.target, '--out', out];
 }
 
-/** Why the gate must not compare against gate.json, or undefined: scores of another judge are not comparable. */
-export function judgeMismatch(gate: Pick<GateFile, 'judge'>, judge = PINNED_JUDGE): string | undefined {
+/** Why the gate must not compare against its baseline `file`, or undefined: scores of another judge are not comparable. */
+export function judgeMismatch(gate: Pick<GateFile, 'judge'>, judge = PINNED_JUDGE, file = GATE_FILE): string | undefined {
   if (gate.judge.model === judge.model && gate.judge.prompt === judge.prompt && gate.judge.effort === judge.effort) return undefined;
-  return `${GATE_FILE} was scored by ${judgeLabel(gate.judge)} but the pinned judge is ${judgeLabel(judge)}: re-baseline deliberately (eval/README.md) before gating`;
+  return `${file} was scored by ${judgeLabel(gate.judge)} but the pinned judge is ${judgeLabel(judge)}: re-baseline deliberately (eval/README.md) before gating`;
 }
 
 export function sampleSd(xs: readonly number[]): number {
@@ -157,6 +174,8 @@ export interface PassResult {
   passages: number;
   briefedChunks: number;
   revised: number;
+  /** refine passes only: segments the review pass answered for (accepted, unchanged or rejected). */
+  reviewed?: number;
   lost: number;
   translatable: number;
   translateUsd: number | null;
@@ -194,6 +213,7 @@ export function passProblems(p: PassResult, judge: JudgeIdentity): string[] {
   if (p.judge !== undefined && judgeMismatch({ judge: p.judge }, judge)) reasons.push(`scored by ${judgeLabel(p.judge)}, not ${judgeLabel(judge)}`);
   if (p.briefedChunks === 0) reasons.push('no chunk carried the brief: the contextual path did not run');
   if (p.revised === 0) reasons.push('no segment was revised: the chunk-0 second pass did not run');
+  if (p.reviewed === 0) reasons.push('no segment was reviewed: the review pass did not run');
   if (p.lost > 0) reasons.push(`${p.lost}/${p.translatable} segments lost`);
   if (p.translateUsd === null || p.judgeUsd === null || passSpend(p) <= 0) reasons.push('no priced calls reported: a pass without real spend is not a result');
   return reasons;
@@ -255,7 +275,7 @@ export function renderPass(attempt: number, p: PassResult, v: PassVerdict): stri
     '| dimension | baseline | margin | floor | score | vs baseline | |',
     '|---|---|---|---|---|---|---|',
     ...v.rows.map((r) => `| ${r.dimension} | ${f2(r.baseline)} | ${f2(r.margin)} | ${f2(r.floor)} | ${f2(r.score)} | ${r.score === undefined ? '–' : sgn(r.score - r.baseline)} | ${r.ok ? 'ok' : 'FAIL'} |`),
-    `passages scored ${p.scored}/${p.passages}, briefed chunks ${p.briefedChunks}, revised segments ${p.revised}, lost ${p.lost}/${p.translatable}`,
+    `passages scored ${p.scored}/${p.passages}, briefed chunks ${p.briefedChunks}, revised segments ${p.revised}${p.reviewed === undefined ? '' : `, reviewed segments ${p.reviewed}`}, lost ${p.lost}/${p.translatable}`,
     `spend: translate ${usd(p.translateUsd)} + judge ${usd(p.judgeUsd)} = $${v.spendUsd.toFixed(4)}`,
     ...v.reasons.map((r) => `- ${r}`),
   ].join('\n');
@@ -310,7 +330,48 @@ export function lineCost(line: string): number {
 }
 
 /** Summary fields the harness writes beyond RunSummary's. */
-type GateSummary = Omit<RunSummary, 'total' | 'docs'> & { total: RunSummary['total'] & { revised?: number }; docs: (RunSummary['docs'][number] & { briefedChunks?: number })[] };
+export type GateSummary = Omit<RunSummary, 'total' | 'docs'> & {
+  total: RunSummary['total'] & { revised?: number };
+  docs: (RunSummary['docs'][number] & { briefedChunks?: number })[];
+  concurrency?: number;
+  /** The translate calls' thinking (null for a mock run). */
+  thinking?: { reasoning?: Quirks['reasoning']; maxTokensParam?: Quirks['maxTokensParam'] } | null;
+};
+
+/** Segments the review pass answered for in a refine run (accepted, unchanged or rejected). */
+export const reviewedSegments = (s: Pick<RunSummary, 'review'>): number => (s.review ? s.review.accepted + s.review.unchanged + s.review.rejected : 0);
+
+/**
+ * How a finished harness run differs from the gate configuration over `passages` (empty: it is a run of exactly
+ * that configuration, prompt texts included, over exactly those passages, so `--from` may use it as a baseline run).
+ */
+export function runConfigMismatch(s: GateSummary, cfg: GateConfig, passages: readonly string[]): string[] {
+  const vars = { targetLang: cfg.target, style: 'natural' as const, gloss: 'first' as const };
+  const have = new Set(s.docs.map((d) => d.slug));
+  const missing = passages.filter((id) => !have.has(id));
+  const extra = [...have].filter((id) => !passages.includes(id));
+  const want: [string, unknown, unknown][] = [
+    ['set', s.set, cfg.set],
+    ['provider/model', s.label, `${cfg.provider}/${cfg.model}`],
+    ['strategy', s.strategy, cfg.strategy],
+    ['strategy version', s.strategyVersion, cfg.strategyVersion],
+    ['translate prompt', s.prompts?.translate ?? s.prompt, cfg.translatePrompt],
+    ['review prompt', s.prompts?.review, cfg.reviewPrompt],
+    ['chunk tokens', s.chunkTokens, cfg.chunkTokens],
+    ['concurrency', s.concurrency, cfg.concurrency],
+    ['target', s.target, cfg.target],
+    ['style', s.style ?? 'natural', 'natural'],
+    ['gloss', s.gloss ?? 'first', 'first'],
+    ['personal glossary', s.glossary ?? 0, 0],
+    ['thinking', s.thinking?.reasoning, cfg.quirks.reasoning],
+    ['max tokens parameter', s.thinking?.maxTokensParam, cfg.quirks.maxTokensParam],
+    ['translate prompt hash', s.promptHash, translatePromptHash(cfg.translatePrompt, vars)],
+    ['review prompt hash', s.reviewPromptHash, cfg.reviewPrompt === undefined ? undefined : reviewPromptHash(cfg.reviewPrompt, vars)],
+  ];
+  const out = want.filter(([, got, exp]) => !isDeepStrictEqual(got, exp)).map(([name, got, exp]) => `${name} ${JSON.stringify(got) ?? 'none'}, not ${JSON.stringify(exp) ?? 'none'}`);
+  if (missing.length || extra.length) out.push(`passages: ${[missing.length ? `missing ${missing.join(', ')}` : '', extra.length ? `not in the eval set ${extra.join(', ')}` : ''].filter(Boolean).join('; ')}`);
+  return out;
+}
 
 /** One translate-and-judge pass into `dir`, stopped at `deadline` or when its spend passes `budgetUsd`. `resume` keeps a finished translation. */
 async function livePass(cfg: GateConfig, dir: string, deadline: number, budgetUsd: number, resume = false): Promise<PassResult> {
@@ -355,6 +416,7 @@ async function livePass(cfg: GateConfig, dir: string, deadline: number, budgetUs
     passages: run ? Object.keys(run.outputs).length : 0,
     briefedChunks: summary ? summary.docs.reduce((n, d) => n + (d.briefedChunks ?? 0), 0) : 0,
     revised: summary?.total.revised ?? 0,
+    ...(cfg.strategy === refine.id ? { reviewed: summary ? reviewedSegments(summary) : 0 } : {}),
     lost: summary?.total.lost ?? 0,
     translatable: summary?.total.translatable ?? 0,
     translateUsd: summary === undefined && translateUsd === 0 ? null : translateUsd,
@@ -372,15 +434,53 @@ function keyCheck(cfg: GateConfig): string | undefined {
   return missing.length ? `${missing.join(', ')} not set (.env or the environment): the gate needs live calls` : undefined;
 }
 
-/** `--baseline n`: n passes into eval/runs/gate-baseline-<i>/ (a finished one is kept), then eval/gate.json. */
-async function baseline(cfg: GateConfig, n: number, timeoutMin: number): Promise<number> {
+/**
+ * Why the finished runs in `dirs` cannot seed the baseline of `cfg` (`--from`), one line per problem; empty when
+ * each is a distinct run of exactly that configuration over every passage of the eval set, and its baseline folder
+ * is free (or already holds that run).
+ */
+export function fromProblems(dirs: readonly string[], cfg: GateConfig, mode: GateMode, root = ROOT, passages: readonly string[] = dirs.length ? listPassageIds(root) : []): string[] {
+  const problems: string[] = [];
+  const seen = new Map<string, string>();
+  dirs.forEach((dir, i) => {
+    const summary = readJson<GateSummary>(path.resolve(root, dir, 'summary.json'));
+    if (summary === undefined) {
+      problems.push(`${dir}: no summary.json (not a finished harness run)`);
+      return;
+    }
+    const twin = seen.get(summary.run);
+    if (twin !== undefined) problems.push(`${dir}: the same run (${summary.run}) as ${twin}: the baseline needs distinct runs`);
+    else seen.set(summary.run, dir);
+    for (const m of runConfigMismatch(summary, cfg, passages)) problems.push(`${dir}: ${m}`);
+    const target = readJson<GateSummary>(path.resolve(root, BASELINE_DIR(i + 1, mode), 'summary.json'));
+    if (target !== undefined && target.run !== summary.run) problems.push(`${BASELINE_DIR(i + 1, mode)} already holds another run (${target.run}): delete the old baseline runs first`);
+  });
+  return problems;
+}
+
+/** Copies `--from` run i into its baseline folder, without calls.jsonl (as a gate baseline run keeps it); a folder already holding it is kept. */
+function seedBaseline(from: string, dir: string): void {
+  const abs = path.resolve(ROOT, dir);
+  if (fs.existsSync(path.join(abs, 'summary.json'))) return;
+  fs.cpSync(path.resolve(ROOT, from), abs, { recursive: true, filter: (src) => path.basename(src) !== 'calls.jsonl' });
+  console.log(`seeded ${dir} from ${from}`);
+}
+
+/**
+ * `--baseline n`: n passes into the mode's baseline folders (a finished one is kept), then the mode's baseline file.
+ * With `from` (n finished runs of the same configuration), those runs are copied in and only judged.
+ */
+async function baseline(cfg: GateConfig, n: number, timeoutMin: number, mode: GateMode, from: readonly string[] = []): Promise<number> {
+  const file = gateFile(mode);
   const results: PassResult[] = [];
   for (let i = 1; i <= n; i++) {
-    const dir = BASELINE_DIR(i);
+    const dir = BASELINE_DIR(i, mode);
+    const seed = from[i - 1];
+    if (seed !== undefined) seedBaseline(seed, dir);
     console.log(`\nbaseline run ${i}/${n} → ${dir}`);
     const r = await livePass(cfg, dir, Date.now() + timeoutMin * 60_000, SPEND_CAP_USD, true);
     const problems = passProblems(r, PINNED_JUDGE);
-    console.log(`baseline run ${i}: ${DIMENSIONS.map((d) => `${d} ${f2(r.means[d])}`).join(', ')}; briefed chunks ${r.briefedChunks}, revised ${r.revised}; spend translate ${usd(r.translateUsd)} + judge ${usd(r.judgeUsd)}`);
+    console.log(`baseline run ${i}: ${DIMENSIONS.map((d) => `${d} ${f2(r.means[d])}`).join(', ')}; briefed chunks ${r.briefedChunks}, revised ${r.revised}${r.reviewed === undefined ? '' : `, reviewed ${r.reviewed}`}; spend translate ${usd(r.translateUsd)} + judge ${usd(r.judgeUsd)}`);
     if (problems.length) {
       console.log(`baseline run ${i} is not usable:\n${problems.map((x) => `- ${x}`).join('\n')}\nFix the cause and run the same command again (finished runs are kept).`);
       return 1;
@@ -398,22 +498,22 @@ async function baseline(cfg: GateConfig, n: number, timeoutMin: number): Promise
   console.log(`baseline spend $${results.reduce((a, r) => a + passSpend(r), 0).toFixed(4)} at nominal prices`);
   const below = belowM2(dims);
   if (below.length) {
-    console.log(`\nHEAD is below the M2 c400 reference on ${below.join(', ')}: ${GATE_FILE} not written. Report it; do not re-baseline over a regression.`);
+    console.log(`\nHEAD is below the M2 c400 reference on ${below.join(', ')}: ${file} not written. Report it; do not re-baseline over a regression.`);
     return 3;
   }
-  const file: GateFile = { judge: PINNED_JUDGE, config: cfg, marginRule: `max(2 × sample SD of the ${n} run means, ${MIN_MARGIN})`, dimensions: dims, baselineRuns: results.map((r) => r.dir), m2c400Run: M2_C400_RUN, createdAt: new Date().toISOString() };
-  fs.writeFileSync(path.join(ROOT, GATE_FILE), `${JSON.stringify(file, null, 1)}\n`);
-  console.log(`\nwrote ${GATE_FILE}`);
+  const gate: GateFile = { judge: PINNED_JUDGE, config: cfg, marginRule: `max(2 × sample SD of the ${n} run means, ${MIN_MARGIN})`, dimensions: dims, baselineRuns: results.map((r) => r.dir), m2c400Run: M2_C400_RUN, createdAt: new Date().toISOString() };
+  fs.writeFileSync(path.join(ROOT, file), `${JSON.stringify(gate, null, 1)}\n`);
+  console.log(`\nwrote ${file}`);
   return 0;
 }
 
 /** Entry (scripts/eval-gate.mjs). Exit 0 green, 1 red, 2 refused before any call, 3 baseline below the M2 reference. */
 export async function main(argv: string[]): Promise<number> {
-  let opt: { baseline?: string | undefined; 'timeout-min': string };
+  let opt: { baseline?: string | undefined; 'timeout-min': string; mode: string; from?: string | undefined };
   try {
     ({ values: opt } = parseArgs({
       args: argv.filter((a) => a !== '--'),
-      options: { baseline: { type: 'string' }, 'timeout-min': { type: 'string', default: '25' } },
+      options: { baseline: { type: 'string' }, 'timeout-min': { type: 'string', default: '25' }, mode: { type: 'string', default: 'balanced' }, from: { type: 'string' } },
     }));
   } catch (e) {
     console.log(`eval gate refused: ${(e as Error).message}`);
@@ -429,11 +529,26 @@ export async function main(argv: string[]): Promise<number> {
     console.log(`eval gate refused: --baseline expects a whole number of runs, at least ${MIN_BASELINE_RUNS} (the margin needs a standard deviation), not "${opt.baseline}"`);
     return 2;
   }
+  const mode = GATE_MODES.find((m) => m === opt.mode);
+  if (mode === undefined) {
+    console.log(`eval gate refused: --mode expects ${GATE_MODES.join(' or ')}, not "${opt.mode}"`);
+    return 2;
+  }
+  const from = opt.from === undefined ? [] : opt.from.split(',').map((d) => d.trim()).filter(Boolean);
+  if (opt.from !== undefined && (runs === undefined || from.length !== runs)) {
+    console.log(`eval gate refused: --from seeds the baseline runs, so it needs --baseline with as many runs as folders (${from.length} given${runs === undefined ? ', no --baseline' : `, --baseline ${runs}`})`);
+    return 2;
+  }
   let cfg: GateConfig;
   try {
-    cfg = shippedConfig();
+    cfg = shippedConfig(mode);
   } catch (e) {
     console.log(`eval gate refused: ${(e as Error).message}`);
+    return 2;
+  }
+  const unusable = fromProblems(from, cfg, mode);
+  if (unusable.length) {
+    console.log(`eval gate refused: --from runs that are not of the gate configuration:\n${unusable.map((x) => `- ${x}`).join('\n')}`);
     return 2;
   }
   const noKey = keyCheck(cfg);
@@ -441,14 +556,15 @@ export async function main(argv: string[]): Promise<number> {
     console.log(`eval gate refused: ${noKey}`);
     return 2;
   }
-  console.log(`eval gate: ${cfg.provider}/${cfg.model}, ${cfg.strategy}@${cfg.strategyVersion} (${cfg.translatePrompt}), chunk ${cfg.chunkTokens}, ${cfg.concurrency} in flight, judge ${judgeLabel(PINNED_JUDGE)}`);
-  if (runs !== undefined) return baseline(cfg, runs, timeoutMin);
-  const gate = readJson<GateFile>(path.join(ROOT, GATE_FILE));
+  console.log(`eval gate${mode === 'best' ? ' (Best)' : ''}: ${cfg.provider}/${cfg.model}, ${cfg.strategy}@${cfg.strategyVersion} (${cfg.translatePrompt}${cfg.reviewPrompt === undefined ? '' : `, ${cfg.reviewPrompt}`}), chunk ${cfg.chunkTokens}, ${cfg.concurrency} in flight, judge ${judgeLabel(PINNED_JUDGE)}`);
+  if (runs !== undefined) return baseline(cfg, runs, timeoutMin, mode, from);
+  const file = gateFile(mode);
+  const gate = readJson<GateFile>(path.join(ROOT, file));
   if (gate === undefined) {
-    console.log(`eval gate refused: no ${GATE_FILE} (run pnpm run eval:gate -- --baseline 5)`);
+    console.log(`eval gate refused: no ${file} (run pnpm run eval:gate -- ${mode === 'best' ? '--mode best ' : ''}--baseline 5)`);
     return 2;
   }
-  const mismatch = judgeMismatch(gate);
+  const mismatch = judgeMismatch(gate, PINNED_JUDGE, file);
   if (mismatch) {
     console.log(`eval gate refused: ${mismatch}`);
     return 2;
@@ -456,6 +572,6 @@ export async function main(argv: string[]): Promise<number> {
   const changed = (Object.keys(cfg) as (keyof GateConfig)[]).filter((k) => !isDeepStrictEqual(cfg[k], gate.config[k]));
   if (changed.length) console.log(`note: the shipped default differs from the baseline's on ${changed.join(', ')}; scores are compared with the baseline all the same`);
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const outcome = await runGate(gate, (attempt, budget) => livePass(cfg, path.join('eval-results', `gate-${stamp}-pass${attempt}`), Date.now() + timeoutMin * 60_000, budget), (line) => console.log(line));
+  const outcome = await runGate(gate, (attempt, budget) => livePass(cfg, path.join('eval-results', `gate-${mode === 'best' ? 'best-' : ''}${stamp}-pass${attempt}`), Date.now() + timeoutMin * 60_000, budget), (line) => console.log(line));
   return outcome.green ? 0 : 1;
 }

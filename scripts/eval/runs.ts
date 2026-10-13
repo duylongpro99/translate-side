@@ -13,6 +13,24 @@ export interface OutputItem {
   error: string | null;
 }
 
+/**
+ * What `refine`'s review pass did, in segments: replaced by a checked revision (accepted), left as
+ * drafted (unchanged), a candidate that failed a post-check (rejected), or not reviewed (skipped:
+ * budget, a failed call, a dropped review). `chunks` counts the review reports; `input` and `output`
+ * are the review calls' tokens, already in the run's totals.
+ */
+export interface ReviewCounts {
+  chunks: number;
+  accepted: number;
+  unchanged: number;
+  rejected: number;
+  skipped: number;
+  input: number;
+  output: number;
+  /** Rejected candidates by the check that failed them (a candidate may fail several); see doc-tally.ts rejectedKinds. */
+  rejectedKinds?: Record<string, number>;
+}
+
 export interface RunSummary {
   run: string;
   set?: string;
@@ -22,6 +40,8 @@ export interface RunSummary {
   prompt?: string;
   /** 12 hex digits of SHA-256 over the translate system prompt rendered with no context (run.ts). */
   promptHash?: string;
+  /** refine runs: the same hash over the review system prompt. */
+  reviewPromptHash?: string;
   /** Every prompt version the run sent, by role (M2 Phase B on); `prompt` is the translate one. */
   prompts?: Record<string, string>;
   label: string;
@@ -34,6 +54,8 @@ export interface RunSummary {
   chunkTokens?: number;
   total: { translatable: number; lost: number; failed: number; repaired: number; calls: number; input: number; cachedInput: number; output: number; wallMs: number; costUsd: number | null };
   docs: DocSummary[];
+  /** refine runs only (null or absent otherwise): the review counts over every passage. */
+  review?: ReviewCounts | null;
 }
 
 /** One passage's line in summary.json; the totals are the sums of these (report-core compares runs on their common passages). */
@@ -48,6 +70,8 @@ export interface DocSummary {
   output?: number;
   wallMs?: number;
   costUsd?: number | null;
+  /** refine runs only. */
+  review?: ReviewCounts;
 }
 
 export interface JudgeFile {

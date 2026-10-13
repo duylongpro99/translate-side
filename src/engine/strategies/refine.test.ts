@@ -269,7 +269,7 @@ describe('refine: contextual draft, then review', () => {
   it('keys the cache by strategy, version and every prompt it sends', () => {
     expect(refine.id).toBe('refine');
     expect(refine.version).toBe(REFINE_VERSION);
-    expect(REFINE_CACHE_KEY).toEqual({ strategy: 'refine', version: 1, promptIds: [ANALYZE_PROMPT_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, 'review@1'] });
+    expect(REFINE_CACHE_KEY).toEqual({ strategy: 'refine', version: 1, promptIds: [ANALYZE_PROMPT_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, REVIEW_PROMPT_ID] });
   });
 
   it('is exported from the engine entry point', () => {
