@@ -181,6 +181,28 @@ panel:
     showDraftFor: "Hiện bản nháp: \"$1\""
     hideDraftFor: "Ẩn bản nháp: \"$1\""
     draftTitle: Được rà soát bởi $1. Hiện bản nháp đã được thay thế
+    edit: Sửa
+    editFor: "Sửa: \"$1\""
+    editTitle: Sửa bản dịch này. Bản của bạn được giữ trên thiết bị này và được hiện mỗi khi đoạn văn này xuất hiện lại
+    editLabel: "Bản dịch của bạn cho \"$1\""
+    editHint: "Ctrl+Enter (⌘+Enter trên Mac) để lưu, Esc để hủy."
+    editSave: Lưu
+    editCancel: Hủy
+    editWarning: "Bản của bạn có thể đã mất một phần của bản gốc: $1. Bạn vẫn có thể lưu."
+    editLostCode: đoạn mã
+    editLostLinks: liên kết
+    editLostUrls: địa chỉ web
+    editLostNumbers: con số
+    edited: Đã sửa
+    editedTitle: Bản sửa của bạn, giữ trên thiết bị này. Dịch lại sẽ thay thế nó
+    imported: Đã nhập
+    importedTitle: Từ một tệp bộ nhớ dịch bạn đã nhập. Dịch lại sẽ thay thế nó
+    editUnsaved: Không lưu được bản sửa để dùng sau; nó chỉ hiện trên trang này.
+    replaceEdit: Thay bản sửa của bạn?
+    replaceImported: Thay bản dịch đã nhập?
+    replaceText: Dịch lại sẽ xóa bản sửa đã lưu của đoạn văn này và hỏi lại mô hình.
+    replaceYes: Thay
+    replaceNo: Giữ lại
   job:
     seconds: $1 giây
     running: Đang dịch sang $1… $2/$3
@@ -206,6 +228,9 @@ panel:
     reviewUnavailable: "Không rà soát được: $1"
     kept:
       n: $1 đoạn vẫn giữ bản dịch trước đó
+    editsKept:
+      1: Giữ 1 đoạn đã sửa
+      n: Giữ $1 đoạn đã sửa
     restTitle:
       n: $1 đoạn đang chờ; chúng sẽ được dịch khi bạn cuộn tới
     limit: Chi tiêu tháng này ($1) đã đạt giới hạn mềm $2 của bạn. Không có gì được gửi đi.
@@ -400,6 +425,32 @@ options:
     stats: "$1 đoạn đã dịch và $2 bản tóm tắt tài liệu, $3 trên $4."
     hint: "Các trang bạn dịch lại sẽ được mở từ bộ nhớ đệm này mà không mất phí. Khi đầy, các mục cũ nhất sẽ bị xóa trước. Dữ liệu chỉ nằm trên thiết bị này."
     clear: "Xóa bộ nhớ đệm"
+  memory:
+    title: "Bộ nhớ dịch"
+    stats: "$1 trên $2 bản sửa."
+    hint: "Các bản sửa bạn làm bằng nút Sửa trong bảng điều khiển. Chúng chỉ nằm trên thiết bị này, không bao giờ được đồng bộ và vẫn còn khi bạn xóa bộ nhớ đệm. Khi đầy, bản sửa mới sẽ thay bản đã lâu nhất không thay đổi."
+    export: "Xuất bộ nhớ dịch"
+    exported: "Đã xuất $1 bản sửa."
+    exportFailed: "Không xuất được bộ nhớ dịch: $1"
+    file: "Nhập tệp bộ nhớ dịch"
+    preview: "Có thể nhập $1 bản sửa; bỏ qua $2 (sai định dạng, quá dài, hoặc làm mất con số, đoạn mã hay liên kết của bản gốc)."
+    replaceMatching: "Đồng thời thay các đoạn trùng khớp"
+    replaceHint: "Tắt: các bản sửa đã nhập chỉ dùng để định hướng các lần dịch sau. Bật: chúng được hiện thay cho bản dịch của cùng đoạn văn, có đánh dấu “đã nhập”. Bản sửa của chính bạn không bao giờ bị thay."
+    apply: "Nhập"
+    cancel: "Hủy"
+    imported: "Đã nhập $1 bản sửa."
+    keptYours: "Giữ nguyên $1 bản bạn đã tự sửa."
+    full: "Không lưu $1: bộ nhớ dịch đã đầy."
+    importFailed: "Không nhập được: $1"
+    clear: "Xóa bộ nhớ dịch"
+    clearConfirm: "Xóa toàn bộ $1 bản sửa? Không thể hoàn tác. Hãy xuất ra trước để giữ một bản sao."
+    clearYes: "Xóa tất cả"
+    clearFailed: "Không xóa được bộ nhớ dịch: $1"
+    unreadable: "Không đọc được bộ nhớ dịch: $1"
+    tooLarge: "Tệp này quá lớn để là tệp bộ nhớ dịch."
+    notOurs: "Đây không phải tệp bộ nhớ dịch của Translate Side."
+    noVersion: "Tệp bộ nhớ dịch này không có phiên bản hợp lệ."
+    newerVersion: "Tệp bộ nhớ dịch này được tạo bởi phiên bản Translate Side mới hơn. Hãy cập nhật tiện ích rồi nhập lại."
   reading: "Đang đọc…"
   spend:
     title: "Mức sử dụng và chi phí"

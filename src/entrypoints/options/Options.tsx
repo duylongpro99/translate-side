@@ -32,10 +32,12 @@ import { isOverflowed, onListChanged, overflowNotice } from '@/shared/sync-quota
 import { openOnboarding } from '@/shared/onboarding';
 import { ProvidersSection, type AdapterFor } from './Providers.tsx';
 import { TransferSection } from './Transfer.tsx';
+import { MemorySection } from './Memory.tsx';
 import { DiagnosticsSection } from './Diagnostics.tsx';
 import { screenReaderNote, shortcutList } from '@/shared/shortcuts';
 import { openShortcutSettings, toggleRow, useToggleShortcut } from '@/shared/toggle-shortcut';
 import { openTranslationCache, type CacheStats, type TranslationCache } from '@/shared/cache';
+import { openTranslationMemory, type TranslationMemory } from '@/shared/memory';
 import { formatUsd } from '@/shared/cost';
 import { pricingFor } from '@/shared/pricing';
 import { estimateSpend, monthKey, readSpend, readSpendLimit, resetSpend, saveSpendLimit, SPEND_KEY, SPEND_LIMIT_KEY, type SpendLimit, type SpendTotals } from '@/shared/spend';
@@ -793,7 +795,7 @@ function SpendLimitRow({ api, limit, month, onSaved }: { api: Browser; limit: Sp
   );
 }
 
-export function Options({ api, cache = openTranslationCache(), adapterFor }: { api: Browser; cache?: TranslationCache | undefined; adapterFor?: AdapterFor }) {
+export function Options({ api, cache = openTranslationCache(), memory = openTranslationMemory(), adapterFor }: { api: Browser; cache?: TranslationCache | undefined; memory?: TranslationMemory | undefined; adapterFor?: AdapterFor }) {
   return (
     <main class="opt">
       <h1>{i18n.t('options.title')}</h1>
@@ -812,6 +814,7 @@ export function Options({ api, cache = openTranslationCache(), adapterFor }: { a
       <ShortcutsSection api={api} />
       <SpendSection api={api} />
       <CacheSection cache={cache} />
+      <MemorySection memory={memory} />
       <TransferSection api={api} />
       <DiagnosticsSection api={api} />
     </main>

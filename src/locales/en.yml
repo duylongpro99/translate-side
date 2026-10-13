@@ -184,6 +184,28 @@ panel:
     showDraftFor: "Show draft: \"$1\""
     hideDraftFor: "Hide draft: \"$1\""
     draftTitle: Reviewed by $1. Show the draft it replaced
+    edit: Edit
+    editFor: "Edit: \"$1\""
+    editTitle: Correct this translation. Your version stays on this device and is shown whenever this text comes up again
+    editLabel: "Your translation of \"$1\""
+    editHint: "Ctrl+Enter (⌘+Enter on a Mac) saves, Esc cancels."
+    editSave: Save
+    editCancel: Cancel
+    editWarning: "Your text may have lost something the original has: $1. You can still save it."
+    editLostCode: code spans
+    editLostLinks: links
+    editLostUrls: web addresses
+    editLostNumbers: numbers
+    edited: Edited
+    editedTitle: Your correction, kept on this device. Retranslate replaces it
+    imported: Imported
+    importedTitle: From a translation memory file you imported. Retranslate replaces it
+    editUnsaved: Your edit could not be saved for later; it shows on this page only.
+    replaceEdit: Replace your edit?
+    replaceImported: Replace the imported translation?
+    replaceText: Retranslate deletes the saved correction of this text and asks the model again.
+    replaceYes: Replace
+    replaceNo: Keep it
   job:
     seconds: $1 s
     running: Translating into $1… $2 of $3
@@ -210,6 +232,9 @@ panel:
     kept:
       1: 1 block kept its earlier translation
       n: $1 blocks kept their earlier translation
+    editsKept:
+      1: 1 edited block kept
+      n: $1 edited blocks kept
     restTitle:
       1: 1 block is waiting; it is translated as you scroll to it
       n: $1 blocks are waiting; they are translated as you scroll to them
@@ -405,6 +430,32 @@ options:
     stats: "$1 translated blocks and $2 document briefs, $3 of $4."
     hint: "Pages you translated again open from this cache at no cost. The oldest entries go first when it is full. It stays on this device."
     clear: "Clear cache"
+  memory:
+    title: "Translation memory"
+    stats: "$1 of $2 corrections."
+    hint: "Your corrections from the panel's Edit button. They stay on this device, are never synced, and are kept when you clear the cache. When it is full, a new correction replaces the one changed longest ago."
+    export: "Export translation memory"
+    exported: "Corrections exported: $1."
+    exportFailed: "Could not export the translation memory: $1"
+    file: "Import a translation memory file"
+    preview: "Can be imported: $1. Skipped: $2 (malformed, too long, or they drop a number, code span or link of their source)."
+    replaceMatching: "Also replace matching blocks"
+    replaceHint: "Off: imported corrections only guide later translations. On: they are shown in place of the translation of the same text, marked “imported”. Your own corrections are never replaced."
+    apply: "Import"
+    cancel: "Cancel"
+    imported: "Corrections imported: $1."
+    keptYours: "Left as you corrected them: $1."
+    full: "Not stored because the translation memory is full: $1."
+    importFailed: "Could not import: $1"
+    clear: "Clear translation memory"
+    clearConfirm: "Delete every correction ($1)? This cannot be undone. Export them first to keep a copy."
+    clearYes: "Delete all"
+    clearFailed: "Could not clear the translation memory: $1"
+    unreadable: "Could not read the translation memory: $1"
+    tooLarge: "This file is too large to be a translation memory file."
+    notOurs: "This is not a Translate Side translation memory file."
+    noVersion: "This translation memory file has no valid version."
+    newerVersion: "This translation memory file was made by a newer version of Translate Side. Update the extension, then import it."
   reading: "Reading…"
   spend:
     title: "Usage and cost"
