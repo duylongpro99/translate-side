@@ -2,7 +2,7 @@
 // Lives in engine/ so the engine can import it; the shell imports it from here.
 // Also the engine contract (§5.2–§5.6), below.
 
-import type { LLMClient, LLMError, MTClient, ModelRole } from '../llm/types.ts';
+import type { LLMClient, LLMError, LLMErrorKind, MTClient, ModelRole } from '../llm/types.ts';
 
 export type SegmentKind = 'heading' | 'p' | 'li' | 'quote' | 'code' | 'table-cell' | 'caption';
 
@@ -128,6 +128,17 @@ export interface TranslationJob {
    * in flight are never touched, M3-D3). Absent or undefined: every pending segment stays.
    */
   within?: () => ReadonlySet<string> | undefined;
+  /**
+   * `refine`: drafts the job already has, by segment id (e.g. cache hits below the review
+   * revision). They seed working memory at their revision and are reviewed without being drafted
+   * again. Other strategies ignore it.
+   */
+  drafts?: ReadonlyMap<string, { text: string; revision: number }>;
+  /**
+   * `refine`: asked before each review call starts; false stops starting them (e.g. a lazy round
+   * waits for nothing but the calls in flight, which finish). Absent: always wanted.
+   */
+  reviewWanted?: () => boolean;
   strategy: StrategyId;
   options: JobOptions;
 }
@@ -156,7 +167,8 @@ export type EngineEvent =
       producedBy: { strategy: string; stage: string; model: string };
       /**
        * Absent = 1. A repair (decision S2, M1-E3) re-emits the same revision with a higher attempt,
-       * and the panel replaces that revision's text. Revisions stay for later stages (refine = 2).
+       * and the panel replaces that revision's text. Revisions: 1 a draft, 2 contextual's chunk-0
+       * revise pass, 3 refine's review pass (`producedBy.stage` = `review`).
        */
       attempt?: number;
       /** E.g. an idiom explained. */
@@ -179,14 +191,36 @@ export type EngineEvent =
    * ChunkOutcome.briefed). For the harness and diagnostics; the panel ignores it.
    * With `revise`: contextual's second pass of the chunk (M2-D17) is over, and `kept` lists the
    * segments whose revision 2 was dropped because it failed a post-check revision 1 passed (round 15, Phase D).
+   * With `review` (refine): the chunk's review pass is over; see ReviewReport.
    */
-  | { type: 'chunk'; index: number; briefed: boolean; revise?: { kept: string[] } }
+  | { type: 'chunk'; index: number; briefed: boolean; revise?: { kept: string[] }; review?: ReviewReport }
   /** Shown in UI, cached. */
   | { type: 'artifact'; kind: 'brief' | 'glossary'; data: unknown }
   /** `input` includes cached tokens; `cachedInput` is how many were cache reads (plan M1 §5). */
   /** `client`: the `id` of the client that spent it (LLMClient.id, e.g. the shell's profile id), when it has one. */
   | { type: 'usage'; role: string; model: string; client?: string; input: number; output: number; cachedInput?: number }
   | { type: 'done' };
+
+/**
+ * What `refine`'s review pass did with one chunk (for the shell's cache, the harness and
+ * diagnostics). Every id of `ids` is in at most one list; an id in none was not reviewed (`skipped`).
+ */
+export interface ReviewReport {
+  /** The chunk's segments sent for review (or that would have been), in page order. */
+  ids: string[];
+  /** Replaced by a revision that passed every post-check. */
+  accepted: string[];
+  /** The reviewer left them: `<none/>`, an omitted id, or the draft's own text. */
+  unchanged: string[];
+  /** The reviewer's text failed a post-check: the draft stays. */
+  rejected: string[];
+  /**
+   * No review of the chunk: the budget could not cover it, the call failed (`error`, when it was
+   * a provider error), or the job no longer wanted reviews (TranslationJob.reviewWanted).
+   */
+  skipped?: 'budget' | 'error' | 'dropped';
+  error?: LLMErrorKind;
+}
 
 export type EngineEventType = EngineEvent['type'];
 
