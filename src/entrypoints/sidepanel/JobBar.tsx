@@ -93,6 +93,12 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
       })()}
     </span>
   ) : null;
+  // Best was asked for but its review route cannot run: the page is translated without the review.
+  const reviewNote = job.reviewUnavailable ? (
+    <span class="job__review" data-testid="job-review-unavailable" role="note">
+      {i18n.t('panel.job.reviewUnavailable', [failureText(job.reviewUnavailable)])}
+    </span>
+  ) : null;
   // A Retranslate page that ended early (M3 dogfood B2): some blocks show their earlier translation.
   const keptNote = job.kept ? (
     <span class="job__kept" data-testid="job-kept" role="note">
@@ -155,6 +161,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
           ) : null}
           {job.backoff?.length ? <BackoffNote entries={job.backoff} /> : null}
           {fallbackNote}
+          {reviewNote}
         </div>
       );
     case 'done':
@@ -174,6 +181,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
             </button>
           ) : null}
           {fallbackNote}
+          {reviewNote}
         </div>
       );
     case 'cancelled':

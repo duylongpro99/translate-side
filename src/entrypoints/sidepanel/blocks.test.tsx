@@ -270,3 +270,45 @@ describe('model badges (plan M4-E9, DESIGN §4.3.5: the panel shows which model 
     expect(root.querySelectorAll('[data-testid=seg-model-badge]')).toHaveLength(0);
   });
 });
+
+describe('refined blocks (Best, DESIGN §5.2: the text is replaced and marked "refined")', () => {
+  const seg = (id: string): Segment => ({ id, kind: 'p', text: `Block ${id}`, inlineMarkup: `Block ${id}`, domPath: `/p[${id}]`, translate: true });
+  const states = new Map<string, SegState>([
+    ['1', { status: 'final', text: 'Một đã sửa', revision: 3, refined: true, draft: 'Một nháp', model: 'qwen3:8b', reviewModel: 'big-model' }],
+    ['2', { status: 'final', text: 'Hai', revision: 3, refined: true }],
+    ['3', { status: 'final', text: 'Ba', revision: 1 }],
+  ]);
+  let root: HTMLElement;
+  beforeEach(() => {
+    root = document.createElement('div');
+    document.body.replaceChildren(root);
+    act(() => render(<SegmentList segments={['1', '2', '3'].map(seg)} states={states as JobView['segs']} model="qwen3:8b" actions={{ retry: () => {} }} />, root));
+  });
+  const block = (id: string) => root.querySelector(`[data-id="${id}"]`) as HTMLElement;
+
+  it('marks only refined blocks, after their text, with no fallback badge', () => {
+    expect([...root.querySelectorAll('[data-testid=seg-refined]')].map((m) => m.closest('[data-id]')?.getAttribute('data-id'))).toEqual(['1', '2']);
+    expect(block('1').dataset.refined).toBe('true');
+    expect(block('3').dataset.refined).toBeUndefined();
+    expect(block('1').classList.contains('seg--refined')).toBe(true);
+    expect(block('1').textContent?.startsWith('Một đã sửa')).toBe(true);
+    expect(root.querySelector('[data-testid=seg-model-badge]')).toBeNull();
+  });
+
+  it('Show draft shows the draft the review replaced, under the text, and only where the draft is known', () => {
+    const show = block('1').querySelector<HTMLButtonElement>('[data-testid=seg-draft]');
+    expect(show?.textContent).toBe('Show draft');
+    expect(show?.title).toBe('Reviewed by big-model. Show the draft it replaced');
+    // Refined from the cache (no draft kept) and not refined: no button.
+    expect(block('2').querySelector('[data-testid=seg-draft]')).toBeNull();
+    expect(block('3').querySelector('[data-testid=seg-draft]')).toBeNull();
+    act(() => show?.click());
+    expect(block('1').querySelector('[data-testid=seg-draft-text]')?.textContent).toBe('Một nháp');
+    expect(show?.getAttribute('aria-pressed')).toBe('true');
+    expect(show?.textContent).toBe('Hide draft');
+    // The refined text stays shown.
+    expect(block('1').textContent).toContain('Một đã sửa');
+    act(() => show?.click());
+    expect(block('1').querySelector('[data-testid=seg-draft-text]')).toBeNull();
+  });
+});

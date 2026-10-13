@@ -162,6 +162,13 @@ panel:
     itFailed: đã thất bại
     explanation: Giải thích
     explanationSr: "Giải thích: $1"
+    refined: Đã tinh chỉnh
+    refinedTitle: Đã được tinh chỉnh qua một lượt rà soát
+    showDraft: Hiện bản nháp
+    hideDraft: Ẩn bản nháp
+    showDraftFor: "Hiện bản nháp: \"$1\""
+    hideDraftFor: "Ẩn bản nháp: \"$1\""
+    draftTitle: Được rà soát bởi $1. Hiện bản nháp đã được thay thế
   job:
     seconds: $1 giây
     running: Đang dịch sang $1… $2/$3
@@ -184,6 +191,7 @@ panel:
     continueAnyway: Vẫn tiếp tục
     excludesCancelled: chưa tính các yêu cầu đã hủy
     costTitle: $1 token đầu vào ($2 token từ bộ nhớ đệm), $3 token đầu ra
+    reviewUnavailable: "Không rà soát được: $1"
     kept:
       n: $1 đoạn vẫn giữ bản dịch trước đó
     restTitle:

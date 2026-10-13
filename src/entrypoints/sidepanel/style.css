@@ -358,6 +358,7 @@ body {
   color: var(--accent);
 }
 .job__fallback,
+.job__review,
 .job__kept {
   flex-basis: 100%;
   font-size: 0.8rem;
@@ -631,8 +632,35 @@ body {
   border-radius: 4px;
   background: var(--surface);
 }
+/* Best: a review refined the block (a quiet dot after its text); Show draft puts the draft under it. */
+.seg__refined {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: middle;
+  animation: seg-refined-in 0.4s ease-out;
+}
+@keyframes seg-refined-in {
+  from {
+    opacity: 0;
+  }
+}
+.seg__draft {
+  display: block;
+  margin-top: 4px;
+  padding-left: 8px;
+  border-left: 2px dashed var(--line);
+  color: var(--muted);
+  font-size: 0.9em;
+}
 @media (prefers-reduced-motion: reduce) {
   .seg__actions {
     transition: none;
+  }
+  .seg__refined {
+    animation: none;
   }
 }

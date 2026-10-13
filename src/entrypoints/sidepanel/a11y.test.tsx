@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 // Keyboard and screen-reader use of the segment list (plan M5-E10).
+import fs from 'node:fs';
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -118,5 +119,25 @@ describe('segment list a11y', () => {
     await draw();
     const keys = [...block('b').querySelectorAll('button')].map((b) => b.getAttribute('aria-keyshortcuts'));
     expect(keys).toEqual(['O', 'R', 'E', 'C']);
+  });
+
+  it('names the refined marker and the draft toggle, keeps the draft in the target language, and stills the marker for reduced motion', async () => {
+    const refined = new Map(states);
+    refined.set('b', { status: 'final', text: 'VI refined', revision: 3, refined: true, draft: 'VI draft', reviewModel: 'big' });
+    await draw({ states: refined });
+    const mark = block('b').querySelector('[data-testid="seg-refined"]');
+    expect(mark?.getAttribute('role')).toBe('img');
+    expect(mark?.getAttribute('aria-label')).toBe('Refined');
+    expect(mark?.getAttribute('title')).toBe('Refined by a review pass');
+    const toggle = block('b').querySelector<HTMLButtonElement>('[data-testid="seg-draft"]');
+    expect(toggle?.getAttribute('aria-label')).toBe('Show draft: "First paragraph text"');
+    expect(toggle?.getAttribute('aria-pressed')).toBe('false');
+    await act(() => toggle?.click());
+    expect(toggle?.getAttribute('aria-label')).toBe('Hide draft: "First paragraph text"');
+    expect(block('b').querySelector('[data-testid="seg-draft-text"]')?.getAttribute('lang')).toBe('vi');
+    // Its fade-in is switched off under prefers-reduced-motion.
+    const css = fs.readFileSync('src/entrypoints/sidepanel/style.css', 'utf8');
+    const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
+    expect(reduced).toMatch(/\.seg__refined\s*\{\s*animation: none;/);
   });
 });

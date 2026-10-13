@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 // The job bar on a long page in lazy mode (plan M5-E4): a Translate the rest button, in every state that has the rest waiting.
+// And its note when Best cannot review.
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { describe, expect, it } from 'vitest';
@@ -54,5 +55,16 @@ describe('the bar in lazy mode (M5-E4)', () => {
     const root = bar(whole, []);
     expect(root.querySelector('[data-testid=translate-rest]')).toBeNull();
     expect(root.textContent).toContain('900 of 900 · 4.0 s');
+  });
+});
+
+describe('the bar when Best cannot review', () => {
+  it('says why, while running and when done, and offers nothing to click for it', () => {
+    const error = { kind: 'auth' as const, message: 'Add your Review API key in settings' };
+    for (const status of ['running', 'done'] as const) {
+      const root = bar({ ...view, status, reviewUnavailable: error }, []);
+      expect(root.querySelector('[data-testid=job-review-unavailable]')?.textContent).toMatch(/^Review unavailable: /);
+    }
+    expect(bar(view, []).querySelector('[data-testid=job-review-unavailable]')).toBeNull();
   });
 });

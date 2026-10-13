@@ -165,6 +165,13 @@ panel:
     itFailed: it failed
     explanation: Explanation
     explanationSr: "Explanation: $1"
+    refined: Refined
+    refinedTitle: Refined by a review pass
+    showDraft: Show draft
+    hideDraft: Hide draft
+    showDraftFor: "Show draft: \"$1\""
+    hideDraftFor: "Hide draft: \"$1\""
+    draftTitle: Reviewed by $1. Show the draft it replaced
   job:
     seconds: $1 s
     running: Translating into $1… $2 of $3
@@ -187,6 +194,7 @@ panel:
     continueAnyway: Continue anyway
     excludesCancelled: excludes cancelled requests
     costTitle: $1 input tokens ($2 cached), $3 output tokens
+    reviewUnavailable: "Review unavailable: $1"
     kept:
       1: 1 block kept its earlier translation
       n: $1 blocks kept their earlier translation

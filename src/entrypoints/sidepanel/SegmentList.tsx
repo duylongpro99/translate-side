@@ -66,6 +66,9 @@ type Props = {
   /** The original is shown under the translation (Original, M3-E5). */
   original?: boolean;
   onOriginal?: ((id: string) => void) | undefined;
+  /** Best: the draft a review replaced is shown under the refined text (Show draft). */
+  draft?: boolean;
+  onDraft?: ((id: string) => void) | undefined;
   /** The job's model: a final produced by another one (a fallback, M4-E9) gets a badge naming it. */
   model?: string | undefined;
 };
@@ -94,7 +97,7 @@ export function blockName(seg: Segment): string {
   return words.slice(0, 6).join(' ') + (words.length > 6 ? '…' : '');
 }
 
-function BlockActions({ seg, state, actions, original, onOriginal }: Props) {
+function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraft }: Props) {
   const [copied, setCopied] = useState<'ok' | 'failed' | undefined>();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -114,6 +117,19 @@ function BlockActions({ seg, state, actions, original, onOriginal }: Props) {
       {done && onOriginal ? (
         <button type="button" class="seg__action" data-testid="seg-original" aria-keyshortcuts="O" aria-pressed={original === true} aria-label={i18n.t(original ? 'panel.segment.hideOriginalFor' : 'panel.segment.showOriginalFor', [name])} onClick={() => onOriginal(seg.id)}>
           {original ? i18n.t('panel.segment.hideOriginal') : i18n.t('panel.segment.original')}
+        </button>
+      ) : null}
+      {done && state.draft !== undefined && onDraft ? (
+        <button
+          type="button"
+          class="seg__action"
+          data-testid="seg-draft"
+          aria-pressed={draft === true}
+          aria-label={i18n.t(draft ? 'panel.segment.hideDraftFor' : 'panel.segment.showDraftFor', [name])}
+          title={i18n.t('panel.segment.draftTitle', [state.reviewModel ?? ''])}
+          onClick={() => onDraft(seg.id)}
+        >
+          {draft ? i18n.t('panel.segment.hideDraft') : i18n.t('panel.segment.showDraft')}
         </button>
       ) : null}
       {done && actions?.retranslate ? (
@@ -161,16 +177,35 @@ function Original({ seg, state, original }: Props) {
   );
 }
 
+/** The draft a review replaced, under the refined text, in the target language (Show draft). */
+function Draft({ seg, state, draft }: Props) {
+  const { target } = useContext(Langs);
+  if (!draft || state?.status !== 'final' || state.draft === undefined) return null;
+  return (
+    <span class="seg__draft" data-testid="seg-draft-text" {...(target ? { lang: target } : {})}>
+      <Markup nodes={parseMarkup(state.draft, markerKinds(seg))} />
+    </span>
+  );
+}
+
+/** Best: a small dot after a block whose text is the review's revision (DESIGN.md §5.2 "refined"). */
+function RefinedMark({ state }: Props) {
+  if (state?.status !== 'final' || !state.refined) return null;
+  return <span class="seg__refined" data-testid="seg-refined" role="img" aria-label={i18n.t('panel.segment.refined')} title={i18n.t('panel.segment.refinedTitle')} />;
+}
+
 function statusAttrs(seg: Segment, state: SegState | undefined, extra = '') {
   const status = seg.translate ? (state?.status ?? 'original') : 'kept';
+  const refined = status === 'final' && state?.refined === true;
   return {
     'data-id': seg.id,
     'data-kind': seg.kind,
     'data-status': status,
+    ...(refined ? { 'data-refined': 'true' } : {}),
     // Focusable for the keyboard (src/entrypoints/sidepanel/blocks-nav.ts roves the one Tab stop); a block still arriving says so.
     tabIndex: -1,
     ...(status === 'streaming' || status === 'pending' ? { 'aria-busy': true } : {}),
-    class: `seg seg--${seg.kind} seg--${status}${seg.hidden ? ' seg--hidden' : ''}${extra}`,
+    class: `seg seg--${seg.kind} seg--${status}${refined ? ' seg--refined' : ''}${seg.hidden ? ' seg--hidden' : ''}${extra}`,
   };
 }
 
@@ -200,7 +235,9 @@ function Notes(props: Props) {
   const { seg, state, actions } = props;
   return (
     <>
+      <RefinedMark {...props} />
       <ModelBadge {...props} />
+      <Draft {...props} />
       <Original {...props} />
       {seg.hidden ? <span class="seg__note">{i18n.t('panel.segment.hidden')}</span> : null}
       {state?.status === 'failed' && state.error ? (
@@ -253,7 +290,7 @@ function ExplainNote({ state }: Props) {
 /** Re-renders only when its segment's state object changes: a stream updates one block at a time. */
 class Block extends Component<Props> {
   override shouldComponentUpdate(next: Props): boolean {
-    return next.seg !== this.props.seg || next.state !== this.props.state || next.original !== this.props.original || next.model !== this.props.model;
+    return next.seg !== this.props.seg || next.state !== this.props.state || next.original !== this.props.original || next.draft !== this.props.draft || next.model !== this.props.model;
   }
 
   override render(props: Props) {
@@ -309,7 +346,7 @@ class Block extends Component<Props> {
 
 class Cell extends Component<Props> {
   override shouldComponentUpdate(next: Props): boolean {
-    return next.seg !== this.props.seg || next.state !== this.props.state || next.original !== this.props.original || next.model !== this.props.model;
+    return next.seg !== this.props.seg || next.state !== this.props.state || next.original !== this.props.original || next.draft !== this.props.draft || next.model !== this.props.model;
   }
 
   override render(props: Props) {
@@ -338,7 +375,7 @@ function tableOf(seg: Segment): string | undefined {
 type States = JobView['segs'] | undefined;
 
 /** Consecutive segments of one table, grouped into rows by groupId. */
-function Table({ cells, states, actions, originals, onOriginal, model }: { cells: Segment[]; states: States; actions?: SegmentActions | undefined; originals: ReadonlySet<string>; onOriginal?: ((id: string) => void) | undefined; model?: string | undefined }) {
+function Table({ cells, states, actions, originals, onOriginal, drafts, onDraft, model }: { cells: Segment[]; states: States; actions?: SegmentActions | undefined; originals: ReadonlySet<string>; onOriginal?: ((id: string) => void) | undefined; drafts: ReadonlySet<string>; onDraft?: ((id: string) => void) | undefined; model?: string | undefined }) {
   const rows: Segment[][] = [];
   for (const c of cells) {
     const row = rows[rows.length - 1];
@@ -350,7 +387,7 @@ function Table({ cells, states, actions, originals, onOriginal, model }: { cells
       {rows.map((row) => (
         <div class="seg-row" role="row" key={row[0]?.id} data-group={row[0]?.groupId}>
           {row.map((c) => (
-            <Cell key={c.id} seg={c} state={states?.get(c.id)} actions={actions} original={originals.has(c.id)} onOriginal={onOriginal} model={model} />
+            <Cell key={c.id} seg={c} state={states?.get(c.id)} actions={actions} original={originals.has(c.id)} onOriginal={onOriginal} draft={drafts.has(c.id)} onDraft={onDraft} model={model} />
           ))}
         </div>
       ))}
@@ -375,8 +412,20 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
       }),
     [],
   );
-  // Only a translated list has originals to show.
+  // Which refined blocks show their draft (Show draft): likewise, for the session.
+  const [drafts, setDrafts] = useState<ReadonlySet<string>>(() => new Set());
+  const onDraft = useMemo(
+    () => (id: string) =>
+      setDrafts((cur) => {
+        const next = new Set(cur);
+        if (!next.delete(id)) next.add(id);
+        return next;
+      }),
+    [],
+  );
+  // Only a translated list has originals (and drafts) to show.
   const toggle = states ? onOriginal : undefined;
+  const toggleDraft = states ? onDraft : undefined;
   const out: ComponentChildren[] = [];
   for (let i = 0; i < segments.length; ) {
     const seg = segments[i] as Segment;
@@ -384,7 +433,7 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
     if (table !== undefined) {
       let j = i;
       while (j < segments.length && tableOf(segments[j] as Segment) === table) j++;
-      out.push(<Table key={seg.id} cells={segments.slice(i, j)} states={states} actions={actions} originals={originals} onOriginal={toggle} model={model} />);
+      out.push(<Table key={seg.id} cells={segments.slice(i, j)} states={states} actions={actions} originals={originals} onOriginal={toggle} drafts={drafts} onDraft={toggleDraft} model={model} />);
       i = j;
     } else if (seg.kind === 'li') {
       // List items sit in a list, so a screen reader announces "list, 3 items".
@@ -393,13 +442,13 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
       out.push(
         <div class="seg-list" role="list" key={seg.id}>
           {segments.slice(i, j).map((li) => (
-            <Block key={li.id} seg={li} state={states?.get(li.id)} actions={actions} original={originals.has(li.id)} onOriginal={toggle} model={model} />
+            <Block key={li.id} seg={li} state={states?.get(li.id)} actions={actions} original={originals.has(li.id)} onOriginal={toggle} draft={drafts.has(li.id)} onDraft={toggleDraft} model={model} />
           ))}
         </div>,
       );
       i = j;
     } else {
-      out.push(<Block key={seg.id} seg={seg} state={states?.get(seg.id)} actions={actions} original={originals.has(seg.id)} onOriginal={toggle} model={model} />);
+      out.push(<Block key={seg.id} seg={seg} state={states?.get(seg.id)} actions={actions} original={originals.has(seg.id)} onOriginal={toggle} draft={drafts.has(seg.id)} onDraft={toggleDraft} model={model} />);
       i++;
     }
   }
