@@ -41,6 +41,31 @@ const SYNC = {
   routing: { translate: 'mock-model' },
 };
 
+/** A second profile on the mock connection, for the Review with route (`seed({ reviewWith: true })`). */
+export const REVIEW_MODEL = 'mock-review-model';
+const REVIEW_PROFILE = { id: 'mock-review', connectionId: 'mock', model: REVIEW_MODEL, maxConcurrency: 4, chunkTokens: 1200 };
+
+/** The seeded settings: the mock provider, with the quality setting, a review route and a page budget when asked for. */
+function syncFor(opts: SeedOptions): Record<string, unknown> {
+  return {
+    ...SYNC,
+    ...(opts.budgetTokens === undefined ? {} : { prefs: { ...SYNC.prefs, budgetTokens: opts.budgetTokens } }),
+    ...(opts.quality === undefined ? {} : { quality: { keepDraftsOnScreen: false, ...opts.quality } }),
+    ...(opts.reviewWith ? { 'profile:mock-review': REVIEW_PROFILE, routing: { ...SYNC.routing, review: REVIEW_PROFILE.id } } : {}),
+  };
+}
+
+export interface SeedOptions {
+  /** false: the first-run notice is left unacknowledged. */
+  privacy?: boolean;
+  /** The quality setting (sync item `quality`), e.g. `{ mode: 'best' }`. Absent: none (Balanced). */
+  quality?: { mode: 'fast' | 'balanced' | 'best'; strategy?: string; keepDraftsOnScreen?: boolean };
+  /** Routes the review role to a second mock model (REVIEW_MODEL). */
+  reviewWith?: boolean;
+  /** The per-page token ceiling (0: none). */
+  budgetTokens?: number;
+}
+
 /**
  * What starts Chromium in `lang`. On Linux the launch env's `LANGUAGE` decides. On macOS the application
  * locale (the one the extension's messages resolve in) is the system's, which `-AppleLanguages` overrides for
@@ -60,7 +85,7 @@ export interface Extension {
   id: string;
   worker: Worker;
   /** Seeds the mock provider; `privacy: false` leaves the first-run notice unacknowledged. */
-  seed(opts?: { privacy?: boolean }): Promise<void>;
+  seed(opts?: SeedOptions): Promise<void>;
   /** Opens a fixture (a path under fixtures/) in a new tab. */
   open(fixture: string): Promise<Page>;
   /** Opens the panel in a tab of the same window; it stays in the background. */
@@ -170,13 +195,14 @@ export const test = base.extend<Fixtures & Options, { servers: MockControl; extP
     await use({
       id,
       worker,
-      async seed({ privacy = true } = {}) {
+      async seed(opts = {}) {
+        const { privacy = true } = opts;
         await worker.evaluate(
           async ([sync, local]) => {
             await chrome.storage.sync.set(sync);
             await chrome.storage.local.set(local);
           },
-          [SYNC, { 'secret:mock': 'placeholder-key', ...(privacy ? { privacyNotice: { version: 2, at: 1 } } : {}) }] as const,
+          [syncFor(opts), { 'secret:mock': 'placeholder-key', ...(privacy ? { privacyNotice: { version: 2, at: 1 } } : {}) }] as const,
         );
       },
       async open(fixture) {
