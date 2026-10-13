@@ -1,5 +1,5 @@
 {
-  "note": "Gzip (level 9) of the production build at the start of release hardening, before the diagnostics log, plus 10% (2026-10-12)",
+  "note": "Gzip (level 9) of the production build at the start of release hardening, before the diagnostics log, plus 10% (2026-10-12); chunks/route.js measured again with Best (refine, the review stage and its prompt) in the panel's engine, plus 10% (2026-10-13)",
   "files": {
     "assets/onboarding.css": 646,
     "assets/sidepanel.css": 2617,
@@ -10,7 +10,7 @@
     "chunks/onboarding.js": 3910,
     "chunks/openai.js": 90199,
     "chunks/options.js": 14969,
-    "chunks/route.js": 13713,
+    "chunks/route.js": 16063,
     "chunks/sdk.js": 1599,
     "chunks/sidepanel.js": 24480,
     "chunks/sites.js": 50267,

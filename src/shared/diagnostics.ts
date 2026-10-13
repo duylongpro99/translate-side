@@ -56,6 +56,11 @@ export interface JobRecord {
   tokens: { input: number; cachedInput: number; output: number };
   firstTextAt?: number;
   failed: number;
+  /**
+   * Best (`refine`): how many segments its review replaced, left as they were, whose candidate
+   * failed a post-check, and that were not reviewed (budget, a failed call, dropped). Absent otherwise.
+   */
+  review?: { accepted: number; unchanged: number; rejected: number; skipped: number };
   /** The errors that stopped the run or failed its segments: kind, HTTP status, how many. */
   errors: readonly { kind: LLMErrorKind; status?: number; count: number }[];
   /** The page's origin; kept only when the user turned on site names. */
@@ -83,6 +88,7 @@ export interface JobEntry {
   durationMs?: number;
   firstTextMs?: number;
   failed: number;
+  review?: NonNullable<JobRecord['review']>;
   errors: { kind: LLMErrorKind; status?: number; count: number; message: string }[];
   origin?: string;
 }
@@ -158,6 +164,7 @@ export function jobEntry(api: Browser, record: JobRecord, sites: boolean): JobEn
     tokens: { input: record.tokens.input, cachedInput: record.tokens.cachedInput, output: record.tokens.output },
     ...(record.firstTextAt === undefined ? {} : { firstTextMs: record.firstTextAt - record.startedAt }),
     failed: record.failed,
+    ...(record.review === undefined ? {} : { review: { accepted: record.review.accepted, unchanged: record.review.unchanged, rejected: record.review.rejected, skipped: record.review.skipped } }),
     errors: record.errors.map((e) => ({ kind: e.kind, ...(e.status === undefined ? {} : { status: e.status }), count: e.count, message: KIND_MESSAGES[e.kind] ?? KIND_MESSAGES.unknown })),
     ...(sites && record.origin ? { origin: record.origin } : {}),
   };

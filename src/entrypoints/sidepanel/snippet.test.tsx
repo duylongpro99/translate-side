@@ -3,7 +3,7 @@
 // its own, shown whatever the page is, including one whose extraction failed.
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { translatorClient } from '@/engine/testing';
 import type { LLMClient } from '@/llm/types';
 import { MAX_SELECTION_CHARS, selectionParagraphs, type SnippetRecord } from '@/shared/snippet';
@@ -16,14 +16,14 @@ import { createTranslator } from './translator.ts';
 
 type Api = Parameters<typeof createTranslator>[0];
 
-function fakeApi() {
+function fakeApi(sync: Record<string, unknown> = {}) {
   const onSession = new Set<(c: Record<string, { newValue?: unknown }>) => void>();
   const onSync = new Set<(c: Record<string, { newValue?: unknown }>) => void>();
   const session = new Map<string, unknown>();
   const none = { addListener: () => {}, removeListener: () => {} };
   const api = {
     storage: {
-      sync: { get: (k: string) => Promise.resolve(k === 'prefs' ? { prefs: { targetLang: 'vi', sourceLang: 'auto' } } : {}), onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) } },
+      sync: { get: (k: string) => Promise.resolve(k === 'prefs' ? { prefs: { targetLang: 'vi', sourceLang: 'auto' } } : k in sync ? { [k]: sync[k] } : {}), onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) } },
       // The first-run privacy notice was acknowledged (M3-E10).
       local: { get: () => Promise.resolve({ privacyNotice: { version: 2, at: 0 } }), set: () => Promise.resolve(), onChanged: none },
       session: {
@@ -105,6 +105,21 @@ describe('selectionParagraphs', () => {
 });
 
 describe('selection mode in the panel (plan M3-E4, §3 #5)', () => {
+  it('a selection never runs Best: single-pass, with no analyze or review call, even with the quality set to Best', async () => {
+    const f = fakeApi({ quality: { mode: 'best', keepDraftsOnScreen: false } });
+    const featureAvailable = vi.fn(() => Promise.resolve(true));
+    const t = createTranslator(f.api, { translateClient: okClient(), featureAvailable });
+    const stop = t.watch(() => 3);
+    (t.hooks as Required<typeof t.hooks>).active(3);
+    f.leave(3, record(Array.from({ length: 6 }, (_, i) => `Paragraph ${i} ${'word '.repeat(80)}`).join('\n\n')));
+    await until(() => t.snippets.jobs.get(3)?.status === 'done');
+    expect(t.snippets.jobs.get(3)?.counts).toEqual({ total: 6, final: 6, failed: 0 });
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent.filter((m) => m.startsWith('<document>') || m.startsWith('<review>'))).toEqual([]);
+    expect(featureAvailable).not.toHaveBeenCalled();
+    stop();
+  });
+
   it('translates a selection on a page where extraction failed, and shows it instead of the hint', async () => {
     const f = fakeApi();
     const t = createTranslator(f.api, { translateClient: okClient() });

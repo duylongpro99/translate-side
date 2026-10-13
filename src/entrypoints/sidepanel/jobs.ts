@@ -19,11 +19,17 @@
 // - Retranslate page (M3 dogfood B2): each block keeps its earlier translation on screen until its
 //   new final arrives; a block that fails, or one the run never reached (stop, cancel), keeps it,
 //   and its cache entry is not dropped.
+// - Best (`refine`, DESIGN.md §5.2–§5.3): the strategy is resolved once per run (`job.strategy`).
+//   Drafts show as in Balanced; a block's reviewed revision replaces its draft with a "refined"
+//   marker, the draft kept for "Show draft". Cache hits below the review revision, and Balanced's
+//   entries on a miss, are shown at once as drafts and only reviewed. A review that is rejected,
+//   skipped or cannot run leaves the draft: it never fails a block. In lazy mode, once a round's
+//   drafts are done, the reader nearing the round's end drops its reviews not started.
 // - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
-import { BASIC_ID, BASIC_SWITCH_STAGE, basic, briefCacheKey, contextual, estimateTokens, createDefaultPromptRegistry, createEngine, decideRetry, explain, normalizeBrief, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy, type BasicSwitchInfo } from '@/engine/index';
-import type { SnippetRequest } from '@/engine/types';
+import { BASIC_ID, BASIC_SWITCH_STAGE, DRAFTS_STAGE, REFINE_ID, REVIEWED_REVISION, basic, briefCacheKey, contextual, estimateTokens, createDefaultPromptRegistry, createEngine, decideRetry, explain, normalizeBrief, refine, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy, type BasicSwitchInfo } from '@/engine/index';
+import type { ReviewReport, SnippetRequest } from '@/engine/types';
 import type { LLMClient, LLMError, LLMErrorKind, MTClient, NormalizedRequest } from '@/llm/types';
 import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
 import { costUsd, formatUsd, type UsageTotals } from '@/shared/cost';
@@ -63,7 +69,18 @@ export interface SegState {
    * Not part of the translation: it is never cached, and a Retranslate drops it with the old text.
    */
   explain?: { status: 'loading' | 'ready' | 'failed'; text?: string; error?: LLMError };
+  /**
+   * Best (`refine`): the shown final is the review's revision (DESIGN.md §5.2: the panel replaces
+   * the text and marks it "refined"). From this run's review, `draft` is the text it replaced and
+   * `reviewModel` the model that reviewed it (for "Show draft"); from the cache, neither.
+   */
+  refined?: true;
+  draft?: string;
+  reviewModel?: string;
 }
+
+/** The engine's review stage id (`producedBy.stage` of a review's final). */
+const REVIEW_STAGE = 'review';
 
 export type JobStatus =
   /** Requests may be in flight. */
@@ -146,6 +163,8 @@ export interface JobView {
   fallback?: { from: string; to: string; error: LLMError; basic?: true; recovered?: true };
   /** The page is under a local-only site rule (its pattern): a stop says why nothing fell back to the cloud (M4-D tester O1). */
   localOnly?: string;
+  /** Best asked for, but the review route cannot run (no key, no access…): this run goes on as Balanced, and says why. */
+  reviewUnavailable?: LLMError;
   /** Epoch ms: when this run started, when its first text became visible, when it ended. */
   startedAt: number;
   firstVisibleAt?: number;
@@ -192,6 +211,10 @@ const BACKOFF_KINDS: ReadonlySet<LLMErrorKind> = new Set(['rate_limit', 'overloa
  * M7) is a better text than the failed pass, so it stays (§5.6) and only gets the error. A failure
  * naming a revision (the check stage) replaces a final of that revision or lower: the shown text
  * is the one that failed (review D-B1).
+ *
+ * A final of `refine`'s review stage is marked `refined`, keeps the text it replaces as `draft`
+ * and names its reviewer (`reviewModel`), not as the block's model: it is no fallback. A rejected
+ * review sends nothing, so the draft stays.
  */
 export function applySegmentEvent(cur: SegState | undefined, e: EngineEvent): SegState | undefined {
   switch (e.type) {
@@ -205,6 +228,10 @@ export function applySegmentEvent(cur: SegState | undefined, e: EngineEvent): Se
         const newer = e.revision > (cur.revision ?? 1) || (e.revision === cur.revision && attempt > (cur.attempt ?? 1));
         if (!newer) return cur;
       } else if (cur?.status === 'failed' && e.revision <= (cur.revision ?? 1)) return cur;
+      if (e.producedBy.stage === REVIEW_STAGE) {
+        const draft = cur?.status === 'final' ? cur.text : undefined;
+        return { status: 'final', text: e.text, revision: e.revision, attempt, refined: true, ...(draft === undefined ? {} : { draft }), reviewModel: e.producedBy.model };
+      }
       return { status: 'final', text: e.text, revision: e.revision, attempt, model: e.producedBy.model, ...(e.producedBy.strategy === BASIC_ID ? { basic: true as const } : {}) };
     }
     case 'segment.failed':
@@ -365,6 +392,8 @@ export type ClientResult =
        * make an analyze call. Undefined from it = the translate client serves it (§4.3.1).
        */
       analyze?: () => Promise<AnalyzeResult | undefined>;
+      /** Resolves the `review` role's client (a `refine` run), likewise. */
+      review?: () => Promise<AnalyzeResult | undefined>;
     }
   | { ok: false; error: LLMError; connection?: JobConnection };
 
@@ -374,6 +403,8 @@ export interface ClientTarget {
   url: string;
   /** The run may make an analyze call (not single-pass, not a segment retry): give a resolver for that role too. */
   analyze?: boolean;
+  /** The run reviews its drafts (`refine`): give a resolver for the `review` role too. */
+  review?: boolean;
 }
 
 const addUsage = (a: UsageTotals, b: UsageTotals): UsageTotals => ({ input: a.input + b.input, cachedInput: a.cachedInput + b.cachedInput, output: a.output + b.output });
@@ -396,10 +427,11 @@ function pageCost(job: Job, profile: ModelProfile, usage: UsageTotals): number |
  * call's own profile or a fallback by its model (M4-E9); else the translate profile.
  */
 function spendingProfile(job: Job, event: { role: string; model: string; client?: string }, profile: ModelProfile): ModelProfile {
-  const all = [profile, ...(job.analyzeProfile ? [job.analyzeProfile] : []), ...job.fallbackProfiles];
+  const all = [profile, ...(job.analyzeProfile ? [job.analyzeProfile] : []), ...(job.reviewProfile ? [job.reviewProfile] : []), ...job.fallbackProfiles];
   const byId = event.client === undefined ? undefined : all.find((p) => p.id === event.client);
   if (byId) return byId;
   if (event.role === 'analyze' && job.analyzeProfile !== undefined && event.model === job.analyzeProfile.model) return job.analyzeProfile;
+  if (event.role === 'review' && job.reviewProfile !== undefined && event.model === job.reviewProfile.model) return job.reviewProfile;
   if (event.model === profile.model) return profile;
   return job.fallbackProfiles.find((p) => p.model === event.model) ?? (event.role === 'analyze' && job.analyzeProfile ? job.analyzeProfile : profile);
 }
@@ -411,10 +443,19 @@ export interface JobDeps {
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
   /** The engine's retry policy (default DEFAULT_RETRY_POLICY); the backoff and fallback notes follow the same one. */
   retry?: RetryPolicy;
-  /** Test seam: the engine to run (default: single-pass and contextual over the given clients). */
-  engine?: (client: LLMClient, analyze?: LLMClient, fallback?: readonly LLMClient[]) => TranslationEngine;
-  /** Test seam: the strategy jobs run (default PANEL_STRATEGY). */
+  /** Test seam: the engine to run (default: single-pass, contextual and refine over the given clients). */
+  engine?: (client: LLMClient, analyze?: LLMClient, fallback?: readonly LLMClient[], review?: LLMClient) => TranslationEngine;
+  /**
+   * The strategy every job runs, whatever its document asks for (the selection's `single-pass`,
+   * tests, the latency script). Absent: the document's (`JobDoc.strategy`), else PANEL_STRATEGY.
+   */
   strategy?: StrategyId;
+  /**
+   * Whether a paid feature is available, read once per job start (a cached answer, no network).
+   * `best-mode` gates `refine` from every source: without it a job asked for it runs `contextual`.
+   * Absent: always available.
+   */
+  featureAvailable?: (id: 'best-mode') => Promise<boolean>;
   /** The `basic` strategy's translator (Chrome's Translator, plan M5-E7). Absent: none, and a switch to basic says so. */
   mt?: MTClient | undefined;
   /** The translation cache (M3-E2). Absent: every run goes to the model. */
@@ -527,9 +568,31 @@ export interface JobDoc {
    * they are; alt text off leaves image descriptions out of the page altogether. Absent: captions on, alt text off.
    */
   media?: { captions: boolean; altText: boolean };
+  /** The strategy asked for (the quality mode or its override); absent = PANEL_STRATEGY. `Jobs.start` decides what runs. */
+  strategy?: StrategyId;
+  /** Best: a refined revision of a block on screen waits until the block leaves the screen. */
+  keepDraftsOnScreen?: boolean;
 }
 
 interface Job {
+  /**
+   * The strategy this run runs, resolved once at its start (JobDeps.strategy, else the document's,
+   * else PANEL_STRATEGY; `refine` without `best-mode`, or without a review route, is `contextual`).
+   */
+  strategy: StrategyId;
+  /** Best: the run's drafts are all done (the engine's `drafts` stage); only reviews are left. */
+  draftsDone?: boolean;
+  /** Best: whether review calls may still start (TranslationJob.reviewWanted); a lazy round turns it off. */
+  reviewWanted: boolean;
+  /**
+   * Best with keepDraftsOnScreen: the refined state of a block on screen (`next`), shown once the
+   * block leaves the screen, unless the text it would replace (`over`) was replaced meanwhile.
+   */
+  held: Map<string, { next: SegState; over: SegState | undefined }>;
+  /** The review role's own profile, when routing sends it elsewhere than translate (its usage is priced with it). */
+  reviewProfile?: ModelProfile;
+  /** Best: the model the review runs on (in the cache scope). */
+  reviewModel?: string;
   /**
    * What the soft limit stopped (M4-E10): "Continue anyway" carries it out, whether a run (with
    * its own options: a Retranslate page skips the cache) or one block's redo.
@@ -617,7 +680,7 @@ interface Job {
   /** Counts segment retries, for their backoff keys. */
   retrySeq: number;
   /** What this run's diagnostics record counts as it goes (`onJobRecord`). */
-  log: { id: string; promptIds: Set<string>; chunks: Set<number>; calls: number; tokens: UsageTotals };
+  log: { id: string; promptIds: Set<string>; chunks: Set<number>; calls: number; tokens: UsageTotals; review?: NonNullable<JobRecord['review']> };
 }
 
 export type JobsListener = (tabId: number, view: JobView | undefined) => void;
@@ -678,7 +741,47 @@ export class Jobs {
     } else if (job?.docId === docId && job.lazy) {
       this.reach(tabId, job);
     }
-    if (job?.docId === docId && job.lazy && job.view.status === 'running' && ids.length > 0) this.leave(tabId, job);
+    if (job?.docId === docId && job.held.size > 0 && this.release(job, new Set(this.screenOf(tabId, docId)))) this.patch(tabId, job, { counts: count(job.segs) });
+    if (job?.docId === docId && job.lazy && job.view.status === 'running' && ids.length > 0) {
+      this.dropReviews(tabId, job);
+      this.leave(tabId, job);
+    }
+  }
+
+  /**
+   * Shows the held refined revisions of blocks not in `screen` (keepDraftsOnScreen), unless the
+   * block's text changed meanwhile (a Retranslate). Returns whether any was shown.
+   */
+  private release(job: Job, screen: ReadonlySet<string>): boolean {
+    let shown = false;
+    for (const [id, { next, over }] of job.held) {
+      if (screen.has(id)) continue;
+      job.held.delete(id);
+      const now = job.segs.get(id);
+      if (now?.status !== 'final' || now.text !== over?.text) continue;
+      job.segs.set(id, next);
+      shown = true;
+    }
+    return shown;
+  }
+
+  /**
+   * Best in lazy mode: once the round's drafts are done, a reader who nears the round's end (the
+   * low-water mark that starts the next round) or leaves its window no longer waits for its
+   * reviews. Those not started are dropped (their blocks stay drafts, reviewed on a later visit),
+   * so the round ends with the calls in flight and the next one starts at the reader.
+   */
+  private dropReviews(tabId: number, job: Job): void {
+    const current = job.within ?? job.round;
+    if (!job.lazy || job.strategy !== REFINE_ID || !job.draftsDone || !job.reviewWanted || current === undefined) return;
+    const translatable = (job.translatable ??= job.view.segments.filter((s) => s.translate));
+    const pinned = this.pinnedOf(tabId, job.docId);
+    const screen = this.screenOf(tabId, job.docId);
+    const own = screen.filter((id) => !pinned.includes(id));
+    if (own.length === 0) return;
+    const left = !own.some((id) => current.has(id));
+    const near = lazyWindow(translatable, screen, LAZY_LOW_WATER, pinned);
+    if (left || [...near].some((id) => job.segs.get(id)?.status === 'pending')) job.reviewWanted = false;
   }
 
   /**
@@ -747,6 +850,9 @@ export class Jobs {
    */
   async start(tabId: number, docId: string, doc: JobDoc, options: { resume?: boolean; keepCost?: boolean; keepBrief?: boolean; fresh?: boolean; all?: boolean } = {}): Promise<void> {
     const { resume = false, keepCost = false, keepBrief = false, fresh = false } = options;
+    // The one async read of the strategy: everything later in the run reads `job.strategy`.
+    const requested = this.deps.strategy ?? doc.strategy ?? PANEL_STRATEGY;
+    const strategy = requested === REFINE_ID && !(await this.bestMode()) ? contextual.id : requested;
     const prev = this.jobs.get(tabId);
     const keep = resume && prev?.docId === docId && prev.view.status !== 'running' ? prev : undefined;
     const all = options.all ?? keep?.all ?? false;
@@ -791,6 +897,9 @@ export class Jobs {
     const gate = new Gate();
     gate.set(tabId === this.activeTabId);
     const job: Job = {
+      strategy,
+      reviewWanted: true,
+      held: new Map(),
       lazy,
       all,
       docId,
@@ -849,7 +958,8 @@ export class Jobs {
     this.record(job, 'started');
 
     const signal = job.controller.signal;
-    const resolved = await this.deps.translateClient({ tabId, url: doc.url, analyze: (this.deps.strategy ?? PANEL_STRATEGY) !== 'single-pass' });
+    const refining = job.strategy === REFINE_ID;
+    const resolved = await this.deps.translateClient({ tabId, url: doc.url, analyze: job.strategy !== 'single-pass', ...(refining ? { review: true } : {}) });
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
     if (resolved.connection) this.patch(tabId, job, { connection: resolved.connection });
     if (!resolved.ok) {
@@ -860,19 +970,40 @@ export class Jobs {
     if (resolved.localOnly !== undefined) this.patch(tabId, job, { localOnly: resolved.localOnly });
     job.fallbackProfiles = resolved.fallback?.map((l) => l.profile) ?? [];
     this.patch(tabId, job, { model: client.model });
-    await this.fromCache(tabId, job, { todo, translatable, model: client.model, fresh });
+    // Best: the review route decides the cache scope (its model is in the key), so it is resolved
+    // before the lookup, with the analyze route alongside (that one is used only if a brief is asked for).
+    let review: AnalyzeResult | undefined;
+    let analyzeAhead: Promise<AnalyzeResult | undefined> | undefined;
+    if (refining) {
+      analyzeAhead = resolved.analyze?.();
+      review = resolved.review ? await resolved.review() : undefined;
+      if (signal.aborted || this.jobs.get(tabId) !== job) return;
+      if (review && !review.ok) {
+        // Best never translates less than Balanced: without its reviewer the run is Balanced.
+        job.strategy = contextual.id;
+        this.patch(tabId, job, { reviewUnavailable: review.error });
+        review = undefined;
+      } else {
+        job.reviewModel = review?.client.model ?? client.model;
+        if (review) job.reviewProfile = review.profile;
+      }
+    }
+    const drafts = new Map<string, { text: string; revision: number }>();
+    await this.fromCache(tabId, job, { todo, translatable, model: client.model, fresh, drafts });
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
     // Lazy mode: this round covers the screen and what follows it, the rest waits (M5-E4).
     if (job.lazy) {
       const window = lazyWindow(translatable, this.screenOf(tabId, docId), {}, this.pinnedOf(tabId, docId));
       for (const id of [...todo]) if (!window.has(id)) todo.delete(id);
+      for (const id of [...drafts.keys()]) if (!window.has(id)) drafts.delete(id);
       job.round = window;
     }
     // The analyze call sees only the segments still to translate. A brief stored under the key of
     // the whole page must come from the whole page, so a run that skips any segment stores none.
     // A lazy round's analyze call reads the whole page (`briefFrom`), so its brief is stored.
     if (todo.size !== translatable.length && !job.lazy) job.briefKey = undefined;
-    if (todo.size === 0) {
+    // Best: drafts from the cache are only reviewed; with none left either, nothing is sent.
+    if (todo.size === 0 && drafts.size === 0) {
       this.finish(tabId, job, 'done');
       return;
     }
@@ -888,7 +1019,7 @@ export class Jobs {
     }
     // The analyze role is resolved only when the brief will be asked for: a kept or cached brief
     // means no analyze call, so its route must not stop the run.
-    const analyze = resolved.analyze && !job.view.brief ? await resolved.analyze() : undefined;
+    const analyze = resolved.analyze && !job.view.brief ? await (analyzeAhead ?? resolved.analyze()) : undefined;
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
     if (analyze && !analyze.ok) {
       if (analyze.connection) this.patch(tabId, job, { connection: analyze.connection });
@@ -896,7 +1027,7 @@ export class Jobs {
       return;
     }
     if (analyze) job.analyzeProfile = analyze.profile;
-    const engine = this.engineFor(tabId, job, { client, profile, ...(resolved.connection ? { connection: resolved.connection } : {}) }, undefined, analyze, resolved.fallback);
+    const engine = this.engineFor(tabId, job, { client, profile, ...(resolved.connection ? { connection: resolved.connection } : {}) }, undefined, analyze, resolved.fallback, review?.ok ? review : undefined);
     const engineJob: TranslationJob = {
       doc: {
         url: doc.url,
@@ -905,7 +1036,8 @@ export class Jobs {
         targetLang: doc.targetLang,
         outline: segments.filter((s) => s.kind === 'heading').map((s) => s.text),
         // Already-final segments are not sent again (resume). Code blocks ride along; the engine skips them.
-        segments: segments.filter((s) => !s.translate || todo.has(s.id)),
+        // Best: drafts from the cache go too, to be reviewed (not drafted again).
+        segments: segments.filter((s) => !s.translate || todo.has(s.id) || drafts.has(s.id)),
       },
       // Viewport first (M3-E1): what is on screen now, read again each time a chunk starts.
       priority: [...this.screenOf(tabId, docId)],
@@ -913,7 +1045,8 @@ export class Jobs {
       focus: () => job.focus,
       within: () => job.within,
       ...(job.lazy ? { briefFrom: segments } : {}),
-      strategy: this.deps.strategy ?? PANEL_STRATEGY,
+      ...(job.strategy === REFINE_ID ? { reviewWanted: () => job.reviewWanted, ...(drafts.size > 0 ? { drafts } : {}) } : {}),
+      strategy: job.strategy,
       options: {
         style: doc.style ?? 'natural',
         ...(doc.gloss ? { gloss: doc.gloss } : {}),
@@ -955,6 +1088,9 @@ export class Jobs {
     const keepCost = prev?.docId === docId ? prev : undefined;
     const now = this.now();
     const job: Job = {
+      strategy: this.deps.strategy ?? doc.strategy ?? PANEL_STRATEGY,
+      reviewWanted: true,
+      held: new Map(),
       lazy: false,
       all: false,
       docId,
@@ -1235,9 +1371,9 @@ export class Jobs {
   /**
    * The engine over the job's clients: each counted, gated by the tab being active and watched for
    * backoff (M3-E8), and for a refused key (§4.3.5: the connection is marked `error`, "Fix key"
-   * names it). `primary` is the routed profile; `fallback` its chain (M4-E9), shared by both roles.
+   * names it). `primary` is the routed profile; `fallback` its chain (M4-E9), shared by every role.
    */
-  private engineFor(tabId: number, job: Job, primary: FallbackLink, retryKey?: number, analyze?: FallbackLink, fallback: readonly FallbackLink[] = []): TranslationEngine {
+  private engineFor(tabId: number, job: Job, primary: FallbackLink, retryKey?: number, analyze?: FallbackLink, fallback: readonly FallbackLink[] = [], review?: FallbackLink): TranslationEngine {
     const { profile } = primary;
     const meter = {
       start: () => {
@@ -1293,7 +1429,18 @@ export class Jobs {
     const gated = wrap(primary, 0, fallback[0]);
     const gatedFallback = fallback.map((l, i) => wrap(l, i + 1, chain[i + 2]));
     const gatedAnalyze = analyze ? wrap(analyze, chain.findIndex((l) => l.profile.id === analyze.profile.id), fallback[0]) : undefined;
-    return this.deps.engine?.(gated, gatedAnalyze, gatedFallback) ?? this.defaultEngine(gated, gatedAnalyze, gatedFallback);
+    const gatedReview = review ? wrap(review, chain.findIndex((l) => l.profile.id === review.profile.id), fallback[0]) : undefined;
+    if (this.deps.engine) return gatedReview ? this.deps.engine(gated, gatedAnalyze, gatedFallback, gatedReview) : this.deps.engine(gated, gatedAnalyze, gatedFallback);
+    return this.defaultEngine(gated, gatedAnalyze, gatedFallback, gatedReview);
+  }
+
+  /** `best-mode` for this run (JobDeps.featureAvailable); an answer that fails is "no". */
+  private async bestMode(): Promise<boolean> {
+    try {
+      return (await this.deps.featureAvailable?.('best-mode')) ?? true;
+    } catch {
+      return false;
+    }
   }
 
   /** The tab is gone (closed, moved to another window): cancel and forget its job. */
@@ -1308,20 +1455,18 @@ export class Jobs {
     for (const tabId of this.jobs.keys()) this.cancel(tabId);
   }
 
-  private defaultEngine(client: LLMClient, analyze?: LLMClient, fallback: readonly LLMClient[] = []): TranslationEngine {
+  private defaultEngine(client: LLMClient, analyze?: LLMClient, fallback: readonly LLMClient[] = [], review?: LLMClient): TranslationEngine {
     return createEngine({
       // The engine asks by role (§5.1); route.ts resolved each through routing (src/shared/providers.ts
-      // resolveRoute): `analyze` has its own client only when routed elsewhere, else it is translate's (§4.3.1).
-      llm: (role) => {
-        if (role === 'review') throw new Error(`no model profile is routed for the ${role} role yet`);
-        return role === 'analyze' && analyze ? analyze : client;
-      },
-      // Both roles hand over to the same chain (M4-E9), so a link that gave up is skipped by both.
+      // resolveRoute): `analyze` and `review` have their own client only when routed elsewhere, else
+      // it is translate's (§4.3.1).
+      llm: (role) => (role === 'analyze' && analyze ? analyze : role === 'review' && review ? review : client),
+      // Every role hands over to the same chain (M4-E9), so a link that gave up is skipped by all.
       fallback: () => fallback,
       now: this.now,
       sleep: this.deps.sleep ?? abortableSleep,
       ...(this.deps.retry === undefined ? {} : { retry: this.deps.retry }),
-      strategies: [singlePass, contextual, explain, basic],
+      strategies: [singlePass, contextual, refine, explain, basic],
       prompts: createDefaultPromptRegistry(),
       ...(this.deps.mt === undefined ? {} : { mt: this.deps.mt }),
     });
@@ -1339,11 +1484,19 @@ export class Jobs {
         const cur = job.segs.get(event.id);
         let next = applySegmentEvent(cur, event);
         if (next === cur || next === undefined) return;
+        // A review's final is the job model's block (no fallback badge), stored under the job's key.
+        if (next.refined) next = { ...next, model: job.view.model };
         // A retranslated block that fails keeps its earlier translation, and its cache entry (B2).
         const earlier = job.earlier.get(event.id);
         const restored = next.status === 'failed' && earlier !== undefined;
         if (restored) next = { ...earlier, redoError: next.error ?? uiError('unknown', 'no translation came back', 'noTranslation') };
         else if (next.status === 'final') job.earlier.delete(event.id);
+        // Keep drafts on screen: the refined text waits until the block leaves the screen (stored now).
+        if (next.refined && job.doc.keepDraftsOnScreen && this.screenOf(tabId, job.docId).includes(event.id)) {
+          job.held.set(event.id, { next, over: cur });
+          this.remember(job, event.id, next);
+          return;
+        }
         job.segs.set(event.id, next);
         if (!restored) this.remember(job, event.id, next);
         const patch: Partial<JobView> = { counts: count(job.segs) };
@@ -1363,6 +1516,12 @@ export class Jobs {
       case 'stage': {
         const promptId = (event.info as { promptId?: unknown } | undefined)?.promptId;
         if (event.status === 'start' && typeof promptId === 'string') job.log.promptIds.add(promptId);
+        // Best: the drafts are done, only reviews are left (a lazy round may stop waiting for them).
+        if (event.stage === DRAFTS_STAGE && event.status === 'done') {
+          job.draftsDone = true;
+          if (job.view.status === 'running') this.dropReviews(tabId, job);
+          return;
+        }
         // Every provider gave up and the job switched to Chrome's Translator (M5-E7); `done` with
         // `recovered`: a provider answered again and the job went back to it.
         if (event.stage !== BASIC_SWITCH_STAGE || job.view.status !== 'running') return;
@@ -1385,7 +1544,8 @@ export class Jobs {
         return;
       }
       case 'chunk':
-        if (!event.revise) job.log.chunks.add(event.index);
+        if (event.review) this.reviewed(job, event.review);
+        else if (!event.revise) job.log.chunks.add(event.index);
         return;
       case 'usage': {
         const spent = { input: event.input, cachedInput: event.cachedInput ?? 0, output: event.output };
@@ -1411,33 +1571,48 @@ export class Jobs {
    * the brief from the brief cache when the run has none. Any cache error just means a normal run.
    * Mutates `todo`: the segments still to translate.
    */
-  private async fromCache(tabId: number, job: Job, run: { todo: Set<string>; translatable: readonly Segment[]; model: string; fresh: boolean }): Promise<void> {
+  private async fromCache(tabId: number, job: Job, run: { todo: Set<string>; translatable: readonly Segment[]; model: string; fresh: boolean; drafts: Map<string, { text: string; revision: number }> }): Promise<void> {
     const cache = this.deps.cache;
     if (!cache) return;
     const { doc } = job;
     const segments = job.view.segments;
-    const scope = scopeHash(keyScope({ targetLang: doc.targetLang, model: run.model, style: doc.style, gloss: doc.gloss, strategy: this.deps.strategy ?? PANEL_STRATEGY, glossary: doc.glossary }));
+    const scope = this.scopeOf(job, run.model);
     for (const s of run.translatable) job.keys.set(s.id, segmentKey(scope, s));
     job.briefKey = briefCacheKey({ url: doc.url, title: doc.title, targetLang: doc.targetLang, outline: segments.filter((s) => s.kind === 'heading').map((s) => s.text) }, segments);
     if (run.fresh) return;
     try {
       const wanted = run.translatable.filter((s) => run.todo.has(s.id));
+      // Best: where it has no entry, Balanced's entry of the same block (same model, style and glossary) is a draft.
+      const refining = job.strategy === REFINE_ID;
+      const balanced = refining ? scopeHash(keyScope({ targetLang: doc.targetLang, model: run.model, style: doc.style, gloss: doc.gloss, strategy: contextual.id, glossary: doc.glossary })) : undefined;
+      const draftKey = (s: Segment) => (balanced === undefined ? undefined : segmentKey(balanced, s));
       // A cache that never answers (a blocked or dead database) must not hold the translation.
       const timedOut = Symbol('timeout');
       let timer: ReturnType<typeof setTimeout> | undefined;
-      const lookup = Promise.all([cache.getMany([...new Set(wanted.map((s) => job.keys.get(s.id) as string))]), job.view.brief ?? cache.getBrief(job.briefKey)]);
+      const lookup = Promise.all([
+        cache.getMany([...new Set(wanted.map((s) => job.keys.get(s.id) as string))]),
+        job.view.brief ?? cache.getBrief(job.briefKey),
+        balanced === undefined ? undefined : cache.getMany([...new Set(wanted.map((s) => draftKey(s) as string))]),
+      ]);
       const found = await Promise.race([lookup, new Promise<typeof timedOut>((resolve) => (timer = setTimeout(() => resolve(timedOut), this.deps.cacheTimeoutMs ?? 1500)))]);
       clearTimeout(timer);
       lookup.catch(() => {});
       if (found === timedOut) return;
-      const [hits, brief] = found;
+      const [hits, brief, draftHits] = found;
       if (job.controller.signal.aborted || this.jobs.get(tabId) !== job) return;
       const patch: Partial<JobView> = {};
       let shown = 0;
       for (const s of wanted) {
         const hit = hits.get(job.keys.get(s.id) as string);
-        if (!hit) continue;
-        job.segs.set(s.id, { status: 'final', text: hit.text, revision: hit.revision, attempt: hit.attempt });
+        // Best: an entry at the review revision was reviewed (refined, or kept as drafted); below it, it is a draft.
+        if (hit && (!refining || hit.revision >= REVIEWED_REVISION)) {
+          job.segs.set(s.id, { status: 'final', text: hit.text, revision: hit.revision, attempt: hit.attempt, ...(hit.refined ? { refined: true as const } : {}) });
+        } else {
+          const draft = hit ?? (draftHits === undefined ? undefined : draftHits.get(draftKey(s) as string));
+          if (!draft) continue;
+          job.segs.set(s.id, { status: 'final', text: draft.text, revision: draft.revision, attempt: draft.attempt });
+          run.drafts.set(s.id, { text: draft.text, revision: draft.revision });
+        }
         run.todo.delete(s.id);
         shown++;
       }
@@ -1462,15 +1637,22 @@ export class Jobs {
     // A basic translation (M5-E7) is a stopgap: not stored, so the next run asks the model again.
     if (state.basic) return;
     // A final is stored under the model that produced it (§7); a failure drops the job model's entry.
-    const key = state.status === 'final' ? this.keyFor(job, id, state.model) : job.keys.get(id);
+    // A review's final goes under the job's own key (the reviewer is in its scope), so a reload finds it.
+    const key = state.status === 'final' && !state.refined ? this.keyFor(job, id, state.model) : job.keys.get(id);
+    if (state.status === 'final' && state.text !== undefined) this.store(job, key, { text: state.text, revision: state.revision ?? 1, attempt: state.attempt ?? 1, ...(state.refined ? { refined: true as const } : {}) });
+    else if (state.status === 'failed') this.store(job, key, undefined);
+  }
+
+  /** Queues a cache write of `entry` under `key`, or the entry's removal (undefined). */
+  private store(job: Job, key: string | undefined, entry: CachedSegment | undefined): void {
     if (key === undefined || !this.deps.cache) return;
-    if (state.status === 'final' && state.text !== undefined) {
+    if (entry) {
       job.drops.delete(key);
-      job.writes.set(key, { text: state.text, revision: state.revision ?? 1, attempt: state.attempt ?? 1 });
-    } else if (state.status === 'failed') {
+      job.writes.set(key, entry);
+    } else {
       job.writes.delete(key);
       job.drops.add(key);
-    } else return;
+    }
     if (job.flush) return;
     job.flush = true;
     // Coalesced: one transaction for the finals of a tick.
@@ -1485,11 +1667,35 @@ export class Jobs {
     if (!segment) return undefined;
     let scope = job.scopes.get(model);
     if (scope === undefined) {
-      const { doc } = job;
-      scope = scopeHash(keyScope({ targetLang: doc.targetLang, model, style: doc.style, gloss: doc.gloss, strategy: this.deps.strategy ?? PANEL_STRATEGY, glossary: doc.glossary }));
+      scope = this.scopeOf(job, model);
       job.scopes.set(model, scope);
     }
     return segmentKey(scope, segment);
+  }
+
+  /** The cache scope of the job's finals from `model`: its strategy, settings and, for Best, its reviewer. */
+  private scopeOf(job: Job, model: string): string {
+    const { doc } = job;
+    return scopeHash(keyScope({ targetLang: doc.targetLang, model, style: doc.style, gloss: doc.gloss, strategy: job.strategy, glossary: doc.glossary, reviewModel: job.reviewModel }));
+  }
+
+  /**
+   * Best: what a chunk's review did (ReviewReport). Its counts go to the diagnostics record, and a
+   * block the reviewer left as it was, or whose candidate was rejected, is stored at the review
+   * revision with its draft: it was reviewed, so a reload shows it as final and asks nothing.
+   * Accepted ones were stored with their final; skipped ones stay drafts, reviewed on a later visit.
+   */
+  private reviewed(job: Job, report: ReviewReport): void {
+    const log = (job.log.review ??= { accepted: 0, unchanged: 0, rejected: 0, skipped: 0 });
+    log.accepted += report.accepted.length;
+    log.unchanged += report.unchanged.length;
+    log.rejected += report.rejected.length;
+    if (report.skipped !== undefined) log.skipped += report.ids.length;
+    for (const id of [...report.unchanged, ...report.rejected]) {
+      const state = job.segs.get(id);
+      if (state?.status !== 'final' || state.text === undefined || state.basic || (state.revision ?? 1) >= REVIEWED_REVISION) continue;
+      this.store(job, job.keys.get(id), { text: state.text, revision: REVIEWED_REVISION, attempt: 1 });
+    }
   }
 
   private flushCache(job: Job): void {
@@ -1521,6 +1727,8 @@ export class Jobs {
     for (const [id, s] of job.segs) if (s.status === 'streaming' && !job.retrying.has(id)) job.segs.set(id, { status: 'pending' });
     // A retranslate that ends early puts back the earlier translation of every block it did not redo (B2).
     for (const [id, s] of job.earlier) if (job.segs.get(id)?.status === 'pending' && !job.retrying.has(id)) job.segs.set(id, s);
+    // Refined revisions held while their block was on screen are shown now that the run is over.
+    this.release(job, new Set());
     const kept = job.earlier.size > 0 ? { kept: job.earlier.size } : {};
     job.backoff.clear();
     if (job.lazy) {
@@ -1601,7 +1809,7 @@ export class Jobs {
       startedAt: v.startedAt,
       ...(outcome === 'started' ? {} : { endedAt: v.endedAt ?? this.now() }),
       outcome,
-      strategy: this.deps.strategy ?? PANEL_STRATEGY,
+      strategy: job.strategy,
       promptIds: [...job.log.promptIds],
       ...(v.connection?.presetId === undefined ? {} : { presetId: v.connection.presetId }),
       ...(v.model ? { model: v.model } : {}),
@@ -1613,6 +1821,7 @@ export class Jobs {
       tokens: { ...job.log.tokens },
       ...(v.firstVisibleAt === undefined ? {} : { firstTextAt: v.firstVisibleAt }),
       failed: v.counts.failed,
+      ...(job.log.review === undefined ? {} : { review: { ...job.log.review } }),
       errors: [...errors.values()],
       ...(origin === undefined || origin === 'null' ? {} : { origin }),
     });

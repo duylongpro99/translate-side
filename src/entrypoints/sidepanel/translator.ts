@@ -7,7 +7,7 @@
 import type { browser } from 'wxt/browser';
 import { i18n } from '#i18n';
 import { chromeLanguageDetector, detectionSample, detectSourceLanguage, MIXED_LANGUAGE_DETECTION, sameLanguage, segmentsInLanguage, type LanguageDetectorPort } from '@/shared/language';
-import type { GlossaryEntry } from '@/engine/types';
+import type { GlossaryEntry, StrategyId } from '@/engine/types';
 import { GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences, SECRET_PREFIX, type Preferences } from '@/shared/settings';
 import type { ReadInfo, SessionHooks } from './controller.ts';
 import type { ExtractResult } from '@/shared/protocol';
@@ -77,15 +77,38 @@ export interface TranslatorOptions {
   privacy?: PrivacyGate;
 }
 
-/** What a job reads from the settings: the preferences and the personal glossary (both storage.sync). */
+/** What a job reads from the settings: the preferences, the personal glossary and the quality setting (all storage.sync). */
 interface Settings {
   prefs: Preferences;
   glossary: GlossaryEntry[];
+  quality: Pick<JobDoc, 'strategy' | 'keepDraftsOnScreen'>;
 }
 
 async function readSettings(api: Browser): Promise<Settings> {
-  const [prefs, glossary] = await Promise.all([readPreferences(api), readGlossary(api)]);
-  return { prefs, glossary };
+  const [prefs, glossary, quality] = await Promise.all([readPreferences(api), readGlossary(api), readQuality(api)]);
+  return { prefs, glossary, quality };
+}
+
+/** The sync item of the quality setting: `{ mode, strategy?, keepDraftsOnScreen }`, its own item so v1.0 builds never erase it. */
+const QUALITY_KEY = 'quality';
+const MODE_STRATEGIES: Readonly<Record<string, StrategyId>> = { fast: 'single-pass', balanced: 'contextual', best: 'refine' };
+const STRATEGIES: ReadonlySet<string> = new Set(Object.values(MODE_STRATEGIES));
+
+/**
+ * The strategy a page job asks for (the advanced override, else the mode's) and whether refined
+ * text waits for its block to leave the screen. Unknown values, or none, ask for nothing: the
+ * panel's default. Whether `refine` may run is decided when the job starts (Jobs.start).
+ */
+async function readQuality(api: Browser): Promise<Settings['quality']> {
+  try {
+    const raw: unknown = (await api.storage.sync.get(QUALITY_KEY))[QUALITY_KEY];
+    if (typeof raw !== 'object' || raw === null) return {};
+    const { mode, strategy, keepDraftsOnScreen } = raw as Record<string, unknown>;
+    const requested = typeof strategy === 'string' && STRATEGIES.has(strategy) ? strategy : typeof mode === 'string' ? MODE_STRATEGIES[mode] : undefined;
+    return { ...(requested === undefined ? {} : { strategy: requested }), ...(keepDraftsOnScreen === true ? { keepDraftsOnScreen: true } : {}) };
+  } catch {
+    return {};
+  }
 }
 
 /** Why "Continue anyway" could not go on (review 3 #3): the bar shows it instead of nothing. */
@@ -130,9 +153,9 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
    * model call). With per-segment detection on, the segments already in the target language are
    * kept as they are, and the page is skipped only when nothing else is left.
    */
-  const docFor = async ({ prefs, glossary }: Settings, url: string, title: string, pageLang: string | undefined, segments: JobDoc['segments']): Promise<{ doc: JobDoc; skip: boolean }> => {
+  const docFor = async ({ prefs, glossary, quality }: Settings, url: string, title: string, pageLang: string | undefined, segments: JobDoc['segments']): Promise<{ doc: JobDoc; skip: boolean }> => {
     const detection = await detectSourceLanguage({ override: prefs.sourceLang === 'auto' ? undefined : prefs.sourceLang, sample: detectionSample(segments), pageLang }, detector);
-    const base = { url, title, ...(pageLang === undefined ? {} : { pageLang }), sourceLang: detection.lang, targetLang: prefs.targetLang, detection, segments, style: prefs.style, gloss: prefs.gloss, glossary, budgetTokens: prefs.budgetTokens, media: { captions: prefs.captions, altText: prefs.altText } };
+    const base = { url, title, ...(pageLang === undefined ? {} : { pageLang }), sourceLang: detection.lang, targetLang: prefs.targetLang, detection, segments, style: prefs.style, gloss: prefs.gloss, glossary, budgetTokens: prefs.budgetTokens, media: { captions: prefs.captions, altText: prefs.altText }, ...quality };
     if (!mixed) return { doc: base, skip: sameLanguage(detection.lang, prefs.targetLang) };
     const keep = await segmentsInLanguage(segments, prefs.targetLang, detector);
     const left = segments.some((s) => s.translate && !keep.has(s.id));

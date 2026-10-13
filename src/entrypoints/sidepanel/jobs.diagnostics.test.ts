@@ -101,4 +101,24 @@ describe('the diagnostics record of a page run', () => {
     await Promise.all([first, second]);
     expect(seen.filter((r) => r.id === firstId).map((r) => r.outcome)).toEqual(['started', 'replaced']);
   });
+
+  it('a Best run reports the strategy it ran and its review counts; a refused Best reports contextual', async () => {
+    const isReview = (req: { messages: { content: string }[] }) => (req.messages[0]?.content ?? '').startsWith('<review>');
+    // The reviewer leaves every draft as it is.
+    const client = translatorClient((lines, _n, req) => (isReview(req) ? '<none/>' : lines.map((l) => `<seg id="${l.n}"${l.nonce ? ` n="${l.nonce}"` : ''}>vi:${l.source}</seg>`).join('\n')));
+    for (const [available, strategy] of [[true, 'refine'], [false, 'contextual']] as const) {
+      const device = fakeDevice();
+      const log = createDiagnosticsLog(device.api);
+      const writes: Promise<void>[] = [];
+      const jobs = new Jobs({ translateClient: () => Promise.resolve({ ok: true, client, profile: GEMINI_PROFILE, connection }), featureAvailable: () => Promise.resolve(available), onJobRecord: (r) => void writes.push(log.record(r)) });
+      jobs.setActive(1);
+      await jobs.start(1, 'd', { ...doc(2), strategy: 'refine' });
+      await Promise.all(writes);
+      const [entry] = await readDiagnostics(device.api);
+      expect(entry).toMatchObject({ outcome: 'done', strategy });
+      if (entry?.type !== 'page-job') throw new Error('no entry');
+      if (available) expect(entry.review).toEqual({ accepted: 0, unchanged: 2, rejected: 0, skipped: 0 });
+      else expect(entry.review).toBeUndefined();
+    }
+  });
 });

@@ -1,7 +1,8 @@
 // The `translate` role → a client (DESIGN.md §4.3.5 Resolve, plan M4-E8): the profile routed for
 // this page (site rule, then the tab's override, then the default route; src/shared/providers.ts),
 // its connection's key from storage.local, and the host permission for its origin; the `analyze`
-// role's own client when routing sends it elsewhere, resolved only when a brief is asked for. A quirk the adapter learns is saved on the
+// role's own client when routing sends it elsewhere, resolved only when a brief is asked for, and
+// likewise the `review` role's for a `refine` run. A quirk the adapter learns is saved on the
 // stored connection (§4.2.4).
 import type { browser } from 'wxt/browser';
 import { CHROME_NANO, NANO_OFF_MESSAGE, createClient } from '@/llm/client';
@@ -105,11 +106,29 @@ async function analyzeClient(api: Browser, target: RouteTarget, translateProfile
 }
 
 /**
+ * The `review` role's client (`refine`'s review pass, DESIGN.md §5.3), like `analyzeClient`:
+ * `Routing.review` when set (under a local-only site rule, that rule's model), else undefined and
+ * the translate client serves it. A route that can't run is an error; the job then runs without
+ * the review rather than stopping.
+ */
+async function reviewClient(api: Browser, target: RouteTarget, translateProfileId: string): Promise<AnalyzeResult | undefined> {
+  let route: Route;
+  try {
+    route = await resolveRoute(api, 'review', target);
+  } catch (error) {
+    return settingsError(error);
+  }
+  if (route.ok && route.profile.id === translateProfileId) return undefined;
+  return clientFor(api, route);
+}
+
+/**
  * The client a job runs on (§4.3.5, §5.1: the engine asks by role): `translate`; with
  * `target.analyze`, also a resolver for the `analyze` role, called only when an analyze call will
- * be made (no brief cached or kept), so a route that can't run never stops a run that needs none.
+ * be made (no brief cached or kept), so a route that can't run never stops a run that needs none;
+ * with `target.review`, a resolver for the `review` role.
  */
-export async function translateClient(api: Browser, target: RouteTarget & { analyze?: boolean } = {}): Promise<ClientResult> {
+export async function translateClient(api: Browser, target: RouteTarget & { analyze?: boolean; review?: boolean } = {}): Promise<ClientResult> {
   let route: Route;
   try {
     route = await resolveRoute(api, 'translate', target);
@@ -121,9 +140,10 @@ export async function translateClient(api: Browser, target: RouteTarget & { anal
   const { links: fallback, basic } = await fallbackClients(api, route);
   const routed = route.localOnly && route.rule ? { ...translate, localOnly: route.rule.pattern } : translate;
   const withFallback = { ...routed, ...(fallback.length > 0 ? { fallback } : {}), ...(basic ? { basic } : {}) };
-  if (!target.analyze) return withFallback;
   const profileId = translate.profile.id;
-  return { ...withFallback, analyze: () => analyzeClient(api, target, profileId) };
+  const review = target.review ? { review: () => reviewClient(api, target, profileId) } : {};
+  if (!target.analyze) return { ...withFallback, ...review };
+  return { ...withFallback, analyze: () => analyzeClient(api, target, profileId), ...review };
 }
 
 /**
