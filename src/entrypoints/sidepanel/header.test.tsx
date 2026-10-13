@@ -282,7 +282,7 @@ describe('panel header (M3-E6)', () => {
       await until(() => t.jobs.get(1)?.status === 'done');
       await act(() => settle(30));
       expect(q<HTMLSelectElement>('quality-mode')?.value).toBe('balanced');
-      expect(q('quality-mode')?.getAttribute('title')).toBe('Set to single-pass in settings');
+      expect(q('quality-mode')?.getAttribute('title')).toBe('Set to Single pass in settings');
       choose('quality-mode', 'fast');
       await until(() => (f.sync.get('quality') as { mode: string }).mode === 'fast');
       expect(f.sync.get('quality')).toEqual({ mode: 'fast', keepDraftsOnScreen: true });

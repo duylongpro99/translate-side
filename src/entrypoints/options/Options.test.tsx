@@ -606,6 +606,20 @@ describe('options: translation quality', () => {
     expect(f.sync.get('prefs')).toEqual({ targetLang: 'vi', sourceLang: 'auto' });
   });
 
+  it('the Advanced section stays open once it is opened, even after a setting is cleared', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => root.querySelector('#quality-strategy') !== null);
+    const details = root.querySelector('[data-testid=quality-advanced]') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    details.open = true;
+    const keep = input('quality-keep-drafts');
+    act(() => keep.click());
+    act(() => keep.click());
+    await flush();
+    expect(details.open).toBe(true);
+  });
+
   it('with Best not released it is offered nowhere, not as a mode and not as a strategy', async () => {
     flags.released = false;
     const f = fakeApi();

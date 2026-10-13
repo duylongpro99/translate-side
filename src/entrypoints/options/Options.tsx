@@ -216,8 +216,13 @@ const strategyText = (strategy: QualityStrategy): string =>
 
 function QualitySection({ api }: { api: Browser }) {
   const [quality, setQuality] = useState<Quality | undefined>();
+  // Open at first only when something advanced is set; the user's own toggling is left alone afterwards.
+  const [startsOpen, setStartsOpen] = useState(false);
   useEffect(() => {
-    void readQuality(api).then(setQuality);
+    void readQuality(api).then((q) => {
+      setStartsOpen(q.strategy !== undefined || q.keepDraftsOnScreen);
+      setQuality(q);
+    });
   }, []);
   if (!quality) return null;
   // Queued on what was stored last, like the preferences; `strategy: undefined` clears the override.
@@ -241,7 +246,7 @@ function QualitySection({ api }: { api: Browser }) {
         ))}
       </div>
       <p class="opt__hint">{i18n.t('options.quality.retranslates')}</p>
-      <details data-testid="quality-advanced" open={quality.strategy !== undefined || quality.keepDraftsOnScreen}>
+      <details data-testid="quality-advanced" open={startsOpen}>
         <summary>{i18n.t('options.quality.advanced')}</summary>
         <div class="opt__row">
           <label for="quality-strategy">{i18n.t('options.quality.strategy')}</label>

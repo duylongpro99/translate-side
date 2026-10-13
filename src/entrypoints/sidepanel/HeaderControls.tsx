@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import type { StyleMode } from '@/engine/types';
 import { i18n } from '#i18n';
 import { featureAvailable } from '@/shared/features';
-import { BEST_MODE_RELEASED, QUALITY_MODES, type Quality, type QualityMode } from '@/shared/quality';
+import { BEST_MODE_RELEASED, QUALITY_MODES, type Quality, type QualityMode, type QualityStrategy } from '@/shared/quality';
 import { languageName } from '@/shared/language-name';
 import { LANGUAGES, STYLES, type Preferences } from '@/shared/settings';
 import type { JobActions } from './JobBar.tsx';
@@ -19,7 +19,9 @@ const styleLabel = (style: StyleMode) => i18n.t(`panel.controls.style.${style}`)
 const styleTitle = (style: StyleMode) => i18n.t(`panel.controls.styleTitle.${style}`);
 
 const qualityLabel = (mode: QualityMode) => i18n.t(`panel.controls.quality.${mode}`);
-const qualityTitle = (quality: Quality) => (quality.strategy ? i18n.t('panel.controls.qualityOverride', [quality.strategy]) : i18n.t(`panel.controls.qualityTitle.${quality.mode}`));
+const strategyLabel = (strategy: QualityStrategy) =>
+  strategy === 'single-pass' ? i18n.t('options.quality.strategySinglePass') : strategy === 'contextual' ? i18n.t('options.quality.strategyContextual') : i18n.t('options.quality.strategyRefine');
+const qualityTitle = (quality: Quality) => (quality.strategy ? i18n.t('panel.controls.qualityOverride', [strategyLabel(quality.strategy)]) : i18n.t(`panel.controls.qualityTitle.${quality.mode}`));
 
 /**
  * Whether Best may be chosen, for display only: the job decides for itself when it starts

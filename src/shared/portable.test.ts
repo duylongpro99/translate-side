@@ -381,8 +381,13 @@ describe('the quality setting travels with the file', () => {
   });
 
   it('cleans an imported setting, keeps an imported refine as written, and says when it is unreadable', () => {
-    expect(planOf(file({ quality: { mode: 'turbo', strategy: 'magic', keepDraftsOnScreen: 'yes' } })).quality).toEqual({ mode: 'balanced', keepDraftsOnScreen: false });
+    expect(planOf(file({ quality: { mode: 'turbo', strategy: 'refine', keepDraftsOnScreen: 'yes' } })).quality).toEqual({ mode: 'balanced', strategy: 'refine', keepDraftsOnScreen: false });
     expect(planOf(file({ quality: { mode: 'fast', strategy: 'refine', keepDraftsOnScreen: false } })).quality).toEqual({ mode: 'fast', strategy: 'refine', keepDraftsOnScreen: false });
+    for (const empty of [{}, { mode: 42 }, { mode: 'turbo', strategy: 'magic' }]) {
+      const skipped = planOf(file({ quality: empty }));
+      expect(skipped.quality).toBeUndefined();
+      expect(skipped.notes.join(' ')).toContain('quality');
+    }
     const bad = planOf(file({ quality: 'best' }));
     expect(bad.quality).toBeUndefined();
     expect(bad.notes.join(' ')).toContain('quality');

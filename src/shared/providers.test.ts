@@ -394,6 +394,10 @@ describe('routing resolution (plan M4-E8, DESIGN §4.3.5)', () => {
     expect(id(resolveRouteIn(own, 'analyze', { url: 'https://x.corp.example.com/' }))).toBe('site:ollama-qwen');
     // review (M7) follows the same rule.
     expect(id(resolveRouteIn(s, 'review'))).toBe(`routing:${APIBOX_QWEN_PROFILE.id}`);
+    const reviewed = { ...s, routing: { ...s.routing, review: APIBOX_PRO_PROFILE.id } };
+    expect(id(resolveRouteIn(reviewed, 'review', { url: 'https://news.example.org/' }))).toBe(`routing:${APIBOX_PRO_PROFILE.id}`);
+    // A cloud review profile never sees a local-only site's text either.
+    expect(id(resolveRouteIn(reviewed, 'review', { url: 'https://x.corp.example.com/' }))).toBe('site:ollama-qwen');
   });
 
   it('a site rule to a missing profile is an error, not a fall-through; a stale tab override is ignored', () => {

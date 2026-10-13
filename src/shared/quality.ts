@@ -42,6 +42,13 @@ export function cleanQuality(raw: unknown): Quality {
   return out;
 }
 
+/** Whether `raw` carries at least one value this build understands (an import of nothing else is skipped). */
+export function hasKnownQuality(raw: unknown): boolean {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return false;
+  const { mode, strategy, keepDraftsOnScreen } = raw as Record<string, unknown>;
+  return QUALITY_MODES.includes(mode as QualityMode) || QUALITY_STRATEGIES.includes(strategy as QualityStrategy) || typeof keepDraftsOnScreen === 'boolean';
+}
+
 /**
  * The strategy a job asks for: the override if set, else the mode's. Whether `refine` may run is
  * decided once when the job starts (Jobs.start); this never consults features.
@@ -59,14 +66,23 @@ export async function readQuality(api: Browser): Promise<Quality> {
 let write: Promise<unknown> = Promise.resolve();
 
 /**
- * Applies `patch` to the stored quality setting. Updates run one after another, each on what the
- * last one wrote. A patch with `strategy: undefined` clears the override.
+ * Applies `patch` to the stored item. Updates run one after another, each on what the last one
+ * wrote. The patch lands on the raw stored record, so fields and modes a newer build wrote (and
+ * this one does not know) survive; only what the patch names is overwritten. A patch with
+ * `strategy: undefined` clears the override. Returns the cleaned result.
  */
 export function updateQuality(api: Browser, patch: Partial<Quality>): Promise<Quality> {
   const run = write.then(async () => {
-    const next = cleanQuality({ ...(await readQuality(api)), ...patch });
+    const stored = (await api.storage.sync.get(QUALITY_KEY))[QUALITY_KEY];
+    const next: Record<string, unknown> = typeof stored === 'object' && stored !== null && !Array.isArray(stored) ? { ...defaultQuality(), ...stored } : { ...defaultQuality() };
+    if (patch.mode !== undefined && QUALITY_MODES.includes(patch.mode)) next.mode = patch.mode;
+    if ('strategy' in patch) {
+      if (patch.strategy !== undefined && QUALITY_STRATEGIES.includes(patch.strategy)) next.strategy = patch.strategy;
+      else delete next.strategy;
+    }
+    if (patch.keepDraftsOnScreen !== undefined) next.keepDraftsOnScreen = patch.keepDraftsOnScreen;
     await api.storage.sync.set({ [QUALITY_KEY]: next });
-    return next;
+    return cleanQuality(next);
   });
   write = run.catch(() => undefined);
   return run;

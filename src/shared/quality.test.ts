@@ -61,4 +61,13 @@ describe('quality setting', () => {
     expect(f.sync.get(QUALITY_KEY)).toEqual({ mode: 'best', keepDraftsOnScreen: true });
     expect('strategy' in (f.sync.get(QUALITY_KEY) as object)).toBe(false);
   });
+
+  it('keeps what a newer build wrote: an extra field and an unknown mode survive an unrelated update', async () => {
+    const f = fakeApi({ [QUALITY_KEY]: { mode: 'deep', keepDraftsOnScreen: false, deepBudget: 3 } });
+    const next = await updateQuality(f.api, { keepDraftsOnScreen: true });
+    expect(f.sync.get(QUALITY_KEY)).toEqual({ mode: 'deep', keepDraftsOnScreen: true, deepBudget: 3 });
+    expect(next).toEqual({ mode: 'balanced', keepDraftsOnScreen: true });
+    await updateQuality(f.api, { mode: 'fast' });
+    expect(f.sync.get(QUALITY_KEY)).toEqual({ mode: 'fast', keepDraftsOnScreen: true, deepBudget: 3 });
+  });
 });

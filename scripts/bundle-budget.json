@@ -1,5 +1,5 @@
 {
-  "note": "Gzip (level 9) of the production build at the start of release hardening, before the diagnostics log, plus 10% (2026-10-12); chunks/route.js measured again with Best (refine, the review stage and its prompt) in the panel's engine, plus 10% (2026-10-13); chunks/sites.js measured again at 50380 B once the shared engine carries refine, the review stage and the review prompt, plus 10% (2026-10-13)",
+  "note": "Gzip (level 9) of the production build at the start of release hardening, before the diagnostics log, plus 10% (2026-10-12); chunks/route.js measured again with Best (refine, the review stage and its prompt) in the panel's engine, plus 10% (2026-10-13); chunks/sites.js measured again at 50727 B once the shared engine carries refine, the review stage and the review prompt, and the quality mode reader is bundled with it, plus 10% (2026-10-13)",
   "files": {
     "assets/onboarding.css": 646,
     "assets/sidepanel.css": 2617,
@@ -13,7 +13,7 @@
     "chunks/route.js": 16063,
     "chunks/sdk.js": 1599,
     "chunks/sidepanel.js": 24480,
-    "chunks/sites.js": 55418,
+    "chunks/sites.js": 55800,
     "chunks/style.js": 11832,
     "chunks/toggle-shortcut.js": 812,
     "content-scripts/content.js": 24253

@@ -47,7 +47,7 @@ import {
   type ProviderConnection,
 } from './settings.ts';
 import { cleanSiteList, readSiteLists, SITE_ALLOWLIST_KEY, SITE_NEVER_KEY, sitePattern } from './sites.ts';
-import { cleanQuality, QUALITY_KEY, readQuality, type Quality } from './quality.ts';
+import { cleanQuality, hasKnownQuality, QUALITY_KEY, readQuality, type Quality } from './quality.ts';
 import { assertFits, saveListWithOverflow } from './sync-quota.ts';
 
 type Browser = typeof browser;
@@ -417,7 +417,7 @@ export function parseImport(text: string): ParseResult {
   const glossary = Array.isArray(s.glossary) ? cleanGlossary(capped(s.glossary, MAX_GLOSSARY, 'glossary', notes)) : undefined;
   const prefs = importPrefs(s.prefs, notes);
   // An imported strategy is kept as written: whether `refine` may run is decided when a job starts.
-  const quality = isRecord(s.quality) ? cleanQuality(s.quality) : undefined;
+  const quality = isRecord(s.quality) && hasKnownQuality(s.quality) ? cleanQuality(s.quality) : undefined;
   if (s.quality !== undefined && quality === undefined) notes.push(i18n.t('options.portable.skipQuality'));
 
   const keys: Record<string, string> = {};

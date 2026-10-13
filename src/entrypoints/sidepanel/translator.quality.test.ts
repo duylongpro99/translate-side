@@ -142,6 +142,15 @@ describe('a quality switch re-translates the open page', () => {
     s.stop();
   });
 
+  it('a keep-drafts toggle on Balanced, where it does nothing, does not restart the page', async () => {
+    const s = setup();
+    await s.open();
+    s.f.setQuality({ mode: 'balanced', keepDraftsOnScreen: true });
+    await settle(80);
+    expect(s.strategies()).toEqual(['contextual']);
+    s.stop();
+  });
+
   it('a switch made while the job is cancelled applies when it resumes, not before', async () => {
     const s = setup();
     s.gate.held = true;
