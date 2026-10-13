@@ -4,6 +4,7 @@
 // Zero console errors apply here too, apart from what a flow provokes on purpose (fixtures.ts
 // `allowedConsole`).
 import fs from 'node:fs';
+import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { REVIEW_MODEL, blockStatuses, expect, jobSettled, test, type Extension } from './fixtures.ts';
 import type { MockCall } from './servers.ts';
@@ -187,6 +188,20 @@ test.describe('Vietnamese UI', () => {
     expect(await extension.worker.evaluate(() => chrome.i18n.getUILanguage())).toMatch(/^vi/);
     expect(await extension.worker.evaluate(() => chrome.i18n.getMessage('actionTitle'))).toBe('Mở Translate Side');
   });
+});
+
+test('Balanced sends exactly what it sent before Best existed (e2e/balanced-prompts.json)', async ({ extension, mock }) => {
+  await extension.seed();
+  const page = await extension.open('sites/goblog-pipelines.html');
+  const panel = await extension.panel();
+  await extension.translate(page);
+  expect(await jobSettled(panel)).toBe('done');
+  // Concurrent requests arrive in any order: compared sorted, each as the kind, status and every message sent.
+  const calls = mock.calls.map((c) => ({ kind: c.kind, status: c.status, prompt: c.prompt })).sort((a, b) => (JSON.stringify(a) < JSON.stringify(b) ? -1 : 1));
+  const file = path.resolve(import.meta.dirname, 'balanced-prompts.json');
+  const snapshot = JSON.parse(fs.readFileSync(file, 'utf8')) as { note: string; calls: unknown[] };
+  if (process.env.UPDATE_BALANCED_PROMPTS) fs.writeFileSync(file, `${JSON.stringify({ ...snapshot, calls }, null, 1)}\n`);
+  else expect(calls).toEqual(snapshot.calls);
 });
 
 test.describe('Best', () => {
