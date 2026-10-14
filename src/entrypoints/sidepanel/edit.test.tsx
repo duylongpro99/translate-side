@@ -118,6 +118,27 @@ describe('the Edit action', () => {
     expect(actions.edit).toHaveBeenCalledWith('a', 'Chạy kiểm thử trên vài tệp');
   });
 
+  it('closes when its block stops being final (a retranslate, a new run), and so does "Replace your edit?"', async () => {
+    await draw();
+    await open('a');
+    const states = base();
+    states.set('a', { status: 'pending', text: 'Chạy `npm test` trên 3 tệp' });
+    await draw(states);
+    expect(within('a', 'seg-editor')).toBeNull();
+    states.set('a', { status: 'final', text: 'mới', revision: 1 });
+    await draw(states);
+    expect(within('a', 'seg-editor')).toBeNull();
+
+    await act(() => within('b', 'seg-retranslate')?.click());
+    expect(within('b', 'seg-replace-confirm')).not.toBeNull();
+    const after = base();
+    after.set('b', { status: 'final', text: 'Đoạn thứ hai', revision: 1 });
+    await draw(after);
+    after.set('b', { status: 'final', text: 'Đoạn thứ hai', revision: 1, edited: 'user' });
+    await draw(after);
+    expect(within('b', 'seg-replace-confirm')).toBeNull();
+  });
+
   it('cannot save an empty text', async () => {
     await draw();
     const area = await open('a');

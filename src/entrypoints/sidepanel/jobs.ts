@@ -38,7 +38,7 @@ import type { ReviewReport, SnippetRequest } from '@/engine/types';
 import type { LLMClient, LLMError, LLMErrorKind, MTClient, NormalizedRequest } from '@/llm/types';
 import { BEST_MODE_RELEASED } from '@/shared/quality';
 import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
-import { cleanEditText, memoryKey, type MemoryEntry, type TranslationMemory } from '@/shared/memory';
+import { cleanEditText, memoryKey, NO_ORIGIN, type MemoryEntry, type TranslationMemory } from '@/shared/memory';
 import { costUsd, formatUsd, type UsageTotals } from '@/shared/cost';
 import type { Detection } from '@/shared/language';
 import { entryId, type JobRecord } from '@/shared/diagnostics';
@@ -235,6 +235,8 @@ const BACKOFF_KINDS: ReadonlySet<LLMErrorKind> = new Set(['rate_limit', 'overloa
  */
 export function applySegmentEvent(cur: SegState | undefined, e: EngineEvent): SegState | undefined {
   // The user's correction stands: a late final, a review revision or a failure leaves it as it is.
+  // An edit made before its block's review started does not cancel that review (it runs, and is
+  // paid for): its revision is discarded here. An accepted gap; the review is one call per chunk.
   if (cur?.edited) return cur;
   switch (e.type) {
     case 'segment.partial':
@@ -481,6 +483,11 @@ export interface JobDeps {
   cache?: TranslationCache | undefined;
   /** The translation memory: the user's corrections, shown before the cache. Absent: edits last for the session. */
   memory?: TranslationMemory | undefined;
+  /**
+   * Whether a local-only site rule covers `url` now (read at edit time, so a rule added after the
+   * run, or a run whose route never resolved, still marks the edit). Absent: no rules.
+   */
+  siteLocalOnly?: (url: string) => Promise<boolean>;
   /** How long a run waits for the cache (and the memory) before it goes to the model without it (default 1500). */
   cacheTimeoutMs?: number;
   /** Every usage report, priced (the running total in settings, M3-E9), with the profile that spent it (M4-E10). */
@@ -937,8 +944,10 @@ export class Jobs {
     const around = lazy && before !== undefined ? lazyWindow(translatable, this.screenOf(tabId, docId), {}, this.pinnedOf(tabId, docId)) : undefined;
     for (const s of translatable) {
       const old = keep?.segs.get(s.id) ?? before?.segs.get(s.id);
-      // An edited block stays as the user corrected it, a Retranslate page included.
-      if (old?.status === 'final' && old.edited) {
+      // An edited block stays as the user corrected it, a Retranslate page included; not after a
+      // change of target language (the memory has that language's own corrections, if any).
+      const sameLang = (keep ?? before)?.doc.targetLang === doc.targetLang;
+      if (old?.status === 'final' && old.edited && sameLang) {
         segs.set(s.id, old);
         continue;
       }
@@ -950,6 +959,8 @@ export class Jobs {
         const shown = { ...prior };
         delete shown.redoError;
         delete shown.error;
+        delete shown.edited;
+        delete shown.editUnsaved;
         earlier.set(s.id, shown);
         segs.set(s.id, { status: 'pending', text: prior.text });
       } else segs.set(s.id, old?.status === 'final' && keep ? old : { status: 'pending' });
@@ -1337,13 +1348,15 @@ export class Jobs {
     this.patch(tabId, job, { counts: count(job.segs) });
     let saved: boolean;
     try {
+      // The site rule as it stands now counts too; a rule that cannot be read counts as local-only.
+      const ruled = this.deps.siteLocalOnly ? await this.deps.siteLocalOnly(job.doc.url).catch(() => true) : false;
       await this.deps.memory?.put({
         source: segment.inlineMarkup || segment.text,
         target,
         sourceLang: job.view.sourceLang,
         targetLang: job.doc.targetLang,
-        origin: originOf(job.doc.url) ?? '',
-        localOnly: job.localOnly || job.view.localOnly !== undefined,
+        origin: originOf(job.doc.url) ?? NO_ORIGIN,
+        localOnly: ruled || job.localOnly || job.view.localOnly !== undefined,
       });
       saved = this.deps.memory !== undefined;
     } catch {
@@ -1456,7 +1469,7 @@ export class Jobs {
       if (signal.aborted) return settle(before);
       if (limit) {
         // The bar offers "Continue anyway", which redoes this block (M4-E10).
-        job.afterLimit = () => this.redoSegment(tabId, id, mode);
+        job.afterLimit = () => this.redoSegment(tabId, id, mode, discard);
         this.patch(tabId, job, { limit });
         return settle(failedWith(limitError(limit)));
       }

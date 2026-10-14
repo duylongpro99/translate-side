@@ -25,7 +25,7 @@ import { chromeTranslator } from '@/llm/chrome-translator';
 import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
 import { snippetDocId, snippetView, SnippetStore } from './snippet.ts';
 import { chooseForTab, makeDefault, readSwitcher, type SwitcherState } from './switcher.ts';
-import { isErrorStatusWrite, onProviderSettingsChanged, saveConnectionStatus } from '@/shared/providers';
+import { isErrorStatusWrite, onProviderSettingsChanged, readProviderSettings, saveConnectionStatus, siteRuleFor } from '@/shared/providers';
 import { onListChanged } from '@/shared/sync-quota';
 import { routedSummary, translateClient, type Routed, type RouteTarget } from './route.ts';
 import { ViewportStore } from './viewport.ts';
@@ -113,7 +113,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   };
   // Chrome's Translator, the `basic` fallback's translator (M5-E7); undefined in a browser without it.
   const mt = 'mt' in deps ? deps.mt : chromeTranslator();
-  const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), memory: openTranslationMemory(), featureAvailable, ...deps, mt });
+  const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), memory: openTranslationMemory(), siteLocalOnly: async (url) => siteRuleFor((await readProviderSettings(api)).routing, url)?.localOnly === true, featureAvailable, ...deps, mt });
   // No cache and no translation memory: a selection is a one-off, and its text is not kept beyond the session.
   // Single-pass: one request per chunk, never the contextual brief (analyze) call for a selection.
   const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target), ...deps, mt, strategy: 'single-pass', cache: undefined, memory: undefined, lazyAbove: Infinity, onJobRecord: undefined });

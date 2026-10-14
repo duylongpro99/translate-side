@@ -7,7 +7,7 @@ import { REVIEWED_REVISION, type Segment } from '@/engine/index';
 import { renderLines, translatorClient, wireLines } from '@/engine/testing';
 import type { LLMClient, NormalizedRequest } from '@/llm/types';
 import { openTranslationCache, type TranslationCache } from '@/shared/cache';
-import { memoryKey, openTranslationMemory, type TranslationMemory } from '@/shared/memory';
+import { memoryKey, NO_ORIGIN, openTranslationMemory, type TranslationMemory } from '@/shared/memory';
 import { GEMINI_PROFILE } from '@/shared/settings';
 import { applySegmentEvent, Jobs, type ClientResult, type JobDeps, type JobDoc, type SegState } from './jobs.ts';
 
@@ -143,6 +143,29 @@ describe('Jobs.edit and the translation memory', () => {
     expect((await memory.getMany([key(0)])).get(key(0))?.localOnly).toBe(true);
   });
 
+  it('marks an edit local-only when a site rule covers the page at edit time, or the rule cannot be read', async () => {
+    for (const siteLocalOnly of [() => Promise.resolve(true), () => Promise.reject(new Error('no settings'))]) {
+      const memory = newMemory();
+      const jobs = session({ translateClient: ok(client()), memory, siteLocalOnly });
+      await jobs.start(1, 'd', doc(2));
+      await jobs.edit(1, 's0', 'Nội bộ');
+      expect((await memory.getMany([key(0)])).get(key(0))?.localOnly).toBe(true);
+    }
+    const memory = newMemory();
+    const jobs = session({ translateClient: ok(client()), memory, siteLocalOnly: () => Promise.resolve(false) });
+    await jobs.start(1, 'd', doc(2));
+    await jobs.edit(1, 's0', 'Công khai');
+    expect((await memory.getMany([key(0)])).get(key(0))?.localOnly).toBe(false);
+  });
+
+  it('an edit on a page without an origin is stored with the no-origin mark', async () => {
+    const memory = newMemory();
+    const jobs = session({ translateClient: ok(client()), memory });
+    await jobs.start(1, 'd', doc(2, { url: 'data:text/html,<p>x</p>' }));
+    await jobs.edit(1, 's0', 'Sửa');
+    expect((await memory.getMany([key(0)])).get(key(0))?.origin).toBe(NO_ORIGIN);
+  });
+
   it('an edit that cannot be saved stays on screen for the session and says so', async () => {
     const memory = { ...newMemory(), put: () => Promise.reject(new Error('quota')) };
     const jobs = session({ translateClient: ok(client()), memory });
@@ -223,6 +246,41 @@ describe('Retranslate and edited blocks', () => {
     expect(resent).not.toContain(source(3));
   });
 
+  it('Retranslate page after a change of target language does not keep edits made in the other language', async () => {
+    const memory = newMemory();
+    const c = client();
+    const jobs = session({ translateClient: ok(c), memory });
+    await jobs.start(1, 'd', doc(2));
+    await jobs.edit(1, 's0', 'Một');
+    const before = c.requests.length;
+    await jobs.start(1, 'd', doc(2, { targetLang: 'fr' }), { fresh: true, keepCost: true });
+    expect(seg(jobs, 's0')).toMatchObject({ status: 'final', text: `vi:${source(0)}` });
+    expect(seg(jobs, 's0')?.edited).toBeUndefined();
+    expect(jobs.get(1)?.editsKept).toBeUndefined();
+    expect(sent({ requests: c.requests.slice(before) })).toContain(source(0));
+    // The Vietnamese edit is still there for Vietnamese.
+    expect(await memory.count()).toBe(1);
+  });
+
+  it('"Continue anyway" after the spend limit, when replacing an edit, still replaces it', async () => {
+    const memory = newMemory();
+    let limited = false;
+    const jobs = session({ translateClient: ok(client()), memory, spendLimit: () => Promise.resolve(limited ? { monthUsd: 6, limitUsd: 5 } : undefined) });
+    await jobs.start(1, 'd', doc(2));
+    await jobs.edit(1, 's0', 'Của tôi');
+    limited = true;
+    await jobs.discardEdit(1, 's0');
+    expect(seg(jobs, 's0')).toMatchObject({ text: 'Của tôi', edited: 'user' });
+    expect(jobs.get(1)?.limit).toBeDefined();
+    limited = false;
+    const next = jobs.takeAfterLimit(1);
+    expect(next).toBeDefined();
+    await next?.();
+    expect(seg(jobs, 's0')).toMatchObject({ status: 'final', text: `vi:${source(0)}` });
+    expect(seg(jobs, 's0')?.edited).toBeUndefined();
+    expect(await memory.count()).toBe(0);
+  });
+
   it("a block's Retranslate leaves an edit alone; discardEdit translates it again and deletes the entry", async () => {
     const memory = newMemory();
     const c = client();
@@ -272,7 +330,7 @@ describe('Retranslate and edited blocks', () => {
 describe('Imported entries', () => {
   const imported = async (override: boolean) => {
     const memory = newMemory();
-    await memory.importMany([{ key: key(0), source: source(0), target: 'Từ tệp', sourceLang: 'en', targetLang: 'vi', created: 1 }], { override });
+    await memory.importMany([{ key: key(0), source: source(0), target: 'Từ tệp', sourceLang: 'en', targetLang: 'vi', localOnly: false, created: 1 }], { override });
     const c = client();
     const jobs = session({ translateClient: ok(c), memory });
     await jobs.start(1, 'd', doc(2));

@@ -610,6 +610,13 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
       confirm: open((id) => setConfirming((confirm = id)), () => confirm),
     };
   }, []);
+  // A block that stops being final (a retranslate, a new run) closes its editor and its question.
+  const editingState = editing === undefined ? undefined : states?.get(editing);
+  const confirmingState = confirming === undefined ? undefined : states?.get(confirming);
+  useEffect(() => {
+    if (editing !== undefined && editingState?.status !== 'final') ui.edit(undefined);
+    if (confirming !== undefined && (confirmingState?.status !== 'final' || !confirmingState.edited)) ui.confirm(undefined);
+  }, [editingState, confirmingState]);
   useEffect(() => {
     const id = returnTo.current;
     if (id === undefined || !root.current) return;
