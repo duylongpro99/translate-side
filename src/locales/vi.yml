@@ -334,7 +334,7 @@ options:
     captions: "Dịch chú thích của hình và bảng"
     altText: "Dịch mô tả ảnh (văn bản thay thế)"
     mediaHint: "Mô tả ảnh cũng là văn bản của trang: khi bật, chúng được gửi đến nhà cung cấp cùng với phần còn lại của trang. Khi tắt, chúng không hiện trong bảng và không bao giờ được gửi đi."
-    budgetHint: "Số token đầu vào và đầu ra cho một trang, tính cả mọi lần gọi mô hình; nhập 0 để không giới hạn, để trống để dùng mức mặc định. Phần chưa dịch khi hết ngân sách sẽ được đánh dấu là đã bỏ qua."
+    budgetHint: "Số token đầu vào và đầu ra cho một lượt dịch, tính cả mọi lần gọi mô hình (kể cả lần rà soát). Trang dài được dịch theo từng phần thì mỗi phần có giới hạn này. Nhập 0 để không giới hạn, để trống để dùng mức mặc định. Phần chưa dịch khi hết ngân sách sẽ được đánh dấu là đã bỏ qua."
   quality:
     title: "Chất lượng bản dịch"
     mode: "Chất lượng"

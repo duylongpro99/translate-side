@@ -542,9 +542,12 @@ type EngineEvent =
 ```
 
 Key extensibility choice: **segments have revisions**. A strategy can emit a fast draft
-(`revision: 1`) and later a better version (`revision: 2`) after a review pass. The panel just
-replaces the text (with a subtle "refined" marker). So "stronger" strategies never cost the user
-time-to-first-read.
+(`revision: 1`) and later a better version after a review pass. The panel just replaces the
+text (with a subtle "refined" marker). So "stronger" strategies never cost the user
+time-to-first-read. Revision 1 is a first draft; revision 2 is `contextual`'s chunk-0 revise pass
+(§5.7); revision 3 is `refine`'s review (`producedBy.stage` is `review`), which is above revision 2
+so a review never races a revise. The panel keeps the draft a review replaced behind a "Show
+draft" toggle.
 
 A repaired segment (§5.7 Step 3) keeps its revision and carries a higher `attempt`. For the same id
 and revision, the panel replaces the text in place when the attempt is higher, and a later
@@ -589,11 +592,33 @@ A custom `run()` is only needed for unusual control flow (e.g. an agent loop).
 | `basic` | Chrome Translator per segment | literal, free, offline | last fallback |
 | `single-pass` | translate(chunk) + check | good, cheapest LLM option | small local models, quick mode |
 | `contextual` **(v1 default)** | analyze → translate(chunk, with brief + context tail) → check | natural, keeps tone and terms | default |
-| `refine` | `contextual` draft → **review** (source + draft → targeted fixes: meaning errors, omissions, unnatural phrasing, term consistency) → check | best; ~1.6–2× cost; refined text arrives as revision 2 | "Best" mode, or per-site |
+| `refine` | `contextual` draft → **review** (source + draft → targeted fixes: meaning errors, omissions, unnatural phrasing, term consistency), accepted only if it passes the post-checks | best; up to about 2× `contextual`'s cost; refined text arrives as revision 3 | "Best" mode, or the advanced strategy override |
 | `agentic` (future) | an LLM loop with **read-only tools**: `lookup_glossary`, `search_translation_memory`, `get_surrounding_text`, `define_term` (web), `flag_ambiguity` | strongest for hard texts (law, research, dense docs) | opt-in, per document |
 
 The user sees **quality modes** rather than strategy names: *Fast* → `single-pass`, *Balanced* →
-`contextual`, *Best* → `refine`. Advanced settings expose the exact strategy.
+`contextual` (the default), *Best* → `refine`. The mode is chosen in the panel header and in
+Settings; Settings' advanced section exposes the exact strategy, which then wins over the mode
+(choosing a mode in the header clears it). The setting is its own `storage.sync` item, so a build
+that does not know it never erases it, and a profile without it runs Balanced.
+
+How `refine` runs (`src/engine/strategies/refine.ts`, `src/engine/stages/review.ts`):
+- The drafts are exactly Balanced's output, and the review starts only after all drafts are
+  done (a `drafts` stage event), so time to the first draft is Balanced's. Drafts the job brings
+  (cache hits below revision 3) are shown at once and only reviewed.
+- The review is one call per chunk, on the `review` role, which is the translate route unless
+  "Review with" in Settings › Providers names a model; a local-only site rule keeps it on the
+  rule's local model. It receives each segment's source and draft and returns only the segments it
+  changed. A candidate replaces its draft only when it passes every post-check and does not copy a
+  neighbouring translation; otherwise the draft stays. A review never produces `segment.failed`,
+  and a rejected candidate is not asked for again.
+- A review call starts only when the job's remaining budget, less what the calls in flight have
+  reserved, covers it. The budget is per run: on a page translated in rounds (lazy mode), each
+  round has its own. Once a round's drafts are done, a review that has not started is dropped
+  when the reader moves on, and a later round picks the unreviewed blocks up.
+- A refined block shows a "Refined" marker. With "Keep drafts on screen until the block scrolls
+  away", a refined text waits for its block to leave the screen.
+- A selection always runs `single-pass`, with no cache, no review and no translation memory. A
+  page job that asks for `refine` when Best is not offered runs `contextual`.
 
 ### 5.4 Context providers (pluggable knowledge)
 Everything the model should "know" besides the text itself comes through one interface, so new
@@ -640,7 +665,7 @@ page that was translated before it was made (an exact edit of the block itself a
 
 ### 5.6 Guardrails that every strategy inherits
 - **Budget**: each job gets a token/cost ceiling from settings. Stages check `ctx.budget`, and a
-  `refine` pass is skipped (keeping the draft) if the budget is exhausted.
+  `refine` review call is skipped (keeping the draft) when the budget cannot cover it.
 - **Safety**: page text is always wrapped as data. Agent tools are read-only, and their outputs are
   also treated as untrusted. Nothing the engine produces is rendered as HTML.
 - **Validation**: the `check` stage (segment count, markers, code/URL preservation) runs at the
@@ -794,12 +819,30 @@ viewport comes first, you can start reading almost immediately.
   reuses its translation across pages whose briefs differ, which is worth more than a brief-exact
   match. The cost is that a cached sentence was translated under another page's brief, once;
   *retranslate* always bypasses the cache and replaces the stored entry.
+  A `refine` entry is the review's text (marked refined) or the draft the review left, and its key
+  adds the model the review ran on, so another "Review with" model is another entry. A Balanced
+  entry below revision 3 is shown as a draft in Best and reviewed, not retranslated.
 - **Brief cache**: by `url + contentHash + targetLang + analyze prompt version` (the hash covers
   exactly what the analyze call sends), so a revisit makes no analyze call either. Kept by count
   (200), least recently used first.
 - Cache stats (entries, size) and *Clear cache* are in the options page.
-- **Settings** (`chrome.storage.sync`): target language, provider, model, style, personal
-  glossary, site rules (auto-translate when the panel is open / never translate).
+- **Translation memory** (IndexedDB `translate-side-memory`, apart from the cache): the user's
+  corrections, one entry per target language and source text as the cache normalises it, with the
+  page origin it was made on and whether it was made under a local-only site rule (never synced).
+  It is user data: *Clear cache* and cache eviction never touch it, and it has its own export file
+  (`translate-side-memory`, which carries each entry's local-only mark but not its origin), its
+  import (validated entry by entry, treated as untrusted) and *Clear translation memory* in the
+  options page. At most 5,000 entries; a new correction at the cap replaces an imported entry
+  first, then the user's oldest. The database is created empty on first use, so an update from a
+  build without it keeps every existing store as it was.
+- **Edit override**: a block the user corrected shows the correction ("Edited"), taken from the
+  memory before the cache and the engine, even on a retranslate of the page. It is never sent and
+  never written to the cache. An imported entry overrides only when the import ticked "Also
+  replace matching blocks" ("Imported"). A block's own Retranslate replaces an edit only after
+  the user confirms.
+- **Settings** (`chrome.storage.sync`): target language, provider, model, style, quality mode
+  (its own item), personal glossary, site rules (auto-translate when the panel is open / never
+  translate). The device setting "Use corrections from other sites" is in `chrome.storage.local`.
 - **API keys** (`chrome.storage.local` only, never sync). Show a clear note that keys are stored
   locally.
 

@@ -14,7 +14,7 @@ so it reads like a native writer wrote it.
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-34A853)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow)
-![Version 1.0](https://img.shields.io/badge/version-1.0.0-blue)
+![Version 1.1](https://img.shields.io/badge/version-1.1.0-blue)
 
 [Features](#-features) · [How it works](#-how-it-works) · [Getting started](#-getting-started) · [Providers](#-providers-and-local-models) · [Privacy](#-privacy) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 
@@ -63,6 +63,10 @@ Translate Side gives the model the **whole document's context** before it transl
 | 🗂️ **Any provider, or none online** | Bring your own key for Anthropic, OpenAI, Google Gemini, OpenRouter or any OpenAI- or Anthropic-compatible service, or run a model on your own computer with Ollama or LM Studio. Route pages to different models per site, with fallbacks. See [Providers and local models](#-providers-and-local-models). |
 | 🧠 **"About this document"** | Before translating, the model writes a short brief covering genre, audience, purpose, tone and key terms. You can read it in the panel, and every chunk is translated with it. |
 | 🎨 **Style modes** | **Natural** reads as if it was written in your language. **Faithful** stays closer to the original wording. **Simplified** uses short sentences and plain words. |
+| ⚖️ **Quality modes** | **Fast** translates each part of the page in one pass, at the lowest cost. **Balanced**, the default, reads the page first and translates with what it learned. Choose in the panel header or in Settings › Translation quality. |
+| ✨ **Best mode** | Best translates like Balanced, then a second look reviews each block for meaning errors, omissions and unnatural wording. The first draft appears as fast as in Balanced; a better version replaces it, marked "Refined", and "Show draft" brings back what it replaced. A fix that would lose code, links or numbers is dropped and the draft stays. It costs more (up to about twice Balanced), counts against the page's token budget, and can use its own model (Settings › Providers › Review with). |
+| ✏️ **Edit a translation** | The Edit button on a block opens it for your own wording. Your version is marked "Edited", is shown whenever that text comes up again, and stays on this device, even when you clear the cache. |
+| 🧾 **Translation memory** | Your corrections also guide later translations: when a passage is similar to one you corrected, the correction goes to the model as an example (at most three per chunk). By default only corrections from the same site are used; "Use corrections from other sites" widens that. Export and import the memory as its own file in Settings › Translation memory. |
 | 📖 **Personal glossary** | Pick how a term is always rendered, or keep it as is (for example, "deploy" stays in English). It syncs to other devices signed in to the same Chrome profile. |
 | 🛡️ **Checked output** | Every segment is checked for lost code spans, URLs, numbers and formatting. A segment that fails is re-requested once, so you never get a broken one without a warning. |
 | 🌐 **Language aware** | Detects the page's language, and skips a page that is already in your target language. The interface is in English and Vietnamese and follows Chrome's language. |
@@ -218,7 +222,8 @@ how to delete it, is in [`docs/privacy.md`](docs/privacy.md).
 | ✅ | **M4** Providers | Claude, OpenAI, Gemini, OpenRouter, Ollama and LM Studio, with connection test and fallback |
 | ✅ | **M5** Reading UX complete | Hover link, scroll sync, single-page apps, long documents, keyboard and screen readers |
 | ⏳ | **M6** Release hardening → **v1.0** | Eval gate, end-to-end tests, storage migration, performance, Vietnamese interface, store package and docs |
-| 🔭 | **M7–M8** Beyond | Stronger translation strategies, translation memory, Firefox |
+| ⏳ | **M7** Stronger translation → **v1.1** | Quality modes, edits and a translation memory |
+| 🔭 | **M8** Beyond | Firefox and other independent tracks |
 
 The full plan is in [`ROADMAP.md`](ROADMAP.md) and [`docs/plans/`](docs/plans/). The design and its
 reasoning are in [`DESIGN.md`](DESIGN.md).

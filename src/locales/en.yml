@@ -339,7 +339,7 @@ options:
     captions: "Translate figure and table captions"
     altText: "Translate image descriptions (alt text)"
     mediaHint: "Image descriptions are page text too: with this on they are sent to your provider with the rest of the page. Off, they are not shown in the panel and never sent."
-    budgetHint: "Input and output tokens for one page, every model call included; 0 for no limit, empty for the default. What is left untranslated when it runs out is marked as skipped."
+    budgetHint: "Input and output tokens for one run, every model call included (a review call too). A long page translated in parts has this limit for each part. 0 for no limit, empty for the default. What is left untranslated when it runs out is marked as skipped."
   quality:
     title: "Translation quality"
     mode: "Quality"

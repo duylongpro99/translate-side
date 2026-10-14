@@ -15,7 +15,7 @@ what it reads, where that text goes, what it keeps on your device, and how to de
   never read.
 - A local model (Ollama or LM Studio, see [local-models.md](local-models.md)) keeps the text on your computer.
 
-Effective for version 1.0.0. If a later version changes what is described here, this page changes with it, and the
+Effective for version 1.1.0. If a later version changes what is described here, this page changes with it, and the
 panel asks you to read its notice again.
 
 ## What the extension reads
@@ -50,11 +50,18 @@ A translation sends:
   few of the blocks just before the ones being translated; and the target language and style;
 - for the "About this document" brief: the page title, its headings and the opening of its text;
 - your glossary entries that apply (the term, how you want it rendered, your note);
+- your corrections that are similar to a passage being translated, as examples (the original text and your
+  version, at most three per chunk), under the rules in "Your corrections" below;
 - the model name, and your API key as the credential, to that provider only.
 
 It does **not** send the page's address, cookies, your other tabs, your history, your other settings, or the keys of
 other providers. The provider sees what any API call shows: your key, your network address and the extension's
 `chrome-extension://` origin.
+
+**Best mode only.** Besides the translation, Best makes a second request per chunk to review it. It sends the source
+text of each block with its translation, and the same kind of correction examples as above, to the model chosen
+under "Review with" in Settings › Providers, or to the translation model if none is chosen. A local-only site rule
+keeps it on that rule's local model.
 
 Your routing decides which provider gets a page: the model you picked, a rule for that site, or a fallback you
 listed if the first one is busy or down. Chrome's own on-device translator ("Chrome basic translation") is the last
@@ -71,8 +78,9 @@ other `http://` address is refused, so page text never crosses the internet unen
 
 | Where | What | Leaves the device? |
 |---|---|---|
-| Extension local storage (`storage.local`) | Your API keys, one per connection. The first-run notice acknowledgement and the setup guide's state. The diagnostics log. The usage and cost totals (token counts and estimated cost by month, day and model profile). Settings too large to sync. | No. Keys are never synced. |
-| Extension sync storage (`storage.sync`) | Connections (name, address, protocol), models, routing and site rules, preferences (languages, style, per-page token budget), your glossary, and your allowlist and never-translate lists. No keys and no page text. | Only through Chrome Sync, if you have it turned on: it goes to your Google account, with your other Chrome devices. |
+| Extension local storage (`storage.local`) | Your API keys, one per connection. The first-run notice acknowledgement and the setup guide's state. The diagnostics log. The usage and cost totals (token counts and estimated cost by month, day and model profile). The "Use corrections from other sites" setting. Settings too large to sync. | No. Keys are never synced. |
+| Extension sync storage (`storage.sync`) | Connections (name, address, protocol), models, routing and site rules, preferences (languages, style, per-page token budget), the quality mode, your glossary, and your allowlist and never-translate lists. No keys and no page text. | Only through Chrome Sync, if you have it turned on: it goes to your Google account, with your other Chrome devices. |
+| Browser database (IndexedDB `translate-side-memory`) | Your corrections: the original text of the block, your version, the languages, when you made it, and the site (its address up to the host) you made it on. Whether it was made on a site that is local-only is also kept. At most 5,000 entries. | No, never synced. Only through the export file you save yourself (see "Your corrections"). |
 | Browser database (IndexedDB `translate-side-cache`) | Translations already made (the translated text, found again by a hash of the source text and settings), and the short document briefs, each found by the page address it was made for. At most 50 MB of translations and 200 briefs, oldest unused first. | No. |
 | Per-session storage (`storage.session`) | Per tab: whether the page could be read, the selected text and its page address for a context-menu translation, and a per-tab provider choice. | No. Chrome clears it when the browser closes. |
 | The panel's own `localStorage` | One on/off setting (whether the panel follows the page's scroll). | No. |
@@ -80,6 +88,29 @@ other `http://` address is refused, so page text never crosses the internet unen
 Keys are saved as Chrome stores any extension data: in your browser profile on disk, not encrypted by the extension.
 Anyone who can read your computer account can read them. Settings › Export and import settings writes the settings to a file you
 choose; API keys are left out unless you tick "include keys" and confirm.
+
+## Your corrections
+
+When you correct a block with the panel's Edit button, the original text and your version are kept in a database on
+this device (`translate-side-memory`), apart from the translation cache. They are shown again whenever that same text
+is translated, and are never sent for that. The database is never synced, is not touched by "Clear cache", and is
+deleted by "Clear translation memory" in Settings › Translation memory.
+
+Corrections also work as examples. When you translate a similar passage, a few of them are sent to the provider that
+translates that page, along with the passage (see "What is sent"). Three rules decide which:
+
+- A correction made on a page under a local-only site rule is sent only when the page being translated is under one
+  too, so it stays on local models. It is never sent to a cloud provider.
+- By default only corrections you made on the same site are sent. Corrections from your other sites, and imported
+  ones, are sent only if you turn on "Use corrections from other sites" in Settings › Translation memory. That setting
+  applies on every route, local models included.
+- Nothing is sent for a selection you translate on its own.
+
+The file made by "Export translation memory" is a separate, explicit file you save and keep; the extension never
+sends it anywhere. It holds the original text and your version of every correction and whether each was made on a
+local-only site, but not the site's address. It is not part of the settings export file. An imported file is checked
+before it is stored, and only guides later translations unless you tick "Also replace matching blocks". The
+diagnostics log records how many corrections a run used and an identifier of each (a hash), never their text.
 
 ## Diagnostics
 
@@ -107,6 +138,7 @@ stack.
 - **Provider keys and a connection:** Settings › Providers › Remove (it removes the key, the connection's models
   and the access Chrome granted for its address, unless a site you allowlisted still uses that address).
 - **Translations and briefs:** Settings › Translation cache › Clear cache.
+- **Corrections:** Settings › Translation memory › Clear translation memory (export them first to keep a copy).
 - **Diagnostics log:** Settings › Diagnostics › Clear log.
 - **Usage and cost totals:** Settings › Usage and cost › Reset total.
 - **Site access:** remove a site from Settings › Site rules; Chrome also lists granted sites at
@@ -162,6 +194,18 @@ Stored on the device
 - storage.session: src/shared/access.ts:52, src/shared/snippet.ts:12-54, src/shared/providers.ts:692-705 (tab route).
 - localStorage: src/entrypoints/sidepanel/follow.ts:16.
 - Export leaves keys out by default: src/shared/portable.ts:1-10.
+
+Corrections and examples
+- The memory database, its fields and its export file (no origin; the local-only mark kept): src/shared/memory.ts
+  (MEMORY_DB, MemoryEntry, exportFile). It is not part of the settings export: src/shared/portable.ts.
+- Which entries may be sent: src/shared/memory.ts (examplesFor: local-only entries only to a local-only route;
+  other sites' and imported entries only with the across-sites setting, on every route), used in
+  src/entrypoints/sidepanel/jobs.ts (examples built from the route's local-only state). The setting is in
+  storage.local: src/shared/memory.ts (MEMORY_ACROSS_SITES_KEY).
+- A selection uses no memory: src/entrypoints/sidepanel/translator.ts (the snippet jobs).
+- The review call and its route: src/entrypoints/sidepanel/route.ts (reviewClient), src/shared/providers.ts
+  (resolveRouteIn: a local-only site rule holds every role); it carries the job's examples: src/engine/stages/review.ts
+  (gatherContext). Its record is counts only: src/shared/diagnostics.ts (review, memory).
 
 Diagnostics
 - Contents and limits: src/shared/diagnostics.ts:1-12 (what is kept and never kept), :19 (50 entries), :20

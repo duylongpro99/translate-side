@@ -31,6 +31,23 @@ pnpm run eval:report -- eval-results/<c> eval-results/<r>     # contextual first
 
 `refine` drafts exactly as `contextual` does (translate@2 only), then reviews each chunk of drafts with `--review-prompt` (default: the shipped review prompt). `summary.json` counts, per passage and in total, the segments the review accepted (replaced by a revision that passed every post-check), left unchanged, rejected (the candidate failed a post-check; the draft stays) or skipped, and the review calls' tokens. Each rejected candidate is read back from the recorded review answer and checked again, so `summary.json` also counts the rejections by the check that failed them (`rejectedKinds`: the post-check kinds, `tag` for a page tag brought back, `duplicate` for a copied neighbour). `summary.json` records `reviewPromptHash` beside `promptHash`, so a review prompt edited under the same id shows. The report adds, beside the judge dimensions and the cost ratio, the ratio of input plus output tokens (the APIBOX prices are nominal), those review counts with the share of the reviewer's changes that were rejected, and the rejections by check. With `--mock`, the reviewer leaves odd items unchanged, cuts every fourth item to its first word (the length check rejects it, except on the shortest segments) and returns the other even items' drafts with a fixed suffix (accepted), so a mock run goes through the unchanged, accepted and rejected paths without a key.
 
+## Translation memory in a run
+
+```
+pnpm run eval -- --set eval --strategy contextual --prompt translate@2 --chunk-tokens 400 --memory <file> --out eval-results/<m>
+```
+
+`--memory` takes a translation-memory export (the file the options page writes, or one written by hand in the same shape) and gives the run its entries for the run's target language as examples. It needs `contextual` or `refine` with `translate@2` (`translate@1` has no context block to carry them). Each document's retrieval is written to `<id>.memory.json` (hashed ids and counts, never text), and `summary.json` records the number of entries. The harness applies no origin or local-only rule (a file has neither): every entry counts. A run with a memory is never a gate baseline.
+
+## Latency
+
+```
+pnpm run latency -- --runs 2 --scenarios top,middle --strategy contextual
+pnpm run latency -- --runs 2 --scenarios top,middle --strategy refine
+```
+
+Runs the panel's own job code over a page of about 3,000 words made from the fixtures, against the default profile (live calls, `AIBOX_API_KEY` from `.env`), and reports when the screen was first done and when the whole page was. `--strategy` (`single-pass`, `contextual` or `refine`) times Balanced and Best alike; a `refine` run also times its review calls. Results are written to `eval-results/latency-<stamp>.json`.
+
 ## Regression gate
 
 ```
