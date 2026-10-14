@@ -128,6 +128,27 @@ async function cacheRows(panel: Page): Promise<number> {
   );
 }
 
+/** The translation-memory database as the panel's origin sees it: whether it exists, and how many entries it holds. */
+async function memoryState(panel: Page): Promise<{ exists: boolean; entries: number }> {
+  return panel.evaluate(async () => {
+    const exists = (await indexedDB.databases()).some((d) => d.name === 'translate-side-memory');
+    if (!exists) return { exists, entries: 0 };
+    return new Promise<{ exists: boolean; entries: number }>((resolve, reject) => {
+      const open = indexedDB.open('translate-side-memory');
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const db = open.result;
+        const tx = db.transaction('entries', 'readonly');
+        const count = tx.objectStore('entries').count();
+        tx.oncomplete = () => {
+          db.close();
+          resolve({ exists, entries: count.result });
+        };
+      };
+    });
+  });
+}
+
 test.skip(!OLD || !NEW, 'run through `pnpm run e2e:upgrade`, which builds both versions');
 
 test('an earlier build upgrades in place: settings, glossary, key and cache survive, and the cached page makes no calls', async () => {
@@ -175,6 +196,9 @@ test('an earlier build upgrades in place: settings, glossary, key and cache surv
       await chrome.storage.local.set(local);
     }, [shape.sync, shape.local] as const);
     const first = await translatePage(context, before, id);
+    // The stored acknowledgement is of the first notice version. A build whose notice is newer asks again, and
+    // the run goes on only once it is acknowledged (as the user of that build did).
+    if (await first.panel.getByTestId('privacy-notice').isVisible()) await first.panel.getByTestId('privacy-ok').click();
     expect(await jobSettled(first.panel)).toBe('done');
     expect(providerCalls).toBeGreaterThan(0);
     const translated = await blockStatuses(first.panel);
@@ -225,20 +249,32 @@ test('an earlier build upgrades in place: settings, glossary, key and cache surv
     for (const [key, value] of Object.entries(seeded.sync)) expect(upgraded.sync[key], `sync ${key}`).toEqual(value);
     for (const [key, value] of Object.entries(seeded.local)) expect(upgraded.local[key], `local ${key}`).toEqual(value);
     console.log(`kept: sync ${Object.keys(seeded.sync).join(', ')}; local ${Object.keys(seeded.local).join(', ')}`);
+    // The quality setting is its own item, written only when the user changes it: absent here, so Balanced.
+    expect(upgraded.sync.quality, 'the quality item is not created by the update').toBeUndefined();
     console.log(`added: sync ${Object.keys(upgraded.sync).filter((k) => !(k in seeded.sync)).join(', ')}; local ${Object.keys(upgraded.local).filter((k) => !(k in seeded.local)).join(', ')}`);
 
     // The same page again: every block comes from the cache the earlier build filled.
     const calls = providerCalls;
     const again = await translatePage(context, after, id);
-    // The current notice is newer than the one the earlier build's user acknowledged: it is shown once more, and
-    // nothing is sent until it is acknowledged.
-    await expect(again.panel.getByTestId('privacy-notice')).toBeVisible();
-    expect(providerCalls - calls).toBe(0);
-    await again.panel.getByTestId('privacy-ok').click();
+    // A notice newer than the one the earlier build's user acknowledged is shown once more, and nothing is sent
+    // until it is acknowledged; one that has not changed is not shown again.
+    const current = Number(/PRIVACY_NOTICE_VERSION = (\d+)/.exec(fs.readFileSync(path.join(ROOT, 'src/entrypoints/sidepanel/privacy.ts'), 'utf8'))?.[1]);
+    const acknowledged = ((await storage(after)).local.privacyNotice as { version?: number } | undefined)?.version ?? 0;
+    if (acknowledged < current) {
+      await expect(again.panel.getByTestId('privacy-notice')).toBeVisible();
+      expect(providerCalls - calls).toBe(0);
+      await again.panel.getByTestId('privacy-ok').click();
+    }
     await expect(again.panel.getByTestId('privacy-notice')).toBeHidden();
     expect(await jobSettled(again.panel)).toBe('done');
     expect(await blockStatuses(again.panel)).toEqual(translated);
     expect(providerCalls - calls, `calls after the upgrade: ${JSON.stringify(mock.calls.slice(calls).map((c) => [c.kind, c.segments.length]))}`).toBe(0);
+    // The panel opened the memory database (created empty by the update); nothing was edited, so it holds no entry.
+    await expect.poll(async () => (await memoryState(again.panel)).exists).toBe(true);
+    expect(await memoryState(again.panel)).toEqual({ exists: true, entries: 0 });
+    // Without a stored quality item the header offers Balanced, and the page above came from the cache of that strategy.
+    await expect(again.panel.getByTestId('quality-mode')).toHaveValue('balanced');
+    expect((await storage(after)).sync.quality, 'a translation does not write the quality item').toBeUndefined();
     console.log(`current build, same page: ${providerCalls - calls} provider calls, blocks ${JSON.stringify(await blockStatuses(again.panel))}`);
     expect(mock.calls.length).toBe(calls);
   } finally {
