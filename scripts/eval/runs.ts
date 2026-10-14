@@ -51,6 +51,8 @@ export interface RunSummary {
   style?: string;
   gloss?: string;
   glossary?: number;
+  /** Translation-memory entries given to the run (`--memory`); absent = none. */
+  memory?: number;
   chunkTokens?: number;
   total: { translatable: number; lost: number; failed: number; repaired: number; calls: number; input: number; cachedInput: number; output: number; wallMs: number; costUsd: number | null };
   docs: DocSummary[];
@@ -142,6 +144,7 @@ export function runLabel(s: RunSummary): string {
     s.style && s.style !== 'natural' ? s.style : '',
     s.gloss && s.gloss !== 'first' ? `gloss ${s.gloss}` : '',
     s.glossary ? `glossary ${s.glossary}` : '',
+    s.memory ? `memory ${s.memory}` : '',
     s.chunkTokens !== undefined && s.chunkTokens !== 1500 ? `chunk ${s.chunkTokens}` : '',
   ].filter(Boolean);
   return `${s.strategy ?? 'single-pass'} / ${[translate, ...others].join('+')} / ${s.model}${extra.length ? ` / ${extra.join(', ')}` : ''}`;

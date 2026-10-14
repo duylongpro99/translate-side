@@ -130,6 +130,7 @@ describe('seeding a baseline from finished runs', () => {
     expect(mismatch(runOf(best, { thinking: null }))[0]).toMatch(/^thinking none, not /);
     expect(mismatch(runOf(best, { thinking: { reasoning: best.quirks.reasoning, maxTokensParam: 'max_tokens' } }))).toEqual([`max tokens parameter "max_tokens", not "${best.quirks.maxTokensParam}"`]);
     expect(mismatch(runOf(best, { style: 'faithful', glossary: 2 }))).toEqual(['style "faithful", not "natural"', 'personal glossary 2, not 0']);
+    expect(mismatch(runOf(best, { memory: 3 }))).toEqual(['translation memory 3, not 0']);
   });
   it('compares the prompt texts, not only their ids', () => {
     expect(mismatch(runOf(best, { promptHash: '000000000000' }))).toEqual([`translate prompt hash "000000000000", not "${translatePromptHash(CONTEXTUAL_TRANSLATE_PROMPT_ID, VARS)}"`]);

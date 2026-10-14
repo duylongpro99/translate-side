@@ -6,7 +6,7 @@
 //      [--set fixtures|eval] [--strategy single-pass|contextual|refine] [--probe-nonce] [--chunk-tokens n]
 //      [--concurrency n] [--target vi] [--price in,cached,out]
 //      [--prompt translate@1|translate@2] [--style natural|faithful|simplified] [--gloss first|off]
-//      [--glossary "deploy,executor=bộ thực thi"] [--pause ms] [--review-prompt review@N]
+//      [--glossary "deploy,executor=bộ thực thi"] [--pause ms] [--review-prompt review@N] [--memory file]
 // `contextual` (plan M2) adds the brief call: <slug>.brief.json holds the parsed brief (or null),
 // calls.jsonl tags each call with its role, and summary.json records the strategy and the prompt
 // versions so the comparison report (pnpm run eval:report) can tell runs apart.
@@ -14,6 +14,9 @@
 // `--prompt translate@1` runs contextual as Phase B did. single-pass stays on translate@1 (the
 // frozen baseline). `--style`, `--gloss` and `--glossary` (term, or term=rendering; a bare term is
 // "keep as is") are the job options the panel takes from the settings (M2-E6).
+// `--memory <file>` (a translation-memory export) gives the run those corrections as examples
+// (`JobOptions.memory`, contextual and refine only): the retrieval's `context` events go to
+// <slug>.memory.json, and summary.json counts the entries. Such a run is not a gate baseline.
 // `refine` (the Best mode) drafts as contextual does (translate@2 only), then reviews each chunk of
 // drafts with `--review-prompt` (default: the shipped review prompt). summary.json counts the
 // review's accepted, unchanged, rejected and skipped segments per document and in total.
@@ -28,8 +31,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { createClient } from '@/llm';
+import { parseMemoryFile } from './memory-file.ts';
 import type { LLMClient, Quirks, ResolvedConnection, StopReason } from '@/llm/types';
-import { ANALYZE_PROMPT_ID, chunkLimits, chunkSegments, createContextual, createRefine, CONTEXTUAL_ID, REFINE_ID, REVIEW_PROMPT_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, TRANSLATE_V2_PROMPT_ID, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, SINGLE_PASS_ID, toWire, renderSystemPrompt, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, checkDuplicates, checkSegment, codeSpans, type CheckKind, type EngineEvent, type GlossaryEntry, type GlossMode, type Segment, type StyleMode, type TranslationJob } from '@/engine/index';
+import { ANALYZE_PROMPT_ID, chunkLimits, chunkSegments, createContextual, createRefine, CONTEXTUAL_ID, REFINE_ID, REVIEW_PROMPT_ID, CONTEXTUAL_TRANSLATE_PROMPT_ID, TRANSLATE_V2_PROMPT_ID, MAX_TAG, MERGE_FACTOR, parseOutput, planRepair, createDefaultPromptRegistry, createEngine, formatWire, nonceFor, singlePass, SINGLE_PASS_ID, toWire, renderSystemPrompt, translateRequest, TRANSLATE_PROMPT_ID, CHARS_PER_TOKEN, checkDuplicates, checkSegment, codeSpans, CONTEXT_STAGE, type CheckKind, type MemoryExample, type EngineEvent, type GlossaryEntry, type GlossMode, type Segment, type StyleMode, type TranslationJob } from '@/engine/index';
 import type { ModelRole } from '@/llm/types';
 import { costUsd, priceFor } from './pricing.ts';
 import { EVAL_SLUGS } from './docs.ts';
@@ -63,6 +67,7 @@ const { values: opt } = parseArgs({
     style: { type: 'string', default: 'natural' },
     gloss: { type: 'string', default: 'first' },
     glossary: { type: 'string', default: '' },
+    memory: { type: 'string' },
     // Wait between documents (ms), to stay under a free tier's requests-per-minute limit.
     pause: { type: 'string', default: '0' },
     // Translator thinking for a trial (round 9 option d), e.g. `--reasoning low --reasoning-reserve 8000`:
@@ -227,6 +232,9 @@ if (!['natural', 'faithful', 'simplified'].includes(STYLE)) throw new Error('--s
 const GLOSS = opt.gloss as GlossMode;
 if (GLOSS !== 'first' && GLOSS !== 'off') throw new Error('--gloss expects first or off');
 const GLOSSARY: GlossaryEntry[] = parseGlossaryArg(opt.glossary as string);
+if (opt.memory !== undefined && !BRIEFED) throw new Error('--memory needs --strategy contextual or refine (single-pass sends translate@1, which has no context block)');
+/** The corrections given to every run of this harness run (--memory); one array, so the engine builds its index once. */
+const MEMORY: readonly MemoryExample[] = opt.memory === undefined ? [] : parseMemoryFile(fs.readFileSync(path.resolve(opt.memory), 'utf8'), opt.target as string);
 const evalSet = opt.set === 'eval';
 if (!evalSet && opt.set !== 'fixtures') throw new Error('--set expects fixtures or eval');
 const slugs = opt.docs ? opt.docs.split(',') : evalSet ? listPassageIds(ROOT) : [...EVAL_SLUGS];
@@ -324,12 +332,13 @@ async function runDoc(slug: string): Promise<DocResult> {
     doc: { url: doc.url, title: doc.title, sourceLang: doc.lang, targetLang: opt.target as string, outline: doc.segments.filter((s) => s.kind === 'heading').map((s) => s.text), segments: doc.segments },
     priority: [],
     strategy: STRATEGY,
-    options: { style: STYLE, gloss: GLOSS, glossary: GLOSSARY, maxConcurrency: Number(opt.concurrency), chunkTokens },
+    options: { style: STYLE, gloss: GLOSS, glossary: GLOSSARY, maxConcurrency: Number(opt.concurrency), chunkTokens, ...(MEMORY.length > 0 ? { memory: MEMORY } : {}) },
   };
   const t = newTally();
   const { finals, failed } = t;
   let firstFinalMs: number | null = null;
   let inCheck = false;
+  const memoryEvents: unknown[] = [];
   const check: DocResult['check'] = { rerequested: 0, kinds: {}, repaired: 0, failed: 0, input: 0, output: 0, codeBearing: 0, codePreserved: 0, finalsFailingChecks: 0 };
   const t0 = Date.now();
   for await (const e of engine.translate(job, new AbortController().signal) as AsyncIterable<EngineEvent>) {
@@ -347,6 +356,7 @@ async function runDoc(slug: string): Promise<DocResult> {
       check.input += e.input;
       check.output += e.output;
     }
+    if (e.type === 'stage' && e.stage === CONTEXT_STAGE) memoryEvents.push(e.info);
     if (e.type === 'segment.final') firstFinalMs ??= Date.now() - t0;
     tallyEvent(t, e);
   }
@@ -364,6 +374,7 @@ async function runDoc(slug: string): Promise<DocResult> {
   const chunkWires = chunkSegments(doc.segments, chunkLimits(chunkTokens)).map((ch) => formatWire(toWire(ch.segments)));
   // A chunk is counted once: contextual's second pass of chunk 0 sends the same wire.
   const firstPass = chunkWires.filter((w) => calls.slice(callsBefore).some((c) => c.role === 'translate' && c.user.endsWith(w)));
+  if (MEMORY.length > 0) fs.writeFileSync(path.join(outDir, `${slug}.memory.json`), `${JSON.stringify(memoryEvents, null, 1)}\n`);
   if (BRIEFED) fs.writeFileSync(path.join(outDir, `${slug}.brief.json`), `${JSON.stringify(t.brief, null, 1)}\n`);
   const reviewCalls = calls.slice(callsBefore).filter((c) => c.role === 'review');
   const review = { ...t.review, rejectedKinds: rejectedKinds(t.reviewReports, reviewCalls, doc.segments, opt.target as string) };
@@ -541,13 +552,13 @@ const nonce = probes.length ? { echoed: probes.reduce((n, p) => n + p.echoed, 0)
 const briefs = results.flatMap((r) => (r.brief ? [r.brief] : []));
 // M2-D9: one-chunk documents make no brief call (`skipped`); they are counted apart.
 const briefTotals = briefs.length ? { docs: briefs.length, ok: briefs.filter((b) => b.ok).length, skipped: briefs.filter((b) => b.skipped).length, input: briefs.reduce((n, b) => n + b.input, 0), output: briefs.reduce((n, b) => n + b.output, 0), costUsd: price ? costUsd(price, { input: briefs.reduce((n, b) => n + b.input, 0), cachedInput: 0, output: briefs.reduce((n, b) => n + b.output, 0) }) : null } : null;
-const summary = { run: stamp, set: opt.set, strategy: STRATEGY, strategyVersion, prompt: TRANSLATE_PROMPT, promptHash, ...(reviewHash === undefined ? {} : { reviewPromptHash: reviewHash }), prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, label, thinking, reasoning: reasoningStats, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, check: checkTotal, review: reviewTotal, nonce, charsPerToken, thresholds };
+const summary = { run: stamp, set: opt.set, strategy: STRATEGY, strategyVersion, prompt: TRANSLATE_PROMPT, promptHash, ...(reviewHash === undefined ? {} : { reviewPromptHash: reviewHash }), prompts: PROMPTS, style: STYLE, gloss: GLOSS, glossary: GLOSSARY.length, memory: MEMORY.length, label, thinking, reasoning: reasoningStats, brief: briefTotals, model: baseClient.model, target: opt.target, chunkTokens, concurrency: Number(opt.concurrency), price: price ?? null, docs: results, total, check: checkTotal, review: reviewTotal, nonce, charsPerToken, thresholds };
 fs.writeFileSync(path.join(outDir, 'summary.json'), `${JSON.stringify(summary, null, 1)}\n`);
 const money = (n: number | null): string => (n === null ? 'n/a' : `$${n.toFixed(5)}`);
 const md = [
   `# Eval run ${stamp}`,
   '',
-  `Strategy \`${STRATEGY}\` (${Object.values(PROMPTS).join(', ')}), style ${STYLE}, gloss ${GLOSS}, personal glossary ${GLOSSARY.length ? GLOSSARY.map((e) => (e.rendering === e.term ? e.term : `${e.term}=${e.rendering}`)).join(', ') : 'none'}, model \`${label}\`, target \`${opt.target}\`, chunk ${chunkTokens} tokens, ${opt.concurrency} in flight. ${price && !price.verified ? 'Price is an UNVERIFIED placeholder (scripts/eval/pricing.ts).' : ''}`,
+  `Strategy \`${STRATEGY}\` (${Object.values(PROMPTS).join(', ')}), style ${STYLE}, gloss ${GLOSS}, translation memory ${MEMORY.length ? `${MEMORY.length} entries` : 'none'}, personal glossary ${GLOSSARY.length ? GLOSSARY.map((e) => (e.rendering === e.term ? e.term : `${e.term}=${e.rendering}`)).join(', ') : 'none'}, model \`${label}\`, target \`${opt.target}\`, chunk ${chunkTokens} tokens, ${opt.concurrency} in flight. ${price && !price.verified ? 'Price is an UNVERIFIED placeholder (scripts/eval/pricing.ts).' : ''}`,
   '',
   '| doc | segments | lost | repaired | chunks (briefed) | calls | input | cached | output | wall s | first final s | cost |',
   '|---|---|---|---|---|---|---|---|---|---|---|---|',

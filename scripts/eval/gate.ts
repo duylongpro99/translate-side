@@ -363,6 +363,7 @@ export function runConfigMismatch(s: GateSummary, cfg: GateConfig, passages: rea
     ['style', s.style ?? 'natural', 'natural'],
     ['gloss', s.gloss ?? 'first', 'first'],
     ['personal glossary', s.glossary ?? 0, 0],
+    ['translation memory', s.memory ?? 0, 0],
     ['thinking', s.thinking?.reasoning, cfg.quirks.reasoning],
     ['max tokens parameter', s.thinking?.maxTokensParam, cfg.quirks.maxTokensParam],
     ['translate prompt hash', s.promptHash, translatePromptHash(cfg.translatePrompt, vars)],
