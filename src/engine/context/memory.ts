@@ -17,6 +17,11 @@ export const TRANSLATION_MEMORY_PROVIDER_ID = 'translation-memory';
 export const CONTEXT_STAGE = 'context';
 /** The lowest Dice score an example needs to be offered. */
 export const TM_MIN_SIMILARITY = 0.5;
+/**
+ * The fewest words an example and a chunk segment must share (unless their word sets are equal):
+ * a single shared word makes "Sign in" and "Sign out" look alike (0.5), and a lone one is no phrasing to follow.
+ */
+export const TM_MIN_SHARED = 2;
 /** Most examples per chunk. */
 export const TM_MAX_EXAMPLES = 3;
 /** Most tokens of a chunk's context the examples may take (of the whole context budget). */
@@ -24,13 +29,16 @@ export const TM_MAX_TOKENS = 400;
 
 const HEAD = 'Corrections the user made to earlier translations; follow their wording where the same phrasing appears:';
 
+/** The light markers of a link: they come with every link text, and are no words of it. */
+const LINK_MARKERS = /\[\/?link\]/g;
 const WORD = /[\p{L}\p{N}]+/gu;
 /** Scripts written without spaces between words: a "word" there is a whole phrase, so its characters pair up. */
 const UNSPACED = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}]/u;
 
 /** The word tokens of `text` (NFKC, lower case); an unspaced-script word gives its character bigrams. */
 export function tokens(text: string): string[] {
-  const folded = text.normalize('NFKC').toLowerCase();
+  // Markers are dropped on both sides: `[link]Home[/link]` and `[link]Help[/link]` share no word.
+  const folded = text.normalize('NFKC').toLowerCase().replace(LINK_MARKERS, ' ');
   const words = folded.match(WORD) ?? [];
   // Most text has no unspaced script at all: one test for the whole text, not one per word.
   if (!UNSPACED.test(folded)) return words;
@@ -90,14 +98,15 @@ interface Scored {
 
 /**
  * The examples of `memory` scoring at least `min` against `text`, best first (ties in memory order).
- * A Dice score of `min` needs at least ⌈min·|q| ÷ (2 − min)⌉ shared tokens, so a candidate must hold
+ * A Dice score of `min` needs at least ⌈min·|q| ÷ (2 − min)⌉ shared tokens (and never fewer than TM_MIN_SHARED), so a candidate must hold
  * one of any |q| − that + 1 of the query's tokens: only the rarest ones are looked up (the common
  * words of a long passage have the longest lists), and each candidate is then scored exactly.
  */
 function rank(index: Index, text: string, min: number): Scored[] {
   const query = new Set(tokens(text));
   if (query.size === 0) return [];
-  const need = Math.max(1, Math.ceil((min * query.size) / (2 - min) - 1e-9));
+  // A one-word query can only match an example of that one word; any other needs TM_MIN_SHARED words.
+  const need = query.size === 1 ? 1 : Math.max(TM_MIN_SHARED, Math.ceil((min * query.size) / (2 - min) - 1e-9));
   const lists = [...query].map((t) => index.postings.get(t)).filter((l): l is number[] => l !== undefined);
   lists.sort((p, q) => p.length - q.length);
   const seen = new Set<number>();
@@ -111,6 +120,7 @@ function rank(index: Index, text: string, min: number): Scored[] {
       const set = index.sets[at] as Set<string>;
       let shared = 0;
       for (const t of set) if (query.has(t)) shared++;
+      if (shared < TM_MIN_SHARED && !(shared === query.size && shared === set.size)) continue;
       const score = (2 * shared) / (query.size + set.size);
       if (score >= min) out.push({ at, score });
     }

@@ -10,7 +10,7 @@ import type { ContextQuery, EngineEvent, JobOptions, MemoryExample, Segment, Tra
 import { renderContextBlock } from './assemble.ts';
 import { DEFAULT_CONTEXT_PROVIDERS, gatherContext } from './budget.ts';
 import { MEMORY_ENTRIES, MEMORY_QUERIES } from './memory.fixtures.ts';
-import { TM_MAX_EXAMPLES, TM_MAX_TOKENS, TM_MIN_SIMILARITY, similarity, tokens, translationMemoryProvider } from './memory.ts';
+import { TM_MAX_EXAMPLES, TM_MAX_TOKENS, TM_MIN_SHARED, TM_MIN_SIMILARITY, similarity, tokens, translationMemoryProvider } from './memory.ts';
 
 const seg = (id: string, text: string, over: Partial<Segment> = {}): Segment => ({ id, kind: 'p', text, inlineMarkup: text, domPath: `p[${id}]`, translate: true, ...over });
 const OPTIONS: JobOptions = { style: 'natural', glossary: [], maxConcurrency: 2, chunkTokens: 1200 };
@@ -61,13 +61,36 @@ describe('similarity', () => {
   });
 });
 
+describe('link markers and short segments', () => {
+  it('drops the link markers on both sides', () => {
+    expect(tokens('[link]Home[/link] and [LINK]more[/LINK]')).toEqual(['home', 'and', 'more']);
+    expect(similarity('[link]Home[/link]', '[link]Help[/link]')).toBe(0);
+    expect(similarity('[link]Home[/link]', 'Home')).toBe(1);
+  });
+  it('needs two shared words, or equal word sets', async () => {
+    const memory = [
+      { id: 'in', source: 'Sign in', target: 'Đăng nhập' },
+      { id: 'home', source: '[link]Home[/link]', target: '[link]Trang chủ[/link]' },
+    ];
+    const ask = async (text: string) => (await translationMemoryProvider.provide(query([seg('a', text)], memory)))[0]?.refs?.map((r) => r.id) ?? [];
+    expect(await ask('Sign out')).toEqual([]);
+    expect(await ask('[link]Help[/link]')).toEqual([]);
+    expect(await ask('Sign in')).toEqual(['in']);
+    expect(await ask('[link]Home[/link]')).toEqual(['home']);
+    expect(await ask('Please sign in')).toEqual(['in']);
+  });
+});
+
 describe('translationMemoryProvider', () => {
   it('returns nothing without examples, and the prompt stays as it was', async () => {
     const chunk = [seg('a', 'Click the Save button to keep your changes.')];
     expect(await translationMemoryProvider.provide(query(chunk))).toEqual([]);
     expect(await translationMemoryProvider.provide(query(chunk, []))).toEqual([]);
-    const without = await gatherContext(DEFAULT_CONTEXT_PROVIDERS, { ...query(chunk), maxTokens: undefined } as never);
-    expect(renderContextBlock(without)).toBe('');
+    // Structural: no snippet of this provider, so no block is rendered from it.
+    const asked: Omit<ContextQuery, 'maxTokens'> = query(chunk);
+    const without = await gatherContext(DEFAULT_CONTEXT_PROVIDERS, asked);
+    expect(without.some((s) => s.providerId === 'translation-memory')).toBe(false);
+    expect(renderContextBlock(without.filter((s) => s.providerId === 'translation-memory'))).toBe('');
   });
 
   it('offers the similar entry as a chunk snippet with its id and score, tags neutralised', async () => {
@@ -129,7 +152,14 @@ describe('translationMemoryProvider', () => {
     const memory: MemoryExample[] = Array.from({ length: 150 }, (_, i) => ({ id: `e${i}`, source: sentence(3 + (i % 9)), target: `t${i}` }));
     for (let i = 0; i < 60; i++) {
       const text = sentence(2 + (i % 11));
-      const expected = memory.filter((m) => similarity(m.source, text) >= TM_MIN_SIMILARITY).map((m) => m.id);
+      const q = new Set(tokens(text));
+      const expected = memory
+        .filter((m) => {
+          const e = new Set(tokens(m.source));
+          const shared = [...q].filter((t) => e.has(t)).length;
+          return similarity(m.source, text) >= TM_MIN_SIMILARITY && (shared >= TM_MIN_SHARED || (shared === q.size && shared === e.size));
+        })
+        .map((m) => m.id);
       const out = await translationMemoryProvider.provide(query([seg('a', text)], memory, { maxTokens: 100_000, options: { ...OPTIONS, memory } }));
       const got = out[0]?.refs?.map((r) => r.id) ?? [];
       // At most three come back: they are the best of the expected ones.
