@@ -26,7 +26,8 @@ function copyExtension(): string {
   fs.cpSync(BUILD, EXT, { recursive: true });
   const file = path.join(EXT, 'manifest.json');
   const manifest = JSON.parse(fs.readFileSync(file, 'utf8')) as { host_permissions?: string[] };
-  manifest.host_permissions = [...(manifest.host_permissions ?? []), 'http://127.0.0.1/*'];
+  // `localhost` is the same server under a second host name: a flow that needs two origins (and a site rule for one of them) uses it.
+  manifest.host_permissions = [...(manifest.host_permissions ?? []), 'http://127.0.0.1/*', 'http://localhost/*'];
   fs.writeFileSync(file, JSON.stringify(manifest));
   return EXT;
 }
@@ -86,8 +87,8 @@ export interface Extension {
   worker: Worker;
   /** Seeds the mock provider; `privacy: false` leaves the first-run notice unacknowledged. */
   seed(opts?: SeedOptions): Promise<void>;
-  /** Opens a fixture (a path under fixtures/) in a new tab. */
-  open(fixture: string): Promise<Page>;
+  /** Opens a fixture (a path under fixtures/) in a new tab; `origin` is the fixture server's other host name (`http://localhost:4173`) when a flow needs a second origin. */
+  open(fixture: string, origin?: string): Promise<Page>;
   /** Opens the panel in a tab of the same window; it stays in the background. */
   panel(): Promise<Page>;
   /** Opens the settings page in a tab of the same window, 1280×800. */
@@ -174,7 +175,7 @@ export const test = base.extend<Fixtures & Options, { servers: MockControl; extP
     // from the page's origin, hence the allow-origin header. The extension itself (worker, panel) talks
     // only to the mock: any request it makes elsewhere fails the test (DESIGN.md §8, nothing leaves
     // for a host the user did not choose).
-    await context.route(/^https?:\/\/(?!127\.0\.0\.1[:/])/, (route) => {
+    await context.route(new RegExp(`^https?://(?!127\\.0\\.0\\.1[:/]|localhost:${FIXTURE_PORT}/)`), (route) => {
       const request = route.request();
       const from = request.serviceWorker() ? 'worker' : request.frame().url().startsWith('chrome-extension://') ? 'panel' : undefined;
       if (from !== undefined) report(`${from} requested ${request.method()} ${request.url()}`);
@@ -205,9 +206,9 @@ export const test = base.extend<Fixtures & Options, { servers: MockControl; extP
           [syncFor(opts), { 'secret:mock': 'placeholder-key', ...(privacy ? { privacyNotice: { version: 2, at: 1 } } : {}) }] as const,
         );
       },
-      async open(fixture) {
+      async open(fixture, origin = FIXTURE_ORIGIN) {
         const page = await context.newPage();
-        await page.goto(`${FIXTURE_ORIGIN}/${fixture}`);
+        await page.goto(`${origin}/${fixture}`);
         return page;
       },
       async panel() {

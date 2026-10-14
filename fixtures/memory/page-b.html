@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- Translation-memory fixture: a page of the same site with a sentence close to one of page A's. Original filler text, MIT (this repository). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Harbor worker notes</title>
+</head>
+<body>
+<article>
+<h1>Harbor worker notes</h1>
+<p>Every worker registers itself with the harbor service when it starts and reports its capacity as a number. The service uses that number to decide how many tasks a worker may hold at the same time, and it updates the figure whenever the worker reports a change.</p>
+<p>The scheduler hands each queued task to the first idle worker, and it keeps a brief log of what every worker finished.</p>
+<p>A worker that stops answering heartbeats is removed from the pool after three missed checks in a row. Tasks it was holding go back to the front of the queue, so that nothing is lost when a machine disappears without warning.</p>
+<p>Release notes for each version are published in the changelog together with the upgrade steps to follow. Breaking changes are listed first and marked clearly, followed by new features, smaller fixes and a list of deprecated settings.</p>
+<p>Workers can be started in a read-only mode for testing. In that mode they accept tasks and report their results, but they never write anything to the shared storage, which makes them safe to run next to a production pool.</p>
+<p>Documentation for the command line tool lives next to the source code. Every command has a short description, a list of options and one complete example that can be copied into a terminal and run as it is.</p>
+</article>
+</body>
+</html>

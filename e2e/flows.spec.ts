@@ -462,3 +462,93 @@ test.describe('Edits', () => {
     await expect(options.getByTestId('memory-stats')).toHaveText('0 of 5,000 corrections.');
   });
 });
+
+test.describe('Corrections as examples on later pages', () => {
+  const CORRECTION = 'Bộ lập lịch giao từng tác vụ cho worker rảnh đầu tiên.';
+  const LOCAL_ORIGIN = 'http://localhost:4173';
+  const TEXT = { a: 'The scheduler hands every queued task', b: 'The scheduler hands each queued task' };
+
+  /** Translates page A (on `origin`), corrects its second paragraph and closes everything, so page B starts a fresh run. */
+  async function correctOnA(extension: Extension, origin?: string) {
+    const page = await extension.open('memory/page-a.html', origin);
+    const panel = await extension.panel();
+    await extension.translate(page);
+    expect(await jobSettled(panel)).toBe('done');
+    // Found by its text first: the editor replaces the text, so it is addressed by id afterwards.
+    const id = (await panel.locator('.seg--p[data-status=final]', { hasText: TEXT.a }).getAttribute('data-id')) as string;
+    const block = panel.locator(`.seg[data-id="${id}"]`);
+    await block.getByTestId('seg-edit').click();
+    const area = block.getByTestId('seg-edit-text');
+    await area.fill(CORRECTION);
+    await area.press('Control+Enter');
+    await expect(block).toHaveAttribute('data-edited', 'user');
+    // The correction is saved before the next page starts: the options page counts it.
+    const options = await extension.options();
+    await expect(options.getByTestId('memory-stats')).toHaveText('1 of 5,000 corrections.');
+    await options.close();
+    await panel.close();
+    await page.close();
+  }
+
+  /** Translates page B and returns the translate calls the mock saw for it. */
+  async function translateB(extension: Extension, mock: { calls: MockCall[] }) {
+    const from = mock.calls.length;
+    const page = await extension.open('memory/page-b.html');
+    const panel = await extension.panel();
+    await extension.translate(page);
+    expect(await jobSettled(panel)).toBe('done');
+    const calls = mock.calls.slice(from).filter((c) => c.kind === 'translate');
+    // The similar sentence itself was sent to the model: it is not the exact one the user corrected.
+    expect(calls.flatMap((c) => c.segments).some((s) => s.startsWith(TEXT.b))).toBe(true);
+    return { calls, panel };
+  }
+
+  const records = (extension: Extension) =>
+    extension.worker.evaluate(async () => Object.entries(await chrome.storage.local.get(null)).flatMap(([k, v]) => (k.startsWith('diag:') ? [v as { memory?: { hits: number; ids: string[] } }] : [])));
+
+  test('a correction made on one page reaches the prompt for a similar sentence on another, and is logged by id', async ({ extension, mock }) => {
+    await extension.seed();
+    await correctOnA(extension);
+    const { calls } = await translateB(extension, mock);
+
+    const prompt = calls.map((c) => c.prompt).find((p) => p.includes(CORRECTION)) ?? '';
+    expect(prompt, 'the correction is in the chunk of page B that holds the similar sentence').not.toBe('');
+    // Inside the user message's context block, not the system block that is cached.
+    const context = prompt.slice(prompt.indexOf('<context>'), prompt.indexOf('</context>'));
+    expect(context).toContain(`<translation>${CORRECTION}</translation>`);
+
+    // The record keeps a count and hashed ids, never the text.
+    const logged = (await records(extension)).filter((r) => r.memory);
+    expect(logged.length).toBeGreaterThan(0);
+    expect(logged.at(-1)?.memory?.hits).toBeGreaterThanOrEqual(1);
+    expect(logged.at(-1)?.memory?.ids[0]).toMatch(/^m\./);
+    expect(JSON.stringify(await records(extension))).not.toContain(CORRECTION);
+  });
+
+  test('a correction made under a local-only site rule never reaches a request on another route, even with the setting on', async ({ extension, mock }) => {
+    await extension.seed();
+    await extension.worker.evaluate(async () => {
+      await chrome.storage.sync.set({ siteRules: [{ pattern: 'localhost', translate: 'mock-model', localOnly: true }] });
+      await chrome.storage.local.set({ memoryAcrossSites: true });
+    });
+    await correctOnA(extension, LOCAL_ORIGIN);
+    const { calls } = await translateB(extension, mock);
+    expect(calls.map((c) => c.prompt).filter((p) => p.includes(CORRECTION))).toEqual([]);
+    expect((await records(extension)).filter((r) => r.memory)).toEqual([]);
+  });
+
+  test('a correction from another site is sent only when the setting is on', async ({ extension, mock }) => {
+    await extension.seed();
+    await correctOnA(extension, LOCAL_ORIGIN);
+    expect((await translateB(extension, mock)).calls.map((c) => c.prompt).filter((p) => p.includes(CORRECTION))).toEqual([]);
+
+    // The first run cached page B: clear the cache so the similar sentence goes to the model again.
+    const options = await extension.options();
+    await options.getByTestId('cache-clear').click();
+    await expect(options.getByTestId('cache-stats')).toContainText('0 translated blocks');
+    await options.close();
+    await extension.worker.evaluate(() => chrome.storage.local.set({ memoryAcrossSites: true }));
+    const again = await translateB(extension, mock);
+    expect(again.calls.map((c) => c.prompt).filter((p) => p.includes(CORRECTION)).length).toBeGreaterThan(0);
+  });
+});

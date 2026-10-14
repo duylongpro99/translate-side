@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- Translation-memory fixture: the page where a block is corrected. Original filler text, MIT (this repository). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Harbor queue notes</title>
+</head>
+<body>
+<article>
+<h1>Harbor queue notes</h1>
+<p>The harbor queue accepts jobs from any producer and stores them until a worker is free to take them. Each job carries a small header with its priority, its owner and the time it was submitted, so that operators can always tell where a task came from.</p>
+<p>The scheduler hands every queued task to the first idle worker, and it keeps a short log of what each worker finished.</p>
+<p>Operators can pause the queue from the dashboard without losing the jobs that are already waiting in line. Pausing only stops new hand-offs; a task that a worker has already started keeps running until it ends or fails.</p>
+<p>Metrics about queue depth and worker load are exported once a minute for the monitoring system to collect. The same numbers are shown on the dashboard, where the last hour is drawn as a simple line chart with one point per minute.</p>
+<p>When a task fails three times in a row it is moved to a separate list for manual review. Nothing in that list is retried automatically, because a task that fails repeatedly usually needs a person to look at it first.</p>
+<p>The retention period for finished tasks is seven days by default. Older entries are removed during the nightly cleanup, which also compacts the storage files and writes a short summary to the log.</p>
+</article>
+</body>
+</html>
