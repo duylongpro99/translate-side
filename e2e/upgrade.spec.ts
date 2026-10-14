@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium, expect, test, type BrowserContext, type Page, type Worker } from '@playwright/test';
+import { PRIVACY_NOTICE_VERSION } from '../src/entrypoints/sidepanel/privacy.ts';
 import { blockStatuses, jobSettled } from './fixtures.ts';
 import { CHROMIUM_ARGS } from './playwright.config.ts';
 import { FIXTURE_ORIGIN, FIXTURE_PORT, MOCK_BASE_URL, MOCK_PORT, fixtureServer, listen, mockServer } from './servers.ts';
@@ -198,6 +199,7 @@ test('an earlier build upgrades in place: settings, glossary, key and cache surv
     const first = await translatePage(context, before, id);
     // The stored acknowledgement is of the first notice version. A build whose notice is newer asks again, and
     // the run goes on only once it is acknowledged (as the user of that build did).
+    await expect(first.panel.locator('[data-testid=privacy-notice], [data-testid=job]').first()).toBeVisible();
     if (await first.panel.getByTestId('privacy-notice').isVisible()) await first.panel.getByTestId('privacy-ok').click();
     expect(await jobSettled(first.panel)).toBe('done');
     expect(providerCalls).toBeGreaterThan(0);
@@ -258,9 +260,8 @@ test('an earlier build upgrades in place: settings, glossary, key and cache surv
     const again = await translatePage(context, after, id);
     // A notice newer than the one the earlier build's user acknowledged is shown once more, and nothing is sent
     // until it is acknowledged; one that has not changed is not shown again.
-    const current = Number(/PRIVACY_NOTICE_VERSION = (\d+)/.exec(fs.readFileSync(path.join(ROOT, 'src/entrypoints/sidepanel/privacy.ts'), 'utf8'))?.[1]);
     const acknowledged = ((await storage(after)).local.privacyNotice as { version?: number } | undefined)?.version ?? 0;
-    if (acknowledged < current) {
+    if (acknowledged < PRIVACY_NOTICE_VERSION) {
       await expect(again.panel.getByTestId('privacy-notice')).toBeVisible();
       expect(providerCalls - calls).toBe(0);
       await again.panel.getByTestId('privacy-ok').click();

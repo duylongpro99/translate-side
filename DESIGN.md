@@ -547,7 +547,7 @@ text (with a subtle "refined" marker). So "stronger" strategies never cost the u
 time-to-first-read. Revision 1 is a first draft; revision 2 is `contextual`'s chunk-0 revise pass
 (§5.7); revision 3 is `refine`'s review (`producedBy.stage` is `review`), which is above revision 2
 so a review never races a revise. The panel keeps the draft a review replaced behind a "Show
-draft" toggle.
+draft" toggle, for a review made in this run (refined text read back from the cache has no draft).
 
 A repaired segment (§5.7 Step 3) keeps its revision and carries a higher `attempt`. For the same id
 and revision, the panel replaces the text in place when the attempt is higher, and a later
@@ -592,7 +592,7 @@ A custom `run()` is only needed for unusual control flow (e.g. an agent loop).
 | `basic` | Chrome Translator per segment | literal, free, offline | last fallback |
 | `single-pass` | translate(chunk) + check | good, cheapest LLM option | small local models, quick mode |
 | `contextual` **(v1 default)** | analyze → translate(chunk, with brief + context tail) → check | natural, keeps tone and terms | default |
-| `refine` | `contextual` draft → **review** (source + draft → targeted fixes: meaning errors, omissions, unnatural phrasing, term consistency), accepted only if it passes the post-checks | best; up to about 2× `contextual`'s cost; refined text arrives as revision 3 | "Best" mode, or the advanced strategy override |
+| `refine` | `contextual` draft → **review** (source + draft → targeted fixes: meaning errors, omissions, unnatural phrasing, term consistency), accepted only if it passes the post-checks | best; costs more than `contextual` (about 1.3 to 1.5× on the eval set); refined text arrives as revision 3 | "Best" mode, or the advanced strategy override |
 | `agentic` (future) | an LLM loop with **read-only tools**: `lookup_glossary`, `search_translation_memory`, `get_surrounding_text`, `define_term` (web), `flag_ambiguity` | strongest for hard texts (law, research, dense docs) | opt-in, per document |
 
 The user sees **quality modes** rather than strategy names: *Fast* → `single-pass`, *Balanced* →
@@ -617,6 +617,8 @@ How `refine` runs (`src/engine/strategies/refine.ts`, `src/engine/stages/review.
   when the reader moves on, and a later round picks the unreviewed blocks up.
 - A refined block shows a "Refined" marker. With "Keep drafts on screen until the block scrolls
   away", a refined text waits for its block to leave the screen.
+- When the review route cannot run (for example its model's connection is gone), the run is
+  Balanced and the panel says the review is unavailable.
 - A selection always runs `single-pass`, with no cache, no review and no translation memory. A
   page job that asks for `refine` when Best is not offered runs `contextual`.
 

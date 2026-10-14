@@ -59,9 +59,9 @@ other providers. The provider sees what any API call shows: your key, your netwo
 `chrome-extension://` origin.
 
 **Best mode only.** Besides the translation, Best makes a second request per chunk to review it. It sends the source
-text of each block with its translation, and the same kind of correction examples as above, to the model chosen
-under "Review with" in Settings › Providers, or to the translation model if none is chosen. A local-only site rule
-keeps it on that rule's local model.
+text of each block with its translation, the document brief and the glossary entries that apply, to the model chosen
+under "Review with" in Settings › Providers, or to the translation model if none is chosen. It sends no corrections.
+A local-only site rule keeps it on that rule's local model.
 
 Your routing decides which provider gets a page: the model you picked, a rule for that site, or a fallback you
 listed if the first one is busy or down. Chrome's own on-device translator ("Chrome basic translation") is the last
@@ -115,7 +115,9 @@ diagnostics log records how many corrections a run used and an identifier of eac
 ## Diagnostics
 
 The extension keeps a log of its recent translation runs on your device (the last 50). Each entry holds versions,
-the strategy, the preset and model name, counts of blocks and requests, token counts, timings, the outcome and, for a
+the strategy, the preset and model name, counts of blocks and requests, token counts, timings, in Best the counts of
+blocks its review replaced, left or skipped, how many corrections were used as examples and a hash of each (never their
+text), the outcome and, for a
 failure, the error kind and HTTP status with a fixed message of ours. It never holds page text, page addresses,
 provider addresses, keys, or the provider's own error message. The site's name (for example `example.com`) is added
 only if you turn on "Include site names" in Settings › Diagnostics. The log stays on your device; the only way it
@@ -204,8 +206,9 @@ Corrections and examples
   storage.local: src/shared/memory.ts (MEMORY_ACROSS_SITES_KEY).
 - A selection uses no memory: src/entrypoints/sidepanel/translator.ts (the snippet jobs).
 - The review call and its route: src/entrypoints/sidepanel/route.ts (reviewClient), src/shared/providers.ts
-  (resolveRouteIn: a local-only site rule holds every role); it carries the job's examples: src/engine/stages/review.ts
-  (gatherContext). Its record is counts only: src/shared/diagnostics.ts (review, memory).
+  (resolveRouteIn: a local-only site rule holds every role). The review sends no corrections, only document-scoped
+  snippets (brief, glossary): src/engine/stages/review.ts:180 (options without memory), src/engine/context/assemble.ts:30.
+  Its record is counts only: src/shared/diagnostics.ts (review, memory).
 
 Diagnostics
 - Contents and limits: src/shared/diagnostics.ts:1-12 (what is kept and never kept), :19 (50 entries), :20

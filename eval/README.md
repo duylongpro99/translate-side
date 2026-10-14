@@ -37,7 +37,7 @@ pnpm run eval:report -- eval-results/<c> eval-results/<r>     # contextual first
 pnpm run eval -- --set eval --strategy contextual --prompt translate@2 --chunk-tokens 400 --memory <file> --out eval-results/<m>
 ```
 
-`--memory` takes a translation-memory export (the file the options page writes, or one written by hand in the same shape) and gives the run its entries for the run's target language as examples. It needs `contextual` or `refine` with `translate@2` (`translate@1` has no context block to carry them). Each document's retrieval is written to `<id>.memory.json` (hashed ids and counts, never text), and `summary.json` records the number of entries. The harness applies no origin or local-only rule (a file has neither): every entry counts. A run with a memory is never a gate baseline.
+`--memory` takes a translation-memory export (the file the options page writes, or one written by hand in the same shape) and gives the run its entries for the run's target language as examples. It needs `contextual` or `refine` with `translate@2` (`translate@1` has no context block to carry them). Each document's retrieval is written to `<slug>.memory.json` (hashed ids and counts, never text), and `summary.json` records the number of entries. The harness applies no origin or local-only rule (a file has neither): every entry counts. A run with a memory is never a gate baseline.
 
 ## Latency
 

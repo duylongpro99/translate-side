@@ -175,7 +175,10 @@ export function createReviewStage(reviewPrompt: string = REVIEW_PROMPT_ID, strat
       const client = ctx.llm('review');
       const prompt = ctx.prompts.get(reviewPrompt);
       const { segments, ...doc } = work.doc;
-      const snippets = await gatherContext(ctx.context, { doc, chunk: work.chunk.segments, targetLang: doc.targetLang, segments, memory: ctx.memory, options: work.options });
+      // No corrections: the review's prompt carries document snippets only, so retrieving them would be wasted work.
+      const reviewOptions: JobOptions = { ...work.options };
+      delete reviewOptions.memory;
+      const snippets = await gatherContext(ctx.context, { doc, chunk: work.chunk.segments, targetLang: doc.targetLang, segments, memory: ctx.memory, options: reviewOptions });
       const sourceLang = doc.sourceLang.trim() || (ctx.memory.brief?.language ?? '');
       // Only the document-scoped snippets go in (brief, glossary): byte-identical for every chunk.
       const system = renderSystemPromptV2((vars) => prompt.render(vars), { sourceLang, targetLang: doc.targetLang, style: work.options.style, gloss: work.options.gloss ?? DEFAULT_GLOSS, snippets });
