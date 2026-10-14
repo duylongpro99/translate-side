@@ -157,9 +157,11 @@ describe('Jobs: corrections as examples', () => {
 });
 
 describe('Jobs: the memory never delays the first request', () => {
-  const firstRequest = async (deps: Partial<JobDeps>) => {
+  /** `routeMs`: how long the route takes to resolve (the settings reads of a real run); the memory loads meanwhile. */
+  const firstRequest = async (deps: Partial<JobDeps>, routeMs = 0) => {
     const c = client();
-    const jobs = session({ translateClient: ok(c), cacheTimeoutMs: 80, ...deps });
+    const route = ok(c);
+    const jobs = session({ translateClient: () => settle(routeMs).then(route), cacheTimeoutMs: 80, ...deps });
     const t0 = performance.now();
     const started = jobs.start(1, 'd', doc());
     while (c.requests.length === 0) await settle(1);
@@ -186,10 +188,11 @@ describe('Jobs: the memory never delays the first request', () => {
     const full = newMemory();
     await full.importMany(entries, { override: false });
     await full.put(edit());
-    // Warm both: the first run of a panel session loads the snapshot.
+    // A fresh panel session each time, so the snapshot is read from the store every run. The route takes
+    // a realistic 40 ms (storage reads) and the memory loads while it resolves.
     const times = async (memory: TranslationMemory) => {
       const out: number[] = [];
-      for (let i = 0; i < 3; i++) out.push((await firstRequest({ memory, acrossSites: () => Promise.resolve(true), cacheTimeoutMs: 1500 })).ms);
+      for (let i = 0; i < 3; i++) out.push((await firstRequest({ memory, acrossSites: () => Promise.resolve(true), cacheTimeoutMs: 1500 }, 40)).ms);
       return Math.min(...out);
     };
     const base = await times(empty);

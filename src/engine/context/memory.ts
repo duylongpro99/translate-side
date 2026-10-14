@@ -30,8 +30,12 @@ const UNSPACED = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script
 
 /** The word tokens of `text` (NFKC, lower case); an unspaced-script word gives its character bigrams. */
 export function tokens(text: string): string[] {
+  const folded = text.normalize('NFKC').toLowerCase();
+  const words = folded.match(WORD) ?? [];
+  // Most text has no unspaced script at all: one test for the whole text, not one per word.
+  if (!UNSPACED.test(folded)) return words;
   const out: string[] = [];
-  for (const [word] of text.normalize('NFKC').toLowerCase().matchAll(WORD)) {
+  for (const word of words) {
     if (!UNSPACED.test(word)) {
       out.push(word);
       continue;
@@ -54,8 +58,8 @@ export function similarity(a: string, b: string): number {
 }
 
 interface Index {
-  /** Distinct token count of each example's source. */
-  sizes: number[];
+  /** Distinct tokens of each example's source. */
+  sets: Set<string>[];
   postings: Map<string, number[]>;
 }
 
@@ -65,16 +69,16 @@ function indexOf(memory: readonly MemoryExample[]): Index {
   let index = indexes.get(memory);
   if (index === undefined) {
     const postings = new Map<string, number[]>();
-    const sizes = memory.map((e, i) => {
+    const sets = memory.map((e, i) => {
       const set = new Set(tokens(e.source));
       for (const t of set) {
         const list = postings.get(t);
         if (list) list.push(i);
         else postings.set(t, [i]);
       }
-      return set.size;
+      return set;
     });
-    indexes.set(memory, (index = { sizes, postings }));
+    indexes.set(memory, (index = { sets, postings }));
   }
   return index;
 }
@@ -84,24 +88,32 @@ interface Scored {
   score: number;
 }
 
-/** The examples of `memory` scoring at least `min` against `text`, best first (ties in memory order). */
+/**
+ * The examples of `memory` scoring at least `min` against `text`, best first (ties in memory order).
+ * A Dice score of `min` needs at least ⌈min·|q| ÷ (2 − min)⌉ shared tokens, so a candidate must hold
+ * one of any |q| − that + 1 of the query's tokens: only the rarest ones are looked up (the common
+ * words of a long passage have the longest lists), and each candidate is then scored exactly.
+ */
 function rank(index: Index, text: string, min: number): Scored[] {
   const query = new Set(tokens(text));
   if (query.size === 0) return [];
-  // Shared-token counts by entry, in a flat array: common words have long posting lists.
-  const shared = new Uint32Array(index.sizes.length);
-  const touched: number[] = [];
-  for (const t of query) {
-    for (const at of index.postings.get(t) ?? []) {
-      const n = shared[at] as number;
-      if (n === 0) touched.push(at);
-      shared[at] = n + 1;
-    }
-  }
+  const need = Math.max(1, Math.ceil((min * query.size) / (2 - min) - 1e-9));
+  const lists = [...query].map((t) => index.postings.get(t)).filter((l): l is number[] => l !== undefined);
+  lists.sort((p, q) => p.length - q.length);
+  const seen = new Set<number>();
   const out: Scored[] = [];
-  for (const at of touched) {
-    const score = (2 * (shared[at] as number)) / (query.size + (index.sizes[at] as number));
-    if (score >= min) out.push({ at, score });
+  // Tokens no example has count among the rarest: fewer lists remain to look through.
+  const absent = query.size - lists.length;
+  for (const list of lists.slice(0, Math.max(0, query.size - need + 1 - absent))) {
+    for (const at of list) {
+      if (seen.has(at)) continue;
+      seen.add(at);
+      const set = index.sets[at] as Set<string>;
+      let shared = 0;
+      for (const t of set) if (query.has(t)) shared++;
+      const score = (2 * shared) / (query.size + set.size);
+      if (score >= min) out.push({ at, score });
+    }
   }
   return out.sort((p, q) => q.score - p.score || p.at - q.at);
 }
