@@ -19,6 +19,7 @@ import { formatWire, toWire, type WireChunk } from '../parsing/wire.ts';
 import { translateChunk, type ChunkCall, type ChunkReport, type FollowUp, type Shrink } from '../parsing/translate-chunk.ts';
 import { DEFAULT_GLOSS, renderContextBlock, renderSystemPromptV2 } from '../context/assemble.ts';
 import { gatherContext } from '../context/budget.ts';
+import { CONTEXT_STAGE } from '../context/memory.ts';
 import { segmentsBefore } from '../context/glossary.ts';
 import { CONTEXT_TAIL_PARAGRAPHS } from '../context/tail.ts';
 import type { Rendered } from '../parsing/duplicate.ts';
@@ -371,7 +372,7 @@ export function createTranslateRun(strategyId: string, brief?: BriefWait, prompt
     const prepared = await prepareChunk(work, ctx, memory, promptId);
     const { call, neighbours } = prepared;
     // Which corrections of the memory went into this chunk's prompt: ids and scores, never text.
-    if (prepared.memoryRefs !== undefined) yield { type: 'stage', stage: 'context', status: 'done', info: { chunk: work.chunk.index, memory: prepared.memoryRefs } };
+    if (prepared.memoryRefs !== undefined) yield { type: 'stage', stage: CONTEXT_STAGE, status: 'done', info: { chunk: work.chunk.index, memory: prepared.memoryRefs } };
     const gen = translateChunk(toWire(work.chunk.segments), call, {
       producedBy: producedByOf(strategyId, 'translate', prepared),
       clientId: () => prepared.clientId,

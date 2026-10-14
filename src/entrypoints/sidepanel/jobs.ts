@@ -33,15 +33,16 @@
 // - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
-import { BASIC_ID, BASIC_SWITCH_STAGE, DRAFTS_STAGE, REFINE_ID, REVIEWED_REVISION, basic, briefCacheKey, contextual, estimateTokens, createDefaultPromptRegistry, createEngine, decideRetry, explain, normalizeBrief, refine, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy, type BasicSwitchInfo } from '@/engine/index';
+import { BASIC_ID, BASIC_SWITCH_STAGE, CONTEXT_STAGE, DRAFTS_STAGE, REFINE_ID, REVIEWED_REVISION, basic, briefCacheKey, contextual, estimateTokens, createDefaultPromptRegistry, createEngine, decideRetry, explain, normalizeBrief, refine, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy, type BasicSwitchInfo } from '@/engine/index';
 import type { ReviewReport, SnippetRequest } from '@/engine/types';
 import type { LLMClient, LLMError, LLMErrorKind, MTClient, NormalizedRequest } from '@/llm/types';
 import { BEST_MODE_RELEASED } from '@/shared/quality';
 import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
-import { cleanEditText, memoryKey, NO_ORIGIN, type MemoryEntry, type TranslationMemory } from '@/shared/memory';
+import { cleanEditText, createMemorySnapshots, examplesFor, memoryKey, NO_ORIGIN, type MemoryEntry, type MemorySnapshots, type TranslationMemory } from '@/shared/memory';
+import type { FeatureId } from '@/shared/features';
 import { costUsd, formatUsd, type UsageTotals } from '@/shared/cost';
 import type { Detection } from '@/shared/language';
-import { entryId, type JobRecord } from '@/shared/diagnostics';
+import { entryId, MEMORY_IDS_LOGGED, type JobRecord } from '@/shared/diagnostics';
 import { i18n } from '#i18n';
 import { uiError } from './status.ts';
 import type { LimitReached, SpendDelta } from '@/shared/spend';
@@ -474,9 +475,12 @@ export interface JobDeps {
   /**
    * Whether a paid feature is available, read once per job start (a cached answer, no network).
    * `best-mode` gates `refine` from every source: without it a job asked for it runs `contextual`.
-   * Absent: always available.
+   * `translation-memory` gates only the retrieval of similar corrections as examples: edits and the
+   * exact reuse of an edit stay free. Absent: always available.
    */
-  featureAvailable?: (id: 'best-mode') => Promise<boolean>;
+  featureAvailable?: (id: FeatureId) => Promise<boolean>;
+  /** "Use corrections from other sites" (a device setting, off by default), read once per job start. Absent: off. */
+  acrossSites?: () => Promise<boolean>;
   /** The `basic` strategy's translator (Chrome's Translator, plan M5-E7). Absent: none, and a switch to basic says so. */
   mt?: MTClient | undefined;
   /** The translation cache (M3-E2). Absent: every run goes to the model. */
@@ -695,6 +699,8 @@ interface Job {
   drops: Set<string>;
   /** Cache writes run one after another, so a later delete can't overtake an earlier put. */
   chain: Promise<void>;
+  /** The translation-memory feature was available at this run's start (the one read of the gate). */
+  memoryOn?: boolean;
   /** Memory writes of this job (edits, discarded edits), one at a time and in the order they were asked. */
   memoryWrites: Promise<void>;
   flush?: boolean;
@@ -739,7 +745,7 @@ interface Job {
   /** Counts segment retries, for their backoff keys. */
   retrySeq: number;
   /** What this run's diagnostics record counts as it goes (`onJobRecord`). */
-  log: { id: string; promptIds: Set<string>; chunks: Set<number>; calls: number; tokens: UsageTotals; review?: NonNullable<JobRecord['review']> };
+  log: { id: string; promptIds: Set<string>; chunks: Set<number>; calls: number; tokens: UsageTotals; review?: NonNullable<JobRecord['review']>; memory?: { hits: number; ids: Set<string> } };
 }
 
 export type JobsListener = (tabId: number, view: JobView | undefined) => void;
@@ -766,8 +772,12 @@ export class Jobs {
   private activeTabId: number | undefined;
   private readonly now: () => number;
 
+  /** The memory's entries per target language, kept for the life of the panel and read again only when the store changed. */
+  private readonly snapshots: MemorySnapshots | undefined;
+
   constructor(private readonly deps: JobDeps) {
     this.now = deps.now ?? Date.now;
+    this.snapshots = deps.memory ? createMemorySnapshots(deps.memory) : undefined;
   }
 
   subscribe(fn: JobsListener): () => void {
@@ -1040,6 +1050,20 @@ export class Jobs {
     const signal = job.controller.signal;
     // A refine request asks for the review resolver too; it is called only if the run stays refine.
     const routing = this.deps.translateClient({ tabId, url: doc.url, analyze: requested !== 'single-pass', ...(access ? { review: true } : {}) });
+    // The translation-memory gate is read here, once for this run, together with the snapshot and
+    // the setting, while the route resolves; all of it raced against the cache timeout, so a slow
+    // store never delays the first request. A timeout or an error means no examples for this run.
+    const featureAvailable = this.deps.featureAvailable ?? (() => Promise.resolve(true));
+    const snapshots = this.snapshots;
+    const memoryAhead =
+      snapshots === undefined
+        ? undefined
+        : this.timed(
+            (async () => {
+              const [on, entries, acrossSites] = await Promise.all([featureAvailable('translation-memory').catch(() => false), snapshots.load(doc.targetLang), this.deps.acrossSites?.().catch(() => false) ?? false]);
+              return { on, entries, acrossSites };
+            })(),
+          );
     if (access) {
       const allowed = await access;
       if (signal.aborted || this.jobs.get(tabId) !== job) {
@@ -1139,6 +1163,11 @@ export class Jobs {
     if (analyze) job.analyzeProfile = analyze.profile;
     const engine = this.engineFor(tabId, job, { client, profile, ...(resolved.connection ? { connection: resolved.connection } : {}) }, undefined, analyze, resolved.fallback, review?.ok ? review : undefined);
     if (job.strategy === REFINE_ID) job.reviewScope = new Set([...todo, ...drafts.keys()]);
+    // The sending rules (src/shared/memory.ts examplesFor): the route decides what may leave the device.
+    const looked = await memoryAhead;
+    if (signal.aborted || this.jobs.get(tabId) !== job) return;
+    job.memoryOn = looked?.on === true;
+    const examples = looked?.on ? examplesFor(looked.entries, { origin: originOf(doc.url), localOnly: resolved.localOnly !== undefined, acrossSites: looked.acrossSites }) : undefined;
     const engineJob: TranslationJob = {
       doc: {
         url: doc.url,
@@ -1169,6 +1198,7 @@ export class Jobs {
         ...(job.view.brief ? { brief: job.view.brief } : {}),
         // The chain ends in Chrome's Translator (M5-E7).
         ...(resolved.basic ? { basicFallback: true } : {}),
+        ...(examples && examples.length > 0 ? { memory: examples } : {}),
       },
     };
     try {
@@ -1376,6 +1406,18 @@ export class Jobs {
     if (saved || this.jobs.get(tabId) !== job || job.segs.get(id) !== next) return;
     job.segs.set(id, { ...next, editUnsaved: true });
     this.patch(tabId, job, {});
+  }
+
+  /** Counts the corrections a chunk's prompt used, by their hashed ids: never text. */
+  private logMemory(job: Job, info: unknown): void {
+    const refs = (info as { memory?: unknown } | undefined)?.memory;
+    if (!Array.isArray(refs)) return;
+    const log = (job.log.memory ??= { hits: 0, ids: new Set() });
+    for (const ref of refs as { id?: unknown }[]) {
+      if (typeof ref?.id !== 'string') continue;
+      log.hits++;
+      log.ids.add(ref.id);
+    }
   }
 
   /** Runs `task` after the job's earlier memory writes, whatever their outcome; its result or error is the caller's. */
@@ -1708,6 +1750,10 @@ export class Jobs {
         return;
       }
       case 'stage': {
+        if (event.stage === CONTEXT_STAGE) {
+          this.logMemory(job, event.info);
+          return;
+        }
         const promptId = (event.info as { promptId?: unknown } | undefined)?.promptId;
         if (event.status === 'start' && typeof promptId === 'string') job.log.promptIds.add(promptId);
         // Best: the drafts are done, only reviews are left (a lazy round may stop waiting for them).
@@ -2079,6 +2125,7 @@ export class Jobs {
       ...(v.firstVisibleAt === undefined ? {} : { firstTextAt: v.firstVisibleAt }),
       failed: v.counts.failed,
       ...(review === undefined ? {} : { review }),
+      ...(job.log.memory === undefined ? {} : { memory: { hits: job.log.memory.hits, ids: [...job.log.memory.ids].slice(0, MEMORY_IDS_LOGGED) } }),
       errors: [...errors.values()],
       ...(origin === undefined ? {} : { origin }),
     });

@@ -4,6 +4,8 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { MAX_MEMORY_ENTRIES, MAX_MEMORY_IMPORT_BYTES, MEMORY_FORMAT, memoryKey, openTranslationMemory, type MemoryEdit, type TranslationMemory } from '@/shared/memory';
+import { fakeDevice } from '@/shared/testing';
+import { MEMORY_ACROSS_SITES_KEY } from '@/shared/memory';
 import { MemorySection } from './Memory.tsx';
 
 const flush = async () => {
@@ -41,6 +43,31 @@ beforeEach(() => {
 const newMemory = () => openTranslationMemory({ factory: new IDBFactory() }) as TranslationMemory;
 const edit = (over: Partial<MemoryEdit> = {}): MemoryEdit => ({ source: 'Sign in', target: 'Đăng nhập', sourceLang: 'en', targetLang: 'vi', origin: 'https://a.example', localOnly: false, ...over });
 const file = (entries: unknown[]) => JSON.stringify({ format: MEMORY_FORMAT, formatVersion: 1, entries });
+
+describe('MemorySection: use corrections from other sites', () => {
+  it('is off by default, saved on the device when ticked, and shown ticked when it is on', async () => {
+    const t = fakeDevice();
+    render(<MemorySection memory={newMemory()} api={t.api} />, root);
+    await flush();
+    const box = q('memory-across-sites') as HTMLInputElement;
+    expect(box.checked).toBe(false);
+    await click('memory-across-sites');
+    expect(t.local.data.get(MEMORY_ACROSS_SITES_KEY)).toBe(true);
+    await click('memory-across-sites');
+    expect(t.local.data.get(MEMORY_ACROSS_SITES_KEY)).toBe(false);
+
+    const on = fakeDevice({ local: { [MEMORY_ACROSS_SITES_KEY]: true } });
+    render(<MemorySection memory={newMemory()} api={on.api} />, root);
+    await flush();
+    expect((q('memory-across-sites') as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('is not shown without a place to keep it', async () => {
+    render(<MemorySection memory={newMemory()} />, root);
+    await flush();
+    expect(root.querySelector('[data-testid="memory-across-sites"]')).toBeNull();
+  });
+});
 
 describe('MemorySection', () => {
   it('shows the count of the cap, and exports the memory to its own file', async () => {

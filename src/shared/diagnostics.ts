@@ -17,6 +17,8 @@ type Browser = typeof browser;
 
 export const DIAG_PREFIX = 'diag:';
 export const MAX_ENTRIES = 50;
+/** Most translation-memory ids a run's record keeps. */
+export const MEMORY_IDS_LOGGED = 20;
 /** storage.local: whether new entries keep the page's origin (off unless the user turns it on). */
 export const DIAG_SITES_KEY = 'diagnosticsSites';
 export const DIAG_FORMAT = 'translate-side-diagnostics';
@@ -63,6 +65,11 @@ export interface JobRecord {
    * failed a post-check, and that were not reviewed (budget, a failed call, dropped). Absent otherwise.
    */
   review?: { accepted: number; unchanged: number; rejected: number; skipped: number };
+  /**
+   * Translation memory: how many corrections went into the run's prompts as examples, and which
+   * (memory keys: hashes, never text; at most MEMORY_IDS_LOGGED). Absent when none did.
+   */
+  memory?: { hits: number; ids: readonly string[] };
   /** The errors that stopped the run or failed its segments: kind, HTTP status, how many. */
   errors: readonly { kind: LLMErrorKind; status?: number; count: number }[];
   /** The page's origin; kept only when the user turned on site names. */
@@ -92,6 +99,7 @@ export interface JobEntry {
   firstTextMs?: number;
   failed: number;
   review?: NonNullable<JobRecord['review']>;
+  memory?: { hits: number; ids: string[] };
   errors: { kind: LLMErrorKind; status?: number; count: number; message: string }[];
   origin?: string;
 }
@@ -169,6 +177,7 @@ export function jobEntry(api: Browser, record: JobRecord, sites: boolean): JobEn
     ...(record.firstTextAt === undefined ? {} : { firstTextMs: record.firstTextAt - record.startedAt }),
     failed: record.failed,
     ...(record.review === undefined ? {} : { review: { accepted: record.review.accepted, unchanged: record.review.unchanged, rejected: record.review.rejected, skipped: record.review.skipped } }),
+    ...(record.memory === undefined ? {} : { memory: { hits: record.memory.hits, ids: record.memory.ids.slice(0, MEMORY_IDS_LOGGED) } }),
     errors: record.errors.map((e) => ({ kind: e.kind, ...(e.status === undefined ? {} : { status: e.status }), count: e.count, message: KIND_MESSAGES[e.kind] ?? KIND_MESSAGES.unknown })),
     ...(sites && record.origin ? { origin: record.origin } : {}),
   };

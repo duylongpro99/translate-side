@@ -1,7 +1,7 @@
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import { openTranslationCache, type TranslationCache } from './cache.ts';
-import { cleanEditText, IMPORT_ORIGIN, MAX_MEMORY_ENTRIES, MAX_MEMORY_IMPORT_BYTES, MAX_MEMORY_TEXT, MEMORY_FORMAT, memoryExportFileName, memoryKey, openTranslationMemory, parseMemoryImport, type MemoryEdit, type TranslationMemory } from './memory.ts';
+import { cleanEditText, createMemorySnapshots, examplesFor, IMPORT_ORIGIN, MEMORY_ACROSS_SITES_KEY, NO_ORIGIN, readAcrossSites, type MemoryEntry, MAX_MEMORY_ENTRIES, MAX_MEMORY_IMPORT_BYTES, MAX_MEMORY_TEXT, MEMORY_FORMAT, memoryExportFileName, memoryKey, openTranslationMemory, parseMemoryImport, type MemoryEdit, type TranslationMemory } from './memory.ts';
 
 const open = (factory = new IDBFactory(), over: Parameters<typeof openTranslationMemory>[0] = {}) => openTranslationMemory({ factory, ...over }) as TranslationMemory;
 const edit = (over: Partial<MemoryEdit> = {}): MemoryEdit => ({ source: 'Sign in to your account', target: 'Đăng nhập vào tài khoản', sourceLang: 'en', targetLang: 'vi', origin: 'https://a.example', localOnly: false, ...over });
@@ -258,5 +258,66 @@ describe('export and import', () => {
     expect(parseMemoryImport(file([], { formatVersion: 0 })).ok).toBe(false);
     expect(parseMemoryImport(file([], { formatVersion: '1' })).ok).toBe(false);
     expect(parseMemoryImport(file([], { formatVersion: 2 }))).toEqual({ ok: false, error: expect.stringContaining('newer version') });
+  });
+});
+
+describe('examplesFor: what a run may send', () => {
+  const row = (key: string, over: Partial<MemoryEntry> = {}): MemoryEntry => ({ key, source: `source ${key}`, target: `target ${key}`, sourceLang: 'en', targetLang: 'vi', origin: 'https://a.example', localOnly: false, by: 'user', override: true, created: 1, updated: 1, ...over });
+  const snapshot = [
+    row('same'),
+    row('same-local', { localOnly: true }),
+    row('other', { origin: 'https://b.example' }),
+    row('other-local', { origin: 'https://b.example', localOnly: true }),
+    row('imported', { origin: IMPORT_ORIGIN, by: 'import', override: false }),
+    row('no-origin', { origin: NO_ORIGIN }),
+  ];
+  const ids = (scope: Parameters<typeof examplesFor>[1]) => examplesFor(snapshot, scope).map((e) => e.id);
+
+  it('a run that is not local-only never gets a local-only entry, and gets other origins only with the setting', () => {
+    expect(ids({ origin: 'https://a.example', localOnly: false, acrossSites: false })).toEqual(['same']);
+    expect(ids({ origin: 'https://a.example', localOnly: false, acrossSites: true })).toEqual(['same', 'other', 'imported', 'no-origin']);
+  });
+  it('a page without an origin is nobody’s same site', () => {
+    expect(ids({ origin: undefined, localOnly: false, acrossSites: false })).toEqual([]);
+    expect(ids({ origin: undefined, localOnly: false, acrossSites: true })).toEqual(['same', 'other', 'imported', 'no-origin']);
+  });
+  it('a local-only run gets every entry', () => {
+    expect(ids({ origin: 'https://a.example', localOnly: true, acrossSites: false })).toHaveLength(6);
+  });
+  it('gives the examples as id, source and target only, and the same array for the same scope', () => {
+    const scope = { origin: 'https://a.example', localOnly: false, acrossSites: false };
+    const a = examplesFor(snapshot, scope);
+    expect(a[0]).toEqual({ id: 'same', source: 'source same', target: 'target same' });
+    expect(examplesFor(snapshot, { ...scope })).toBe(a);
+    expect(examplesFor(snapshot, { ...scope, acrossSites: true })).not.toBe(a);
+    expect(examplesFor([...snapshot], scope)).not.toBe(a);
+  });
+});
+
+describe('createMemorySnapshots and the setting', () => {
+  it('keeps one snapshot per language until the store changes', async () => {
+    const m = open();
+    await m.put(edit());
+    let lists = 0;
+    const counted = { ...m, list: (lang: string, limit: number) => (lists++, m.list(lang, limit)) };
+    const snaps = createMemorySnapshots(counted);
+    const first = await snaps.load('vi');
+    expect(await snaps.load('vi')).toBe(first);
+    expect(lists).toBe(1);
+    expect(await snaps.load('fr')).toEqual([]);
+    expect(lists).toBe(2);
+    await m.put(edit({ source: 'Another sentence entirely', target: 'Một câu khác' }));
+    const next = await snaps.load('vi');
+    expect(next).not.toBe(first);
+    expect(next).toHaveLength(2);
+    await m.clear();
+    expect(await snaps.load('vi')).toEqual([]);
+  });
+
+  it('reads the across-sites setting, off unless it is exactly true or when the read fails', async () => {
+    expect(await readAcrossSites({ get: () => Promise.resolve({ [MEMORY_ACROSS_SITES_KEY]: true }) })).toBe(true);
+    expect(await readAcrossSites({ get: () => Promise.resolve({}) })).toBe(false);
+    expect(await readAcrossSites({ get: () => Promise.resolve({ [MEMORY_ACROSS_SITES_KEY]: 'yes' }) })).toBe(false);
+    expect(await readAcrossSites({ get: () => Promise.reject(new Error('x')) })).toBe(false);
   });
 });

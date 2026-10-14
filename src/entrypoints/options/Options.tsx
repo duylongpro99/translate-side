@@ -814,7 +814,7 @@ export function Options({ api, cache = openTranslationCache(), memory = openTran
       <ShortcutsSection api={api} />
       <SpendSection api={api} />
       <CacheSection cache={cache} />
-      <MemorySection memory={memory} />
+      <MemorySection memory={memory} api={api} />
       <TransferSection api={api} />
       <DiagnosticsSection api={api} />
     </main>

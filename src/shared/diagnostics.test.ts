@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { browser } from 'wxt/browser';
-import { createDiagnosticsLog, DIAG_PREFIX, DIAG_SITES_KEY, diagnosticsFile, MAX_ENTRIES, readDiagnostics, clearDiagnostics, type JobRecord } from './diagnostics.ts';
+import { createDiagnosticsLog, DIAG_PREFIX, DIAG_SITES_KEY, diagnosticsFile, MAX_ENTRIES, MEMORY_IDS_LOGGED, readDiagnostics, clearDiagnostics, type JobRecord } from './diagnostics.ts';
 import { fakeArea, fakeDevice, type FakeArea } from './testing.ts';
 
 type Browser = typeof browser;
@@ -99,6 +99,16 @@ describe('the diagnostics log', () => {
     const { api } = fakeDevice();
     await createDiagnosticsLog(api, () => 5000).crash('App', 'TypeError');
     expect(await readDiagnostics(api)).toEqual([{ type: 'panel-error', id: expect.stringMatching(/^5000-/), at: new Date(5000).toISOString(), extension: '', chrome: expect.any(String), component: 'App', error: 'TypeError' }]);
+  });
+
+  it('records the translation-memory counts and at most the capped number of hashed ids', async () => {
+    const { api } = fakeDevice();
+    const ids = Array.from({ length: MEMORY_IDS_LOGGED + 5 }, (_, i) => `m.${i}`);
+    await createDiagnosticsLog(api).record(record(1000, { memory: { hits: 40, ids } }));
+    await createDiagnosticsLog(api).record(record(2000));
+    const [plain, withMemory] = await readDiagnostics(api);
+    expect(withMemory).toMatchObject({ memory: { hits: 40, ids: ids.slice(0, MEMORY_IDS_LOGGED) } });
+    expect(plain).not.toHaveProperty('memory');
   });
 
   it('clears only its own keys', async () => {

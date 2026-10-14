@@ -13,6 +13,8 @@ import type { ContextProvider, ContextSnippet, MemoryExample } from '../types.ts
 import { pair } from './assemble.ts';
 
 export const TRANSLATION_MEMORY_PROVIDER_ID = 'translation-memory';
+/** The stage event that reports which memory entries a chunk's prompt used (`info: { chunk, memory: refs }`). */
+export const CONTEXT_STAGE = 'context';
 /** The lowest Dice score an example needs to be offered. */
 export const TM_MIN_SIMILARITY = 0.5;
 /** Most examples per chunk. */
@@ -87,12 +89,13 @@ function rank(index: Index, text: string, min: number): Scored[] {
   const query = new Set(tokens(text));
   if (query.size === 0) return [];
   // Shared-token counts by entry, in a flat array: common words have long posting lists.
-  const shared = new Uint16Array(index.sizes.length);
+  const shared = new Uint32Array(index.sizes.length);
   const touched: number[] = [];
   for (const t of query) {
     for (const at of index.postings.get(t) ?? []) {
-      if (shared[at] === 0) touched.push(at);
-      shared[at]++;
+      const n = shared[at] as number;
+      if (n === 0) touched.push(at);
+      shared[at] = n + 1;
     }
   }
   const out: Scored[] = [];

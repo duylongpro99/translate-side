@@ -19,9 +19,13 @@
 //   local-only rule stays local-only after a re-import. An imported file is untrusted: size-capped
 //   before parsing, validated entry by entry, checked like a model's answer (`checkSegment`), and
 //   its other provenance is ignored; its `localOnly` mark can only make an entry stricter.
+// - Retrieval (the translation-memory provider in the engine) gets examples only through
+//   `examplesFor`, which applies the sending rules: a run whose route is not local-only never
+//   receives an entry marked local-only, and receives an entry from another page's origin (or an
+//   imported one) only when the user turned on "Use corrections from other sites".
 // - No migration: later schema changes bump this database's own version in `onupgradeneeded`.
 import { i18n } from '#i18n';
-import { checkSegment } from '@/engine/index';
+import { checkSegment, type MemoryExample } from '@/engine/index';
 import { hash53 } from '@/segment/hash';
 import { normalizeForKey } from './cache.ts';
 
@@ -426,6 +430,73 @@ export function openTranslationMemory(options: IdbMemoryOptions = {}): Translati
       const row = (await req(tx.objectStore('meta').get('version'))) as VersionRow | undefined;
       await done(tx);
       return row?.n ?? 0;
+    },
+  };
+}
+
+// ---- Retrieval: the snapshot and the sending rules ------------------------------------------------
+
+/** storage.local: whether corrections made on other sites may be sent as examples (off unless the user turns it on). */
+export const MEMORY_ACROSS_SITES_KEY = 'memoryAcrossSites';
+
+/** The setting, read from a storage.local; a read that fails counts as off. */
+export async function readAcrossSites(local: { get(key: string): Promise<Record<string, unknown>> }): Promise<boolean> {
+  try {
+    return (await local.get(MEMORY_ACROSS_SITES_KEY))[MEMORY_ACROSS_SITES_KEY] === true;
+  } catch {
+    return false;
+  }
+}
+
+export interface ExamplesScope {
+  /** The page's origin; undefined for a page without one. */
+  origin: string | undefined;
+  /** The run's route is local-only (a site rule keeps the page on local connections). */
+  localOnly: boolean;
+  /** "Use corrections from other sites". */
+  acrossSites: boolean;
+}
+
+const views = new WeakMap<readonly MemoryEntry[], Map<string, readonly MemoryExample[]>>();
+
+/**
+ * The entries a run may send as examples. A local-only run may send all of them. Any other run
+ * never sends an entry marked local-only, and sends one made on another origin, or imported, only
+ * with `acrossSites`; a page without an origin is never "the same site". The result is memoised
+ * per snapshot and scope, so every round of a job gets the same array (and the engine the same index).
+ */
+export function examplesFor(snapshot: readonly MemoryEntry[], scope: ExamplesScope): readonly MemoryExample[] {
+  let byScope = views.get(snapshot);
+  if (!byScope) views.set(snapshot, (byScope = new Map()));
+  const id = `${scope.origin ?? ''}\u0000${scope.localOnly}\u0000${scope.acrossSites}`;
+  let view = byScope.get(id);
+  if (!view) {
+    const allowed = (e: MemoryEntry) => scope.localOnly || (!e.localOnly && (scope.acrossSites || (scope.origin !== undefined && e.origin === scope.origin)));
+    byScope.set(id, (view = snapshot.filter(allowed).map(({ key, source, target }) => ({ id: key, source, target }))));
+  }
+  return view;
+}
+
+export interface MemorySnapshots {
+  /** The entries of a target language (at most MAX_MEMORY_ENTRIES): the same array until the store changes. */
+  load(targetLang: string): Promise<readonly MemoryEntry[]>;
+}
+
+/**
+ * One snapshot per target language for the life of the panel, read again only when the store's
+ * write counter has changed (from any page of the extension). The counter is read before the
+ * entries, so a write landing in between only makes the next call reload.
+ */
+export function createMemorySnapshots(memory: TranslationMemory): MemorySnapshots {
+  const held = new Map<string, { version: number; entries: readonly MemoryEntry[] }>();
+  return {
+    async load(targetLang) {
+      const version = await memory.version();
+      const have = held.get(targetLang);
+      if (have?.version === version) return have.entries;
+      const entries = await memory.list(targetLang, MAX_MEMORY_ENTRIES);
+      held.set(targetLang, { version, entries });
+      return entries;
     },
   };
 }

@@ -4,8 +4,9 @@
 // says how many entries can be imported and how many were skipped before anything is stored.
 // Imported entries only guide translations unless the user ticks "Also replace matching blocks".
 import { useEffect, useRef, useState } from 'preact/hooks';
+import type { browser } from 'wxt/browser';
 import { i18n } from '#i18n';
-import { MAX_MEMORY_ENTRIES, MAX_MEMORY_IMPORT_BYTES, memoryExportFileName, parseMemoryImport, type ImportEntry, type TranslationMemory } from '@/shared/memory';
+import { MAX_MEMORY_ENTRIES, MAX_MEMORY_IMPORT_BYTES, MEMORY_ACROSS_SITES_KEY, memoryExportFileName, parseMemoryImport, readAcrossSites, type ImportEntry, type TranslationMemory } from '@/shared/memory';
 import { download } from './Transfer.tsx';
 
 type Note = { text: string; warn: boolean };
@@ -14,7 +15,9 @@ const errorText = (err: unknown) => (err instanceof Error ? err.message : String
 const num = (n: number) => n.toLocaleString('en-US');
 const mb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
-export function MemorySection({ memory }: { memory: TranslationMemory | undefined }) {
+/** `api`: where the device setting "Use corrections from other sites" lives; without it the checkbox is not shown. */
+export function MemorySection({ memory, api }: { memory: TranslationMemory | undefined; api?: typeof browser }) {
+  const [across, setAcross] = useState(false);
   const [count, setCount] = useState<number | undefined | null>();
   const [note, setNote] = useState<Note | undefined>();
   const [pending, setPending] = useState<{ entries: ImportEntry[]; skipped: number; fileName: string } | undefined>();
@@ -33,6 +36,9 @@ export function MemorySection({ memory }: { memory: TranslationMemory | undefine
       setCount(null);
       setNote({ text: i18n.t('options.memory.unreadable', [errorText(err)]), warn: true });
     });
+  useEffect(() => {
+    if (api) void readAcrossSites(api.storage.local).then(setAcross);
+  }, [api]);
   useEffect(() => {
     void load();
     // Reads the memory once on mount, and again after each change made here.
@@ -131,6 +137,27 @@ export function MemorySection({ memory }: { memory: TranslationMemory | undefine
         {count === undefined ? i18n.t('options.reading') : count === null ? '' : i18n.t('options.memory.stats', [num(count), num(MAX_MEMORY_ENTRIES)])}
       </p>
       <p class="opt__hint">{i18n.t('options.memory.hint')}</p>
+      {api ? (
+        <>
+          <label class="opt__check">
+            <input
+              type="checkbox"
+              data-testid="memory-across-sites"
+              checked={across}
+              aria-describedby="memory-across-hint"
+              onChange={(e) => {
+                const on = (e.target as HTMLInputElement).checked;
+                setAcross(on);
+                void api.storage.local.set({ [MEMORY_ACROSS_SITES_KEY]: on });
+              }}
+            />{' '}
+            {i18n.t('options.memory.acrossSites')}
+          </label>
+          <p class="opt__hint" id="memory-across-hint">
+            {i18n.t('options.memory.acrossSitesHint')}
+          </p>
+        </>
+      ) : null}
       <div class="opt__row">
         <button type="button" data-testid="memory-export" disabled={busy} onClick={() => void runExport()}>
           {i18n.t('options.memory.export')}
