@@ -436,6 +436,7 @@ options:
     hint: "Your corrections from the panel's Edit button. They stay on this device, are never synced, and are kept when you clear the cache. When it is full, a new correction replaces an imported one first (the oldest), then your own oldest."
     acrossSites: "Use corrections from other sites"
     acrossSitesHint: "Off: only corrections you made on the same site can guide a translation. On: corrections from your other sites, and imported ones, can guide it too. A correction made under a local-only site rule is only ever sent to local models."
+    acrossSitesFailed: "Could not save the setting: $1"
     export: "Export translation memory"
     exported: "Corrections exported: $1."
     exportTooLarge: "The file is $1, more than the $2 an import accepts, so it cannot be imported again as it is."

@@ -62,11 +62,15 @@ describe('Jobs: corrections as examples', () => {
     expect(text).not.toContain(CORRECTION);
   });
 
-  it('sends it on a local-only route, from any origin', async () => {
+  it('sends it on a local-only route; an entry of another origin still needs the setting there', async () => {
     const memory = newMemory();
-    await memory.put(edit({ localOnly: true, origin: 'https://other.example' }));
-    const { text } = await run({ memory }, {}, { localOnly: 'a.example/*' });
-    expect(text).toContain(CORRECTION);
+    await memory.put(edit({ localOnly: true }));
+    expect((await run({ memory }, {}, { localOnly: 'a.example/*' })).text).toContain(CORRECTION);
+
+    const other = newMemory();
+    await other.put(edit({ localOnly: true, origin: 'https://other.example' }));
+    expect((await run({ memory: other }, {}, { localOnly: 'a.example/*' })).text).not.toContain(CORRECTION);
+    expect((await run({ memory: other, acrossSites: () => Promise.resolve(true) }, {}, { localOnly: 'a.example/*' })).text).toContain(CORRECTION);
   });
 
   it('sends a correction of another origin only with "use corrections from other sites"', async () => {
@@ -128,7 +132,7 @@ describe('Jobs: corrections as examples', () => {
     expect(failing.jobs.get(1)?.counts.final).toBe(1);
   });
 
-  it('gives every round of a document the same array', async () => {
+  it('gives a restarted run the same array until the store changes', async () => {
     const memory = newMemory();
     await memory.put(edit());
     const seen: (readonly MemoryExample[] | undefined)[] = [];
@@ -156,12 +160,84 @@ describe('Jobs: corrections as examples', () => {
   });
 });
 
+describe('Jobs: which requests carry the corrections', () => {
+  const failing = (): LLMClient => {
+    const base = client();
+    return {
+      model: 'primary',
+      reasoningReserveTokens: base.reasoningReserveTokens,
+      async *stream() {
+        await Promise.resolve();
+        yield { type: 'error' as const, error: { kind: 'network' as const, message: 'down' } };
+      },
+    };
+  };
+  const withFallback = (primary: LLMClient, backup: LLMClient) => (): Promise<ClientResult> =>
+    Promise.resolve({ ok: true, client: primary, profile: GEMINI_PROFILE, fallback: [{ client: backup, profile: { ...GEMINI_PROFILE, id: 'backup', model: 'backup' } }] });
+  const instant = () => Promise.resolve();
+
+  it('a refine run sends the correction with its drafts and none with its review', async () => {
+    const memory = newMemory();
+    await memory.put(edit());
+    const c = translatorClient((lines, _n, req) => (isAnalyze(req) ? JSON.stringify(BRIEF) : (req.messages[0]?.content ?? '').startsWith('<review>') ? '<none/>' : renderLines(lines, (t) => `vi:${t}`)), { model: GEMINI_PROFILE.model });
+    const jobs = session({ translateClient: ok(c), memory });
+    await jobs.start(1, 'd', doc({ strategy: 'refine' }));
+    const reviews = c.requests.filter((r) => (r.messages[0]?.content ?? '').startsWith('<review>'));
+    const drafts = c.requests.filter((r) => !isAnalyze(r) && !reviews.includes(r));
+    expect(reviews.length).toBeGreaterThan(0);
+    expect(drafts.some((r) => (r.messages[0]?.content ?? '').includes(CORRECTION))).toBe(true);
+    expect(reviews.some((r) => `${r.system}\n${r.messages.map((m) => m.content).join('\n')}`.includes(CORRECTION))).toBe(false);
+  });
+
+  it('a fallback link never sees a local-only correction, and sees an ordinary one the same as the primary would', async () => {
+    const local = newMemory();
+    await local.put(edit({ localOnly: true }));
+    const backup = client();
+    const guarded = session({ translateClient: withFallback(failing(), backup), memory: local, acrossSites: () => Promise.resolve(true), sleep: instant });
+    await guarded.start(1, 'd', doc());
+    expect(backup.requests.length).toBeGreaterThan(0);
+    expect(userText(backup)).not.toContain(CORRECTION);
+
+    const plain = newMemory();
+    await plain.put(edit());
+    const backup2 = client();
+    const open = session({ translateClient: withFallback(failing(), backup2), memory: plain, sleep: instant });
+    await open.start(1, 'd', doc());
+    expect(userText(backup2)).toContain(CORRECTION);
+  });
+
+  it('gives the rounds of a lazy page the same array', async () => {
+    const memory = newMemory();
+    await memory.put(edit());
+    const seen: (readonly MemoryExample[] | undefined)[] = [];
+    const c = client();
+    const engine = (llm: LLMClient): TranslationEngine => {
+      const real = createEngine({ llm: () => llm, now: Date.now, sleep: fakeSleep(), strategies: [singlePass, contextual, refine, explain, basic], prompts: createDefaultPromptRegistry() });
+      return {
+        ...real,
+        translate(job, signal) {
+          seen.push(job.options.memory);
+          return real.translate(job, signal);
+        },
+      };
+    };
+    const segments: Segment[] = Array.from({ length: 500 }, (_, i) => ({ id: `s${i}`, kind: 'p', text: `${PAGE} Part ${i}`, inlineMarkup: `${PAGE} Part ${i}`, domPath: `/p[${i + 1}]`, translate: true }));
+    const jobs = session({ translateClient: ok(c), memory, engine, lazyAbove: 50 });
+    await jobs.start(1, 'd', doc({ segments }));
+    expect(jobs.get(1)?.lazy).toBeDefined();
+    jobs.setViewport(1, 'd', ['s499']);
+    for (let i = 0; i < 400 && seen.length < 2; i++) await settle(5);
+    expect(seen.length).toBeGreaterThanOrEqual(2);
+    expect(seen[0]).toHaveLength(1);
+    expect(seen[1]).toBe(seen[0]);
+  });
+});
+
 describe('Jobs: the memory never delays the first request', () => {
-  /** `routeMs`: how long the route takes to resolve (the settings reads of a real run); the memory loads meanwhile. */
-  const firstRequest = async (deps: Partial<JobDeps>, routeMs = 0) => {
+  const firstRequest = async (deps: Partial<JobDeps>) => {
     const c = client();
     const route = ok(c);
-    const jobs = session({ translateClient: () => settle(routeMs).then(route), cacheTimeoutMs: 80, ...deps });
+    const jobs = session({ translateClient: route, cacheTimeoutMs: 80, ...deps });
     const t0 = performance.now();
     const started = jobs.start(1, 'd', doc());
     while (c.requests.length === 0) await settle(1);
@@ -179,24 +255,44 @@ describe('Jobs: the memory never delays the first request', () => {
     expect(userText(c)).not.toContain(CORRECTION);
   });
 
-  it('a 5,000-entry store adds under 50 ms to the first request', async () => {
+  /** 5,000 entries of mixed length: mostly a sentence, some paragraphs, a few near the 4,000-character cap. */
+  const bigStore = async () => {
+    let seed = 5;
+    const next = (n: number) => (seed = (seed * 1103515245 + 12345) % 2147483648) % n;
+    const words = (count: number) => Array.from({ length: count }, () => (next(3) === 0 ? `common${next(6)}` : `word${next(4000)}`)).join(' ');
     const entries = Array.from({ length: 5000 }, (_, i) => {
-      const source = `Entry ${i} describes the topic${i % 97} and subject${i % 389} in some detail`;
+      const r = i % 20;
+      const source = r === 0 ? words(550).slice(0, 3900) : r < 4 ? words(55) : words(12);
       return { key: memoryKey('vi', source), source, target: `Mục ${i}`, sourceLang: 'en', targetLang: 'vi', localOnly: false, created: i + 1 };
     });
+    const memory = newMemory();
+    await memory.importMany(entries, { override: false });
+    await memory.put(edit());
+    return memory;
+  };
+  const best = (xs: number[]) => Math.min(...xs);
+
+  it('a warmed 5,000-entry store adds under 50 ms to the first request, against an empty store in the same run', async () => {
+    const full = await bigStore();
     const empty = newMemory();
-    const full = newMemory();
-    await full.importMany(entries, { override: false });
-    await full.put(edit());
-    // A fresh panel session each time, so the snapshot is read from the store every run. The route takes
-    // a realistic 40 ms (storage reads) and the memory loads while it resolves.
-    const times = async (memory: TranslationMemory) => {
+    const sample = async (memory: TranslationMemory) => {
       const out: number[] = [];
-      for (let i = 0; i < 3; i++) out.push((await firstRequest({ memory, acrossSites: () => Promise.resolve(true), cacheTimeoutMs: 1500 }, 40)).ms);
-      return Math.min(...out);
+      for (let i = 0; i < 5; i++) {
+        const c = client();
+        const jobs = session({ translateClient: ok(c), memory, acrossSites: () => Promise.resolve(true), cacheTimeoutMs: 1500 });
+        await jobs.warmMemory('vi');
+        const t0 = performance.now();
+        const started = jobs.start(1, 'd', doc());
+        while (c.requests.length === 0) await settle(0);
+        out.push(performance.now() - t0);
+        await started;
+        // The corrections were used when the store has them.
+        expect(userText(c).includes(CORRECTION)).toBe(memory === full);
+      }
+      return best(out);
     };
-    const base = await times(empty);
-    const loaded = await times(full);
+    const base = await sample(empty);
+    const loaded = await sample(full);
     expect(loaded - base).toBeLessThan(50);
   });
 });

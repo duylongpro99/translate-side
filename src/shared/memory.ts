@@ -21,7 +21,7 @@
 //   its other provenance is ignored; its `localOnly` mark can only make an entry stricter.
 // - Retrieval (the translation-memory provider in the engine) gets examples only through
 //   `examplesFor`, which applies the sending rules: a run whose route is not local-only never
-//   receives an entry marked local-only, and receives an entry from another page's origin (or an
+//   receives an entry marked local-only, and any run receives an entry from another page's origin (or an
 //   imported one) only when the user turned on "Use corrections from other sites".
 // - No migration: later schema changes bump this database's own version in `onupgradeneeded`.
 import { i18n } from '#i18n';
@@ -460,18 +460,19 @@ export interface ExamplesScope {
 const views = new WeakMap<readonly MemoryEntry[], Map<string, readonly MemoryExample[]>>();
 
 /**
- * The entries a run may send as examples. A local-only run may send all of them. Any other run
- * never sends an entry marked local-only, and sends one made on another origin, or imported, only
- * with `acrossSites`; a page without an origin is never "the same site". The result is memoised
- * per snapshot and scope, so every round of a job gets the same array (and the engine the same index).
+ * The entries a run may send as examples. A run that is not local-only never sends an entry marked
+ * local-only. On every route, an entry made on another origin, or imported, is sent only with
+ * `acrossSites`; a page without an origin is never "the same site". The result is memoised per
+ * snapshot and scope, so every round of a job gets the same array (and the engine the same index);
+ * the origin is part of the scope only when it decides something (`acrossSites` off).
  */
 export function examplesFor(snapshot: readonly MemoryEntry[], scope: ExamplesScope): readonly MemoryExample[] {
   let byScope = views.get(snapshot);
   if (!byScope) views.set(snapshot, (byScope = new Map()));
-  const id = `${scope.origin ?? ''}\u0000${scope.localOnly}\u0000${scope.acrossSites}`;
+  const id = `${scope.acrossSites ? '' : (scope.origin ?? '\u0001')}\u0000${scope.localOnly}\u0000${scope.acrossSites}`;
   let view = byScope.get(id);
   if (!view) {
-    const allowed = (e: MemoryEntry) => scope.localOnly || (!e.localOnly && (scope.acrossSites || (scope.origin !== undefined && e.origin === scope.origin)));
+    const allowed = (e: MemoryEntry) => (scope.localOnly || !e.localOnly) && (scope.acrossSites || (scope.origin !== undefined && e.origin === scope.origin));
     byScope.set(id, (view = snapshot.filter(allowed).map(({ key, source, target }) => ({ id: key, source, target }))));
   }
   return view;

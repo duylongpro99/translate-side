@@ -431,6 +431,7 @@ options:
     hint: "Các bản sửa bạn làm bằng nút Sửa trong bảng điều khiển. Chúng chỉ nằm trên thiết bị này, không bao giờ được đồng bộ và vẫn còn khi bạn xóa bộ nhớ đệm. Khi đầy, bản sửa mới sẽ thay bản đã nhập trước (bản cũ nhất), rồi mới đến bản sửa cũ nhất của chính bạn."
     acrossSites: "Dùng các bản sửa từ các trang web khác"
     acrossSitesHint: "Tắt: chỉ các bản sửa bạn làm trên cùng trang web mới được dùng để hướng dẫn bản dịch. Bật: các bản sửa từ những trang web khác của bạn, và các bản đã nhập, cũng được dùng. Bản sửa làm dưới quy tắc trang web chỉ-cục-bộ chỉ được gửi tới mô hình chạy cục bộ."
+    acrossSitesFailed: "Không thể lưu cài đặt: $1"
     export: "Xuất bộ nhớ dịch"
     exported: "Đã xuất $1 bản sửa."
     exportTooLarge: "Tệp có dung lượng $1, lớn hơn mức $2 mà chức năng nhập chấp nhận, nên không thể nhập lại nguyên tệp."

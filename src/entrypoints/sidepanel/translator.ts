@@ -114,6 +114,8 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   // Chrome's Translator, the `basic` fallback's translator (M5-E7); undefined in a browser without it.
   const mt = 'mt' in deps ? deps.mt : chromeTranslator();
   const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), memory: openTranslationMemory(), siteLocalOnly: async (url) => siteRuleFor((await readProviderSettings(api)).routing, url)?.localOnly === true, featureAvailable, acrossSites: () => readAcrossSites(api.storage.local), ...deps, mt });
+  // The corrections for the language in use are read while the panel opens, not on the first run's way.
+  void readPreferences(api).then((p) => jobs.warmMemory(p.targetLang), () => {});
   // No cache and no translation memory: a selection is a one-off, and its text is not kept beyond the session.
   // Single-pass: one request per chunk, never the contextual brief (analyze) call for a selection.
   const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target), ...deps, mt, strategy: 'single-pass', cache: undefined, memory: undefined, lazyAbove: Infinity, onJobRecord: undefined });
@@ -136,6 +138,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
    */
   const docFor = async ({ prefs, glossary, quality }: Settings, url: string, title: string, pageLang: string | undefined, segments: JobDoc['segments']): Promise<{ doc: JobDoc; skip: boolean }> => {
     const detection = await detectSourceLanguage({ override: prefs.sourceLang === 'auto' ? undefined : prefs.sourceLang, sample: detectionSample(segments), pageLang }, detector);
+    void jobs.warmMemory(prefs.targetLang);
     const base = { url, title, ...(pageLang === undefined ? {} : { pageLang }), sourceLang: detection.lang, targetLang: prefs.targetLang, detection, segments, style: prefs.style, gloss: prefs.gloss, glossary, budgetTokens: prefs.budgetTokens, media: { captions: prefs.captions, altText: prefs.altText }, strategy: requestedStrategy(quality), ...(quality.keepDraftsOnScreen && requestedStrategy(quality) === 'refine' ? { keepDraftsOnScreen: true } : {}) };
     if (!mixed) return { doc: base, skip: sameLanguage(detection.lang, prefs.targetLang) };
     const keep = await segmentsInLanguage(segments, prefs.targetLang, detector);

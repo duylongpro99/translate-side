@@ -699,10 +699,6 @@ interface Job {
   drops: Set<string>;
   /** Cache writes run one after another, so a later delete can't overtake an earlier put. */
   chain: Promise<void>;
-  /** The translation-memory feature was available at this run's start (the one read of the gate). */
-  memoryOn?: boolean;
-  /** Memory writes of this job (edits, discarded edits), one at a time and in the order they were asked. */
-  memoryWrites: Promise<void>;
   flush?: boolean;
   /** A retranslate run: its stored finals replace whatever the cache has. */
   fresh?: boolean;
@@ -774,6 +770,8 @@ export class Jobs {
 
   /** The memory's entries per target language, kept for the life of the panel and read again only when the store changed. */
   private readonly snapshots: MemorySnapshots | undefined;
+  /** Memory writes (edits, discarded edits), one at a time and in the order they were asked. */
+  private memoryWrites: Promise<void> = Promise.resolve();
 
   constructor(private readonly deps: JobDeps) {
     this.now = deps.now ?? Date.now;
@@ -1004,7 +1002,6 @@ export class Jobs {
       writes: new Map(),
       drops: new Set(),
       chain: Promise.resolve(),
-      memoryWrites: Promise.resolve(),
       backoff: new Map(),
       failures: new Map(),
       fallbackProfiles: [],
@@ -1055,8 +1052,9 @@ export class Jobs {
     // store never delays the first request. A timeout or an error means no examples for this run.
     const featureAvailable = this.deps.featureAvailable ?? (() => Promise.resolve(true));
     const snapshots = this.snapshots;
+    // Not for a single-pass run (a selection, a test): its prompt has no room for examples.
     const memoryAhead =
-      snapshots === undefined
+      snapshots === undefined || requested === 'single-pass'
         ? undefined
         : this.timed(
             (async () => {
@@ -1166,7 +1164,6 @@ export class Jobs {
     // The sending rules (src/shared/memory.ts examplesFor): the route decides what may leave the device.
     const looked = await memoryAhead;
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
-    job.memoryOn = looked?.on === true;
     const examples = looked?.on ? examplesFor(looked.entries, { origin: originOf(doc.url), localOnly: resolved.localOnly !== undefined, acrossSites: looked.acrossSites }) : undefined;
     const engineJob: TranslationJob = {
       doc: {
@@ -1252,7 +1249,6 @@ export class Jobs {
       writes: new Map(),
       drops: new Set(),
       chain: Promise.resolve(),
-      memoryWrites: Promise.resolve(),
       backoff: new Map(),
       failures: new Map(),
       fallbackProfiles: [],
@@ -1382,10 +1378,10 @@ export class Jobs {
     this.patch(tabId, job, { counts: count(job.segs) });
     let saved: boolean;
     try {
-      // Queued behind the job's other memory writes, and skipped when the block no longer shows this
+      // Queued behind the other memory writes, and skipped when the block no longer shows this
       // edit (a later save of it, or a Retranslate that discarded it): an older text never lands
       // after a newer one, and a discard is never undone by a save that was still waiting.
-      saved = await this.queueMemory(job, async () => {
+      saved = await this.queueMemory(async () => {
         if (job.segs.get(id) !== next) return true;
         // The site rule as it stands now counts too; a rule that cannot be read counts as local-only.
         const ruled = this.deps.siteLocalOnly ? await this.deps.siteLocalOnly(job.doc.url).catch(() => true) : false;
@@ -1408,7 +1404,23 @@ export class Jobs {
     this.patch(tabId, job, {});
   }
 
-  /** Counts the corrections a chunk's prompt used, by their hashed ids: never text. */
+  /**
+   * The user's corrections found in the memory are read in advance for `targetLang`, so a run's
+   * first request does not wait for the store. Never throws; a store that is slow or broken only
+   * means the run itself reads it (and gives up at the cache timeout).
+   */
+  warmMemory(targetLang: string): Promise<void> {
+    return this.snapshots?.load(targetLang).then(
+      () => undefined,
+      () => undefined,
+    ) ?? Promise.resolve();
+  }
+
+  /**
+   * Counts the corrections a chunk's prompt used, by their hashed ids: never text. The translate
+   * and revise passes report them; a chunk's repair call in the check stage reuses the prompt and
+   * is not counted again, so `hits` counts prompts built, not requests sent.
+   */
   private logMemory(job: Job, info: unknown): void {
     const refs = (info as { memory?: unknown } | undefined)?.memory;
     if (!Array.isArray(refs)) return;
@@ -1420,10 +1432,10 @@ export class Jobs {
     }
   }
 
-  /** Runs `task` after the job's earlier memory writes, whatever their outcome; its result or error is the caller's. */
-  private queueMemory<T>(job: Job, task: () => Promise<T>): Promise<T> {
-    const run = job.memoryWrites.then(task);
-    job.memoryWrites = run.then(
+  /** Runs `task` after the earlier memory writes, whatever their outcome; its result or error is the caller's. */
+  private queueMemory<T>(task: () => Promise<T>): Promise<T> {
+    const run = this.memoryWrites.then(task);
+    this.memoryWrites = run.then(
       () => undefined,
       () => undefined,
     );
@@ -1579,7 +1591,7 @@ export class Jobs {
         if (discard && outcome.status === 'final') {
           const source = segment.inlineMarkup || segment.text;
           try {
-            await this.queueMemory(job, async () => this.deps.memory?.delete([memoryKey(job.doc.targetLang, source)]));
+            await this.queueMemory(async () => this.deps.memory?.delete([memoryKey(job.doc.targetLang, source)]));
           } catch (err) {
             return settle(failedWith({ kind: 'unknown', message: `the edit could not be deleted: ${err instanceof Error ? err.message : String(err)}`, raw: err }));
           }

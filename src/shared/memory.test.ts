@@ -281,8 +281,9 @@ describe('examplesFor: what a run may send', () => {
     expect(ids({ origin: undefined, localOnly: false, acrossSites: false })).toEqual([]);
     expect(ids({ origin: undefined, localOnly: false, acrossSites: true })).toEqual(['same', 'other', 'imported', 'no-origin']);
   });
-  it('a local-only run gets every entry', () => {
-    expect(ids({ origin: 'https://a.example', localOnly: true, acrossSites: false })).toHaveLength(6);
+  it('a local-only run may send local-only entries, but still other origins only with the setting', () => {
+    expect(ids({ origin: 'https://a.example', localOnly: true, acrossSites: false })).toEqual(['same', 'same-local']);
+    expect(ids({ origin: 'https://a.example', localOnly: true, acrossSites: true })).toHaveLength(6);
   });
   it('gives the examples as id, source and target only, and the same array for the same scope', () => {
     const scope = { origin: 'https://a.example', localOnly: false, acrossSites: false };
@@ -290,6 +291,11 @@ describe('examplesFor: what a run may send', () => {
     expect(a[0]).toEqual({ id: 'same', source: 'source same', target: 'target same' });
     expect(examplesFor(snapshot, { ...scope })).toBe(a);
     expect(examplesFor(snapshot, { ...scope, acrossSites: true })).not.toBe(a);
+    // With the setting on the origin decides nothing: pages of any origin share one array.
+    const all = examplesFor(snapshot, { ...scope, acrossSites: true });
+    expect(examplesFor(snapshot, { origin: 'https://b.example', localOnly: false, acrossSites: true })).toBe(all);
+    expect(examplesFor(snapshot, { origin: undefined, localOnly: false, acrossSites: true })).toBe(all);
+    expect(examplesFor(snapshot, { origin: 'https://b.example', localOnly: false, acrossSites: false })).not.toBe(a);
     expect(examplesFor([...snapshot], scope)).not.toBe(a);
   });
 });

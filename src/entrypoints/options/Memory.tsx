@@ -18,6 +18,8 @@ const mb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 /** `api`: where the device setting "Use corrections from other sites" lives; without it the checkbox is not shown. */
 export function MemorySection({ memory, api }: { memory: TranslationMemory | undefined; api?: typeof browser }) {
   const [across, setAcross] = useState(false);
+  // A click made before the first read came back wins over it.
+  const clicked = useRef(false);
   const [count, setCount] = useState<number | undefined | null>();
   const [note, setNote] = useState<Note | undefined>();
   const [pending, setPending] = useState<{ entries: ImportEntry[]; skipped: number; fileName: string } | undefined>();
@@ -37,7 +39,7 @@ export function MemorySection({ memory, api }: { memory: TranslationMemory | und
       setNote({ text: i18n.t('options.memory.unreadable', [errorText(err)]), warn: true });
     });
   useEffect(() => {
-    if (api) void readAcrossSites(api.storage.local).then(setAcross);
+    if (api) void readAcrossSites(api.storage.local).then((on) => !clicked.current && setAcross(on));
   }, [api]);
   useEffect(() => {
     void load();
@@ -147,8 +149,13 @@ export function MemorySection({ memory, api }: { memory: TranslationMemory | und
               aria-describedby="memory-across-hint"
               onChange={(e) => {
                 const on = (e.target as HTMLInputElement).checked;
+                clicked.current = true;
                 setAcross(on);
-                void api.storage.local.set({ [MEMORY_ACROSS_SITES_KEY]: on });
+                // A setting that could not be saved is not shown as on: back to what it was, with the reason.
+                api.storage.local.set({ [MEMORY_ACROSS_SITES_KEY]: on }).catch((err: unknown) => {
+                  setAcross(!on);
+                  setNote({ text: i18n.t('options.memory.acrossSitesFailed', [errorText(err)]), warn: true });
+                });
               }}
             />{' '}
             {i18n.t('options.memory.acrossSites')}

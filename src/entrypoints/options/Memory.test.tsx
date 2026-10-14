@@ -57,9 +57,20 @@ describe('MemorySection: use corrections from other sites', () => {
     expect(t.local.data.get(MEMORY_ACROSS_SITES_KEY)).toBe(false);
 
     const on = fakeDevice({ local: { [MEMORY_ACROSS_SITES_KEY]: true } });
+    render(null, root);
     render(<MemorySection memory={newMemory()} api={on.api} />, root);
     await flush();
     expect((q('memory-across-sites') as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('reverts the checkbox and says why when the setting cannot be saved', async () => {
+    const t = fakeDevice();
+    const api = { ...t.api, storage: { ...t.api.storage, local: { ...t.api.storage.local, set: () => Promise.reject(new Error('quota')) } } } as typeof t.api;
+    render(<MemorySection memory={newMemory()} api={api} />, root);
+    await flush();
+    await click('memory-across-sites');
+    expect((q('memory-across-sites') as HTMLInputElement).checked).toBe(false);
+    expect(q('memory-note').textContent).toBe('Could not save the setting: quota');
   });
 
   it('is not shown without a place to keep it', async () => {
