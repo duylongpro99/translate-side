@@ -608,15 +608,23 @@ interface ContextProvider {
 }
 ```
 - v1: `DocumentBriefProvider` (from the analyze stage), `GlossaryProvider` (personal + auto
-  glossary), `ContextTailProvider` (the previous chunk with its translation).
-- Later: `TranslationMemoryProvider` (your past corrections; see below), `SiteStyleProvider`
+  glossary), `ContextTailProvider` (the previous chunk with its translation),
+  `TranslationMemoryProvider` (your past corrections; see below).
+- Later: `SiteStyleProvider`
   (per-site tone rules, e.g. keep docs formal), `DomainProvider` (domain term lists: medical,
   legal, maritime…).
 
-**Learning from the user (future):** when you edit a translated block in the panel, the
-(source, corrected target) pair goes into a local translation memory. Similar future passages
-retrieve it as an example, so the translator adapts to your preferences over time. This needs no
-change to stages, only a new provider.
+**Learning from the user:** when you edit a translated block in the panel, the
+(source, corrected target) pair goes into a local translation memory. Similar passages retrieve
+it as an example, so the translator adapts to your preferences over time. Retrieval is lexical
+(Dice coefficient over words, character pairs for scripts written without spaces; no
+embeddings): at most three examples per chunk, each at least 0.5 similar, within 400 tokens, in
+the chunk's `<context>` block (never the cached system block). The provider comes last, so the
+context tail keeps its share. The engine receives the examples only through `JobOptions.memory`;
+the panel decides what may be sent: an entry made under a local-only site rule never goes to a
+route that is not local-only, and an entry from another site (or an imported one) goes out only
+when the device setting "Use corrections from other sites" is on (default off). Each retrieval
+is logged as hashed ids and counts, never text.
 
 ### 5.5 Prompts are versioned assets
 - Prompts live in `engine/prompts/` as templates with an id and version (`translate@3`,
