@@ -624,7 +624,11 @@ context tail keeps its share. The engine receives the examples only through `Job
 the panel decides what may be sent: an entry made under a local-only site rule never goes to a
 route that is not local-only, and an entry from another site (or an imported one) goes out only
 when the device setting "Use corrections from other sites" is on (default off). Each retrieval
-is logged as hashed ids and counts, never text.
+is logged as hashed ids and counts, never text. A word is a letter or digit run; link markers are not words, and an example must share at
+least two words with a segment (or have the same words), so "Sign in" does not retrieve "Sign
+out". The translation cache key does not include the memory: a block already cached keeps its
+earlier translation until it is retranslated, so Retranslate is how a new correction reaches a
+page that was translated before it was made (an exact edit of the block itself always applies).
 
 ### 5.5 Prompts are versioned assets
 - Prompts live in `engine/prompts/` as templates with an id and version (`translate@3`,

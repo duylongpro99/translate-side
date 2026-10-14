@@ -232,7 +232,7 @@ if (!['natural', 'faithful', 'simplified'].includes(STYLE)) throw new Error('--s
 const GLOSS = opt.gloss as GlossMode;
 if (GLOSS !== 'first' && GLOSS !== 'off') throw new Error('--gloss expects first or off');
 const GLOSSARY: GlossaryEntry[] = parseGlossaryArg(opt.glossary as string);
-if (opt.memory !== undefined && !BRIEFED) throw new Error('--memory needs --strategy contextual or refine (single-pass sends translate@1, which has no context block)');
+if (opt.memory !== undefined && (!BRIEFED || TRANSLATE_PROMPT !== TRANSLATE_V2_PROMPT_ID)) throw new Error('--memory needs --strategy contextual or refine with translate@2 (translate@1 has no context block)');
 /** The corrections given to every run of this harness run (--memory); one array, so the engine builds its index once. */
 const MEMORY: readonly MemoryExample[] = opt.memory === undefined ? [] : parseMemoryFile(fs.readFileSync(path.resolve(opt.memory), 'utf8'), opt.target as string);
 const evalSet = opt.set === 'eval';

@@ -1,6 +1,7 @@
 // The harness's `--memory <file>`: a translation-memory export (the extension's own file, or one
 // written by hand in the same shape) read as the examples of a run. Only entries of the run's target
-// language count. Ids are hashes of the source, as the panel logs them: never text.
+// language count. Ids are hashes of the source (the harness has no panel to share its key scheme
+// with): the run's logs carry them in place of text.
 import type { MemoryExample } from '@/engine/index';
 import { hashId } from '@/segment/hash';
 
