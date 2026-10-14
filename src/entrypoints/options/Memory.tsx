@@ -12,6 +12,7 @@ type Note = { text: string; warn: boolean };
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 const num = (n: number) => n.toLocaleString('en-US');
+const mb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
 export function MemorySection({ memory }: { memory: TranslationMemory | undefined }) {
   const [count, setCount] = useState<number | undefined | null>();
@@ -57,7 +58,11 @@ export function MemorySection({ memory }: { memory: TranslationMemory | undefine
     try {
       const out = await memory.exportFile();
       download(out.json, memoryExportFileName());
-      setNote({ text: i18n.t('options.memory.exported', [num(out.count)]), warn: false });
+      // A memory bigger than an import accepts is still exported (it is the user's backup), but the file cannot be read back whole.
+      const tooBig = out.bytes > MAX_MEMORY_IMPORT_BYTES;
+      const parts = [i18n.t('options.memory.exported', [num(out.count)])];
+      if (tooBig) parts.push(i18n.t('options.memory.exportTooLarge', [mb(out.bytes), mb(MAX_MEMORY_IMPORT_BYTES)]));
+      setNote({ text: parts.join(' '), warn: tooBig });
     } catch (err) {
       setNote({ text: i18n.t('options.memory.exportFailed', [errorText(err)]), warn: true });
     } finally {

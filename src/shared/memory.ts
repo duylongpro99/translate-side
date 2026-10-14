@@ -10,11 +10,15 @@
 //   when the user ticked "Also replace matching blocks".
 // - Each entry records where it came from (`origin`, `localOnly`, `by`) so later readers can keep
 //   corrections made under a local-only site rule, or on another site, away from cloud routes.
-// - At most MAX_MEMORY_ENTRIES: a new edit at the cap replaces the least recently updated entry;
-//   an import never evicts anything, and stores only what fits.
+//   `localOnly` only ever tightens: no later edit or import of the same source clears it.
+// - At most MAX_MEMORY_ENTRIES: a new edit at the cap replaces the least recently updated imported
+//   entry, and the user's own only when no imported one is left; an import never evicts anything,
+//   and stores only what fits.
 // - The memory has its own export file (`translate-side-memory`), separate from the settings file.
-//   An imported file is untrusted: size-capped before parsing, validated entry by entry, checked
-//   like a model's answer (`checkSegment`), and stripped of its provenance.
+//   It carries each entry's `localOnly` mark (never its origin), so a correction made under a
+//   local-only rule stays local-only after a re-import. An imported file is untrusted: size-capped
+//   before parsing, validated entry by entry, checked like a model's answer (`checkSegment`), and
+//   its other provenance is ignored; its `localOnly` mark can only make an entry stricter.
 // - No migration: later schema changes bump this database's own version in `onupgradeneeded`.
 import { i18n } from '#i18n';
 import { checkSegment } from '@/engine/index';
@@ -31,6 +35,12 @@ export const MEMORY_FORMAT = 'translate-side-memory';
 export const MEMORY_FORMAT_VERSION = 1;
 /** The `origin` of every imported entry: it was made on no page of this profile. */
 export const IMPORT_ORIGIN = 'import';
+/**
+ * The `origin` of an edit made on a page without one (a `data:` or `file:` URL, an unparsable
+ * one). Never equal to a page's origin (those are `scheme://host`), so such an entry is never
+ * "same site" for anything.
+ */
+export const NO_ORIGIN = 'none';
 
 export type MemoryBy = 'user' | 'import';
 
@@ -71,6 +81,8 @@ export interface ImportEntry {
   target: string;
   sourceLang: string;
   targetLang: string;
+  /** The file marked it as made under a local-only site rule (only `true` counts). */
+  localOnly: boolean;
   created: number;
 }
 
@@ -92,8 +104,11 @@ export interface TranslationMemory {
   list(targetLang: string, limit: number): Promise<MemoryEntry[]>;
   count(): Promise<number>;
   clear(): Promise<void>;
-  /** The export file (JSON) and how many entries it holds. Provenance stays out of it. */
-  exportFile(now?: Date): Promise<{ json: string; count: number }>;
+  /**
+   * The export file (JSON), how many entries it holds and its size in bytes (UTF-8). Each entry
+   * keeps its `localOnly` mark; its origin and who made it stay on this device.
+   */
+  exportFile(now?: Date): Promise<{ json: string; count: number; bytes: number }>;
   /** Stores entries from parseMemoryImport as `by: 'import'`; `override` when the user ticked it. */
   importMany(entries: readonly ImportEntry[], options: { override: boolean }): Promise<ImportResult>;
   /** A counter bumped by every write, from any page of the extension: a reader reloads when it changed. */
@@ -111,6 +126,11 @@ export function memoryKey(targetLang: string, source: string): string {
 /** C0 and C1 control characters other than tab, line feed and carriage return. */
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/;
+/**
+ * What an imported text may not hold besides controls: bidirectional embeddings, overrides and
+ * isolates (they can make shown text read other than it is), and zero-width characters.
+ */
+const HIDDEN = /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/;
 // eslint-disable-next-line no-control-regex
 const CONTROL_ALL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g;
 
@@ -133,7 +153,7 @@ function importEntry(raw: unknown, now: number): ImportEntry | undefined {
   const { source, target, sourceLang = '', targetLang, created } = raw;
   if (typeof source !== 'string' || typeof target !== 'string' || typeof targetLang !== 'string' || typeof sourceLang !== 'string') return undefined;
   if (source.length > MAX_MEMORY_TEXT || target.length > MAX_MEMORY_TEXT) return undefined;
-  if (CONTROL.test(source) || CONTROL.test(target)) return undefined;
+  if (CONTROL.test(source) || CONTROL.test(target) || HIDDEN.test(source) || HIDDEN.test(target)) return undefined;
   if (!LANG_TAG.test(targetLang) || (sourceLang !== '' && !LANG_TAG.test(sourceLang))) return undefined;
   const src = normalizeForKey(source);
   const tgt = target.trim();
@@ -141,7 +161,7 @@ function importEntry(raw: unknown, now: number): ImportEntry | undefined {
   // Checked as a model's answer would be: code spans, links, URLs and numbers kept, a sane length, the right script.
   if (checkSegment(src, tgt, targetLang).length > 0) return undefined;
   const stamp = typeof created === 'number' && Number.isFinite(created) && created >= 0 && created <= now ? created : now;
-  return { key: memoryKey(targetLang, src), source: src, target: tgt, sourceLang, targetLang, created: stamp };
+  return { key: memoryKey(targetLang, src), source: src, target: tgt, sourceLang, targetLang, localOnly: raw.localOnly === true, created: stamp };
 }
 
 /**
@@ -168,8 +188,10 @@ export function parseMemoryImport(text: string, now: number = Date.now()): Memor
     const e = importEntry(r, now);
     if (e === undefined) skipped++;
     else {
+      // The last entry for a source wins, local-only if any of them was.
+      const earlier = byKey.get(e.key);
       byKey.delete(e.key);
-      byKey.set(e.key, e);
+      byKey.set(e.key, earlier?.localOnly ? { ...e, localOnly: true } : e);
     }
   }
   return { ok: true, entries: [...byKey.values()], skipped };
@@ -201,22 +223,28 @@ async function bump(meta: IDBObjectStore): Promise<void> {
   meta.put({ key: 'version', n: (row?.n ?? 0) + 1 } satisfies VersionRow);
 }
 
-/** Deletes the least recently updated entries (other than `keep`) until `extra` are gone. */
-function evict(store: IDBObjectStore, extra: number, keep: string): Promise<void> {
-  if (extra <= 0) return Promise.resolve();
-  const cursor = store.index('updated').openCursor();
-  return new Promise<void>((resolve, reject) => {
-    cursor.onerror = () => reject(cursor.error);
-    cursor.onsuccess = () => {
-      const c = cursor.result;
-      if (!c || extra <= 0) return resolve();
-      if ((c.value as MemoryEntry).key !== keep) {
-        c.delete();
-        extra--;
-      }
-      c.continue();
-    };
-  });
+/**
+ * Deletes `extra` entries (never `keep`), least recently updated first: imported ones, then, only
+ * if that is not enough, the user's own.
+ */
+async function evict(store: IDBObjectStore, extra: number, keep: string): Promise<void> {
+  for (const by of ['import', 'user'] as const) {
+    if (extra <= 0) return;
+    const cursor = store.index('updated').openCursor();
+    await new Promise<void>((resolve, reject) => {
+      cursor.onerror = () => reject(cursor.error);
+      cursor.onsuccess = () => {
+        const c = cursor.result;
+        if (!c || extra <= 0) return resolve();
+        const row = c.value as MemoryEntry;
+        if (row.key !== keep && row.by === by) {
+          c.delete();
+          extra--;
+        }
+        c.continue();
+      };
+    });
+  }
 }
 
 export interface IdbMemoryOptions {
@@ -237,8 +265,10 @@ export function openTranslationMemory(options: IdbMemoryOptions = {}): Translati
   const db = () =>
     (opening ??= new Promise<IDBDatabase>((resolve, reject) => {
       const open = factory.open(options.name ?? MEMORY_DB, MEMORY_DB_VERSION);
-      open.onupgradeneeded = () => {
+      open.onupgradeneeded = (e) => {
         const d = open.result;
+        // Version 1's stores; a later version adds its own steps after this one.
+        if (e.oldVersion >= 1) return;
         const entries = d.createObjectStore('entries', { keyPath: 'key' });
         entries.createIndex('targetLang', 'targetLang');
         entries.createIndex('updated', 'updated');
@@ -285,7 +315,7 @@ export function openTranslationMemory(options: IdbMemoryOptions = {}): Translati
         targetLang: edit.targetLang,
         origin: edit.origin,
         // Once made under a local-only rule, an entry stays local-only, whatever later edits it.
-        localOnly: edit.localOnly || (old?.by === 'user' && old.localOnly),
+        localOnly: edit.localOnly || old?.localOnly === true,
         by: 'user',
         override: true,
         created: old?.created ?? stamp,
@@ -350,10 +380,11 @@ export function openTranslationMemory(options: IdbMemoryOptions = {}): Translati
       const rows = (await req(tx.objectStore('entries').getAll())) as MemoryEntry[];
       await done(tx);
       rows.sort((a, b) => a.created - b.created);
-      // Where an entry was made (its site, a local-only rule) stays on this device.
-      const entries = rows.map(({ source, target, sourceLang, targetLang, created, updated }) => ({ source, target, sourceLang, targetLang, created, updated }));
-      const json = JSON.stringify({ format: MEMORY_FORMAT, formatVersion: MEMORY_FORMAT_VERSION, exportedAt: at.toISOString(), entries }, null, 2);
-      return { json, count: entries.length };
+      // The site an entry was made on stays on this device; its local-only mark goes with it, so a
+      // re-import keeps it away from cloud routes. Compact, so a full memory fits the import cap more often.
+      const entries = rows.map(({ source, target, sourceLang, targetLang, localOnly, created, updated }) => ({ source, target, sourceLang, targetLang, ...(localOnly ? { localOnly: true } : {}), created, updated }));
+      const json = JSON.stringify({ format: MEMORY_FORMAT, formatVersion: MEMORY_FORMAT_VERSION, exportedAt: at.toISOString(), entries });
+      return { json, count: entries.length, bytes: new TextEncoder().encode(json).byteLength };
     },
 
     async importMany(entries, { override }) {
@@ -362,10 +393,16 @@ export function openTranslationMemory(options: IdbMemoryOptions = {}): Translati
       const tx = (await db()).transaction(['entries', 'meta'], 'readwrite');
       const store = tx.objectStore('entries');
       let size = await req(store.count());
+      let marked = false;
       const stamp = now();
       for (const e of entries) {
         const old = (await req(store.get(e.key))) as MemoryEntry | undefined;
         if (old?.by === 'user') {
+          // The user's text stays; a file may still mark it local-only (never the reverse).
+          if (e.localOnly && !old.localOnly) {
+            store.put({ ...old, localOnly: true } satisfies MemoryEntry);
+            marked = true;
+          }
           result.kept++;
           continue;
         }
@@ -373,12 +410,13 @@ export function openTranslationMemory(options: IdbMemoryOptions = {}): Translati
           result.full++;
           continue;
         }
-        // The file's own provenance is never trusted: an import is from no site and under no rule.
-        store.put({ key: e.key, source: e.source, target: e.target, sourceLang: e.sourceLang, targetLang: e.targetLang, origin: IMPORT_ORIGIN, localOnly: false, by: 'import', override, created: e.created, updated: stamp } satisfies MemoryEntry);
+        // The file's own origin is never trusted: an import is from no site. Its local-only mark
+        // only tightens: an entry already local-only stays so.
+        store.put({ key: e.key, source: e.source, target: e.target, sourceLang: e.sourceLang, targetLang: e.targetLang, origin: IMPORT_ORIGIN, localOnly: e.localOnly || old?.localOnly === true, by: 'import', override, created: e.created, updated: stamp } satisfies MemoryEntry);
         if (!old) size++;
         result.stored++;
       }
-      if (result.stored > 0) await bump(tx.objectStore('meta'));
+      if (result.stored > 0 || marked) await bump(tx.objectStore('meta'));
       await done(tx);
       return result;
     },

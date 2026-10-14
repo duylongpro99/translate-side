@@ -51,6 +51,25 @@ describe('openTranslationMemory', () => {
     expect(await m.count()).toBe(0);
   });
 
+  it('at the cap, a new edit replaces the oldest imported entry before any of the user\u2019s own', async () => {
+    let t = 1;
+    const m = open(undefined, { maxEntries: 3, now: () => t++ });
+    await m.put(edit({ source: 'mine old', target: 'của tôi cũ' }));
+    const parsed = parseMemoryImport(file([entry({ source: 'Back', target: 'Quay lại' }), entry({ source: 'Next', target: 'Tiếp' })]));
+    if (!parsed.ok) throw new Error(parsed.error);
+    await m.importMany(parsed.entries, { override: false });
+    await m.put(edit({ source: 'mine new', target: 'của tôi mới' }));
+    const sources = async () => (await m.list('vi', 10)).map((e) => e.source).sort();
+    // Both imported entries share one stamp; one of them goes, the user's oldest edit stays.
+    expect(await sources()).toContain('mine old');
+    expect((await m.list('vi', 10)).filter((e) => e.by === 'import')).toHaveLength(1);
+    await m.put(edit({ source: 'mine newer', target: 'của tôi mới hơn' }));
+    expect(await sources()).toEqual(['mine new', 'mine newer', 'mine old']);
+    // No imported entry left: the user's least recently updated one goes.
+    await m.put(edit({ source: 'mine newest', target: 'mới nhất' }));
+    expect(await sources()).toEqual(['mine new', 'mine newer', 'mine newest']);
+  });
+
   it('at the cap, a new edit replaces the least recently updated entry', async () => {
     let t = 1;
     const m = open(undefined, { maxEntries: 3, now: () => t++ });
@@ -115,9 +134,12 @@ describe('export and import', () => {
     await m.put(edit({ source: 'Version `v2` is out', target: 'Phiên bản `v2` đã ra mắt' }));
     const out = await m.exportFile(new Date(0));
     expect(out.count).toBe(2);
-    // Where an entry was made stays on this device.
+    expect(out.bytes).toBe(new TextEncoder().encode(out.json).byteLength);
+    // The site an entry was made on stays on this device; its local-only mark goes with it.
     expect(out.json).not.toContain('intranet');
-    expect(out.json).not.toContain('localOnly');
+    expect(out.json).not.toContain('origin');
+    expect(out.json).not.toContain('\n');
+    expect((JSON.parse(out.json) as { entries: { localOnly?: boolean }[] }).entries.map((e) => e.localOnly)).toEqual([true, undefined]);
 
     const parsed = parseMemoryImport(out.json, 1000);
     expect(parsed).toMatchObject({ ok: true, skipped: 0 });
@@ -126,7 +148,44 @@ describe('export and import', () => {
     expect(await fresh.importMany(parsed.entries, { override: false })).toEqual({ stored: 2, kept: 0, full: 0 });
     const rows = await fresh.list('vi', 10);
     expect(rows.map((r) => r.source).sort()).toEqual(['Sign in to your account', 'Version `v2` is out']);
-    for (const r of rows) expect(r).toMatchObject({ by: 'import', origin: IMPORT_ORIGIN, localOnly: false, override: false, created: 50, updated: 2000 });
+    for (const r of rows) expect(r).toMatchObject({ by: 'import', origin: IMPORT_ORIGIN, override: false, created: 50, updated: 2000 });
+    // The round trip keeps the local-only mark.
+    expect(Object.fromEntries(rows.map((r) => [r.source, r.localOnly]))).toEqual({ 'Sign in to your account': true, 'Version `v2` is out': false });
+  });
+
+  it('a file can never loosen the local-only mark, only tighten it', async () => {
+    const m = open();
+    // An imported local-only entry, then a file that says otherwise.
+    const strict = parseMemoryImport(file([entry({ localOnly: true })]));
+    const loose = parseMemoryImport(file([entry({ target: 'Đăng nhập', localOnly: false })]));
+    if (!strict.ok || !loose.ok) throw new Error('parse');
+    await m.importMany(strict.entries, { override: false });
+    await m.importMany(loose.entries, { override: false });
+    const k = memoryKey('vi', 'Sign in to your account');
+    expect((await m.getMany([k])).get(k)).toMatchObject({ target: 'Đăng nhập', localOnly: true });
+    // A file marks the user's own edit local-only (the flag only: its text stays).
+    await m.put(edit({ source: 'Back', target: 'Quay lại' }));
+    const before = await m.version();
+    const mark = parseMemoryImport(file([entry({ source: 'Back', target: 'Trở về', localOnly: true })]));
+    if (!mark.ok) throw new Error(mark.error);
+    expect(await m.importMany(mark.entries, { override: true })).toEqual({ stored: 0, kept: 1, full: 0 });
+    expect((await m.getMany([memoryKey('vi', 'Back')])).get(memoryKey('vi', 'Back'))).toMatchObject({ by: 'user', target: 'Quay lại', localOnly: true });
+    expect(await m.version()).toBe(before + 1);
+    // Only `true` counts as a mark.
+    expect(parseMemoryImport(file([entry({ localOnly: 'yes' })])).ok && (parseMemoryImport(file([entry({ localOnly: 'yes' })])) as { entries: { localOnly: boolean }[] }).entries[0]?.localOnly).toBe(false);
+  });
+
+  it('duplicates of one source in a file: the last text wins, local-only if any of them was', () => {
+    const parsed = parseMemoryImport(file([entry({ target: 'Đăng nhập tài khoản cũ', localOnly: true }), entry({ target: 'Đăng nhập tài khoản mới' })]));
+    expect(parsed.ok && parsed.entries).toEqual([expect.objectContaining({ target: 'Đăng nhập tài khoản mới', localOnly: true })]);
+  });
+
+  it("the user's edit over an imported local-only entry stays local-only, even made on a public page", async () => {
+    const m = open();
+    const parsed = parseMemoryImport(file([entry({ localOnly: true })]));
+    if (!parsed.ok) throw new Error(parsed.error);
+    await m.importMany(parsed.entries, { override: false });
+    expect(await m.put(edit({ origin: 'https://public.example', localOnly: false }))).toMatchObject({ by: 'user', localOnly: true });
   });
 
   it('an import ticked "Also replace matching blocks" stores overrides', async () => {
@@ -149,7 +208,8 @@ describe('export and import', () => {
 
   it('ignores the provenance and key a file claims for its entries', () => {
     const parsed = parseMemoryImport(file([entry({ key: 'forged', origin: 'https://bank.example', localOnly: true, by: 'user', override: true })]));
-    expect(parsed.ok && parsed.entries[0]).toEqual({ key: memoryKey('vi', 'Sign in to your account'), source: 'Sign in to your account', target: 'Đăng nhập vào tài khoản', sourceLang: 'en', targetLang: 'vi', created: 1 });
+    // Only its local-only mark is read, and only to make the entry stricter.
+    expect(parsed.ok && parsed.entries[0]).toEqual({ key: memoryKey('vi', 'Sign in to your account'), source: 'Sign in to your account', target: 'Đăng nhập vào tài khoản', sourceLang: 'en', targetLang: 'vi', localOnly: true, created: 1 });
   });
 
   it('skips and counts entries that drop a number or a code span, are over-long, hold control characters or are malformed', () => {
@@ -160,6 +220,9 @@ describe('export and import', () => {
         entry({ source: 'Run `npm test` first', target: 'Chạy kiểm thử trước' }),
         entry({ source: 'x'.repeat(MAX_MEMORY_TEXT + 1), target: 'y' }),
         entry({ source: 'Hello', target: 'Xin\u0000 chào' }),
+        entry({ source: 'Hello there', target: 'Xin \u202Echào' }),
+        entry({ source: 'Hello again', target: 'Xin\u2066 chào' }),
+        entry({ source: 'Good\u200B day', target: 'Chào ngày mới' }),
         entry({ targetLang: 'not a language' }),
         entry({ sourceLang: 42 }),
         entry({ target: '   ' }),
@@ -167,7 +230,7 @@ describe('export and import', () => {
         null,
       ]),
     );
-    expect(parsed).toMatchObject({ ok: true, skipped: 9 });
+    expect(parsed).toMatchObject({ ok: true, skipped: 12 });
     expect(parsed.ok && parsed.entries).toHaveLength(1);
   });
 

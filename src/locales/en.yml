@@ -436,6 +436,7 @@ options:
     hint: "Your corrections from the panel's Edit button. They stay on this device, are never synced, and are kept when you clear the cache. When it is full, a new correction replaces the one changed longest ago."
     export: "Export translation memory"
     exported: "Corrections exported: $1."
+    exportTooLarge: "The file is $1, more than the $2 an import accepts, so it cannot be imported again as it is."
     exportFailed: "Could not export the translation memory: $1"
     file: "Import a translation memory file"
     preview: "Can be imported: $1. Skipped: $2 (malformed, too long, or they drop a number, code span or link of their source)."

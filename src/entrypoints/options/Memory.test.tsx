@@ -56,6 +56,16 @@ describe('MemorySection', () => {
     expect(q('memory-note').textContent).toBe('Corrections exported: 1.');
   });
 
+  it('warns when the export is larger than an import accepts', async () => {
+    const memory = { ...newMemory(), exportFile: () => Promise.resolve({ json: '{}', count: 5000, bytes: 12 * 1024 * 1024 }) };
+    render(<MemorySection memory={memory} />, root);
+    await flush();
+    await click('memory-export');
+    const note = q('memory-note');
+    expect(note.textContent).toBe('Corrections exported: 5,000. The file is 12.0 MB, more than the 10.0 MB an import accepts, so it cannot be imported again as it is.');
+    expect(note.className).toContain('warn');
+  });
+
   it('previews an import with its valid and skipped counts, and imports examples only unless ticked', async () => {
     const memory = newMemory();
     render(<MemorySection memory={memory} />, root);
