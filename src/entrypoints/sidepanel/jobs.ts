@@ -695,6 +695,8 @@ interface Job {
   drops: Set<string>;
   /** Cache writes run one after another, so a later delete can't overtake an earlier put. */
   chain: Promise<void>;
+  /** Memory writes of this job (edits, discarded edits), one at a time and in the order they were asked. */
+  memoryWrites: Promise<void>;
   flush?: boolean;
   /** A retranslate run: its stored finals replace whatever the cache has. */
   fresh?: boolean;
@@ -992,6 +994,7 @@ export class Jobs {
       writes: new Map(),
       drops: new Set(),
       chain: Promise.resolve(),
+      memoryWrites: Promise.resolve(),
       backoff: new Map(),
       failures: new Map(),
       fallbackProfiles: [],
@@ -1219,6 +1222,7 @@ export class Jobs {
       writes: new Map(),
       drops: new Set(),
       chain: Promise.resolve(),
+      memoryWrites: Promise.resolve(),
       backoff: new Map(),
       failures: new Map(),
       fallbackProfiles: [],
@@ -1348,23 +1352,40 @@ export class Jobs {
     this.patch(tabId, job, { counts: count(job.segs) });
     let saved: boolean;
     try {
-      // The site rule as it stands now counts too; a rule that cannot be read counts as local-only.
-      const ruled = this.deps.siteLocalOnly ? await this.deps.siteLocalOnly(job.doc.url).catch(() => true) : false;
-      await this.deps.memory?.put({
-        source: segment.inlineMarkup || segment.text,
-        target,
-        sourceLang: job.view.sourceLang,
-        targetLang: job.doc.targetLang,
-        origin: originOf(job.doc.url) ?? NO_ORIGIN,
-        localOnly: ruled || job.localOnly || job.view.localOnly !== undefined,
+      // Queued behind the job's other memory writes, and skipped when the block no longer shows this
+      // edit (a later save of it, or a Retranslate that discarded it): an older text never lands
+      // after a newer one, and a discard is never undone by a save that was still waiting.
+      saved = await this.queueMemory(job, async () => {
+        if (job.segs.get(id) !== next) return true;
+        // The site rule as it stands now counts too; a rule that cannot be read counts as local-only.
+        const ruled = this.deps.siteLocalOnly ? await this.deps.siteLocalOnly(job.doc.url).catch(() => true) : false;
+        if (job.segs.get(id) !== next) return true;
+        await this.deps.memory?.put({
+          source: segment.inlineMarkup || segment.text,
+          target,
+          sourceLang: job.view.sourceLang,
+          targetLang: job.doc.targetLang,
+          origin: originOf(job.doc.url) ?? NO_ORIGIN,
+          localOnly: ruled || job.localOnly || job.view.localOnly !== undefined,
+        });
+        return this.deps.memory !== undefined;
       });
-      saved = this.deps.memory !== undefined;
     } catch {
       saved = false;
     }
     if (saved || this.jobs.get(tabId) !== job || job.segs.get(id) !== next) return;
     job.segs.set(id, { ...next, editUnsaved: true });
     this.patch(tabId, job, {});
+  }
+
+  /** Runs `task` after the job's earlier memory writes, whatever their outcome; its result or error is the caller's. */
+  private queueMemory<T>(job: Job, task: () => Promise<T>): Promise<T> {
+    const run = job.memoryWrites.then(task);
+    job.memoryWrites = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
   }
 
   /**
@@ -1516,7 +1537,7 @@ export class Jobs {
         if (discard && outcome.status === 'final') {
           const source = segment.inlineMarkup || segment.text;
           try {
-            await this.deps.memory?.delete([memoryKey(job.doc.targetLang, source)]);
+            await this.queueMemory(job, async () => this.deps.memory?.delete([memoryKey(job.doc.targetLang, source)]));
           } catch (err) {
             return settle(failedWith({ kind: 'unknown', message: `the edit could not be deleted: ${err instanceof Error ? err.message : String(err)}`, raw: err }));
           }

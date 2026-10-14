@@ -189,6 +189,32 @@ describe('Jobs.edit and the translation memory', () => {
     expect(await memory.count()).toBe(0);
   });
 
+  it('two quick saves of a block store the newer text, even when the older one reads its site rule slowly', async () => {
+    const memory = newMemory();
+    let calls = 0;
+    // The first save's rule read is the slow one.
+    const siteLocalOnly = () => (calls++ === 0 ? settle(40).then(() => false) : Promise.resolve(false));
+    const jobs = session({ translateClient: ok(client()), memory, siteLocalOnly });
+    await jobs.start(1, 'd', doc(2));
+    await Promise.all([jobs.edit(1, 's0', 'Bản cũ'), jobs.edit(1, 's0', 'Bản mới')]);
+    expect(seg(jobs, 's0')).toMatchObject({ text: 'Bản mới', edited: 'user' });
+    expect((await memory.getMany([key(0)])).get(key(0))?.target).toBe('Bản mới');
+    expect(await memory.count()).toBe(1);
+  });
+
+  it('a Retranslate confirmed right after a save is not undone by that save', async () => {
+    const memory = newMemory();
+    const siteLocalOnly = () => settle(40).then(() => false);
+    const jobs = session({ translateClient: ok(client()), memory, siteLocalOnly, cache: newCache() });
+    await jobs.start(1, 'd', doc(2));
+    const saving = jobs.edit(1, 's0', 'Của tôi');
+    await jobs.discardEdit(1, 's0');
+    await saving;
+    expect(seg(jobs, 's0')).toMatchObject({ status: 'final', text: `vi:${source(0)}` });
+    expect(seg(jobs, 's0')?.edited).toBeUndefined();
+    expect(await memory.count()).toBe(0);
+  });
+
   it('a memory that never answers does not hold the translation', async () => {
     const memory = { ...newMemory(), getMany: () => new Promise<never>(() => {}) };
     const jobs = session({ translateClient: ok(client()), memory, cacheTimeoutMs: 30 });
