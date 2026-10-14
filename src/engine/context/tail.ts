@@ -8,7 +8,7 @@
 // nearest paragraph goes first; if even it doesn't fit, its end is sent, cut at a word.
 import { CHARS_PER_TOKEN, estimateTokens } from '../tokens.ts';
 import type { ContextProvider } from '../types.ts';
-import { neutralizeContextTags } from './assemble.ts';
+import { pair } from './assemble.ts';
 import { segmentsBefore } from './glossary.ts';
 
 export const CONTEXT_TAIL_PROVIDER_ID = 'context-tail';
@@ -18,11 +18,6 @@ export const CONTEXT_TAIL_MAX_TOKENS = 300;
 export const CONTEXT_TAIL_PARAGRAPHS = 2;
 
 const HEAD = 'The text just before these segments, for continuity:';
-
-function pair(source: string, translation: string | undefined): string {
-  const src = `<source>${neutralizeContextTags(source)}</source>`;
-  return translation === undefined ? src : `${src}\n<translation>${neutralizeContextTags(translation)}</translation>`;
-}
 
 /** The end of `text` in at most `maxChars` characters, cut at a word, with "…" in front. */
 function endOf(text: string, maxChars: number): string {

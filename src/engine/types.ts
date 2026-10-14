@@ -94,6 +94,21 @@ export interface JobOptions {
    * `basic` strategy for the blocks it has not translated (engine.ts). Absent: no such switch.
    */
   basicFallback?: boolean;
+  /**
+   * The user's earlier corrections the shell chose to send for this run (the same target language,
+   * already filtered by where each was made and where this run goes). The translation-memory
+   * provider ranks them by similarity to a chunk and offers the closest as examples. Absent: none.
+   * Keep the array stable across the rounds of a job: its search index is built once per array.
+   */
+  memory?: readonly MemoryExample[];
+}
+
+/** One correction of the translation memory, as the engine sees it. */
+export interface MemoryExample {
+  /** The memory key (a hash): what a log or a diagnostics record may carry in place of the text. */
+  id: string;
+  source: string;
+  target: string;
 }
 
 export interface TranslationJob {
@@ -328,6 +343,8 @@ export interface ContextSnippet {
    */
   scope: 'document' | 'chunk';
   text: string;
+  /** The memory entries the text was made from, with their similarity: logged, never the text. */
+  refs?: readonly { id: string; score: number }[];
 }
 
 /** What a provider is asked (§5.4's query, plus what the v1 providers read). */

@@ -65,3 +65,9 @@ const CONTEXT_TAG = /<(\s*\/?\s*)(context|source|translation|seg|brief|glossary|
 export function neutralizeContextTags(text: string): string {
   return text.replace(CONTEXT_TAG, '‹$1$2');
 }
+
+/** A source, with its translation when there is one, as a `<source>`/`<translation>` pair of a chunk's `<context>` block. */
+export function pair(source: string, translation: string | undefined): string {
+  const src = `<source>${neutralizeContextTags(source)}</source>`;
+  return translation === undefined ? src : `${src}\n<translation>${neutralizeContextTags(translation)}</translation>`;
+}

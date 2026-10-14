@@ -394,7 +394,7 @@ describe('token budgeting (plan M2 §5: brief and glossary first, the tail gets 
   });
 
   it('runs the v1 providers in order brief, glossary, tail within CONTEXT_BUDGET_TOKENS', async () => {
-    expect(DEFAULT_CONTEXT_PROVIDERS.map((p) => p.id)).toEqual(['brief', 'glossary', 'context-tail']);
+    expect(DEFAULT_CONTEXT_PROVIDERS.map((p) => p.id)).toEqual(['brief', 'glossary', 'context-tail', 'translation-memory']);
     expect(CONTEXT_BUDGET_TOKENS).toBeGreaterThanOrEqual(1000);
     const memory = withBrief([{ term: 'deploy', rendering: 'deploy' }]);
     const got = await gatherContext(DEFAULT_CONTEXT_PROVIDERS, query({ memory }));

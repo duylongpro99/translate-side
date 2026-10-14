@@ -7,6 +7,7 @@ import { estimateTokens } from '../tokens.ts';
 import type { ContextProvider, ContextQuery, ContextSnippet, GlossaryEntry } from '../types.ts';
 import { BRIEF_MAX_TOKENS, documentBriefProvider } from './brief.ts';
 import { glossaryProvider, renderGlossaryEntry, usedTermsLine } from './glossary.ts';
+import { translationMemoryProvider } from './memory.ts';
 import { contextTailProvider } from './tail.ts';
 
 /** Context tokens per chunk, all providers together (DESIGN §6: system ~1k, context ~300). */
@@ -29,8 +30,11 @@ export function personalGlossaryTokens(entries: readonly GlossaryEntry[]): numbe
   return list + estimateTokens(usedTermsLine(entries));
 }
 
-/** v1 providers (§5.4), document-scoped ones first so the system block can't depend on the chunk. */
-export const DEFAULT_CONTEXT_PROVIDERS: readonly ContextProvider[] = [documentBriefProvider, glossaryProvider, contextTailProvider];
+/**
+ * The providers (§5.4), document-scoped ones first so the system block can't depend on the chunk.
+ * The translation memory comes last: the context tail keeps its share, the examples get what is left.
+ */
+export const DEFAULT_CONTEXT_PROVIDERS: readonly ContextProvider[] = [documentBriefProvider, glossaryProvider, contextTailProvider, translationMemoryProvider];
 
 export async function gatherContext(providers: readonly ContextProvider[], q: Omit<ContextQuery, 'maxTokens'>, total = CONTEXT_BUDGET_TOKENS): Promise<ContextSnippet[]> {
   const out: ContextSnippet[] = [];

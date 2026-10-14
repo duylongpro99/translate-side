@@ -288,6 +288,8 @@ export interface PreparedChunk {
   call: ChunkCall;
   /** translate@2 only: the context tail's translated paragraphs, for the copy guard (translate-chunk.ts). */
   neighbours?: Rendered[];
+  /** translate@2 only: the translation-memory entries (id, similarity) the chunk's examples came from; absent when none were used. */
+  memoryRefs?: readonly { id: string; score: number }[];
 }
 
 /**
@@ -303,6 +305,7 @@ export async function prepareChunk(work: ChunkWork, ctx: StageContext, memory: R
   let system: string;
   let context = '';
   let neighbours: Rendered[] | undefined;
+  let memoryRefs: readonly { id: string; score: number }[] | undefined;
   if (prompt.name === 'translate' && prompt.version >= 2) {
     // The tail's translated paragraphs: no segment of this chunk may come back as one of them.
     neighbours = segmentsBefore(work.doc.segments, work.chunk.segments)
@@ -315,6 +318,7 @@ export async function prepareChunk(work: ChunkWork, ctx: StageContext, memory: R
     const snippets = await gatherContext(ctx.context, { doc, chunk: work.chunk.segments, targetLang: work.doc.targetLang, segments, memory, options: work.options });
     system = renderSystemPromptV2(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style, gloss: work.options.gloss ?? DEFAULT_GLOSS, snippets });
     context = renderContextBlock(snippets);
+    memoryRefs = snippets.find((s) => s.refs !== undefined)?.refs;
   } else {
     system = renderSystemPrompt(render, { sourceLang, targetLang: work.doc.targetLang, style: work.options.style });
   }
@@ -329,6 +333,7 @@ export async function prepareChunk(work: ChunkWork, ctx: StageContext, memory: R
     },
     call,
     ...(neighbours === undefined ? {} : { neighbours }),
+    ...(memoryRefs === undefined ? {} : { memoryRefs }),
   };
 }
 
@@ -365,6 +370,8 @@ export function createTranslateRun(strategyId: string, brief?: BriefWait, prompt
     }
     const prepared = await prepareChunk(work, ctx, memory, promptId);
     const { call, neighbours } = prepared;
+    // Which corrections of the memory went into this chunk's prompt: ids and scores, never text.
+    if (prepared.memoryRefs !== undefined) yield { type: 'stage', stage: 'context', status: 'done', info: { chunk: work.chunk.index, memory: prepared.memoryRefs } };
     const gen = translateChunk(toWire(work.chunk.segments), call, {
       producedBy: producedByOf(strategyId, 'translate', prepared),
       clientId: () => prepared.clientId,
