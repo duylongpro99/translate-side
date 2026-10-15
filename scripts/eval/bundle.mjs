@@ -23,6 +23,8 @@ export async function runBundled(entry) {
     target: 'node22',
     packages: 'external',
     alias: { '@': path.join(ROOT, 'src') },
+    // WXT defines this at build time; here it follows the shell, so WXT_BEST_PREVIEW=1 lets the latency harness run Best.
+    define: { 'import.meta.env.WXT_BEST_PREVIEW': JSON.stringify(process.env.WXT_BEST_PREVIEW ?? '') },
     logLevel: 'warning',
   });
   return import(pathToFileURL(outfile).href);
