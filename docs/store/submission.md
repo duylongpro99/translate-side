@@ -1,4 +1,4 @@
-# Store submission: version 1.0.0
+# Store submission: version 1.1.0
 
 Everything the agent can prepare is here; **publishing is the owner's**. This page lists the package to upload, the
 assets, and the steps in the Chrome Web Store developer dashboard.
@@ -7,10 +7,10 @@ assets, and the steps in the Chrome Web Store developer dashboard.
 
 | | |
 |---|---|
-| File | `.output/translate-side-1.0.0-chrome.zip` (made by `pnpm run zip`; `.output/` is not committed) |
-| Size | 313 288 bytes |
-| SHA-256 | `934f78a41fb427f2abbe0385cdb793137ef9ebf9450711a4ca1e168856452432` |
-| Built from | source at commit `1aa308d` (version `1.0.0` from `package.json`) |
+| File | `.output/translate-side-1.1.0-chrome.zip` (made by `pnpm run zip`; `.output/` is not committed) |
+| Size | 331 294 bytes |
+| SHA-256 | `21339ef0333282dd5384d7c71b8bf969ce2d1b62b0d4616242b2439a111dfa95` |
+| Built from | source at commit `8b1a40e` (version `1.1.0` from `package.json`) |
 
 The zip is reproducible: building the same source again gives the same hash. To rebuild it, run
 `pnpm install --frozen-lockfile && pnpm run zip` and compare the hash with the one above; if the source changed since
@@ -25,9 +25,9 @@ the commit above, the hash changes and this table needs updating.
 - It is the production build: no source maps (`*.map`), no `.env` or dotfiles, no absolute home paths or user names in
   any file, no development-only host permission (the harness's `http://127.0.0.1/*` is added only to a temporary copy
   under `.output/e2e-ext`, never to the build).
-- Version `1.0.0` in the manifest.
+- Version `1.1.0` in the manifest.
 
-**Contents** (27 files, 313 KB):
+**Contents** (27 files, 331 KB):
 
 | Path | What |
 |---|---|
@@ -71,7 +71,7 @@ provider's answer time with a delay added so it reads as a plausible duration; i
    - [ ] The commit that holds `docs/privacy.md` is on `master` on GitHub, so the policy URL resolves:
      https://github.com/duylongpro99/translate-side/blob/master/docs/privacy.md . Open it in a private window.
    - [ ] Rebuild and check the zip: `pnpm install --frozen-lockfile && pnpm run zip`, then
-     `shasum -a 256 .output/translate-side-1.0.0-chrome.zip` matches the table above.
+     `shasum -a 256 .output/translate-side-1.1.0-chrome.zip` matches the table above.
    - [ ] A throw-away API key with a small spend limit for the reviewer's test instructions. Do not put it in the
      repository.
 2. **Add the item.** Developer dashboard → **Add new item** → upload the zip. Fix anything the upload reports.

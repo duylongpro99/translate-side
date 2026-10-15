@@ -1,6 +1,6 @@
 # Closed beta checklist
 
-For the owner and the handful of people who try Translate Side 1.0.0 before it is listed publicly. The automated
+For the owner and the handful of people who try Translate Side 1.1.0 before it is listed publicly. The automated
 suites (unit tests, the end-to-end run in Chromium against a mock provider, the eval gate) cannot cover what needs a
 real Chrome profile, a real keyboard, a screen reader or a Vietnamese reader. This page lists exactly those things.
 
