@@ -2,6 +2,7 @@
 // and the add / edit connection flow: pick a preset → key → Test connection (asks for that origin
 // only, §8) → pick a discovered model → save. Failures say what to do (src/shared/connect.ts); a
 // local server's CORS refusal opens its guide and the test runs again by itself (§4.3.6).
+import { BEST_MODE_RELEASED } from '@/shared/quality';
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
@@ -393,21 +394,25 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
         </select>
       </div>
       <p class="opt__hint">{i18n.t('options.providers.briefHint')}</p>
-      <div class="opt__row">
-        <label for="route-review">{i18n.t('options.providers.reviewWith')}</label>
-        <select
-          id="route-review"
-          value={settings.routing.review ?? ''}
-          onChange={(e) => {
-            const v = (e.target as HTMLSelectElement).value;
-            save({ review: v === '' ? undefined : v }, i18n.t('options.providers.reviewSaved'));
-          }}
-        >
-          <option value="">{i18n.t('options.providers.sameAsTranslate')}</option>
-          {options(settings.routing.review)}
-        </select>
-      </div>
-      <p class="opt__hint">{i18n.t('options.providers.reviewHint')}</p>
+      {BEST_MODE_RELEASED ? (
+        <>
+        <div class="opt__row">
+          <label for="route-review">{i18n.t('options.providers.reviewWith')}</label>
+          <select
+            id="route-review"
+            value={settings.routing.review ?? ''}
+            onChange={(e) => {
+              const v = (e.target as HTMLSelectElement).value;
+              save({ review: v === '' ? undefined : v }, i18n.t('options.providers.reviewSaved'));
+            }}
+          >
+            <option value="">{i18n.t('options.providers.sameAsTranslate')}</option>
+            {options(settings.routing.review)}
+          </select>
+        </div>
+        <p class="opt__hint">{i18n.t('options.providers.reviewHint')}</p>
+        </>
+      ) : null}
       <FallbackChain settings={settings} profiles={profiles} options={options} onSave={(fallback, said) => save({ fallback }, said)} />
       <SiteModelRules settings={settings} profiles={profiles} options={options} onSave={(siteOverrides, said) => saveSites(siteOverrides, said)} />
     </div>

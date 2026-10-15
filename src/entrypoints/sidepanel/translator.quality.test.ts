@@ -2,8 +2,9 @@
 // The quality setting through the translator: a mode, override or keep-drafts switch restarts the
 // open page (refresh and resume) with the brief and cost kept and the cache read, and `refine`
 // runs only when the job-start check allows it, whatever its source.
+import { PRIVACY_NOTICE_VERSION } from './privacy.ts';
 import { IDBFactory } from 'fake-indexeddb';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Segment } from '@/engine/index';
 import { translatorClient } from '@/engine/testing';
 import type { LLMClient, NormalizedRequest } from '@/llm/types';
@@ -12,6 +13,9 @@ import type { JobRecord } from '@/shared/diagnostics';
 import { GEMINI_PROFILE } from '@/shared/settings';
 import type { SessionHooks } from './controller.ts';
 import { createTranslator } from './translator.ts';
+
+// Best is held back from release; these tests exercise it, so they run with the switch on.
+vi.mock('@/shared/quality', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/shared/quality')>()), BEST_MODE_RELEASED: true }));
 
 type Api = Parameters<typeof createTranslator>[0];
 type Ready = Parameters<Required<SessionHooks>['ready']>[2];
@@ -27,7 +31,7 @@ function fakeApi(initial: Record<string, unknown> = {}) {
         get: (k: string | string[]) => Promise.resolve(typeof k === 'string' && sync.has(k) ? { [k]: structuredClone(sync.get(k)) } : {}),
         onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) },
       },
-      local: { get: () => Promise.resolve({ privacyNotice: { version: 2, at: 0 } }), set: () => Promise.resolve(), onChanged: none },
+      local: { get: () => Promise.resolve({ privacyNotice: { version: PRIVACY_NOTICE_VERSION, at: 0 } }), set: () => Promise.resolve(), onChanged: none },
       session: { onChanged: none, get: () => Promise.resolve({}), remove: () => Promise.resolve() },
     },
     permissions: { onAdded: none },

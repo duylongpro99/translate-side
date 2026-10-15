@@ -1,3 +1,4 @@
+import { PRIVACY_NOTICE_VERSION } from '@/entrypoints/sidepanel/privacy';
 import { describe, expect, it } from 'vitest';
 import type { browser } from 'wxt/browser';
 import { createDiagnosticsLog, DIAG_PREFIX, DIAG_SITES_KEY, diagnosticsFile, MAX_ENTRIES, MEMORY_IDS_LOGGED, readDiagnostics, clearDiagnostics, type JobRecord } from './diagnostics.ts';
@@ -112,7 +113,7 @@ describe('the diagnostics log', () => {
   });
 
   it('clears only its own keys', async () => {
-    const { api, local } = fakeDevice({ local: { privacyNotice: { version: 2, at: 1 } } });
+    const { api, local } = fakeDevice({ local: { privacyNotice: { version: PRIVACY_NOTICE_VERSION, at: 1 } } });
     await createDiagnosticsLog(api).record(record(1000));
     await clearDiagnostics(api);
     expect([...local.data.keys()]).toEqual(['privacyNotice']);

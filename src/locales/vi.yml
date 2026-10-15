@@ -92,6 +92,7 @@ panel:
     auto: Các trang web bạn cho phép trong Cài đặt › Quy tắc theo trang web được dịch tự động mỗi lần bạn mở một trang của chúng khi bảng đang mở, nên văn bản của chúng được gửi đến nhà cung cấp mà không cần bạn nhấn.
     fields: Ô mật khẩu, các ô biểu mẫu khác và mọi nơi bạn có thể gõ chữ đều không bao giờ được đọc. Trang đang có ô mật khẩu được sử dụng sẽ bị bỏ qua.
     local: Với các trang nhạy cảm, đừng dịch bằng nhà cung cấp đám mây. Một mô hình cục bộ trên máy tính này (Ollama hoặc LM Studio, thiết lập trong Nhà cung cấp) giữ văn bản ngay trên thiết bị.
+    corrections: "Các bản sửa bạn thực hiện bằng nút Sửa có thể được gửi làm ví dụ, cùng với đoạn văn, đến mô hình dịch trang. Bản sửa làm trên trang chỉ dùng mô hình cục bộ sẽ không bao giờ được gửi đến mô hình đám mây, và bản sửa từ các trang web khác chỉ được gửi khi bạn bật \"Dùng các bản sửa từ các trang web khác\"."
     diagnostics: Nhật ký chẩn đoán về các lần dịch gần đây (số lượng, thời gian, loại lỗi; không có nội dung trang) được lưu trên thiết bị này. Nó chỉ rời khỏi máy khi bạn xuất ra trong Cài đặt.
     ok: Đã hiểu, bắt đầu dịch
   state:

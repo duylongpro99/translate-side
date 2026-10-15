@@ -11,9 +11,10 @@ export const QUALITY_KEY = 'quality';
 
 /**
  * Whether Best is offered at all. False: Best is listed nowhere (not even locked), `refine` is not
- * an override, and a job asked for `refine` runs `contextual` (Jobs.start).
+ * an override, and a job asked for `refine` runs `contextual` (Jobs.start). Best is built but held
+ * back from release: only a build made with WXT_BEST_PREVIEW=1 (the e2e suite's) turns it on.
  */
-export const BEST_MODE_RELEASED = true;
+export const BEST_MODE_RELEASED: boolean = import.meta.env.WXT_BEST_PREVIEW === '1';
 
 export type QualityMode = 'fast' | 'balanced' | 'best';
 export type QualityStrategy = 'single-pass' | 'contextual' | 'refine';

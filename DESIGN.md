@@ -601,6 +601,12 @@ Settings; Settings' advanced section exposes the exact strategy, which then wins
 (choosing a mode in the header clears it). The setting is its own `storage.sync` item, so a build
 that does not know it never erases it, and a profile without it runs Balanced.
 
+Best is built and held back from release: `BEST_MODE_RELEASED` (`src/shared/quality.ts`) is false
+in a release build, so no control offers Best, the `refine` strategy or the "Review with" route,
+and a job that asks for `refine` (an imported setting, say) runs `contextual`. The paired
+evaluation did not reach the margin the plan set for fidelity and naturalness, so Best waits for a
+better review prompt. The e2e suite builds with `WXT_BEST_PREVIEW=1`, which turns the switch on.
+
 How `refine` runs (`src/engine/strategies/refine.ts`, `src/engine/stages/review.ts`):
 - The drafts are exactly Balanced's output, and the review starts only after all drafts are
   done (a `drafts` stage event), so time to the first draft is Balanced's. Drafts the job brings

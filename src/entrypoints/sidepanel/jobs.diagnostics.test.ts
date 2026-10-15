@@ -1,6 +1,6 @@
 // The jobs' diagnostics records (onJobRecord) written through the real log into a fake storage.local:
 // what a run reports, and what never reaches the log even when a provider error echoes the page.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { translatorClient } from '@/engine/testing';
 import type { Segment } from '@/engine/index';
 import type { LLMClient, LLMError } from '@/llm/types';
@@ -9,6 +9,9 @@ import { createDiagnosticsLog, readDiagnostics, type JobRecord } from '@/shared/
 import { GEMINI_PROFILE } from '@/shared/settings';
 import { fakeDevice } from '@/shared/testing';
 import { Jobs, type JobDoc } from './jobs.ts';
+
+// Best is held back from release; these tests exercise it, so they run with the switch on.
+vi.mock('@/shared/quality', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/shared/quality')>()), BEST_MODE_RELEASED: true }));
 
 const SECRET_TEXT = 'The quarterly figures for Project Nightingale';
 const URL_PATH = 'https://intranet.example.com/reports/q3?id=42';

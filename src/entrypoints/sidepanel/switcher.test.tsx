@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // The quick switcher (plan M4-E11, DESIGN §4.3.3 B): a tab-only choice (storage.session), the
 // routing unchanged until "Make default", the choice gone with the tab, and a site rule that wins.
+import { PRIVACY_NOTICE_VERSION } from './privacy.ts';
 import { browser } from 'wxt/browser';
 import { IDBFactory } from 'fake-indexeddb';
 import { render } from 'preact';
@@ -60,7 +61,7 @@ function area(initial: Record<string, unknown> = {}) {
 
 function fakeApi(opts: { siteRules?: unknown[]; keys?: string[]; denied?: string[] } = {}) {
   const sync = area({ prefs: { targetLang: 'vi', sourceLang: 'auto', style: 'natural' }, ...(opts.siteRules ? { siteRules: opts.siteRules } : {}) });
-  const local = area({ privacyNotice: { version: 2, at: 0 }, ...Object.fromEntries((opts.keys ?? ['apibox', 'gemini']).map((id) => [`secret:${id}`, `key-${id}`])) });
+  const local = area({ privacyNotice: { version: PRIVACY_NOTICE_VERSION, at: 0 }, ...Object.fromEntries((opts.keys ?? ['apibox', 'gemini']).map((id) => [`secret:${id}`, `key-${id}`])) });
   const session = area();
   const none = { addListener: () => {}, removeListener: () => {} };
   const removed = new Set<(tabId: number) => void>();

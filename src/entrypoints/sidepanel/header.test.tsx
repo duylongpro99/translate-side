@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // Header controls (plan M3-E6): language pair with a target-language switch, model (read-only),
 // style mode, settings, Cancel / Retranslate page, scroll-follow toggle.
+import { PRIVACY_NOTICE_VERSION } from './privacy.ts';
 import { IDBFactory } from 'fake-indexeddb';
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
@@ -42,7 +43,7 @@ function fakeApi(prefs: Record<string, unknown> = { targetLang: 'vi', sourceLang
         },
         onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) },
       },
-      local: { get: () => Promise.resolve({ privacyNotice: { version: 2, at: 0 } }), set: () => Promise.resolve(), onChanged: none },
+      local: { get: () => Promise.resolve({ privacyNotice: { version: PRIVACY_NOTICE_VERSION, at: 0 } }), set: () => Promise.resolve(), onChanged: none },
       session: { get: () => Promise.resolve({}), remove: () => Promise.resolve(), onChanged: none },
     },
     permissions: { onAdded: none },

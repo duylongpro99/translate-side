@@ -2,6 +2,7 @@
 // The monthly soft limit in the panel (plan M4-E10): a run stops before it sends anything once this
 // month's spend reached the limit, a cached page is not stopped, "Continue anyway" goes on for the
 // month, and a failed "Continue anyway" says so (review 3 #3).
+import { PRIVACY_NOTICE_VERSION } from './privacy.ts';
 import { IDBFactory } from 'fake-indexeddb';
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
@@ -76,7 +77,7 @@ describe('Jobs and the soft limit (M4-E10)', () => {
 describe('the panel: Continue anyway (M4-E10, review 3 #3)', () => {
   function api(opts: { failSet?: boolean } = {}) {
     const local = new Map<string, unknown>([
-      ['privacyNotice', { version: 2, at: 0 }],
+      ['privacyNotice', { version: PRIVACY_NOTICE_VERSION, at: 0 }],
       [SPEND_LIMIT_KEY, { monthlyUsd: 5 }],
       [SPEND_KEY, { since: 0, usd: 5.25, input: 1, cachedInput: 0, output: 1, unpricedTokens: 0, months: { [monthKey(Date.now())]: 5.25 }, days: {}, profiles: {} }],
     ]);
@@ -180,7 +181,7 @@ describe('Continue anyway carries out what the limit stopped (M4-D tester)', () 
   });
 
   it('in the panel: Retranslate page past the limit, then Continue anyway, sends the page again', async () => {
-    const local = new Map<string, unknown>([['privacyNotice', { version: 2, at: 0 }]]);
+    const local = new Map<string, unknown>([['privacyNotice', { version: PRIVACY_NOTICE_VERSION, at: 0 }]]);
     const none = { addListener: () => {}, removeListener: () => {} };
     const api = {
       storage: {

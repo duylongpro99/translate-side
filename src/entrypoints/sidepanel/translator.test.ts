@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { PRIVACY_NOTICE_VERSION } from './privacy.ts';
 import { describe, expect, it } from 'vitest';
 import { BUDGET_MESSAGE, type Segment } from '@/engine/index';
 import type { LLMClient } from '@/llm/types';
@@ -27,7 +28,7 @@ function fakeApi() {
         onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) },
       },
       // The first-run privacy notice was acknowledged (M3-E10).
-      local: { get: () => Promise.resolve({ privacyNotice: { version: 2, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
+      local: { get: () => Promise.resolve({ privacyNotice: { version: PRIVACY_NOTICE_VERSION, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
       session: { onChanged: listeners(), get: () => Promise.resolve({}), remove: () => Promise.resolve() },
     },
     permissions: { onAdded: listeners() },
@@ -744,7 +745,7 @@ describe('a refused key stops once (M4-D tester F1)', () => {
           set,
           onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) },
         },
-        local: { get: () => Promise.resolve({ privacyNotice: { version: 2, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
+        local: { get: () => Promise.resolve({ privacyNotice: { version: PRIVACY_NOTICE_VERSION, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
         session: { onChanged: listeners(), get: () => Promise.resolve({}), remove: () => Promise.resolve() },
       },
       permissions: { onAdded: listeners() },

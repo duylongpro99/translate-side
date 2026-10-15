@@ -35,7 +35,7 @@
     "latency": "node scripts/latency.mjs",
     "faults": "node scripts/faults.mjs",
     "migration": "node scripts/migration.mjs",
-    "e2e": "tsc --noEmit -p e2e/tsconfig.json && playwright test -c e2e/playwright.config.ts",
+    "e2e": "tsc --noEmit -p e2e/tsconfig.json && WXT_BEST_PREVIEW=1 wxt build && playwright test -c e2e/playwright.config.ts",
     "e2e:upgrade": "tsc --noEmit -p e2e/tsconfig.json && node scripts/e2e-upgrade.mjs",
     "test:coverage": "vitest run --coverage"
   },

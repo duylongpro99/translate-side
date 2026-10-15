@@ -9,7 +9,7 @@ type Browser = typeof browser;
 
 export const PRIVACY_KEY = 'privacyNotice';
 /** Bump when the notice says something new that must be shown again. */
-export const PRIVACY_NOTICE_VERSION = 2;
+export const PRIVACY_NOTICE_VERSION = 3;
 
 export type PrivacyState = 'unknown' | 'needed' | 'acknowledged';
 

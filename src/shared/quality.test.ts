@@ -22,9 +22,9 @@ function fakeApi(initial: Record<string, unknown> = {}, failGet = false) {
 }
 
 describe('quality setting', () => {
-  it('is Balanced with nothing kept when nothing is stored, and the release switch defaults on', async () => {
+  it('is Balanced with nothing kept when nothing is stored, and the release switch is off unless a preview build turns it on', async () => {
     expect(await readQuality(fakeApi().api)).toEqual({ mode: 'balanced', keepDraftsOnScreen: false });
-    expect(BEST_MODE_RELEASED).toBe(true);
+    expect(BEST_MODE_RELEASED).toBe(false);
   });
 
   it('cleans what it reads: an unknown mode is Balanced, an unknown strategy is none, other fields are dropped', () => {

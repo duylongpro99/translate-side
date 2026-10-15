@@ -1,4 +1,5 @@
 // The per-page cost readout and the running total it feeds (plan M3-E9).
+import { PRIVACY_NOTICE_VERSION } from './privacy.ts';
 import { describe, expect, it } from 'vitest';
 import type { Segment } from '@/engine/index';
 import { translatorClient } from '@/engine/testing';
@@ -41,7 +42,7 @@ describe('cost (M3-E9)', () => {
   });
 
   it('the panel adds what a page cost to the running total in storage.local', async () => {
-    const local = new Map<string, unknown>([['privacyNotice', { version: 2, at: 0 }]]);
+    const local = new Map<string, unknown>([['privacyNotice', { version: PRIVACY_NOTICE_VERSION, at: 0 }]]);
     const none = { addListener: () => {}, removeListener: () => {} };
     const api = {
       storage: {

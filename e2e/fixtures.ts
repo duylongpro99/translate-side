@@ -9,6 +9,7 @@
 // - `translate(page)` does what the worker's action handler does on Alt+T or the toolbar icon
 //   (src/shared/inject.ts): marks the tab's access, injects the content script, marks it ready.
 // - Console errors from the worker, the panel and the page (content scripts included) fail the test.
+import { PRIVACY_NOTICE_VERSION } from '../src/entrypoints/sidepanel/privacy.ts';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -17,11 +18,12 @@ import { CHROMIUM_ARGS } from './playwright.config.ts';
 import { FIXTURE_ORIGIN, FIXTURE_PORT, MOCK_BASE_URL, MOCK_PORT, fixtureServer, listen, mockServer, type MockControl } from './servers.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const BUILD = path.join(ROOT, '.output/chrome-mv3');
+// The preview build (`pnpm run e2e` makes it): Best is on there, as the release switch is off in the release build.
+const BUILD = path.join(ROOT, '.output-preview/chrome-mv3');
 const EXT = path.join(ROOT, '.output/e2e-ext');
 
 function copyExtension(): string {
-  if (!fs.existsSync(path.join(BUILD, 'manifest.json'))) throw new Error('no build in .output/chrome-mv3: run `pnpm run build` first');
+  if (!fs.existsSync(path.join(BUILD, 'manifest.json'))) throw new Error('no build in .output-preview/chrome-mv3: run `pnpm run e2e`, which makes it');
   fs.rmSync(EXT, { recursive: true, force: true });
   fs.cpSync(BUILD, EXT, { recursive: true });
   const file = path.join(EXT, 'manifest.json');
@@ -203,7 +205,7 @@ export const test = base.extend<Fixtures & Options, { servers: MockControl; extP
             await chrome.storage.sync.set(sync);
             await chrome.storage.local.set(local);
           },
-          [syncFor(opts), { 'secret:mock': 'placeholder-key', ...(privacy ? { privacyNotice: { version: 2, at: 1 } } : {}) }] as const,
+          [syncFor(opts), { 'secret:mock': 'placeholder-key', ...(privacy ? { privacyNotice: { version: PRIVACY_NOTICE_VERSION, at: 1 } } : {}) }] as const,
         );
       },
       async open(fixture, origin = FIXTURE_ORIGIN) {

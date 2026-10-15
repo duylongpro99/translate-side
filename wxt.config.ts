@@ -4,6 +4,8 @@ import { defineConfig } from 'wxt';
 // See DESIGN.md §8 (minimal permissions) and ROADMAP §8 items 18–20.
 export default defineConfig({
   srcDir: 'src',
+  // A preview build (Best on, WXT_BEST_PREVIEW=1; src/shared/quality.ts) goes to its own directory, so it never replaces the release build.
+  outDir: process.env.WXT_BEST_PREVIEW === '1' ? '.output-preview' : '.output',
   modules: ['@wxt-dev/i18n/module'],
   vite: () => ({
     plugins: [preact()],

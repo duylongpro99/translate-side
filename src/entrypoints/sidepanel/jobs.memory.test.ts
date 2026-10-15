@@ -2,7 +2,7 @@
 // engine events ignored for an edited block, Retranslate page keeping edits, a block's Retranslate
 // replacing one only through discardEdit, and imported entries applied only when the user chose so.
 import { IDBFactory } from 'fake-indexeddb';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { REVIEWED_REVISION, type Segment } from '@/engine/index';
 import { renderLines, translatorClient, wireLines } from '@/engine/testing';
 import type { LLMClient, NormalizedRequest } from '@/llm/types';
@@ -10,6 +10,9 @@ import { openTranslationCache, type TranslationCache } from '@/shared/cache';
 import { memoryKey, NO_ORIGIN, openTranslationMemory, type TranslationMemory } from '@/shared/memory';
 import { GEMINI_PROFILE } from '@/shared/settings';
 import { applySegmentEvent, Jobs, type ClientResult, type JobDeps, type JobDoc, type SegState } from './jobs.ts';
+
+// Best is held back from release; these tests exercise it, so they run with the switch on.
+vi.mock('@/shared/quality', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/shared/quality')>()), BEST_MODE_RELEASED: true }));
 
 const words = (n: number) => Array.from({ length: n }, (_, i) => `word${i}`).join(' ');
 const source = (i: number) => `P${i} ${words(120)}`;

@@ -95,6 +95,7 @@ panel:
     auto: Sites you allow in Settings › Site rules are translated automatically each time you open one of their pages while the panel is open, so their text goes to your provider without a click.
     fields: Password and other form fields, and anything you can type into, are never read. A page with a password field in use is skipped.
     local: For sensitive pages, don't translate them with a cloud provider. A local model on this computer (Ollama or LM Studio, set up in Providers) keeps the text on this device.
+    corrections: "Corrections you make with the Edit button can be sent as examples, with the passage, to the model that translates the page. A correction made on a local-only site never goes to a cloud model, and corrections from your other sites go only if you turn on \"Use corrections from other sites\"."
     diagnostics: A diagnostics log of recent translations (counts, timings, error kinds; no page text) is kept on this device. It leaves only if you export it in Settings.
     ok: Got it, translate
   state:

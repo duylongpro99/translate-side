@@ -626,6 +626,7 @@ describe('options: translation quality', () => {
     act(() => render(<Options api={f.api} />, root));
     await waitFor(() => root.querySelector('#quality-fast') !== null);
     expect(root.querySelector('#quality-best')).toBeNull();
+    expect(root.querySelector('#quality-keep-drafts')).toBeNull();
     expect([...(root.querySelector('#quality-strategy') as HTMLSelectElement).options].map((o) => o.value)).toEqual(['', 'single-pass', 'contextual']);
   });
 });

@@ -2,7 +2,7 @@
 // sending rules), the one read of the feature gate per run, a stable array across rounds, the
 // diagnostics counts, and a slow or large store never delaying the first request.
 import { IDBFactory } from 'fake-indexeddb';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createDefaultPromptRegistry, createEngine, basic, contextual, explain, refine, singlePass, type MemoryExample, type Segment, type TranslationEngine } from '@/engine/index';
 import { fakeSleep, renderLines, translatorClient } from '@/engine/testing';
 import type { LLMClient, NormalizedRequest } from '@/llm/types';
@@ -10,6 +10,9 @@ import type { JobRecord } from '@/shared/diagnostics';
 import { memoryKey, openTranslationMemory, type MemoryEdit, type TranslationMemory } from '@/shared/memory';
 import { GEMINI_PROFILE } from '@/shared/settings';
 import { Jobs, type ClientResult, type JobDeps, type JobDoc } from './jobs.ts';
+
+// Best is held back from release; these tests exercise it, so they run with the switch on.
+vi.mock('@/shared/quality', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/shared/quality')>()), BEST_MODE_RELEASED: true }));
 
 const PAGE = 'Click the Save button to keep your changes.';
 const SIMILAR = 'Click the Save button to store your changes.';

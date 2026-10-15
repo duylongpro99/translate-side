@@ -262,11 +262,15 @@ function QualitySection({ api }: { api: Browser }) {
           </select>
         </div>
         <p class="opt__hint">{i18n.t('options.quality.strategyHint')}</p>
-        <div class="opt__row">
-          <input id="quality-keep-drafts" type="checkbox" checked={quality.keepDraftsOnScreen} onChange={(e) => update({ keepDraftsOnScreen: (e.target as HTMLInputElement).checked })} />
-          <label for="quality-keep-drafts">{i18n.t('options.quality.keepDrafts')}</label>
-        </div>
-        <p class="opt__hint">{i18n.t('options.quality.keepDraftsHint')}</p>
+        {BEST_MODE_RELEASED ? (
+          <>
+            <div class="opt__row">
+              <input id="quality-keep-drafts" type="checkbox" checked={quality.keepDraftsOnScreen} onChange={(e) => update({ keepDraftsOnScreen: (e.target as HTMLInputElement).checked })} />
+              <label for="quality-keep-drafts">{i18n.t('options.quality.keepDrafts')}</label>
+            </div>
+            <p class="opt__hint">{i18n.t('options.quality.keepDraftsHint')}</p>
+          </>
+        ) : null}
       </details>
     </section>
   );

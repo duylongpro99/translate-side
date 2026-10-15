@@ -234,4 +234,14 @@ describe('the notice names the fallback providers too (plan M4-E9)', () => {
     act(() => render(<PrivacyNotice onAcknowledge={() => {}} />, root));
     expect(root.querySelector('[data-testid=privacy-diagnostics]')?.textContent).toBe('A diagnostics log of recent translations (counts, timings, error kinds; no page text) is kept on this device. It leaves only if you export it in Settings.');
   });
+
+  it('says corrections can be sent as examples, and under which rules', () => {
+    const root = document.createElement('div');
+    document.body.replaceChildren(root);
+    act(() => render(<PrivacyNotice onAcknowledge={() => {}} />, root));
+    const text = root.querySelector('[data-testid=privacy-corrections]')?.textContent ?? '';
+    expect(text).toContain('sent as examples');
+    expect(text).toContain('local-only site never goes to a cloud model');
+    expect(text).toContain('Use corrections from other sites');
+  });
 });

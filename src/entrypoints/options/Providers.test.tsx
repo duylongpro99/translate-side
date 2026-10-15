@@ -1,13 +1,19 @@
 // @vitest-environment jsdom
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAnthropicAdapter } from '@/llm/anthropic';
 import { createOpenAIAdapter } from '@/llm/openai';
 import { anthropicStream, openaiStream } from '@/llm/testing';
 import type { Protocol } from '@/llm/types';
 import { ProvidersSection } from './Providers.tsx';
 import { overflowNotice } from '@/shared/sync-quota';
+
+const flags = vi.hoisted(() => ({ released: true }));
+vi.mock('@/shared/quality', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/shared/quality')>();
+  return Object.defineProperty({ ...real }, 'BEST_MODE_RELEASED', { get: () => flags.released, enumerable: true });
+});
 
 type Api = Parameters<typeof ProvidersSection>[0]['api'];
 
@@ -87,6 +93,7 @@ const openaiOk = { status: 200, body: openaiStream({ text: ['H'], finish_reason:
 
 let root: HTMLElement;
 beforeEach(() => {
+  flags.released = true;
   root = document.createElement('div');
   document.body.replaceChildren(root);
 });
@@ -358,6 +365,15 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     await waitFor(() => f.sync.has('routing'));
     expect(f.sync.get('routing')).toEqual({ translate: 'apibox-qwen3.8-flash', analyze: 'q', fallback: ['basic'], basicMigrated: true });
     expect($('[data-testid=providers-note]').textContent).toBe('Document brief route saved.');
+  });
+
+  it('with Best not released there is no Review with row', async () => {
+    flags.released = false;
+    const conn = { id: 'o1', label: 'Home Ollama', presetId: 'ollama', protocol: 'openai-chat', baseUrl: 'http://localhost:11434/v1', auth: { style: 'none' }, quirks: {}, status: 'ok' };
+    const f = fakeApi({ sync: { schemaVersion: 1, 'conn:o1': conn, 'profile:q': { id: 'q', connectionId: 'o1', model: 'qwen3:8b', maxConcurrency: 1, chunkTokens: 600 }, routing: { translate: 'q', analyze: 'q', fallback: ['basic'], basicMigrated: true } } });
+    await mount(f, server(() => openaiList()));
+    expect(document.querySelector('#route-analyze')).not.toBeNull();
+    expect(document.querySelector('#route-review')).toBeNull();
   });
 
   it('routing: the Review with row saves its own model, keeps the others, and goes back to "same as translate"', async () => {

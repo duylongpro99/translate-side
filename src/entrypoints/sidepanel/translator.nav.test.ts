@@ -2,6 +2,7 @@
 // Navigation and SPA reads in the translator (plan M5-E3, E2): a page reached by a navigation waits
 // for Translate this page unless its site is allowlisted; a never-translate site sends nothing; a
 // page that changes is translated again from the cache, so only new or changed blocks are sent.
+import { PRIVACY_NOTICE_VERSION } from './privacy.ts';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import type { Segment } from '@/engine/index';
@@ -27,7 +28,7 @@ function fakeApi(sites: { allow?: string[]; never?: string[] } = {}, granted: st
   const api = {
     storage: {
       sync: { get: (k: string | string[]) => Promise.resolve(pick(k)), set: (o: Record<string, unknown>) => (Object.entries(o).forEach(([k, v]) => sync.set(k, v)), Promise.resolve()), onChanged: listeners() },
-      local: { get: () => Promise.resolve({ privacyNotice: { version: 2, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
+      local: { get: () => Promise.resolve({ privacyNotice: { version: PRIVACY_NOTICE_VERSION, at: 0 } }), set: () => Promise.resolve(), onChanged: listeners() },
       session: { onChanged: listeners(), get: () => Promise.resolve({}), remove: () => Promise.resolve() },
     },
     permissions: {

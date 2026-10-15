@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // Selection mode in the panel (plan M3-E4): a record the worker left becomes a translation job on
 // its own, shown whatever the page is, including one whose extraction failed.
+import { PRIVACY_NOTICE_VERSION } from './privacy.ts';
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -25,7 +26,7 @@ function fakeApi(sync: Record<string, unknown> = {}) {
     storage: {
       sync: { get: (k: string) => Promise.resolve(k === 'prefs' ? { prefs: { targetLang: 'vi', sourceLang: 'auto' } } : k in sync ? { [k]: sync[k] } : {}), onChanged: { addListener: (fn: never) => onSync.add(fn), removeListener: (fn: never) => onSync.delete(fn) } },
       // The first-run privacy notice was acknowledged (M3-E10).
-      local: { get: () => Promise.resolve({ privacyNotice: { version: 2, at: 0 } }), set: () => Promise.resolve(), onChanged: none },
+      local: { get: () => Promise.resolve({ privacyNotice: { version: PRIVACY_NOTICE_VERSION, at: 0 } }), set: () => Promise.resolve(), onChanged: none },
       session: {
         get: (k: string) => Promise.resolve(session.has(k) ? { [k]: session.get(k) } : {}),
         remove: (k: string) => (session.delete(k), Promise.resolve()),

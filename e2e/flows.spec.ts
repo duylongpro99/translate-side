@@ -4,6 +4,7 @@
 // and inline edits (kept across a reload and a cleared cache, Retranslate page, a block's Retranslate).
 // Zero console errors apply here too, apart from what a flow provokes on purpose (fixtures.ts
 // `allowedConsole`).
+import { PRIVACY_NOTICE_VERSION } from '../src/entrypoints/sidepanel/privacy.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Page } from '@playwright/test';
@@ -27,7 +28,7 @@ test('the privacy notice blocks sending until it is acknowledged', async ({ exte
   expect(await jobSettled(panel)).toBe('done');
   expect(mock.calls.length).toBeGreaterThan(0);
   expect(Object.keys(await blockStatuses(panel)).filter((s) => s !== 'final' && s !== 'kept')).toEqual([]);
-  expect(await extension.worker.evaluate(async () => (await chrome.storage.local.get('privacyNotice')).privacyNotice)).toMatchObject({ version: 2 });
+  expect(await extension.worker.evaluate(async () => (await chrome.storage.local.get('privacyNotice')).privacyNotice)).toMatchObject({ version: PRIVACY_NOTICE_VERSION });
 });
 
 test('an SPA route change re-extracts the page, and translating it sends only the new segments', async ({ extension, mock }) => {

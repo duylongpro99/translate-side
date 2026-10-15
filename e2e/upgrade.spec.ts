@@ -258,14 +258,13 @@ test('an earlier build upgrades in place: settings, glossary, key and cache surv
     // The same page again: every block comes from the cache the earlier build filled.
     const calls = providerCalls;
     const again = await translatePage(context, after, id);
-    // A notice newer than the one the earlier build's user acknowledged is shown once more, and nothing is sent
-    // until it is acknowledged; one that has not changed is not shown again.
+    // The notice changed since the earlier build's user acknowledged it: it is shown once more, and nothing is
+    // sent until it is acknowledged.
     const acknowledged = ((await storage(after)).local.privacyNotice as { version?: number } | undefined)?.version ?? 0;
-    if (acknowledged < PRIVACY_NOTICE_VERSION) {
-      await expect(again.panel.getByTestId('privacy-notice')).toBeVisible();
-      expect(providerCalls - calls).toBe(0);
-      await again.panel.getByTestId('privacy-ok').click();
-    }
+    expect(acknowledged).toBeLessThan(PRIVACY_NOTICE_VERSION);
+    await expect(again.panel.getByTestId('privacy-notice')).toBeVisible();
+    expect(providerCalls - calls).toBe(0);
+    await again.panel.getByTestId('privacy-ok').click();
     await expect(again.panel.getByTestId('privacy-notice')).toBeHidden();
     expect(await jobSettled(again.panel)).toBe('done');
     expect(await blockStatuses(again.panel)).toEqual(translated);

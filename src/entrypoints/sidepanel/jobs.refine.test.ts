@@ -12,6 +12,9 @@ import { GEMINI_PROFILE } from '@/shared/settings';
 import type { ModelProfile } from '@/shared/settings';
 import { applySegmentEvent, Jobs, type AnalyzeResult, type ClientResult, type ClientTarget, type JobDeps, type JobDoc, type JobView, type SegState } from './jobs.ts';
 
+// Best is held back from release; these tests exercise it, so they run with the switch on.
+vi.mock('@/shared/quality', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/shared/quality')>()), BEST_MODE_RELEASED: true }));
+
 const words = (n: number) => Array.from({ length: n }, (_, i) => `word${i}`).join(' ');
 function doc(n: number, w = 120, over: Partial<JobDoc> = {}): JobDoc {
   const segments: Segment[] = Array.from({ length: n }, (_, i) => {

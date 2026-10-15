@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 // With Best not released, a refine request runs contextual, from every source.
+import { PRIVACY_NOTICE_VERSION } from './privacy.ts';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it, vi } from 'vitest';
 import type { Segment } from '@/engine/index';
@@ -38,7 +39,7 @@ describe('BEST_MODE_RELEASED off', () => {
       const api = {
         storage: {
           sync: { get: (k: string | string[]) => Promise.resolve(typeof k === 'string' && sync.has(k) ? { [k]: sync.get(k) } : {}), onChanged: none },
-          local: { get: () => Promise.resolve({ privacyNotice: { version: 2, at: 0 } }), set: () => Promise.resolve(), onChanged: none },
+          local: { get: () => Promise.resolve({ privacyNotice: { version: PRIVACY_NOTICE_VERSION, at: 0 } }), set: () => Promise.resolve(), onChanged: none },
           session: { onChanged: none, get: () => Promise.resolve({}), remove: () => Promise.resolve() },
         },
         permissions: { onAdded: none },
