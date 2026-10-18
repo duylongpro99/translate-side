@@ -59,11 +59,13 @@ Translate Side gives the model the **whole document's context** before it transl
 | | |
 |---|---|
 | 🪟 **Side-by-side reading** | Click the toolbar icon or press <kbd>Alt</kbd>+<kbd>T</kbd>. The panel opens for that tab and starts translating right away; the same key closes it again. |
-| ⚡ **Streaming output** | Segments appear as they're translated. |
+| ⚡ **Streaming output** | Segments appear as they're translated. A block still waiting shows its original, muted, so there is always something to read. |
+| 📰 **Reads like a page** | Pick serif or sans, a text size, a line width and a theme (system, light, paper or dark) from **Aa** in the panel. A change applies at once and never translates the page again. The theme also applies to Settings and the setup guide, and follows you to your other devices. |
+| 🈶 **Every script, drawn right** | System fonts chosen per script: Japanese and Chinese Han characters take their own forms, and Arabic and Hebrew translations run right to left. |
 | 🗂️ **Any provider, or none online** | Bring your own key for Anthropic, OpenAI, Google Gemini, OpenRouter or any OpenAI- or Anthropic-compatible service, or run a model on your own computer with Ollama or LM Studio. Route pages to different models per site, with fallbacks. See [Providers and local models](#-providers-and-local-models). |
 | 🧠 **"About this document"** | Before translating, the model writes a short brief covering genre, audience, purpose, tone and key terms. You can read it in the panel, and every chunk is translated with it. |
 | 🎨 **Style modes** | **Natural** reads as if it was written in your language. **Faithful** stays closer to the original wording. **Simplified** uses short sentences and plain words. |
-| ⚖️ **Quality modes** | **Fast** translates each part of the page in one pass, at the lowest cost. **Balanced**, the default, reads the page first and translates with what it learned. Choose in the panel header or in Settings › Translation quality. |
+| ⚖️ **Quality modes** | **Fast** translates each part of the page in one pass, at the lowest cost. **Balanced**, the default, reads the page first and translates with what it learned. Choose in the panel's Translation menu or in Settings › Translation quality. |
 | ✏️ **Edit a translation** | The Edit button on a block opens it for your own wording. Your version is marked "Edited", is shown whenever that text comes up again, and stays on this device, even when you clear the cache. |
 | 🧾 **Translation memory** | In Balanced, your corrections also guide later translations: when a passage is similar to one you corrected, the correction goes to the model as an example (at most three per chunk). By default only corrections from the same site are used; "Use corrections from other sites" widens that. Export and import the memory as its own file in Settings › Translation memory. |
 | 📖 **Personal glossary** | Pick how a term is always rendered, or keep it as is (for example, "deploy" stays in English). It syncs to other devices signed in to the same Chrome profile. |
@@ -72,7 +74,7 @@ Translate Side gives the model the **whole document's context** before it transl
 | 🔗 **Hover link and scroll sync** | Point at a block in the panel and the matching block on the page is marked, and the other way round. The panel can follow the page as you scroll. |
 | 📌 **Selection and sites** | Select text and choose "Translate in side panel" to translate just that. Allow a site and each page you open there is translated while the panel is open; mail and sign-in sites are never read. |
 | 🗃️ **Cache and long pages** | Translations are cached on your device and resume after a reload. Long pages translate what you are looking at first, and single-page apps are followed as they change routes. |
-| 💸 **Cost you can see** | The panel shows the token cost of each page. A per-page token budget keeps a runaway job in check. |
+| 💸 **Cost you can see** | The panel's Translation menu shows the token cost of each page. A per-page token budget keeps a runaway job in check. |
 | ⌨️ **Keyboard and screen readers** | The panel is one Tab stop; the arrows (or <kbd>J</kbd>/<kbd>K</kbd>) move between blocks, and <kbd>O</kbd>, <kbd>R</kbd>, <kbd>E</kbd>, <kbd>C</kbd> show the original, retranslate, explain and copy the focused block. The translation is marked with its language. See [Keyboard shortcuts](#keyboard-shortcuts). |
 | 📦 **Portable settings** | Export your connections, models, routing, preferences, glossary and site lists to a JSON file and import it in another browser (Options › Export and import settings). API keys stay out of the file unless you tick "include keys" and confirm. |
 | 🩺 **Local diagnostics** | The last 50 translations (versions, model, counts, tokens, timings, error kinds; never page text or page addresses, and site names only if you turn them on) are logged on this device only. Options › Diagnostics shows the whole file before you save it to attach to a bug report. Nothing is sent automatically. |
@@ -223,7 +225,8 @@ how to delete it, is in [`docs/privacy.md`](docs/privacy.md).
 | ✅ | **M5** Reading UX complete | Hover link, scroll sync, single-page apps, long documents, keyboard and screen readers |
 | ✅ | **M6** Release hardening → **v1.0** | Eval gate, end-to-end tests, storage migration, performance, Vietnamese interface, store package and docs |
 | ⏳ | **M7** Stronger translation → **v1.1** | Quality modes, edits and a translation memory |
-| 🔭 | **M8** Beyond | Firefox and other independent tracks |
+| ⏳ | **M8** UI/UX refresh → **v1.2** | A reading-first panel, reading settings, one design system for every page |
+| 🔭 | **M9** Beyond | Firefox and other independent tracks |
 
 The full plan is in [`ROADMAP.md`](ROADMAP.md) and [`docs/plans/`](docs/plans/). The design and its
 reasoning are in [`DESIGN.md`](DESIGN.md). The interface's tokens, components and rules are in

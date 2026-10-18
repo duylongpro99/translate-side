@@ -13,7 +13,7 @@ The open questions in `DESIGN.md` §12 are unresolved. This roadmap assumes:
 
 | Question | Assumption | What depends on it |
 |---|---|---|
-| Browsers | **Chrome only for v1.** WXT is still used so a Firefox build stays possible. | "Firefox build" moves from M5 to M8. No `sidebar_action` work, no Firefox CI. Chrome built-in AI can be relied on as an *optional* path. |
+| Browsers | **Chrome only for v1.** WXT is still used so a Firefox build stays possible. | "Firefox build" moves from M5 to M9. No `sidebar_action` work, no Firefox CI. Chrome built-in AI can be relied on as an *optional* path. |
 | Default provider | **Anthropic, Claude Haiku 4.5** (`claude-haiku-4-5`, $1 / $5 per MTok, 200K context). | Onboarding pre-selects the Anthropic preset. Eval baseline and cost estimates are measured on Haiku 4.5. Prompt caching will **not** engage on Haiku 4.5 with the designed system block (see §8, item 4). Thinking is left off (omit the `thinking` param). |
 | Target language | **One target language, switchable globally** (settings + header switch). Not per tab, not several at once. | Cache key already includes `targetLang`. The brief cache key must add it (§8, item 10). Onboarding step 1 picks it. |
 | Term gloss (§12 Q4) | Adopt the behavior already in the draft prompt: keep established English terms, add a short gloss **on first occurrence only**, for glossary terms and for terms the model judges to have no common equivalent. Exposed as a setting in M2. | `translate@1` prompt text, eval rubric for "terminology". |
@@ -31,7 +31,7 @@ Sizes assume one developer working with AI assistance: **S** ≈ up to 1 week, *
                                    M5 UX complete + robustness ─────────► M6 Hardening ═══ v1.0
                                                                                  │
                                                                                  ▼
-                                                        M7 Stronger translation ──► M8 Beyond v1
+                                                        M7 Stronger translation ──► M8 UI/UX refresh ──► M9 Beyond v1
 ```
 
 | # | Milestone | Goal in one line | Size | Cut |
@@ -44,7 +44,8 @@ Sizes assume one developer working with AI assistance: **S** ≈ up to 1 week, *
 | M5 | Reading UX complete and robustness | Hover, bidirectional scroll sync, SPA handling, site rules, long docs, tables, Chrome built-in, import/export | M | |
 | M6 | Release hardening | Store listing, permissions review, e2e tests, regression gate, docs, beta | M | **v1.0** |
 | M7 | Stronger translation | `refine` strategy with revisions, quality modes, translation memory from edits | L | v1.1 |
-| M8 | Beyond v1 | `agentic`, Firefox, passphrase lock, domain providers, `gemini-native` | L | later |
+| M8 | UI/UX refresh | One design system for the panel, options and onboarding; reading-first panel, reading settings, script-correct fonts | M | v1.2 |
+| M9 | Beyond v1 | `agentic`, Firefox, passphrase lock, domain providers, `gemini-native` | L | later |
 
 ## 2. Spikes (time-boxed, inside M0)
 
@@ -284,7 +285,7 @@ huge docs, tables, navigation within a site.
 - SPA handling: MutationObserver + URL-change detection → re-extract; unchanged segments from cache; stable segment ids across re-extraction.
 - Navigation within a site keeps translating when the site is allowlisted (optional host permission per S5). Otherwise, after a same-origin navigation, the panel shows the original text with a one-click "Translate this page" (the `activeTab` grant survives same-origin navigation). After a cross-origin navigation, it asks for `Alt+T`/the toolbar or "Always translate on this site", because a panel click cannot grant `activeTab`.
 - Long documents: lazy mode above a segment-count threshold (viewport + ~2 screens ahead), with "Translate the rest" button.
-- Tables: cell segments, rows kept in one chunk; captions and alt text behind a setting; code comments translation deferred to M8.
+- Tables: cell segments, rows kept in one chunk; captions and alt text behind a setting; code comments translation deferred to M9.
 - Site rules UI: auto-translate allowlist, never-translate list, local-only, per-site model (storage from M4-E8).
 - Chrome built-in: `chrome-builtin` adapter for Nano via `LanguageModel` (experimental, behind a flag) and a separate **MT port** for `Translator` used by the `basic` strategy (see §8 item 3); "basic translation" label; used as last fallback or by choice.
 - "Explain this" per-block action (`explain@1` prompt via `translateSnippet`, output shown as a note).
@@ -357,7 +358,22 @@ never waits; the translator learns from the user's edits.
 modes and routing UI; M7-E4 block editing and translation memory store; M7-E5 TM provider;
 M7-E6 eval comparison.
 
-### M8 — Beyond v1 (unsized)
+### M8 — UI/UX refresh (size M, v1.2)
+
+**Goal.** The panel reads like a page, not a form: the translation leads, controls stay out of the
+way, and every script renders correctly. Options and onboarding share the same design system.
+
+**Deliverables.** Design tokens and anti-pattern rules in `docs/design-system.md`; a small Preact
+component set (buttons, menus, segmented controls, fields, popover, icons); the "Paper" panel
+(one control row, 2px progress bar, serif or sans reading text, per-block actions on hover);
+reading settings (font size, typeface, line width, theme light/dark/paper); system font stacks per
+script through `:lang()`; options and onboarding rebuilt on the same components.
+
+**Exit criteria.** See `docs/plans/M8-ui-ux-refresh.md` §3.
+
+**Dependencies.** M6 (e2e, bundle budget, store screenshots), M7 (panel features it restyles).
+
+### M9 — Beyond v1 (unsized)
 
 `agentic` strategy with read-only tools (web `define_term` must be allow-listed and must never
 receive page text verbatim, see §8 item 14); Firefox build (`sidebar_action`, no built-in AI);
@@ -398,8 +414,8 @@ no SPA handling, no Chrome built-in. This is the first point where daily reading
 the extension than without it.
 
 **v1.0 = M0–M6.** Everything in `DESIGN.md` except: `refine`/quality modes and translation memory
-(M7), `agentic` (M8), Firefox (M8), passphrase lock (M8), code-comment translation (M8),
-`gemini-native` (M8). Chrome built-in ships in v1.0 as a fallback and experimental option only
+(M7), `agentic` (M9), Firefox (M9), passphrase lock (M9), code-comment translation (M9),
+`gemini-native` (M9). Chrome built-in ships in v1.0 as a fallback and experimental option only
 if S8 shows it is reliable; otherwise it moves to v1.1 and onboarding offers two paths.
 
 ## 6. Dependencies on the §0 assumptions

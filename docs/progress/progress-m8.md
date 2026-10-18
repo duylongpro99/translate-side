@@ -22,7 +22,7 @@ A fresh session resumes from this file alone.
 | 3 | Reading view: typography, rhythm, block states, scripts | **Accepted 2026-10-18 11:35** (pnpm check, e2e 48 passed) | see git log |
 | 4 | Options page on the design system | **Accepted 2026-10-18 12:30** (pnpm check, e2e 48 passed) | see git log |
 | 5 | Onboarding on the design system | **Accepted 2026-10-18 13:05** (pnpm check, e2e 49 passed) | see git log |
-| 6 | Verification, screenshots, docs and 1.2.0 RC | Pending | |
+| 6 | Verification, screenshots, docs and 1.2.0 RC | **Agent part accepted 2026-10-18 13:40**; owner part open (Windows check, upload, tag) | see git log |
 
 ## Decisions
 
@@ -190,6 +190,35 @@ A fresh session resumes from this file alone.
   budget is tight and the sample is one paragraph); the system fallback draws every script.
 - Phase 5 checks: one `pnpm check` run failed an unrelated timing unit test (`src/engine/context/memory.test.ts`,
   5,000 entries ranked in under 50 ms, 302 ms under load); the next full run passed.
+
+## Phase 6 log
+
+- `e2e/scripts.spec.ts`: real samples for vi, ja, zh-CN, zh-TW, ko, th, ar, and bare zh and he through storage. Every
+  translated block carries the target `lang`; ar and he blocks and the region run `rtl`; ja, zh-CN, zh-TW and ko reach
+  four different font rules, bare zh is Simplified, ar and he differ from vi. The drawn-glyph check passed on this
+  Mac: 直骨 drawn in the Japanese stack differ from the Simplified Chinese one (it skips with a recorded reason where
+  neither platform font exists).
+- Rhythm, reading-settings and follow-anchor checks (`e2e/reading.spec.ts`) run in the full suite; the contrast test
+  covers every theme and token; `check-tokens.mjs` passes on the final tree.
+- Windows check not done: no Windows machine. Recorded in `docs/design-system.md`; sans stays the default.
+- Screenshots: `screens/after/` (light, dark, paper at 320 and 480 px, panel, settings, onboarding) and
+  `screens/README.md`; store screenshots 01–05 regenerated.
+- Docs: DESIGN.md §3 (header, reading settings, sketch), README (features, roadmap row; M8 stays ⏳ until the owner
+  publishes 1.2.0, as M7 did), ROADMAP (M8 UI/UX refresh and M9 Beyond, the same edits as the main checkout's
+  uncommitted ones), docs/design-system.md, docs/privacy.md.
+- Bundle: the lines M8 changed measured again against the phase 1 chunk map (no chunk renamed; `theme-boot.js` new),
+  and the total: 303489 B of 333838 B.
+- Final tree: `pnpm check` green, `pnpm run e2e` 49 passed (6 skipped: the gated screenshot specs and the upgrade
+  test). Last look at every surface in light, paper and dark: one accent, no gradients, cards, pills, shimmer or
+  emoji; spec §2 bullets met (one control row, book-like text with reading settings, even rhythm, readable waiting
+  blocks, script-correct fonts and RTL, options and onboarding on the same parts).
+- Version 1.2.0; the zip, its size and SHA-256 are in `docs/store/submission.md`.
+
+## Final state
+
+M8 is done on branch `m8` (worktree `../translate-side-m8`), not merged or pushed. Owner steps: review, merge into
+master (the main checkout's uncommitted README and ROADMAP edits are already in `m8`: set them aside first), push,
+run the Windows glyph check, upload 1.2.0 and tag it.
 
 ## Open items
 

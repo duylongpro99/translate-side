@@ -50,12 +50,18 @@ terms consistent, and rewrite idioms. That's the core of this design (§5).
 ┌──────────────────────────── Browser window ─────────────────────────────┐
 │  Original page (untouched)              │  Translate Side panel         │
 │                                         │  ┌─────────────────────────┐  │
-│  # Understanding Async Rust             │  │ EN → VI   Haiku 4.5  ⚙  │  │
-│                                         │  ├─────────────────────────┤  │
+│  # Understanding Async Rust             │  │EN→Tiếng Việt⌄ Tự nhiên⌄ │  │
+│                                         │  │        Aa  ⇅  ↻  ⋯      │  │
+│                                         │  │ Understanding Async Rust│  │
+│                                         │  │▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔ 2px │  │
 │  ▌Futures in Rust are lazy: they do     │  │ # Hiểu về Async Rust    │  │
 │  ▌nothing unless polled...  ◀── hover ──┼──▶ ▌Future trong Rust là   │  │
 │                                         │  │ ▌"lười": ...            │  │
 │  ```rust                                │  │ ```rust  (kept as-is)   │  │
+│  async fn fetch() { ... }               │  │ WAITING                 │  │
+│  ```                                    │  │ The original, muted…    │  │
+└─────────────────────────────────────────┴───────────────────────────────┘
+```rust                                │  │ ```rust  (kept as-is)   │  │
 │  async fn fetch() { ... }               │  │                         │  │
 │  ```                                    │  │ ░░░░ translating… ░░░░  │  │
 └─────────────────────────────────────────┴───────────────────────────────┘
@@ -75,10 +81,16 @@ terms consistent, and rewrite idioms. That's the core of this design (§5).
 - **Per-block actions**: *show original inline*, *retranslate* (skips the cache and replaces the
   stored entry), *copy* (the shown text, as plain text), *explain this* (a short note on idioms or
   cultural references; M5).
-- **Header**: the language pair with a target-language switch, the model (read-only until the
-  quick switcher, §4.3.3 B, takes its place), the style mode, settings, Cancel / Retranslate page,
-  and the scroll-follow toggle. A switch is saved like the options page saves it, and the page is
-  translated again under it (from the cache where it can).
+- **Header**: one control row. The language pair with a target-language switch; a Translation
+  button whose popover holds the style mode, the quality, the quick switcher (§4.3.3 B) and a page
+  line with the model, time and cost; then **Aa** (reading settings), the scroll-follow toggle,
+  Retranslate page or Stop, and a More menu (keyboard shortcuts, settings, close). Under the row: the
+  page title, a 2px progress bar while translating, and a strip for notices that must stay in view.
+  A switch is saved like the options page saves it, and the page is translated again under it (from
+  the cache where it can).
+- **Reading settings**: serif or sans, a text size (13 to 24px), a line width and a theme (system,
+  light, paper or dark). They are their own synced setting, never part of the translation settings,
+  so a change restyles the text at once, starts no job and keeps the reader's place.
 - **Style control**: Natural (default) / Faithful (closer to the source) / Simplified (easier
   reading).
 - **Glossary**: terms detected automatically for each document, plus a personal glossary you edit

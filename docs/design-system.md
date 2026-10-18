@@ -86,8 +86,10 @@ Fonts are system fonts only.
 **Why Georgia leads the serif stack.** `scripts/glyph-check.html` draws every Vietnamese vowel with
 every tone mark, plus Ơ Ư Đ, in each candidate. On macOS (Chrome 156, 2026-10-18) Iowan Old Style
 and Charter have every glyph, but they draw the horn of ơ and ư like a hook above, so ơ reads as ỏ
-and Ở loses its horn. Georgia draws them correctly. The Windows result is recorded in phase 6 of
-the M8 plan.
+and Ở loses its horn. Georgia draws them correctly. Windows was not checked: no Windows machine
+was available for M8. Georgia ships with Windows and covers Vietnamese, and sans stays the default
+typeface, so a Windows reader who picks serif gets Georgia; open `scripts/glyph-check.html` there to
+confirm.
 
 ### Per-script stacks and why `lang` matters
 
