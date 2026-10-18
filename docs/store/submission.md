@@ -1,4 +1,4 @@
-# Store submission: version 1.1.0
+# Store submission: version 1.2.0
 
 Everything the agent can prepare is here; **publishing is the owner's**. This page lists the package to upload, the
 assets, and the steps in the Chrome Web Store developer dashboard.
@@ -7,10 +7,10 @@ assets, and the steps in the Chrome Web Store developer dashboard.
 
 | | |
 |---|---|
-| File | `.output/translate-side-1.1.0-chrome.zip` (made by `pnpm run zip`; `.output/` is not committed) |
-| Size | 331 294 bytes |
-| SHA-256 | `21339ef0333282dd5384d7c71b8bf969ce2d1b62b0d4616242b2439a111dfa95` |
-| Built from | source at commit `8b1a40e` (version `1.1.0` from `package.json`) |
+| File | `.output/translate-side-1.2.0-chrome.zip` (made by `pnpm run zip`; `.output/` is not committed) |
+| Size | 344 624 bytes |
+| SHA-256 | `5a78b7552aff633d735bff52590810fc3d0983bd7989e9c91aa8f36d05f910f8` |
+| Built from | source at commit `c1de072` (version `1.2.0` from `package.json`) |
 
 The zip is reproducible: building the same source again gives the same hash. To rebuild it, run
 `pnpm install --frozen-lockfile && pnpm run zip` and compare the hash with the one above; if the source changed since
@@ -25,9 +25,9 @@ the commit above, the hash changes and this table needs updating.
 - It is the production build: no source maps (`*.map`), no `.env` or dotfiles, no absolute home paths or user names in
   any file, no development-only host permission (the harness's `http://127.0.0.1/*` is added only to a temporary copy
   under `.output/e2e-ext`, never to the build).
-- Version `1.1.0` in the manifest.
+- Version `1.2.0` in the manifest.
 
-**Contents** (27 files, 331 KB):
+**Contents** (28 files, 345 KB):
 
 | Path | What |
 |---|---|
@@ -35,9 +35,28 @@ the commit above, the hash changes and this table needs updating.
 | `background.js` | Service worker |
 | `content-scripts/content.js` | The content script, injected on a user action |
 | `sidepanel.html`, `options.html`, `onboarding.html` | The three pages |
+| `theme-boot.js` | Sets the reader's theme before a page paints (a classic script in each page's head) |
 | `chunks/*.js` (12 files), `assets/*.css` (3 files) | Their code and styles, including the Anthropic and OpenAI SDKs |
 | `_locales/en/messages.json`, `_locales/vi/messages.json` | Interface strings |
 | `icon/16.png`, `32.png`, `48.png`, `128.png` | Icons (the 128 px one is also the store icon) |
+
+## What's new in 1.2.0
+
+Paste into the item's update notes (English, then Vietnamese).
+
+> The panel now reads like a page. One quiet control row replaces the old header: the language pair, a Translation
+> menu (style, quality, model and the page's cost), reading settings, scroll follow and a More menu. Choose serif or
+> sans, a text size, a line width and a theme (system, light, paper or dark); a change applies at once and never
+> translates the page again. Paragraphs, lists and headings sit on one even spacing scale, blocks still waiting show
+> their original, Japanese and Chinese characters take their own forms, and Arabic and Hebrew run right to left.
+> Settings and the setup guide use the same look, with a section index in Settings.
+
+> Bảng bên giờ đọc như một trang sách. Một hàng điều khiển gọn thay cho phần đầu cũ: cặp ngôn ngữ, menu Bản dịch
+> (phong cách, chất lượng, mô hình và chi phí của trang), cài đặt đọc, cuộn theo trang và menu Thêm. Chọn chữ có
+> chân hoặc không chân, cỡ chữ, độ rộng dòng và giao diện (hệ thống, sáng, giấy hoặc tối); thay đổi có hiệu lực ngay
+> và không dịch lại trang. Đoạn văn, danh sách và tiêu đề cách đều nhau, khối đang chờ hiện bản gốc, chữ Hán tiếng
+> Nhật và tiếng Trung hiện đúng nét, tiếng Ả Rập và Do Thái chạy từ phải sang trái. Trang cài đặt và trang thiết lập
+> dùng cùng giao diện, trang cài đặt có mục lục các phần.
 
 ## Store assets
 
@@ -71,7 +90,7 @@ provider's answer time with a delay added so it reads as a plausible duration; i
    - [ ] The commit that holds `docs/privacy.md` is on `master` on GitHub, so the policy URL resolves:
      https://github.com/duylongpro99/translate-side/blob/master/docs/privacy.md . Open it in a private window.
    - [ ] Rebuild and check the zip: `pnpm install --frozen-lockfile && pnpm run zip`, then
-     `shasum -a 256 .output/translate-side-1.1.0-chrome.zip` matches the table above.
+     `shasum -a 256 .output/translate-side-1.2.0-chrome.zip` matches the table above.
    - [ ] A throw-away API key with a small spend limit for the reviewer's test instructions. Do not put it in the
      repository.
 2. **Add the item.** Developer dashboard → **Add new item** → upload the zip. Fix anything the upload reports.
