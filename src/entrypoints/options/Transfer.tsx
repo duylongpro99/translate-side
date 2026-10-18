@@ -3,6 +3,7 @@
 // of what it would change, and nothing is written until the user confirms that too (§8).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
+import { Button } from '@/ui/Button';
 import { i18n } from '#i18n';
 import { slots } from '../sidepanel/slots.tsx';
 import { applyImport, buildExport, exportFileName, MAX_IMPORT_BYTES, parseImport, previewImport, type ImportPlan, type ImportReport } from '@/shared/portable';
@@ -220,17 +221,16 @@ export function TransferSection({ api }: { api: Browser }) {
           />{' '}
           {i18n.t('options.transfer.includeKeys')}
         </label>
-        <button type="button" data-testid="export" disabled={busy || confirming} onClick={() => void runExport(withKeys)}>
+        <Button data-testid="export" disabled={busy || confirming} onClick={() => void runExport(withKeys)}>
           {i18n.t('options.transfer.export')}
-        </button>
+        </Button>
       </div>
       {confirming ? (
         <div class="opt__status opt__status--warn" role="alertdialog" aria-labelledby="keys-confirm-h" data-testid="keys-confirm">
           <p id="keys-confirm-h">
             {slots(i18n.t('options.transfer.confirm', { warning: '{warning}' }), { warning: <strong>{i18n.t('options.transfer.confirmWarning')}</strong> })}
           </p>
-          <button
-            type="button"
+          <Button
             ref={confirmCancel}
             data-testid="keys-confirm-no"
             onClick={() => {
@@ -239,10 +239,10 @@ export function TransferSection({ api }: { api: Browser }) {
             }}
           >
             {i18n.t('options.transfer.cancel')}
-          </button>{' '}
-          <button type="button" data-testid="keys-confirm-yes" onClick={() => setConfirming(false)}>
+          </Button>{' '}
+          <Button data-testid="keys-confirm-yes" onClick={() => setConfirming(false)}>
             {i18n.t('options.transfer.confirmYes')}
-          </button>
+          </Button>
         </div>
       ) : null}
       {exportNote ? (
@@ -252,8 +252,8 @@ export function TransferSection({ api }: { api: Browser }) {
       ) : null}
       <h3>{i18n.t('options.transfer.importTitle')}</h3>
       <div class="opt__row">
-        <label for="import-file">{i18n.t('options.transfer.file')}</label>
-        <input id="import-file" ref={fileInput} type="file" accept=".json,application/json" data-testid="import-file" onChange={(e) => void onFile(e)} />
+        <label for="import-file" class="ui-button opt__file-label">{i18n.t('options.transfer.file')}</label>
+        <input id="import-file" class="opt__file-input" ref={fileInput} type="file" accept=".json,application/json" data-testid="import-file" onChange={(e) => void onFile(e)} />
       </div>
       {pending ? (
         <div ref={previewBox} data-testid="import-preview" role="group" aria-label={i18n.t('options.transfer.previewLabel', [pending.fileName])}>
@@ -279,12 +279,12 @@ export function TransferSection({ api }: { api: Browser }) {
             </label>
           ) : null}
           <p>
-            <button type="button" data-testid="import-apply" disabled={busy} onClick={() => void runImport()}>
+            <Button variant="primary" data-testid="import-apply" disabled={busy} onClick={() => void runImport()}>
               {i18n.t('options.transfer.apply')}
-            </button>{' '}
-            <button type="button" data-testid="import-cancel" onClick={() => setPending(undefined)}>
+            </Button>{' '}
+            <Button data-testid="import-cancel" onClick={() => setPending(undefined)}>
               {i18n.t('options.transfer.cancel')}
-            </button>
+            </Button>
           </p>
         </div>
       ) : null}

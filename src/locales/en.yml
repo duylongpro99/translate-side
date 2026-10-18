@@ -346,6 +346,12 @@ errors:
   unknown: unknown error
 
 options:
+  nav:
+    label: Settings sections
+  more: More about this
+  theme:
+    label: Theme
+    hint: "For this page, the panel and the setup guide; it follows you to your other devices, as the panel’s Aa settings do."
   languages:
     title: "Languages"
     target: "Translate into"
@@ -607,6 +613,8 @@ options:
       n: "($1 keys replace one you have saved)"
     apply: "Import"
   providers:
+    groupConnection: Connection
+    groupAuth: Authentication
     accessHint: "Chrome asks for access to $1 only."
     accessHintPorts: "Chrome asks for access to $1 only (all its ports, not just $2)."
     accessHintServer: "Chrome asks for access to this server only."

@@ -6,6 +6,8 @@ import { BEST_MODE_RELEASED } from '@/shared/quality';
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
+import { Select } from '@/ui/Select';
+import { Button } from '@/ui/Button';
 import { i18n } from '#i18n';
 import { slots } from '../sidepanel/slots.tsx';
 import { createAdapter } from '@/llm/client';
@@ -137,7 +139,7 @@ export function ProvidersSection({ api, adapterFor = createAdapter, retestMs = R
   };
 
   return (
-    <section class="opt__section" aria-labelledby="providers-h" data-testid="providers">
+    <section class="opt__section" id="providers" aria-labelledby="providers-h" data-testid="providers">
       <h2 id="providers-h">{i18n.t('options.providers.title')}</h2>
       {!loaded ? (
         <p class="opt__hint">{i18n.t('options.reading')}</p>
@@ -199,9 +201,9 @@ function Connections({ api, loaded, onAdd, onEdit, onNote }: { api: Browser; loa
     <div class="prov__block" data-testid="connections">
       <div class="prov__head">
         <h3>{i18n.t('options.providers.connections')}</h3>
-        <button type="button" onClick={onAdd} data-testid="add-connection">
+        <Button onClick={onAdd} data-testid="add-connection">
           {i18n.t('options.providers.add')}
-        </button>
+        </Button>
       </div>
       {rows.length === 0 ? <p class="opt__hint">{i18n.t('options.providers.noConnections')}</p> : null}
       <ul class="prov__list">
@@ -226,27 +228,27 @@ function Connections({ api, loaded, onAdd, onEdit, onNote }: { api: Browser; loa
               </span>
               <span class="prov__actions">
                 {c.lastErrorKind === 'cors-origin' && c.status === 'error' ? (
-                  <button type="button" onClick={() => onEdit(c.id, true)} data-testid="fix-cors">
+                  <Button onClick={() => onEdit(c.id, true)} data-testid="fix-cors">
                     {i18n.t('options.providers.fix')}
-                  </button>
+                  </Button>
                 ) : null}
-                <button type="button" onClick={() => onEdit(c.id)} aria-label={i18n.t('options.providers.editAria', [c.label])}>
+                <Button onClick={() => onEdit(c.id)} aria-label={i18n.t('options.providers.editAria', [c.label])}>
                   {i18n.t('options.providers.edit')}
-                </button>
+                </Button>
                 {implicit && !loaded.keyed.has(c.id) ? null : confirm === c.id ? (
                   <span class="prov__confirm" data-testid="confirm-remove">
                     {implicit || BUILTIN_IDS.has(c.id) ? i18n.t('options.providers.confirmBuiltIn') : i18n.t('options.providers.confirm', [c.label])}{' '}
-                    <button type="button" onClick={() => remove(c)} data-testid="confirm-remove-yes">
+                    <Button variant="quiet" class="opt__danger" onClick={() => remove(c)} data-testid="confirm-remove-yes">
                       {i18n.t('options.providers.remove')}
-                    </button>{' '}
-                    <button type="button" onClick={() => setConfirm(undefined)}>
+                    </Button>{' '}
+                    <Button onClick={() => setConfirm(undefined)}>
                       {i18n.t('options.providers.cancel')}
-                    </button>
+                    </Button>
                   </span>
                 ) : (
-                  <button type="button" onClick={() => setConfirm(c.id)} aria-label={i18n.t('options.providers.removeAria', [c.label])} data-testid="remove-connection">
+                  <Button variant="quiet" class="opt__danger" onClick={() => setConfirm(c.id)} aria-label={i18n.t('options.providers.removeAria', [c.label])} data-testid="remove-connection">
                     {implicit ? i18n.t('options.providers.removeKey') : i18n.t('options.providers.remove')}
-                  </button>
+                  </Button>
                 )}
               </span>
             </li>
@@ -295,9 +297,9 @@ function Models({ api, loaded, onAdd, onNote }: { api: Browser; loaded: Loaded; 
     <div class="prov__block" data-testid="models">
       <div class="prov__head">
         <h3>{i18n.t('options.providers.models')}</h3>
-        <button type="button" onClick={onAdd} data-testid="add-model">
+        <Button onClick={onAdd} data-testid="add-model">
           {i18n.t('options.providers.add')}
-        </button>
+        </Button>
       </div>
       <ul class="prov__list">
         {rows.map((p) => {
@@ -314,20 +316,20 @@ function Models({ api, loaded, onAdd, onNote }: { api: Browser; loaded: Loaded; 
               {dual && c ? (
                 <label class="prov__switch">
                   API{' '}
-                  <select value={p.protocolOverride ?? c.detectedProtocols?.[0]} onChange={(e) => void setProtocol(p, (e.target as HTMLSelectElement).value as Protocol)} aria-label={i18n.t('options.providers.apiFormatFor', [p.model])}>
+                  <Select value={p.protocolOverride ?? c.detectedProtocols?.[0]} onChange={(e) => void setProtocol(p, (e.target as HTMLSelectElement).value as Protocol)} aria-label={i18n.t('options.providers.apiFormatFor', [p.model])}>
                     {(c.detectedProtocols ?? []).map((x) => (
                       <option key={x} value={x}>
                         {protocolLabel(x)}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
               ) : null}
               <span class="prov__actions">
                 {implicit || settings.routing.translate === p.id ? null : (
-                  <button type="button" onClick={() => void remove(p)} aria-label={i18n.t('options.providers.removeAria', [p.model])}>
+                  <Button variant="quiet" class="opt__danger" onClick={() => void remove(p)} aria-label={i18n.t('options.providers.removeAria', [p.model])}>
                     {i18n.t('options.providers.remove')}
-                  </button>
+                  </Button>
                 )}
               </span>
             </li>
@@ -375,13 +377,13 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
       <h3>{i18n.t('options.providers.routing')}</h3>
       <div class="opt__row">
         <label for="route-translate">{i18n.t('options.providers.translateWith')}</label>
-        <select id="route-translate" value={settings.routing.translate} onChange={(e) => save({ translate: (e.target as HTMLSelectElement).value }, i18n.t('options.providers.translateSaved'))}>
+        <Select id="route-translate" value={settings.routing.translate} onChange={(e) => save({ translate: (e.target as HTMLSelectElement).value }, i18n.t('options.providers.translateSaved'))}>
           {options(settings.routing.translate)}
-        </select>
+        </Select>
       </div>
       <div class="opt__row">
         <label for="route-analyze">{i18n.t('options.providers.brief')}</label>
-        <select
+        <Select
           id="route-analyze"
           value={settings.routing.analyze ?? ''}
           onChange={(e) => {
@@ -391,14 +393,14 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
         >
           <option value="">{i18n.t('options.providers.sameAsTranslate')}</option>
           {options(settings.routing.analyze)}
-        </select>
+        </Select>
       </div>
       <p class="opt__hint">{i18n.t('options.providers.briefHint')}</p>
       {BEST_MODE_RELEASED ? (
         <>
         <div class="opt__row">
           <label for="route-review">{i18n.t('options.providers.reviewWith')}</label>
-          <select
+          <Select
             id="route-review"
             value={settings.routing.review ?? ''}
             onChange={(e) => {
@@ -408,7 +410,7 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
           >
             <option value="">{i18n.t('options.providers.sameAsTranslate')}</option>
             {options(settings.routing.review)}
-          </select>
+          </Select>
         </div>
         <p class="opt__hint">{i18n.t('options.providers.reviewHint')}</p>
         </>
@@ -484,16 +486,16 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
           {rules.map((r) => (
             <li key={r.pattern} class="prov__row" data-testid="site-rule">
               <span class="prov__name">{r.pattern}</span>
-              <select value={r.translate} aria-label={i18n.t('options.providers.modelFor', [r.pattern])} onChange={(e) => edit(r.pattern, { translate: (e.target as HTMLSelectElement).value }, i18n.t('options.providers.siteRuleSaved', [r.pattern]))}>
+              <Select value={r.translate} aria-label={i18n.t('options.providers.modelFor', [r.pattern])} onChange={(e) => edit(r.pattern, { translate: (e.target as HTMLSelectElement).value }, i18n.t('options.providers.siteRuleSaved', [r.pattern]))}>
                 {options(r.translate)}
-              </select>
+              </Select>
               <label class="opt__check">
                 <input type="checkbox" checked={r.localOnly === true} aria-label={i18n.t('options.providers.localOnlyFor', [r.pattern])} onChange={(e) => edit(r.pattern, { localOnly: (e.target as HTMLInputElement).checked }, i18n.t('options.providers.siteRuleSaved', [r.pattern]))} /> {i18n.t('options.providers.localOnly')}
               </label>
               <span class="prov__actions">
-                <button type="button" aria-label={i18n.t('options.providers.removeRuleAria', [r.pattern])} onClick={() => onSave(rules.filter((x) => x.pattern !== r.pattern), i18n.t('options.providers.siteRuleRemoved', [r.pattern]))}>
+                <Button variant="quiet" class="opt__danger" aria-label={i18n.t('options.providers.removeRuleAria', [r.pattern])} onClick={() => onSave(rules.filter((x) => x.pattern !== r.pattern), i18n.t('options.providers.siteRuleRemoved', [r.pattern]))}>
                   {i18n.t('options.providers.remove')}
-                </button>
+                </Button>
               </span>
               {r.localOnly && cloud(r.translate) ? (
                 <p class="opt__status opt__status--warn" data-testid="site-rule-cloud">
@@ -506,15 +508,15 @@ function SiteModelRules({ settings, profiles, options, onSave }: { settings: Pro
       ) : null}
       <form class="opt__row" onSubmit={add} data-testid="site-rule-form">
         <input aria-label={i18n.t('options.providers.site')} placeholder={i18n.t('options.sites.allowPlaceholder')} value={site} onInput={(e) => setSite((e.target as HTMLInputElement).value)} />
-        <select aria-label={i18n.t('options.providers.modelForSite')} value={chosen} onChange={(e) => setModel((e.target as HTMLSelectElement).value)}>
+        <Select aria-label={i18n.t('options.providers.modelForSite')} value={chosen} onChange={(e) => setModel((e.target as HTMLSelectElement).value)}>
           {options(chosen)}
-        </select>
+        </Select>
         <label class="opt__check">
           <input type="checkbox" checked={localOnly} aria-label={i18n.t('options.providers.localOnlyForSite')} onChange={(e) => tickLocal((e.target as HTMLInputElement).checked)} /> {i18n.t('options.providers.localOnly')}
         </label>
-        <button type="submit" disabled={site.trim() === ''}>
+        <Button type="submit" disabled={site.trim() === ''}>
           {i18n.t('options.providers.addRule')}
-        </button>
+        </Button>
       </form>
       {problem ? (
         <p class="opt__status opt__status--warn" role="status" data-testid="site-rule-problem">
@@ -549,7 +551,7 @@ function FallbackChain({ settings, profiles, options, onSave }: { settings: Prov
           <li key={`${i}:${id}`}>
             {i > 0 ? <span aria-hidden="true">→ </span> : null}
             {profiles.some((p) => p.id === id) ? (
-              <select
+              <Select
                 aria-label={i18n.t('options.providers.fallbackN', [String(i + 1)])}
                 value={id}
                 onChange={(e) => {
@@ -560,29 +562,29 @@ function FallbackChain({ settings, profiles, options, onSave }: { settings: Prov
               >
                 {/* Not the translate model itself, nor a model already in the chain (M4-D tester). */}
                 {options(id, [settings.routing.translate, ...chain])}
-              </select>
+              </Select>
             ) : (
               <span>{named(id)}</span>
             )}{' '}
-            <button type="button" class="prov__small" aria-label={i18n.t('options.providers.removeFallbackAria', [String(i + 1), named(id)])} onClick={() => onSave(chain.filter((_, j) => j !== i), i18n.t('options.providers.fallbackRemoved'))}>
+            <Button variant="quiet" class="prov__small opt__danger" aria-label={i18n.t('options.providers.removeFallbackAria', [String(i + 1), named(id)])} onClick={() => onSave(chain.filter((_, j) => j !== i), i18n.t('options.providers.fallbackRemoved'))}>
               ×
-            </button>
+            </Button>
           </li>
         ))}
         {unused.length ? (
           <li>
-            <button type="button" class="prov__small" data-testid="fallback-add" onClick={() => onSave(withAdded((unused[0] as ModelProfile).id), i18n.t('options.providers.fallbackAdded'))}>
+            <Button class="prov__small" data-testid="fallback-add" onClick={() => onSave(withAdded((unused[0] as ModelProfile).id), i18n.t('options.providers.fallbackAdded'))}>
               {chain.some((id) => id !== BASIC_FALLBACK) ? '+' : i18n.t('options.providers.addFallback')}
-            </button>
+            </Button>
           </li>
         ) : chain.length === 0 ? (
           <li class="opt__hint">{i18n.t('options.providers.needSecond')}</li>
         ) : null}
         {hasBasic ? null : (
           <li>
-            <button type="button" class="prov__small" data-testid="fallback-add-basic" title={i18n.t('options.providers.basicTitle')} onClick={() => onSave([...chain, BASIC_FALLBACK], i18n.t('options.providers.basicAdded'))}>
+            <Button class="prov__small" data-testid="fallback-add-basic" title={i18n.t('options.providers.basicTitle')} onClick={() => onSave([...chain, BASIC_FALLBACK], i18n.t('options.providers.basicAdded'))}>
               {i18n.t('options.providers.addBasic')}
-            </button>
+            </Button>
           </li>
         )}
       </ol>
@@ -644,9 +646,9 @@ function ModelForm({ api, adapterFor, loaded, onDone }: { api: Browser; adapterF
     return (
       <div class="prov__block">
         <p class="opt__hint">{i18n.t('options.providers.needConnection')}</p>
-        <button type="button" onClick={() => onDone()}>
+        <Button onClick={() => onDone()}>
           {i18n.t('options.providers.back')}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -655,32 +657,32 @@ function ModelForm({ api, adapterFor, loaded, onDone }: { api: Browser; adapterF
       <h3>{i18n.t('options.providers.addModel')}</h3>
       <div class="opt__row">
         <label for="m-conn">{i18n.t('options.providers.connection')}</label>
-        <select id="m-conn" value={connId} onChange={(e) => setConnId((e.target as HTMLSelectElement).value)}>
+        <Select id="m-conn" value={connId} onChange={(e) => setConnId((e.target as HTMLSelectElement).value)}>
           {usable.map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <ModelPicker id="m-model" model={model} models={models} onModel={setModel} />
       {error ? (
         <p class="opt__status opt__status--warn" data-testid="model-form-error">
           {error}{' '}
           {needsAccess ? (
-            <button type="button" onClick={grant} data-testid="model-form-grant">
+            <Button onClick={grant} data-testid="model-form-grant">
               {i18n.t('options.providers.grant')}
-            </button>
+            </Button>
           ) : null}
         </p>
       ) : null}
       <div class="opt__row">
-        <button type="submit" disabled={model.trim() === ''}>
+        <Button variant="primary" type="submit" disabled={model.trim() === ''}>
           {i18n.t('options.providers.save')}
-        </button>
-        <button type="button" onClick={() => onDone()}>
+        </Button>
+        <Button onClick={() => onDone()}>
           {i18n.t('options.providers.cancel')}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -880,6 +882,7 @@ export function ConnectionForm({
     <form class="prov__block" onSubmit={onSave} data-testid="connection-form">
       <h3>{editing ? i18n.t('options.providers.editTitle', [editing.label]) : i18n.t('options.providers.addTitle', [presetTitle(preset)])}</h3>
       {presetNote(preset) ? <p class="opt__hint">{presetNote(preset)}</p> : null}
+      <h4 class="prov__group">{i18n.t('options.providers.groupConnection')}</h4>
       <div class="opt__row">
         <label for="c-label">{i18n.t('options.providers.name')}</label>
         <input id="c-label" value={draft.label} placeholder={preset.custom ? i18n.t('options.providers.namePlaceholder') : preset.label} onInput={(e) => set({ label: (e.target as HTMLInputElement).value })} />
@@ -888,25 +891,26 @@ export function ConnectionForm({
       {fields.apiFormat ? (
         <div class="opt__row">
           <label for="c-format">{i18n.t('options.providers.apiFormat')}</label>
-          <select id="c-format" value={draft.protocol} onChange={(e) => set({ protocol: (e.target as HTMLSelectElement).value as Protocol | 'auto' })}>
+          <Select id="c-format" value={draft.protocol} onChange={(e) => set({ protocol: (e.target as HTMLSelectElement).value as Protocol | 'auto' })}>
             {(['openai-chat', 'anthropic-messages', 'auto'] as const).map((p) => (
               <option key={p} value={p}>
                 {protocolLabel(p)}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       ) : null}
+      {fields.auth || fields.key ? <h4 class="prov__group">{i18n.t('options.providers.groupAuth')}</h4> : null}
       {fields.auth ? (
         <div class="opt__row">
           <label for="c-auth">{i18n.t('options.providers.auth')}</label>
-          <select id="c-auth" value={draft.authStyle} onChange={(e) => set({ authStyle: (e.target as HTMLSelectElement).value as ConnectionDraft['authStyle'] })}>
+          <Select id="c-auth" value={draft.authStyle} onChange={(e) => set({ authStyle: (e.target as HTMLSelectElement).value as ConnectionDraft['authStyle'] })}>
             {(preset.authChoices ?? [preset.auth]).map((a) => (
               <option key={a} value={a}>
                 {authLabel(a)}
               </option>
             ))}
-          </select>
+          </Select>
           {draft.authStyle === 'custom-header' ? <input aria-label={i18n.t('options.providers.headerName')} placeholder={i18n.t('options.providers.headerNamePlaceholder')} value={draft.headerName} onInput={(e) => set({ headerName: (e.target as HTMLInputElement).value })} /> : null}
         </div>
       ) : null}
@@ -967,9 +971,9 @@ export function ConnectionForm({
         </div>
       </details>
       <div class="opt__row">
-        <button type="button" onClick={onTest} disabled={test.kind === 'running'} data-testid="test-connection">
+        <Button onClick={onTest} disabled={test.kind === 'running'} data-testid="test-connection">
           {test.kind === 'running' ? i18n.t('options.providers.testing') : i18n.t('options.providers.test')}
-        </button>
+        </Button>
         <span class="opt__hint" data-testid="access-hint">{accessHint(fixBaseUrl(draft.baseUrl).url)}</span>
       </div>
       {isUnencryptedPrivate(fixBaseUrl(draft.baseUrl).url) ? (
@@ -996,13 +1000,13 @@ export function ConnectionForm({
       ) : null}
       {error ? <p class="opt__status opt__status--warn">{error}</p> : null}
       <div class="opt__row">
-        <button type="submit" data-testid="save-connection">
+        <Button variant="primary" type="submit" data-testid="save-connection">
           {i18n.t('options.providers.save')}
-        </button>
+        </Button>
         {hideCancel ? null : (
-          <button type="button" onClick={cancel} data-testid="cancel-connection">
+          <Button onClick={cancel} data-testid="cancel-connection">
             {i18n.t('options.providers.cancel')}
-          </button>
+          </Button>
         )}
       </div>
     </form>
@@ -1043,9 +1047,9 @@ function PresetPicker({ onPick, onCancel }: { onPick: (id: PresetId) => void; on
           </ul>
         </div>
       ))}
-      <button type="button" onClick={onCancel}>
+      <Button onClick={onCancel}>
         {i18n.t('options.providers.cancel')}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -1091,21 +1095,21 @@ function TestOutcome({ draft, protocol, test, onFixKey, onRetry, onUseUrl, onGui
       </p>
       {m.command ? <Command text={m.command} /> : null}
       {m.action === 'fix-key' ? (
-        <button type="button" onClick={onFixKey} data-testid="fix-key">
+        <Button onClick={onFixKey} data-testid="fix-key">
           {i18n.t('options.providers.fixKey')}
-        </button>
+        </Button>
       ) : m.action === 'grant' ? (
-        <button type="button" onClick={onRetry}>
+        <Button onClick={onRetry}>
           {i18n.t('options.providers.grant')}
-        </button>
+        </Button>
       ) : m.action === 'cors-guide' ? (
-        <button type="button" onClick={onGuide} data-testid="open-guide">
+        <Button onClick={onGuide} data-testid="open-guide">
           {i18n.t('options.providers.fix')}
-        </button>
+        </Button>
       ) : m.action === 'use-url' && m.suggestion ? (
-        <button type="button" onClick={() => onUseUrl(m.suggestion as string)}>
+        <Button onClick={() => onUseUrl(m.suggestion as string)}>
           {i18n.t('options.providers.useUrl', [m.suggestion])}
-        </button>
+        </Button>
       ) : null}
       {fixes}
     </div>
@@ -1117,8 +1121,7 @@ function Command({ text }: { text: string }) {
   return (
     <div class="prov__command">
       <code data-testid="command">{text}</code>
-      <button
-        type="button"
+      <Button
         onClick={() =>
           void navigator.clipboard?.writeText(text).then(
             () => setCopied(true),
@@ -1127,7 +1130,7 @@ function Command({ text }: { text: string }) {
         }
       >
         {copied ? i18n.t('options.providers.copied') : i18n.t('options.providers.copy')}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -1165,9 +1168,9 @@ export function CorsGuide({ local, onClose }: { local: GuideKind; onClose: () =>
       <p class="opt__hint" data-testid="retest-note">
         {i18n.t('options.providers.retest')}
       </p>
-      <button type="button" onClick={onClose}>
+      <Button onClick={onClose}>
         {i18n.t('options.providers.close')}
-      </button>
+      </Button>
     </div>
   );
 }

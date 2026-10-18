@@ -189,6 +189,27 @@ The translated text in the panel (`.segments`, `SegmentList.tsx`).
   Hebrew, Persian or Urdu (`isRtl` in `src/shared/language.ts`), the region and every translated block
   get `dir="rtl"`; an original still waiting there runs `ltr`. Block CSS uses logical properties only.
 
+## The settings page (forms)
+
+- **Layout.** Wider than 900px, a sticky section index (`OptionsNav.tsx`, a labelled `nav`) beside
+  the content, which is at most 720px wide. Narrower, the index is a wrapping row at the top. The
+  index links to each section's id (`#providers`, `#sites`, `#memory` and so on), so deep links keep
+  working, and marks the section in view with `aria-current`.
+- **Sections.** An `h2` in the UI font at 1.05rem, weight 650. Fields sit on a grid: the label in a
+  160px column and the control beside it, stacked under 560px. A row with no leading label (a
+  checkbox, a set of buttons, a small form) flows on one line.
+- **Help text** sits under its control in `--muted` at 0.85rem. A long explanation of how a setting
+  works is folded under "More about this" (`More.tsx`), with its full text and ids kept. Text that
+  says where data goes or how keys are kept is never folded; `Options.test.tsx` holds the list and
+  checks it.
+- **Controls.** Selects are `Select` and buttons are `Button`: Add is `default`, Remove `quiet` in
+  `--danger`, and a form's Save is the one `primary`. Checkboxes and radios are native with
+  `accent-color`. A file input is visually hidden behind a button-styled label and keeps its focus
+  ring there. The Theme field is a `Segmented` over the same `reading.theme` as the panel's `Aa`.
+- **Lists** (connections, models, glossary, sites, rules, presets) are hairline rows, not cards. A
+  connection's state is a dot and a word (Connected, failed), never color alone. A tag beside a name
+  is a muted word, not a pill.
+
 ## Reading settings
 
 `src/shared/reading.ts` holds the reading settings as their own `storage.sync` item, `reading`.

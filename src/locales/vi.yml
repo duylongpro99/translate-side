@@ -341,6 +341,12 @@ errors:
   unknown: lỗi không xác định
 
 options:
+  nav:
+    label: Các mục cài đặt
+  more: Tìm hiểu thêm
+  theme:
+    label: Giao diện
+    hint: "Cho trang này, bảng bên và trang thiết lập; giao diện theo bạn sang các thiết bị khác, giống cài đặt Aa trong bảng."
   languages:
     title: "Ngôn ngữ"
     target: "Dịch sang"
@@ -594,6 +600,8 @@ options:
       n: "($1 khóa sẽ thay thế khóa bạn đã lưu)"
     apply: "Nhập"
   providers:
+    groupConnection: Kết nối
+    groupAuth: Xác thực
     accessHint: "Chrome chỉ xin quyền truy cập $1."
     accessHintPorts: "Chrome chỉ xin quyền truy cập $1 (mọi cổng của nó, không riêng cổng $2)."
     accessHintServer: "Chrome chỉ xin quyền truy cập máy chủ này."

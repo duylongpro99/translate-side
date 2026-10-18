@@ -20,7 +20,7 @@ A fresh session resumes from this file alone.
 | 1 | Foundations: tokens, themes, fonts, components, reading store | **Accepted 2026-10-18 10:20** | ab98e57 |
 | 2 | Panel chrome: control row, popovers, menu, progress | **Accepted 2026-10-18 10:45** | 1bb2a02 |
 | 3 | Reading view: typography, rhythm, block states, scripts | **Accepted 2026-10-18 11:35** (pnpm check, e2e 48 passed) | see git log |
-| 4 | Options page on the design system | Pending | |
+| 4 | Options page on the design system | **Accepted 2026-10-18 12:30** (pnpm check, e2e 48 passed) | see git log |
 | 5 | Onboarding on the design system | Pending | |
 | 6 | Verification, screenshots, docs and 1.2.0 RC | Pending | |
 
@@ -139,6 +139,42 @@ A fresh session resumes from this file alone.
   inside a `p` for the failed notice, plan ids out of the comments rewritten here, the basic and edited markers
   muted. Kept: the block-state tests live in `reading-view.test.tsx`.
 
+## Phase 4 log
+
+- Hook list and the final never-fold list: `reports/phase-04-hooks.md` in the plan folder.
+- Decisions:
+  - Every native select became `Select` and every button `Button` (Save `primary`, Remove `quiet` in danger), by
+    a mechanical change that keeps each element, id and prop. The inline link-style actions (`opt__link`) and the
+    CORS guide's tabs stay native, styled.
+  - The 160px label grid is CSS on the existing rows rather than a rewrite of every row into `Field`: the same
+    layout, and the 135 `querySelector` hooks in the settings tests stay where they are. `Field` is used for new
+    fields only.
+  - The preset picker stays a list of buttons, restyled as flat rows. The plan asked for `Segmented` or a
+    `Select`, but each preset is an action that opens the connection form at once; a radio group or a select
+    would add a confirm step and change behavior, which the plan rules out. Owner may want to revisit.
+  - Only three long explanations are folded; most long help text says where data goes, so it never folds.
+  - `assets/style.css` (3738 B) and `chunks/toggle-shortcut.js` (855 B, now also carrying the shared `Button` and
+    `Select`) budget lines measured again, plus 10%.
+  - The style section's id is `#translation-style`: `#style` is the style select's id.
+  - The index's current mark follows the scroll through an IntersectionObserver (unit-tested). In an e2e
+    screenshot after a script scroll it still showed Providers; the cause was not investigated, so the e2e does
+    not check it. To confirm by hand in a real browser (open item).
+
+- Review (`reports/review-phase-04.md`): no blocking findings; button types, refs and every hook intact. Fixed:
+  the index marks the last section in view at the bottom of the page (a short last section never reaches the
+  upper band); the index lists only sections on the page (cache and memory are absent without IndexedDB) and
+  follows sections as they render; the file buttons' rows flow on one line, so the label is not squeezed into the
+  label column; a source check proves no `<More>` block holds a never-fold message in any state, and a test on
+  the real page checks each index link's target exists once; Add buttons are `default` and every Remove is
+  `quiet` in danger, so each form has one `primary` (its Save); blank lines left by the conversion removed.
+  Recorded, not changed: the Advanced section's sync notice (`options.providers.advancedSync`) stays inside the
+  existing Advanced details beside the fields it is about; every fold has the same label; the Theme hint is not
+  linked by `aria-describedby` (Segmented has no slot for it); a failed connection's dot uses `--warn` like its text.
+
+- Phase 4 checks: e2e 48 passed. One `pnpm check` run failed a timing test in `sync.test.tsx` (a 100 ms follow
+  window) under the full parallel coverage run; it passed five runs alone and two more full coverage runs. Watched.
+
 ## Open items
 
 - Windows check of the serif stack (phase 6).
+- Settings index: confirm by hand that the current-section mark follows the scroll in a real window.

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import fs from 'node:fs';
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { IDBFactory } from 'fake-indexeddb';
@@ -10,6 +11,7 @@ import { openTranslationCache, type TranslationCache } from '@/shared/cache';
 import { dayKey, estimateSpend, monthKey } from '@/shared/spend';
 import { formatUsd } from '@/shared/cost';
 import { Options } from './Options.tsx';
+import { i18n } from '#i18n';
 
 const flags = vi.hoisted(() => ({ released: true }));
 vi.mock('@/shared/quality', async (importOriginal) => {
@@ -628,5 +630,88 @@ describe('options: translation quality', () => {
     expect(root.querySelector('#quality-best')).toBeNull();
     expect(root.querySelector('#quality-keep-drafts')).toBeNull();
     expect([...(root.querySelector('#quality-strategy') as HTMLSelectElement).options].map((o) => o.value)).toEqual(['', 'single-pass', 'contextual']);
+  });
+});
+
+describe('options: folded help and the theme field', () => {
+  /** What says where data goes or how keys are kept: never folded behind "More about this". */
+  const NEVER_FOLD = [
+    'options.providers.honest',
+    'options.providers.rulesHint',
+    'options.providers.fallbackHint',
+    'options.style.mediaHint',
+    'options.sites.allowHint',
+    'options.sites.neverHint',
+    'options.spend.hint',
+    'options.memory.hint',
+    'options.memory.acrossSitesHint',
+    'options.transfer.intro',
+    'options.transfer.keyKept',
+    'options.transfer.confirmWarning',
+    'options.providers.unencrypted',
+    'options.diagnostics.intro',
+  ] as const;
+  /** The only explanations folded: long, and about how a setting works, not about data. */
+  const FOLDED = ['options.style.budgetHint', 'options.spend.limitHint'] as const;
+  /** The longest literal stretch of the message (placeholders left out), cut to 40 characters. */
+  const start = (key: string) => (i18n.t(key as 'options.more') as string).split(/\$\d|\{\w+\}/).reduce((a, b) => (b.trim().length > a.length ? b.trim() : a), '').slice(0, 40);
+
+  it('never folds a privacy or data-flow disclosure, and folds only the long explanations of how a setting works', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    const text = (el: Element) => el.textContent ?? '';
+    const folded = [...root.querySelectorAll('details.opt__more')].map(text).join(' | ');
+    for (const key of NEVER_FOLD) expect(folded, key).not.toContain(start(key));
+    // Those rendered on this page sit outside any details element. (The rest appear only in a state: a kept key,
+    // the export confirmation, an http:// address; the check on the folded text above covers them too.)
+    const shown = NEVER_FOLD.filter((key) => text(root).includes(start(key)));
+    expect(shown.length).toBeGreaterThanOrEqual(8);
+    for (const key of shown) {
+      const el = [...root.querySelectorAll('p, span, li')].find((e) => e.childElementCount === 0 && text(e).includes(start(key)));
+      expect(el?.closest('details'), key).toBeNull();
+    }
+    for (const key of FOLDED) expect(folded, key).toContain(start(key));
+    expect(root.querySelectorAll('details.opt__more summary')[0]?.textContent).toBe('More about this');
+  });
+
+  it('no folded block in the settings source holds a never-fold message, whatever state shows it', () => {
+    for (const file of ['Options.tsx', 'Providers.tsx', 'Memory.tsx', 'Transfer.tsx', 'Diagnostics.tsx']) {
+      const src = fs.readFileSync(`src/entrypoints/options/${file}`, 'utf8');
+      for (const block of src.match(/<More>[\s\S]*?<\/More>/g) ?? []) for (const key of NEVER_FOLD) expect(block, `${file}: ${key}`).not.toContain(`'${key}'`);
+    }
+    // The three folded explanations, by source.
+    const all = ['Options.tsx', 'Memory.tsx'].map((f) => fs.readFileSync(`src/entrypoints/options/${f}`, 'utf8')).join('\n');
+    const folded = (all.match(/<More>[\s\S]*?<\/More>/g) ?? []).join('\n');
+    for (const key of [...FOLDED, 'options.memory.replaceHint']) expect(folded, key).toContain(`'${key}'`);
+  });
+
+  it('the section index links to sections that each exist exactly once on the real page', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    // The index follows sections as they render (a MutationObserver): one more turn for its update.
+    await flush();
+    const links = [...root.querySelectorAll<HTMLAnchorElement>('[data-testid=options-nav] a')].map((a) => a.getAttribute('href')?.slice(1) ?? '');
+    expect(links.length).toBeGreaterThanOrEqual(10);
+    for (const id of links) expect(root.querySelectorAll(`[id="${id}"]`), id).toHaveLength(1);
+    expect(links).toEqual(expect.arrayContaining(['sites', 'providers', 'transfer']));
+    // No IndexedDB here, so there is no memory section and no dead link to it.
+    expect(links).not.toContain('memory');
+  });
+
+  it('the Theme field writes the same reading item as the panel, and follows it', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await flush();
+    const radio = (v: string) => root.querySelector<HTMLInputElement>(`[data-testid=options-theme] input[value=${v}]`) as HTMLInputElement;
+    expect(radio('system').checked).toBe(true);
+    await act(() => radio('paper').click());
+    await flush();
+    expect(f.sync.get('reading')).toMatchObject({ theme: 'paper' });
+    // A change made in the panel's Aa settings shows here too.
+    await act(() => f.api.storage.sync.set({ reading: { theme: 'dark' } }));
+    await flush();
+    expect(radio('dark').checked).toBe(true);
   });
 });

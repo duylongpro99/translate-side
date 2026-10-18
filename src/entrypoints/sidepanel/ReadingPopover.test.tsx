@@ -95,6 +95,7 @@ describe('ReadingPopover', () => {
     await act(() => render(<ReadingPopover api={f.api} />, root));
     await settle();
     await act(() => f.api.storage.sync.set({ [READING_KEY]: { size: 99, theme: 'neon' } }));
+    await settle();
     expect($('[data-testid=reading-size]').textContent).toBe('24');
     expect($<HTMLInputElement>('[data-testid=reading-theme] input:checked').value).toBe('system');
   });

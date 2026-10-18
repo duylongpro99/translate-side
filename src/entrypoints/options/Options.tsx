@@ -3,7 +3,14 @@
 // language and a source-language override. M2-E6 adds the translation style, the gloss setting
 // and the personal glossary editor (storage.sync, with the quota guard in shared/settings.ts).
 import { useEffect, useState } from 'preact/hooks';
+import { Select } from '@/ui/Select';
+import { Button } from '@/ui/Button';
 import { i18n } from '#i18n';
+import { updateReading, type ReadingTheme } from '@/shared/reading';
+import { Segmented } from '@/ui/Segmented';
+import { useReading } from '@/ui/use-reading';
+import { More } from './More.tsx';
+import { OptionsNav } from './OptionsNav.tsx';
 import { slots } from '../sidepanel/slots.tsx';
 import type { browser } from 'wxt/browser';
 import {
@@ -107,20 +114,20 @@ function LanguageSection({ api }: { api: Browser }) {
     </>
   );
   return (
-    <section class="opt__section" aria-labelledby="lang-h">
+    <section class="opt__section" id="languages" aria-labelledby="lang-h">
       <h2 id="lang-h">{i18n.t('options.languages.title')}</h2>
       <div class="opt__row">
         <label for="target">{i18n.t('options.languages.target')}</label>
-        <select id="target" value={prefs.targetLang} onChange={(e) => update({ targetLang: (e.target as HTMLSelectElement).value })}>
+        <Select id="target" value={prefs.targetLang} onChange={(e) => update({ targetLang: (e.target as HTMLSelectElement).value })}>
           {options(prefs.targetLang)}
-        </select>
+        </Select>
       </div>
       <div class="opt__row">
         <label for="source">{i18n.t('options.languages.source')}</label>
-        <select id="source" value={prefs.sourceLang} onChange={(e) => update({ sourceLang: (e.target as HTMLSelectElement).value })}>
+        <Select id="source" value={prefs.sourceLang} onChange={(e) => update({ sourceLang: (e.target as HTMLSelectElement).value })}>
           <option value="auto">{i18n.t('options.languages.auto')}</option>
           {options(prefs.sourceLang)}
-        </select>
+        </Select>
       </div>
       <p class="opt__hint">{i18n.t('options.languages.hint')}</p>
     </section>
@@ -147,30 +154,30 @@ function StyleSection({ api }: { api: Browser }) {
     void updatePreferences(api, patch);
   };
   return (
-    <section class="opt__section" aria-labelledby="style-h">
+    <section class="opt__section" id="translation-style" aria-labelledby="style-h">
       <h2 id="style-h">{i18n.t('options.style.title')}</h2>
       <div class="opt__row">
         <label for="style">{i18n.t('options.style.label')}</label>
-        <select id="style" value={prefs.style} onChange={(e) => update({ style: (e.target as HTMLSelectElement).value as StyleMode })}>
+        <Select id="style" value={prefs.style} onChange={(e) => update({ style: (e.target as HTMLSelectElement).value as StyleMode })}>
           {STYLES.map((s) => (
             <option key={s} value={s}>
               {styleText(s).label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <p class="opt__hint" data-testid="style-hint">
         {styleText(prefs.style).hint}
       </p>
       <div class="opt__row">
         <label for="gloss">{i18n.t('options.style.terms')}</label>
-        <select id="gloss" value={prefs.gloss} onChange={(e) => update({ gloss: (e.target as HTMLSelectElement).value as GlossMode })}>
+        <Select id="gloss" value={prefs.gloss} onChange={(e) => update({ gloss: (e.target as HTMLSelectElement).value as GlossMode })}>
           {GLOSS_MODES.map((g) => (
             <option key={g} value={g}>
               {glossText(g)}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <p class="opt__hint">{i18n.t('options.style.retranslates')}</p>
       <div class="opt__row">
@@ -200,9 +207,12 @@ function StyleSection({ api }: { api: Browser }) {
       <p class="opt__hint" data-testid="media-hint">
         {i18n.t('options.style.mediaHint')}
       </p>
-      <p class="opt__hint" data-testid="budget-hint">
-        {i18n.t('options.style.budgetHint')}
-      </p>
+      <More>
+        <p class="opt__hint" data-testid="budget-hint">
+          {i18n.t('options.style.budgetHint')}
+        </p>
+      </More>
+      <ThemeField api={api} />
     </section>
   );
 }
@@ -236,7 +246,7 @@ function QualitySection({ api }: { api: Browser }) {
   const shown = quality.mode === 'best' && !BEST_MODE_RELEASED ? 'balanced' : quality.mode;
   const strategies = QUALITY_STRATEGIES.filter((x) => x !== 'refine' || BEST_MODE_RELEASED);
   return (
-    <section class="opt__section" aria-labelledby="quality-h">
+    <section class="opt__section" id="quality" aria-labelledby="quality-h">
       <h2 id="quality-h">{i18n.t('options.quality.title')}</h2>
       <div role="radiogroup" aria-label={i18n.t('options.quality.mode')} data-testid="quality-modes">
         {modes.map((m) => (
@@ -252,14 +262,14 @@ function QualitySection({ api }: { api: Browser }) {
         <summary>{i18n.t('options.quality.advanced')}</summary>
         <div class="opt__row">
           <label for="quality-strategy">{i18n.t('options.quality.strategy')}</label>
-          <select id="quality-strategy" value={quality.strategy ?? ''} onChange={(e) => update({ strategy: ((v) => (v === '' ? undefined : (v as QualityStrategy)))((e.target as HTMLSelectElement).value) })}>
+          <Select id="quality-strategy" value={quality.strategy ?? ''} onChange={(e) => update({ strategy: ((v) => (v === '' ? undefined : (v as QualityStrategy)))((e.target as HTMLSelectElement).value) })}>
             <option value="">{i18n.t('options.quality.strategyMode')}</option>
             {strategies.map((x) => (
               <option key={x} value={x}>
                 {strategyText(x)}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <p class="opt__hint">{i18n.t('options.quality.strategyHint')}</p>
         {BEST_MODE_RELEASED ? (
@@ -350,7 +360,7 @@ function GlossarySection({ api }: { api: Browser }) {
   };
 
   return (
-    <section class="opt__section" aria-labelledby="glossary-h">
+    <section class="opt__section" id="glossary" aria-labelledby="glossary-h">
       <h2 id="glossary-h">{i18n.t('options.glossary.title')}</h2>
       <p class="opt__hint">{i18n.t('options.glossary.intro')}</p>
       {entries.length ? (
@@ -393,13 +403,13 @@ function GlossarySection({ api }: { api: Browser }) {
           disabled={draft.keep}
           onInput={(e) => setDraft({ ...draft, rendering: (e.target as HTMLInputElement).value })}
         />
-        <button type="submit" disabled={draft.term.trim() === ''}>
+        <Button type="submit" disabled={draft.term.trim() === ''}>
           {editing === undefined ? i18n.t('options.glossary.add') : i18n.t('options.glossary.save')}
-        </button>
+        </Button>
         {editing !== undefined ? (
-          <button type="button" onClick={onCancel}>
+          <Button onClick={onCancel}>
             {i18n.t('options.glossary.cancel')}
-          </button>
+          </Button>
         ) : null}
       </form>
       {personalGlossaryTokens(entries) > PERSONAL_GLOSSARY_PROMPT_TOKENS ? (
@@ -540,9 +550,9 @@ function SitesSection({ api }: { api: Browser }) {
         }}
       >
         <input aria-label={i18n.t('options.sites.allowAria')} placeholder={i18n.t('options.sites.allowPlaceholder')} value={allowInput} onInput={(e) => setAllowInput((e.target as HTMLInputElement).value)} />
-        <button type="submit" disabled={allowInput.trim() === ''}>
+        <Button type="submit" disabled={allowInput.trim() === ''}>
           {i18n.t('options.sites.add')}
-        </button>
+        </Button>
       </form>
       <h3>{i18n.t('options.sites.neverTitle')}</h3>
       <p class="opt__hint">
@@ -558,9 +568,9 @@ function SitesSection({ api }: { api: Browser }) {
         }}
       >
         <input aria-label={i18n.t('options.sites.neverAria')} placeholder={i18n.t('options.sites.neverPlaceholder')} value={neverInput} onInput={(e) => setNeverInput((e.target as HTMLInputElement).value)} />
-        <button type="submit" disabled={neverInput.trim() === ''}>
+        <Button type="submit" disabled={neverInput.trim() === ''}>
           {i18n.t('options.sites.add')}
-        </button>
+        </Button>
       </form>
       <p class="opt__hint">{i18n.t('options.sites.modelHint')}</p>
       {note ? (
@@ -622,16 +632,16 @@ function CacheSection({ cache }: { cache: TranslationCache | undefined }) {
   }, []);
   if (!cache || stats === null) return null;
   return (
-    <section class="opt__section" aria-labelledby="cache-h">
+    <section class="opt__section" id="cache" aria-labelledby="cache-h">
       <h2 id="cache-h">{i18n.t('options.cache.title')}</h2>
       <p class="opt__hint" data-testid="cache-stats">
         {stats === undefined ? i18n.t('options.reading') : i18n.t('options.cache.stats', [String(stats.entries), String(stats.briefs), mb(stats.bytes), mb(stats.maxBytes)])}
       </p>
       <p class="opt__hint">{i18n.t('options.cache.hint')}</p>
       <div class="opt__row">
-        <button type="button" data-testid="cache-clear" onClick={() => void cache.clear().then(load, () => setStats(null))}>
+        <Button variant="quiet" class="opt__danger" data-testid="cache-clear" onClick={() => void cache.clear().then(load, () => setStats(null))}>
           {i18n.t('options.cache.clear')}
-        </button>
+        </Button>
       </div>
     </section>
   );
@@ -680,7 +690,7 @@ function SpendSection({ api, now = Date.now }: { api: Browser; now?: () => numbe
   };
   const rows = Object.entries(spend?.profiles ?? {}).sort(([, a], [, b]) => b.usd - a.usd || b.input + b.output - (a.input + a.output));
   return (
-    <section class="opt__section" aria-labelledby="spend-h">
+    <section class="opt__section" id="spend" aria-labelledby="spend-h">
       <h2 id="spend-h">{i18n.t('options.spend.title')}</h2>
       <p class="opt__hint" data-testid="spend-price">
         {pricing
@@ -734,9 +744,9 @@ function SpendSection({ api, now = Date.now }: { api: Browser; now?: () => numbe
       <SpendLimitRow api={api} limit={limit} month={monthKey(now())} onSaved={setLimit} />
       {spend ? (
         <div class="opt__row">
-          <button type="button" data-testid="spend-reset" onClick={() => void resetSpend(api).then(() => setSpend(undefined))}>
+          <Button variant="quiet" class="opt__danger" data-testid="spend-reset" onClick={() => void resetSpend(api).then(() => setSpend(undefined))}>
             {i18n.t('options.spend.reset')}
-          </button>
+          </Button>
         </div>
       ) : null}
     </section>
@@ -773,13 +783,13 @@ function SpendLimitRow({ api, limit, month, onSaved }: { api: Browser; limit: Sp
             if (e.key === 'Enter') save(Number(draft));
           }}
         />
-        <button type="button" data-testid="spend-limit-save" disabled={draft.trim() === ''} onClick={() => save(Number(draft))}>
+        <Button variant="primary" data-testid="spend-limit-save" disabled={draft.trim() === ''} onClick={() => save(Number(draft))}>
           {i18n.t('options.spend.limitSave')}
-        </button>
+        </Button>
         {limit ? (
-          <button type="button" data-testid="spend-limit-remove" onClick={() => save(undefined)}>
+          <Button variant="quiet" class="opt__danger" data-testid="spend-limit-remove" onClick={() => save(undefined)}>
             {i18n.t('options.spend.limitRemove')}
-          </button>
+          </Button>
         ) : null}
       </div>
       {note ? (
@@ -792,35 +802,58 @@ function SpendLimitRow({ api, limit, month, onSaved }: { api: Browser; limit: Sp
           {i18n.t('options.spend.continued')}
         </p>
       ) : null}
-      <p class="opt__hint">
-        {i18n.t('options.spend.limitHint')}
-      </p>
+      <More>
+        <p class="opt__hint">{i18n.t('options.spend.limitHint')}</p>
+      </More>
     </>
+  );
+}
+
+const THEMES: readonly ReadingTheme[] = ['system', 'light', 'paper', 'dark'];
+
+/** The theme, the same stored value as the panel's Aa settings: the two stay in step. A free setting, so radios. */
+function ThemeField({ api }: { api: Browser }) {
+  const reading = useReading(api);
+  return (
+    <div class="opt__field">
+      <Segmented
+        legend={i18n.t('options.theme.label')}
+        name="options-theme"
+        testId="options-theme"
+        value={reading.theme}
+        onChange={(theme) => void updateReading(api, { theme }).catch(() => undefined)}
+        options={THEMES.map((t) => ({ value: t, label: i18n.t(`panel.reading.themes.${t}`) }))}
+      />
+      <p class="opt__hint">{i18n.t('options.theme.hint')}</p>
+    </div>
   );
 }
 
 export function Options({ api, cache = openTranslationCache(), memory = openTranslationMemory(), adapterFor }: { api: Browser; cache?: TranslationCache | undefined; memory?: TranslationMemory | undefined; adapterFor?: AdapterFor }) {
   return (
-    <main class="opt">
-      <h1>{i18n.t('options.title')}</h1>
-      <p class="opt__hint">
-        <button type="button" data-testid="open-onboarding" onClick={() => void openOnboarding(api)}>
-          {i18n.t('options.guide.button')}
-        </button>{' '}
-        {i18n.t('options.guide.text')}
-      </p>
-      <ProvidersSection api={api} {...(adapterFor ? { adapterFor } : {})} />
-      <LanguageSection api={api} />
-      <StyleSection api={api} />
-      <QualitySection api={api} />
-      <GlossarySection api={api} />
-      <SitesSection api={api} />
-      <ShortcutsSection api={api} />
-      <SpendSection api={api} />
-      <CacheSection cache={cache} />
-      <MemorySection memory={memory} api={api} />
-      <TransferSection api={api} />
-      <DiagnosticsSection api={api} />
-    </main>
+    <div class="opt__page">
+      <OptionsNav />
+      <main class="opt">
+        <h1>{i18n.t('options.title')}</h1>
+        <p class="opt__hint">
+          <Button data-testid="open-onboarding" onClick={() => void openOnboarding(api)}>
+            {i18n.t('options.guide.button')}
+          </Button>{' '}
+          {i18n.t('options.guide.text')}
+        </p>
+        <ProvidersSection api={api} {...(adapterFor ? { adapterFor } : {})} />
+        <LanguageSection api={api} />
+        <StyleSection api={api} />
+        <QualitySection api={api} />
+        <GlossarySection api={api} />
+        <SitesSection api={api} />
+        <ShortcutsSection api={api} />
+        <SpendSection api={api} />
+        <CacheSection cache={cache} />
+        <MemorySection memory={memory} api={api} />
+        <TransferSection api={api} />
+        <DiagnosticsSection api={api} />
+      </main>
+    </div>
   );
 }

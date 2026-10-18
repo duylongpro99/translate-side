@@ -1,29 +1,12 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useRef } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
 import { i18n } from '#i18n';
-import { cleanReading, defaultReading, READING_KEY, READING_SIZE_MAX, READING_SIZE_MIN, readReading, updateReading, type Reading, type ReadingTheme, type ReadingTypeface, type ReadingWidth } from '@/shared/reading';
+import { READING_SIZE_MAX, READING_SIZE_MIN, updateReading, type Reading, type ReadingTheme, type ReadingTypeface, type ReadingWidth } from '@/shared/reading';
+import { useReading } from '@/ui/use-reading';
 import { Popover } from '@/ui/Popover';
 import { Segmented } from '@/ui/Segmented';
 
 type Browser = typeof browser;
-
-/** The reading settings, read once and then followed (every value cleaned). */
-export function useReading(api: Browser): Reading {
-  const [reading, setReading] = useState<Reading>(defaultReading);
-  useEffect(() => {
-    let live = true;
-    void readReading(api).then((r) => live && setReading(r));
-    const on = (changes: Record<string, { newValue?: unknown }>) => {
-      if (READING_KEY in changes) setReading(cleanReading(changes[READING_KEY]?.newValue));
-    };
-    api.storage.sync.onChanged.addListener(on);
-    return () => {
-      live = false;
-      api.storage.sync.onChanged.removeListener(on);
-    };
-  }, [api]);
-  return reading;
-}
 
 const THEMES: readonly ReadingTheme[] = ['system', 'light', 'paper', 'dark'];
 const WIDTHS: readonly ReadingWidth[] = ['narrow', 'medium', 'full'];
