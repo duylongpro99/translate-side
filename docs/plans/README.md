@@ -18,7 +18,8 @@ applies a resolution from `ROADMAP.md` §8 (gaps and contradictions), it cites t
 | [M5 — Reading UX complete and robustness](M5-reading-ux-complete.md) | Finish the side-by-side experience and survive real sites: SPAs, docs navigation, huge pages, tables. | |
 | [M6 — Release hardening](M6-release-hardening.md) | Ship v1.0 on the Chrome Web Store with a gate that stops quality from silently regressing. | **v1.0** |
 | [M7 — Stronger translation](M7-stronger-translation.md) | Offer a "Best" mode that measurably beats the default without making reading slower, and learn from user edits. | v1.1 |
-| [M8 — Beyond v1](M8-beyond-v1.md) | Extend reach (Firefox, new providers, formats) and strength (agentic) without weakening privacy or safety guarantees. | later |
+| [M8 — UI/UX refresh](M8-ui-ux-refresh.md) | Make the panel read like a page: the translation leads, controls stay quiet, every script renders correctly. | v1.2 |
+| [M9 — Beyond v1](M9-beyond-v1.md) | Extend reach (Firefox, new providers, formats) and strength (agentic) without weakening privacy or safety guarantees. | later |
 
 ## How each plan is structured
 

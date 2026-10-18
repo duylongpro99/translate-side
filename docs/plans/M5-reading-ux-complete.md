@@ -46,8 +46,8 @@ free, offline Chrome built-in path as a last-resort fallback.
 
 ## 4. Out of scope
 
-- Firefox build (moved to M8 per ROADMAP §0).
-- Code-comment translation (M8).
+- Firefox build (moved to M9 per ROADMAP §0).
+- Code-comment translation (M9).
 - `refine`, quality modes, inline editing (M7).
 - Store packaging, e2e suite, perf budget (M6).
 

@@ -1,4 +1,4 @@
-# M8 — Beyond v1
+# M9 — Beyond v1
 
 Size: unsized · Depends on: v1.0 (M6) and, for some items, M7
 
@@ -7,7 +7,7 @@ Size: unsized · Depends on: v1.0 (M6) and, for some items, M7
 **Extend the extension's reach (more browsers, providers and content types) and strength
 (harder texts) without weakening the privacy and safety guarantees v1 makes.**
 
-M8 is not one release. It's a set of independent tracks, each with its own goal, picked up in
+M9 is not one release. It's a set of independent tracks, each with its own goal, picked up in
 whatever order user demand suggests. They share one rule: each must fit the existing boundaries
 (a new adapter, strategy, context provider or shell port) without changing the engine interface,
 and each must pass the M6 regression gate.

@@ -42,7 +42,7 @@ and strategy change is measured with.
 - Cache, viewport priority, error UX (M3). The brief cache *key* is defined here, the cache
   itself is built in M3.
 - `review` stage and `refine` strategy (M7).
-- Translation memory, site style, domain providers (M7/M8).
+- Translation memory, site style, domain providers (M7/M9).
 - Glossary sync quota handling beyond a basic guard (M6-E6).
 
 ## 5. Decisions to make

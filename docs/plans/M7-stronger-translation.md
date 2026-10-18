@@ -38,7 +38,7 @@ retrieve, with no change to stages, only a new context provider.
 ## 4. Out of scope
 
 - Embedding-based retrieval for translation memory (lexical similarity first; embeddings later).
-- `agentic` strategy (M8).
+- `agentic` strategy (M9).
 - Sharing or syncing translation memory between devices.
 
 ## 5. Decisions to make
@@ -87,7 +87,7 @@ retrieve, with no change to stages, only a new context provider.
 | Refined text replacing what the user is reading is distracting | Replace off-screen first; subtle marker; setting to keep drafts until scroll. |
 | Translation memory retrieves irrelevant examples | Similarity threshold; cap examples per chunk; measure on eval set. |
 
-## 9. Handoff to M8
+## 9. Handoff to M9
 
 - The `review` stage and revision UI, reused by `agentic`.
 - Context provider pattern proven a second time (TM), for `SiteStyleProvider` and

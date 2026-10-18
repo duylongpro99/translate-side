@@ -51,7 +51,7 @@ won't use an Anthropic key: company gateways, OpenRouter, Gemini, Ollama, LM Stu
   built-in path only if S8 said it's viable, otherwise "coming soon".
 - Site rules UI (storage only here; UI in M5-E6).
 - Import/export (M5-E9).
-- `gemini-native` adapter (M8). Passphrase lock (M8).
+- `gemini-native` adapter (M9). Passphrase lock (M9).
 - `review` role in routing UI (M7).
 
 ## 5. Decisions to make
