@@ -126,10 +126,37 @@ Each component lives in `src/ui/` and is tested there (`*.test.tsx`). The styles
 | `Menu` | A menu of actions; a focused item shows the accent focus ring | The trigger has `aria-haspopup="menu"`, `aria-expanded` and `aria-controls`. `role="menu"` with `menuitem` (or `menuitemcheckbox`) entries. Arrow keys and Home/End move, skipping disabled items; Enter or Space runs an item. Escape closes it, stops the event and returns focus to the trigger; Tab and a press outside close it. No typeahead |
 | `Field` | A label, a control and help text | The label's `for` points at the control, and the control's `aria-describedby` points at the help text |
 | `Notice` | A flat tinted block in tones `info`, `warn` and `danger` | `info` is `role="status"`; `warn` and `danger` are `role="alert"`. No shadow, no left border |
-| Icons (`icons.tsx`) | chevron-down, arrow-right, follow, refresh, stop, more, settings, close, copy, edit, explain, check, alert | Inline 16px stroke SVGs in `currentColor`, always `aria-hidden`; the control carries the name |
+| Icons (`icons.tsx`) | chevron-down, arrow-right, follow, refresh, stop, more, sliders, settings, close, copy, edit, explain, check, alert | Inline 16px stroke SVGs in `currentColor`, always `aria-hidden`; the control carries the name |
 
 **Adding a component.** A new component goes in `src/ui/` with a test file next to it and a line
 in the table above. Prefer a native element: only `Popover` and `Menu` are custom.
+
+## The panel header
+
+One control row, then a muted title line, the 2px progress bar and the notice strip.
+
+- **The row**, left to right: the source language (muted), an arrow and the target language as a
+  quiet `Select`; the Translation button (the current style and a chevron); a spacer; `Aa` (the
+  reading settings `Popover`); scroll follow (`IconButton`, `pressed`); retranslate, or Stop while
+  a job runs; and More (a `Menu` with Keyboard shortcuts, Settings, the dev-only segment view and
+  Close panel).
+- **The Translation popover** holds the style and quality `Select`s, the model switcher and a
+  page line: the model, the blocks done, the time and, when a price is set, the cost. The cost is
+  shown only there.
+- **The title line** is the page title, one muted line with a tooltip. It is the panel's `h1`.
+- **The progress bar** is a `role="progressbar"` of done blocks over all blocks. It shows only
+  while a job runs and goes at once when it stops.
+- **The notice strip** holds what must stay in view and never goes inside a popover: the site rule
+  that wins over a tab choice, a failed model switch, a locked Best that is still chosen, and a
+  setting that could not be saved.
+- **The job bar** under the header shows only what needs attention: failures with Retry failed,
+  the rest of a long page with Translate the rest, kept and edited blocks, fallback and review
+  notes, the backoff list, errors and limits. Its progress sentence is an `.sr-only` live region,
+  so screen readers still hear start, progress, failures and done. With nothing to say it is a
+  1px strip.
+- **Stacking.** The header sits above the job bar, which sits above the block actions. The
+  header's popovers line up with the row's edges, so they fit a 320px panel. While the privacy
+  notice waits, the Translation, `Aa` and More triggers are `inert`.
 
 ## Reading settings
 

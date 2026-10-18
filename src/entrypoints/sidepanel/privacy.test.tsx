@@ -204,6 +204,21 @@ describe('first-run privacy notice in the panel', () => {
   });
 });
 
+describe('the header while the notice waits', () => {
+  it('leaves the Translation, Aa and More triggers inert, so no popover opens over the notice, and frees them on acknowledge', async () => {
+    const { t } = setup();
+    await settle();
+    const root = mount(t, { kind: 'ready', docId: 'd1', result });
+    await act(() => settle());
+    const triggers = ['translation-button', 'reading-button', 'more-button'].map((id) => root.querySelector(`[data-testid=${id}]`) as HTMLElement);
+    expect(triggers.every((b) => b !== null)).toBe(true);
+    expect(triggers.map((b) => b.hasAttribute('inert'))).toEqual([true, true, true]);
+    await act(() => (root.querySelector('[data-testid=privacy-ok]') as HTMLButtonElement).click());
+    await act(() => settle());
+    expect(triggers.map((b) => b.hasAttribute('inert'))).toEqual([false, false, false]);
+  });
+});
+
 describe('the notice names the fallback providers too (plan M4-E9)', () => {
   it('lists where text may go if the chosen provider is busy or down', () => {
     const root = document.createElement('div');

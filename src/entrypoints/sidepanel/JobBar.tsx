@@ -7,7 +7,9 @@ import { failureText, noBasicText } from './status.ts';
 import type { LLMError } from '@/llm/types';
 
 // The job's status line (plan M1-E10): progress, Cancel, and the cost readout. On the page view
-// Cancel sits in the header (M3-E6), so the bar leaves it out there (`cancel={false}`).
+// (`inHeader`) the header carries the progress (its 2px bar), Cancel (its Stop icon) and the cost
+// (the Translation popover), so the bar only shows what needs attention: failures, the rest of a
+// long page, notes, errors and limits. Its progress sentence is still said to screen readers.
 
 export interface JobActions {
   cancel(): void;
@@ -66,12 +68,13 @@ function BackoffNote({ entries }: { entries: readonly Backoff[] }) {
   );
 }
 
-export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobView; actions: JobActions; cancel?: boolean }) {
+export function JobBar({ job, actions, inHeader = false }: { job: JobView; actions: JobActions; inHeader?: boolean }) {
+  const showCancel = !inHeader;
   const { final, failed, total } = job.counts;
   const into = languageName(job.targetLang);
   // Providers report usage at the end of a stream, so a cancelled request's spend is unknown:
   // say so instead of estimating it (review E-T2).
-  const cost = job.cost === undefined ? null : (
+  const cost = job.cost === undefined || inHeader ? null : (
     <span class="job__cost" data-testid="job-cost" title={i18n.t('panel.job.costTitle', [String(job.usage.input), String(job.usage.cachedInput), String(job.usage.output)])}>
       {formatUsd(job.cost)}
       {job.unmetered > 0 ? <span class="job__cost-note"> · {i18n.t('panel.job.excludesCancelled')}</span> : null}
@@ -117,7 +120,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
   ) : null;
   // Lazy mode (M5-E4): the page is long, so only the part around the reader is translated.
   const restButton = job.lazy ? (
-    <button type="button" class="job__button" data-testid="translate-rest" title={i18n.t('panel.job.restTitle', job.lazy.rest)} onClick={actions.translateRest}>
+    <button type="button" class="ui-button" data-testid="translate-rest" title={i18n.t('panel.job.restTitle', job.lazy.rest)} onClick={actions.translateRest}>
       {i18n.t('panel.job.translateRest')}
     </button>
   ) : null;
@@ -144,12 +147,57 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
             </>
           ) : null}
         </span>
-        <button type="button" class="job__button" data-testid="limit-continue" onClick={actions.continuePastLimit}>
+        <button type="button" class="ui-button" data-testid="limit-continue" onClick={actions.continuePastLimit}>
           {i18n.t('panel.job.continueAnyway')}
         </button>
-        <button type="button" class="job__button" onClick={actions.openOptions}>
+        <button type="button" class="ui-button" onClick={actions.openOptions}>
           {i18n.t('panel.job.settings')}
         </button>
+      </div>
+    );
+  }
+
+  if (inHeader && (job.status === 'running' || job.status === 'done')) {
+    const running = job.status === 'running';
+    const sentence = running
+      ? `${i18n.t('panel.job.running', [into, String(final), String(total)])}${failed ? ` · ${i18n.t('panel.job.failed', [String(failed)])}` : ''}`
+      : `${i18n.t('panel.job.done', [into, String(final), String(total)])}${failed ? ` · ${i18n.t('panel.job.failed', [String(failed)])}` : ''}${job.lazy ? ` · ${i18n.t('panel.job.restAsRead')}` : job.endedAt === undefined ? '' : ` · ${seconds(job.endedAt - job.startedAt)}`}`;
+    const retry = !running && (failed || job.kept) ? (
+      <button type="button" class="ui-button" data-testid="retry-failed" onClick={actions.resume}>
+        {failed ? i18n.t('panel.job.retryFailed') : i18n.t('panel.job.retry')}
+      </button>
+    ) : null;
+    return (
+      // The wrapper is the live region, as before: the sentence, the failures and every note are said.
+      <div {...attrs} role="status">
+        <p class="sr-only" data-testid="job-live">
+          {sentence}
+        </p>
+        {failed ? (
+          <div class="job__say job__say--warn">
+            {/* Already in the sentence above: shown, not read twice. */}
+            <span class="job__text" aria-hidden="true">
+              {i18n.t('panel.job.failed', [String(failed)])}
+            </span>
+            {retry}
+          </div>
+        ) : null}
+        {job.lazy ? (
+          <div class="job__say">
+            <span class="job__text">{i18n.t('panel.job.restAsRead')}</span>
+            {restButton}
+          </div>
+        ) : null}
+        {!running && job.kept ? (
+          <div class="job__say">
+            {keptNote}
+            {failed ? null : retry}
+          </div>
+        ) : null}
+        {running && job.backoff?.length ? <BackoffNote entries={job.backoff} /> : null}
+        {editsNote}
+        {fallbackNote}
+        {reviewNote}
       </div>
     );
   }
@@ -165,7 +213,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
           {cost}
           {restButton}
           {showCancel ? (
-            <button type="button" class="job__button" onClick={actions.cancel}>
+            <button type="button" class="ui-button" onClick={actions.cancel}>
               {i18n.t('panel.job.cancel')}
             </button>
           ) : null}
@@ -188,7 +236,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
           {editsNote}
           {restButton}
           {failed || job.kept ? (
-            <button type="button" class="job__button" data-testid="retry-failed" onClick={actions.resume}>
+            <button type="button" class="ui-button" data-testid="retry-failed" onClick={actions.resume}>
               {failed ? i18n.t('panel.job.retryFailed') : i18n.t('panel.job.retry')}
             </button>
           ) : null}
@@ -205,7 +253,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
           {cost}
           {keptNote}
           {editsNote}
-          <button type="button" class="job__button" data-testid="translate-rest" onClick={job.lazy ? actions.translateRest : actions.resume}>
+          <button type="button" class="ui-button" data-testid="translate-rest" onClick={job.lazy ? actions.translateRest : actions.resume}>
             {i18n.t('panel.job.translateRest')}
           </button>
         </div>
@@ -219,7 +267,7 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
             {i18n.t('panel.job.skipped', [into, how])}
           </span>
           {cost}
-          <button type="button" class="job__button" onClick={actions.resume}>
+          <button type="button" class="ui-button" onClick={actions.resume}>
             {i18n.t('panel.job.translateAnyway')}
           </button>
         </div>
@@ -229,15 +277,15 @@ export function JobBar({ job, actions, cancel: showCancel = true }: { job: JobVi
       const error = job.stopError;
       const fix =
         error?.kind === 'auth' ? (
-          <button type="button" class="job__button job__button--fix" data-testid="fix-key" onClick={actions.openOptions} title={job.connection ? i18n.t('panel.job.fixKeyTitle', [job.connection.label]) : i18n.t('panel.job.openSettings')}>
+          <button type="button" class="ui-button job__button--fix" data-testid="fix-key" onClick={actions.openOptions} title={job.connection ? i18n.t('panel.job.fixKeyTitle', [job.connection.label]) : i18n.t('panel.job.openSettings')}>
             {i18n.t('panel.job.fixKey')}
           </button>
         ) : error?.kind === 'cors' && error.cause === 'permission' ? (
-          <button type="button" class="job__button" onClick={actions.grantAccess}>
+          <button type="button" class="ui-button" onClick={actions.grantAccess}>
             {i18n.t('panel.job.grantAccess')}
           </button>
         ) : (
-          <button type="button" class="job__button" data-testid="retry-page" onClick={actions.resume}>
+          <button type="button" class="ui-button" data-testid="retry-page" onClick={actions.resume}>
             {error?.kind === 'network' ? i18n.t('panel.job.retry') : i18n.t('panel.job.tryAgain')}
           </button>
         );

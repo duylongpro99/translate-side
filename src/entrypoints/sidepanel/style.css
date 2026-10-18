@@ -2,113 +2,236 @@
 @import '@/ui/base.css';
 
 .panel {
-  padding: 0 16px 24px;
+  padding: 0 var(--space-4) var(--space-5);
 }
+/* The header (direction A): one control row, a muted title line, the 2px progress bar and the notice strip.
+   Above the job bar and the block actions; never overflow: hidden, so popovers are not clipped. */
 .panel__header {
   position: sticky;
   top: 0;
-  padding: 10px 0;
+  z-index: 3;
+  margin: 0 calc(-1 * var(--space-4));
+  padding: 0 var(--space-4);
   background: var(--ground);
   border-bottom: 1px solid var(--line);
-  z-index: 1;
 }
-.panel__row {
+.panel__bar {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--space-2) 0 2px;
 }
-/* Page controls (M3-E6): language pair, model, style, Cancel / Retranslate page. Wraps on a narrow panel. */
+/* The header's popovers and menu open under the whole header (row, title, progress and notice strip),
+   so they never cover a notice, and line up with its inner edges, so they fit a 320px panel. */
+.panel__bar .ui-popover-anchor {
+  position: static;
+}
+.panel__header :is(.ui-popover, .ui-menu) {
+  top: calc(100% + var(--space-1));
+  max-height: calc(100vh - 100% - var(--space-4));
+  overflow-y: auto;
+}
+.panel__header .ui-popover {
+  width: min(280px, 100% - 2 * var(--space-4));
+}
+.panel__header .ui-popover--start {
+  left: var(--space-4);
+}
+.panel__header :is(.ui-popover--end, .ui-menu) {
+  right: var(--space-4);
+}
+.panel__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+}
 .panel__controls {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 6px 8px;
-  margin-top: 8px;
-  font-size: 0.85rem;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--text-m);
 }
 .panel__pair {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+  min-width: 0;
 }
 .panel__source {
+  color: var(--muted);
+  font-size: var(--text-s);
   font-weight: 600;
 }
-.panel__select {
-  font: inherit;
-  color: inherit;
+.panel__arrow {
+  display: inline-flex;
+  color: var(--muted);
+}
+.panel__target {
+  min-width: 4em;
+}
+.panel__target select {
+  max-width: 9.5em;
+  padding-inline: var(--space-1) 18px;
+  font-weight: 600;
+}
+.panel__target .ui-icon {
+  right: 3px;
+  width: 12px;
+  height: 12px;
+}
+.panel__translation {
+  min-width: 0;
+  max-width: 8.5em;
+  padding: 0 var(--space-1) 0 var(--space-2);
+  font-size: var(--text-m);
+}
+.panel__translation-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.panel__translation .ui-icon {
+  color: var(--muted);
+}
+.panel__translation-icon {
+  display: none;
+}
+/* A narrow panel (320px): the row keeps every control by drawing the Translation button as an icon
+   and the header's icon buttons at 28px (still above the 24px minimum target). */
+@media (max-width: 379px) {
+  .panel__bar .ui-icon-button {
+    width: 28px;
+  }
+  .panel__translation {
+    width: 28px;
+    height: 32px;
+    padding: 0;
+  }
+  .panel__translation > :not(.panel__translation-icon) {
+    display: none;
+  }
+  .panel__translation-icon {
+    display: inline-flex;
+  }
+  .panel__translation .panel__translation-icon .ui-icon {
+    color: var(--ink);
+  }
+}
+.panel__aa {
+  font-family: var(--font-serif);
+  font-size: var(--text-base);
+}
+.panel__title {
+  margin: 0;
+  padding: 0 0 var(--space-2);
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-s);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.progress {
+  height: 2px;
+  margin: 0 calc(-1 * var(--space-4)) -1px;
+  background: var(--line);
+}
+.progress__fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.panel__notices:empty {
+  display: none;
+}
+/* Only the hidden live region: no band under the header. */
+.panel__notices:not(:has(> :not(.sr-only))) {
+  padding: 0;
+}
+.panel__notices {
+  padding-bottom: var(--space-2);
+}
+.panel__notice {
+  margin: var(--space-1) 0 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-s);
   background: var(--tint);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 2px 4px;
-  max-width: 11em;
+  color: var(--muted);
+  font-size: var(--text-s);
+}
+.panel__notice--danger {
+  color: var(--danger);
+}
+/* Inside the header's popovers. */
+.pop__title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-base);
+}
+.pop__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-3);
+}
+.pop__label,
+.ui-popover .ui-segmented legend {
+  color: var(--muted);
+  font-size: var(--text-s);
+}
+.ui-popover .ui-segmented {
+  margin: 0 0 var(--space-3);
+}
+.ui-popover .ui-segmented:last-child {
+  margin-bottom: 0;
+}
+.pop__field .ui-select,
+.pop__field .ui-select select {
+  width: 100%;
+}
+.pop__meta {
+  margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--text-s);
+  font-variant-numeric: tabular-nums;
+}
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.stepper output {
+  min-width: 2.5em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 .panel__model {
-  color: var(--muted);
-  max-width: 12em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: block;
+  overflow-wrap: anywhere;
 }
-/* The quick switcher (M4-E11): the select, "This tab only" and Make default sit on their own line. */
 .panel__switcher {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.panel__switcher-select,
+.panel__switcher-select select {
+  width: 100%;
+}
+.panel__tabonly-row {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
-  max-width: none;
-  overflow: visible;
-  white-space: normal;
+  gap: var(--space-1) var(--space-2);
 }
-.panel__switcher .panel__select {
-  max-width: 20em;
-}
-.panel__tabonly,
-.panel__rule {
-  font-size: 0.85em;
-}
-.panel__model--rule {
-  max-width: none;
-  white-space: normal;
-}
-.panel__action {
-  font: inherit;
-  margin-left: auto;
-  color: inherit;
-  background: none;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 2px 8px;
-  cursor: pointer;
-}
-.panel__action:hover {
-  background: var(--tint);
-}
-.panel__header h1 {
-  flex: 1;
-  min-width: 0;
-  font-size: 1rem;
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.panel__icon {
-  border: none;
-  background: none;
-  color: inherit;
-  font-size: 1rem;
-  padding: 4px 6px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.panel__icon:hover,
-.panel__icon[aria-pressed='true'] {
-  background: var(--tint);
+.panel__tabonly {
+  color: var(--muted);
+  font-size: var(--text-s);
 }
 .panel__meta {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: var(--text-m);
 }
 
 /* States */
@@ -254,21 +377,50 @@
   word-break: break-all;
 }
 
-/* Translation job (plan M1-E10) */
+/* Translation job (plan M1-E10). On the page view it holds only what needs attention; empty, it is a 1px strip. */
 .job {
   position: sticky;
-  /* Under the header, whatever height its wrapped controls give it (App.tsx sets the variable). */
+  /* Under the header, whatever height its rows give it (App.tsx sets the variable). */
   top: var(--panel-header-h, 41px);
+  z-index: 2;
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 1px;
   background: var(--ground);
-  border-bottom: 1px solid var(--line);
-  font-size: 0.85rem;
+  font-size: var(--text-m);
   color: var(--muted);
-  z-index: 1;
+}
+.job:not(:has(> :not(.sr-only))) {
+  margin-bottom: -1px;
+}
+.job:has(> :not(.sr-only)) {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+/* A whole-bar state (cancelled, skipped, stopped, limit, and the selection view): text and buttons on rows. */
+.job:is(.job--cancelled, .job--skipped, .job--stopped, [data-testid='job-limit'], [data-testid='job-local-only']),
+.selection .job {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.job__say {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-s);
+  background: var(--tint);
+  color: var(--ink);
+}
+.job__say--warn {
+  color: var(--warn);
+}
+.job__say .job__text::first-letter {
+  text-transform: uppercase;
 }
 .job__text {
   flex: 1;
@@ -289,20 +441,11 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 0.8rem;
+  font-size: var(--text-s);
   color: var(--muted);
 }
 .job__button--fix {
   border-color: var(--accent);
-}
-.job__button {
-  font: inherit;
-  padding: 3px 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--tint);
-  color: var(--ink);
-  cursor: pointer;
 }
 /* A translatable block before its text arrives: the original, dimmed. */
 .seg--pending,
@@ -482,58 +625,43 @@
   font-size: 0.9em;
   font-weight: normal;
 }
-.panel__error {
-  flex-basis: 100%;
-  margin: 0;
-  color: var(--danger);
-}
 .setup-offer {
-  margin: 0.5rem 0.75rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 0.4rem;
-}
-.panel__sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-/* A page read after a navigation, waiting for Translate this page (plan M5-E3). */
-.offer {
-  margin: 10px 0;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--accent);
-  border-radius: 6px;
-  background: var(--tint);
-}
-.offer[data-reason='never'] {
-  border-left-color: var(--muted);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+.setup-offer__text {
+  flex: 1 1 12em;
+  margin: 0;
+}
+/* A page read after a navigation, waiting for Translate this page (plan M5-E3). */
+.offer {
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-s);
+  background: var(--tint);
+}
+.offer[data-reason='never'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 .offer__text {
-  margin: 0 0 6px;
-  color: var(--muted);
+  margin: 0 0 var(--space-2);
+  color: var(--ink);
 }
 .offer[data-reason='never'] .offer__text {
   margin: 0;
   flex: 1;
+  color: var(--muted);
 }
 .offer__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-}
-.job__button--primary {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--on-accent);
+  gap: var(--space-2);
 }
 .seg__explain {
   display: block;

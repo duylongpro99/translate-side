@@ -256,10 +256,13 @@ export async function blockStatuses(panel: Page): Promise<Record<string, number>
   });
 }
 
-/** Waits until the job leaves `running`; returns its status. */
+/**
+ * Waits until the job leaves `running`; returns its status. The job bar only shows what needs
+ * attention, so with nothing to say it is a 1px strip: its status attribute is the signal, not its looks.
+ */
 export async function jobSettled(panel: Page): Promise<string | null> {
   const job = panel.locator('[data-testid=job]');
-  await expect(job).toBeVisible();
+  await expect(job).toHaveAttribute('data-status', /.+/);
   await expect(job).not.toHaveAttribute('data-status', 'running', { timeout: 90_000 });
   return job.getAttribute('data-status');
 }

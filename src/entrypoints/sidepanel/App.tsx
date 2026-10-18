@@ -6,7 +6,14 @@ import { AboutDocument } from './AboutDocument.tsx';
 import { DevView } from './DevView.tsx';
 import { closePanel } from './toggle.ts';
 import { ShortcutList } from './ShortcutList.tsx';
-import { HeaderControls } from './HeaderControls.tsx';
+import { HeaderControls, HeaderNotices } from './HeaderControls.tsx';
+import { ProgressBar } from './ProgressBar.tsx';
+import { ReadingPopover } from './ReadingPopover.tsx';
+import { Button } from '@/ui/Button';
+import { IconButton } from '@/ui/IconButton';
+import { FollowIcon, MoreIcon, RefreshIcon, StopIcon } from '@/ui/icons';
+import { Menu, type MenuEntry } from '@/ui/Menu';
+import { Notice } from '@/ui/Notice';
 import { readFollow, useHoverLink, useScrollFollow, writeFollow, type SendToPage } from './follow.ts';
 import { JobBar, type JobActions } from './JobBar.tsx';
 import type { Jobs, JobView } from './jobs.ts';
@@ -303,54 +310,70 @@ export function App({ controller, translator }: { controller: PanelController; t
   };
   const closeThisPanel = () => void closePanel(browser);
   const [help, setHelp] = useState(false);
-  const helpButton = useRef<HTMLButtonElement>(null);
+  // The help opens from the More menu, so focus goes back to the menu's trigger when it closes.
   const closeHelp = () => {
     setHelp(false);
-    helpButton.current?.focus();
+    headerRef.current?.querySelector<HTMLButtonElement>('[data-testid="more-button"]')?.focus();
   };
+  const showControls = view.kind === 'ready' && translator !== undefined && !selecting && !(import.meta.env.DEV && dev);
+  // The privacy notice is modal: nothing in the header may open over it.
+  const privacyPending = privacy === 'needed' && translator?.privacy !== undefined;
+  const pageJob = showControls ? job : undefined;
+  const moreItems: MenuEntry[] = [
+    { key: 'shortcuts', label: i18n.t('panel.header.shortcuts'), testId: 'shortcuts-button', onSelect: () => setHelp(!help) },
+    { key: 'settings', label: i18n.t('panel.header.settings'), testId: 'menu-settings', onSelect: openOptions },
+    ...(import.meta.env.DEV && view.kind === 'ready' ? [{ key: 'dev', label: i18n.t('panel.header.devView'), testId: 'menu-dev', checked: dev, onSelect: () => setDev(!dev) }] : []),
+    'separator',
+    { key: 'close', label: i18n.t('panel.header.closePanel'), testId: 'menu-close', onSelect: closeThisPanel },
+  ];
   return (
-    <main class="panel" onKeyDown={(e) => help && e.key === 'Escape' && closeHelp()}>
+    <main class="panel" onKeyDown={(e) => help && e.key === 'Escape' && !e.defaultPrevented && closeHelp()}>
       <header class="panel__header" ref={headerRef}>
-        <div class="panel__row">
-          <h1 title={view.kind === 'ready' ? view.result.title : undefined}>{view.kind === 'ready' ? view.result.title || i18n.t('panel.appName') : i18n.t('panel.appName')}</h1>
-          {import.meta.env.DEV && view.kind === 'ready' ? (
-            <button type="button" class="panel__icon panel__dev" aria-pressed={dev} title="Segment view (dev build only)" onClick={() => setDev(!dev)}>
-              {'{ }'}
-            </button>
-          ) : null}
+        <div class="panel__bar">
+          {showControls ? <HeaderControls job={job} prefs={prefs} quality={quality} routedModel={routed?.model} switcher={switcherActions} onPrefs={switchPrefs} onQuality={switchQuality} inert={privacyPending} /> : null}
+          <span class="panel__spacer" />
+          <ReadingPopover api={browser} inert={privacyPending} />
           {view.kind === 'ready' && translator?.viewports ? (
-            <button
-              type="button"
-              class="panel__icon panel__follow"
-              aria-pressed={follow}
-              data-testid="scroll-follow"
-              title={i18n.t(follow ? 'panel.header.followOn' : 'panel.header.followOff')}
-              aria-label={i18n.t('panel.header.follow')}
-              onClick={toggleFollow}
-            >
-              ⇅
-            </button>
+            <IconButton label={i18n.t('panel.header.follow')} title={i18n.t(follow ? 'panel.header.followOn' : 'panel.header.followOff')} pressed={follow} data-testid="scroll-follow" onClick={toggleFollow}>
+              <FollowIcon />
+            </IconButton>
           ) : null}
-          <button type="button" class="panel__icon" ref={helpButton} data-testid="shortcuts-button" title={i18n.t('panel.header.shortcuts')} aria-label={i18n.t('panel.header.shortcuts')} aria-expanded={help} aria-controls="shortcuts" onClick={() => setHelp(!help)}>
-            ?
-          </button>
-          <button type="button" class="panel__icon" title={i18n.t('panel.header.settings')} aria-label={i18n.t('panel.header.settings')} onClick={openOptions}>
-            ⚙
-          </button>
-          <button type="button" class="panel__icon" title={i18n.t('panel.header.close')} aria-label={i18n.t('panel.header.closePanel')} onClick={closeThisPanel}>
-            ✕
-          </button>
+          {pageJob && pageActions ? (
+            pageJob.status === 'running' ? (
+              <IconButton label={i18n.t('panel.controls.cancel')} data-testid="page-cancel" onClick={pageActions.cancel}>
+                <StopIcon />
+              </IconButton>
+            ) : (
+              <IconButton label={i18n.t('panel.controls.retranslatePage')} title={i18n.t('panel.controls.retranslatePageTitle')} data-testid="page-retranslate" onClick={pageActions.retranslatePage}>
+                <RefreshIcon />
+              </IconButton>
+            )
+          ) : null}
+          <Menu
+            label={i18n.t('panel.header.more')}
+            items={moreItems}
+            testId="more-menu"
+            trigger={(p) => (
+              <button type="button" class="ui-icon-button" data-testid="more-button" aria-label={i18n.t('panel.header.more')} title={i18n.t('panel.header.more')} inert={privacyPending} {...p} {...(help ? { 'aria-expanded': true, 'aria-controls': 'shortcuts' } : {})}>
+                <MoreIcon />
+              </button>
+            )}
+          />
         </div>
-        {view.kind === 'ready' && translator && !selecting && !(import.meta.env.DEV && dev) ? <HeaderControls job={job} prefs={prefs} quality={quality} routedModel={routed?.model} switcher={switcherActions} actions={job ? pageActions : undefined} onPrefs={switchPrefs} onQuality={switchQuality} error={prefsError ? i18n.t('panel.header.prefsFailed') : undefined} /> : null}
+        <h1 class="panel__title" title={view.kind === 'ready' ? view.result.title : undefined}>
+          {view.kind === 'ready' ? view.result.title || i18n.t('panel.appName') : i18n.t('panel.appName')}
+        </h1>
+        <ProgressBar job={pageJob} />
+        {showControls ? <HeaderNotices job={job} routedModel={routed?.model} switcher={switcherActions} quality={quality} error={prefsError ? i18n.t('panel.header.prefsFailed') : undefined} /> : null}
       </header>
       {help ? <ShortcutList id="shortcuts" onClose={closeHelp} /> : null}
       {offerSetup ? (
-        <section class="setup-offer" data-testid="setup-offer">
-          <p>{i18n.t('panel.setup.text')}</p>
-          <button type="button" class="job__button" data-testid="setup-open" onClick={() => void openOnboarding(browser)}>
+        <Notice class="setup-offer" data-testid="setup-offer">
+          <p class="setup-offer__text">{i18n.t('panel.setup.text')}</p>
+          <Button variant="primary" data-testid="setup-open" onClick={() => void openOnboarding(browser)}>
             {i18n.t('panel.setup.button')}
-          </button>
-        </section>
+          </Button>
+        </Notice>
       ) : null}
       {privacy === 'needed' && translator?.privacy ? <PrivacyNotice to={routed} onAcknowledge={() => void translator.privacy?.acknowledge().catch(() => {})} /> : null}
       {selecting && tabId !== undefined && snippet && translator?.snippets ? (
@@ -362,7 +385,7 @@ export function App({ controller, translator }: { controller: PanelController; t
       ) : (
         <>
           {job && translator && tabId !== undefined ? (
-            <JobBar job={job} actions={translator.actions(tabId)} cancel={false} />
+            <JobBar job={job} actions={translator.actions(tabId)} inHeader />
           ) : offer && translator && tabId !== undefined ? (
             <OfferBar offer={offer} blocks={view.result.segments.length} onTranslate={() => translator.translatePage?.(tabId)} onAllow={() => translator.allowSite?.(tabId) ?? Promise.resolve(false)} onSettings={openOptions} />
           ) : (

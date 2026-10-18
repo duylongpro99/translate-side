@@ -16,8 +16,16 @@ panel:
     followOff: Cuộn theo trang khi bạn cuộn
     shortcuts: Phím tắt
     settings: Cài đặt
-    close: Đóng
     closePanel: Đóng bảng
+    more: Thêm
+    translation: Bản dịch
+    translationButton: "Bản dịch: $1"
+    translationTitle: Phong cách, chất lượng và mô hình cho trang này
+    progress: Tiến độ dịch
+    devView: Xem theo đoạn (chỉ bản dựng dev)
+    page:
+      model: Mô hình $1
+      blocks: $1 trên $2 khối
     prefsFailed: Không lưu được thiết lập đó. Hãy thử lại hoặc đổi trong phần cài đặt.
     switchFailed: Không đổi được mô hình cho thẻ này. Hãy thử lại.
     defaultFailed: Không lưu được mặc định. Hãy thử lại hoặc đặt trong phần cài đặt.
@@ -39,7 +47,7 @@ panel:
       faithful: Sát với cách diễn đạt của bản gốc
       simplified: "Dễ đọc hơn: câu ngắn hơn, từ ngữ đơn giản"
     cancel: Hủy
-    retranslatePage: ↻ Dịch lại trang
+    retranslatePage: Dịch lại trang
     retranslatePageTitle: Dịch lại toàn bộ trang, bỏ qua các bản dịch đã lưu
     qualityLabel: Chất lượng
     quality:
@@ -121,6 +129,26 @@ panel:
     blockedTitle: Không dịch được đoạn đã chọn
     translating: Đang dịch đoạn đã chọn…
     truncated: Chỉ phần đầu của đoạn chọn dài được dịch.
+  reading:
+    title: Cài đặt đọc
+    size: Cỡ chữ
+    smaller: Chữ nhỏ hơn
+    larger: Chữ lớn hơn
+    typeface: Kiểu chữ
+    typefaces:
+      serif: Có chân
+      sans: Không chân
+    width: Độ rộng dòng
+    widths:
+      narrow: Hẹp
+      medium: Vừa
+      full: Toàn bảng
+    theme: Giao diện
+    themes:
+      system: Hệ thống
+      light: Sáng
+      paper: Giấy
+      dark: Tối
   shortcuts:
     title: Phím tắt
     note: Các phím chữ và phím mũi tên hoạt động khi một đoạn hoặc một nút của đoạn đang được chọn. Phím Tab chỉ đưa bạn vào danh sách một lần; dùng phím mũi tên để di chuyển trong đó.

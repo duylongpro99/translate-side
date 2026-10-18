@@ -16,8 +16,16 @@ panel:
     followOff: Follow the page as it scrolls
     shortcuts: Keyboard shortcuts
     settings: Settings
-    close: Close
     closePanel: Close panel
+    more: More
+    translation: Translation
+    translationButton: "Translation: $1"
+    translationTitle: Style, quality and model for this page
+    progress: Translation progress
+    devView: Segment view (dev build only)
+    page:
+      model: Model $1
+      blocks: $1 of $2 blocks
     prefsFailed: "Couldn't save that setting. Try again, or change it in settings."
     switchFailed: "Couldn't switch the model for this tab. Try again."
     defaultFailed: "Couldn't save the default. Try again, or set it in settings."
@@ -39,7 +47,7 @@ panel:
       faithful: Closer to the source wording
       simplified: "Easier reading: shorter sentences, plain words"
     cancel: Cancel
-    retranslatePage: ↻ Retranslate page
+    retranslatePage: Retranslate page
     retranslatePageTitle: Translate the whole page again, skipping saved translations
     qualityLabel: Quality
     quality:
@@ -124,6 +132,26 @@ panel:
     blockedTitle: Can't translate this selection
     translating: Translating the selection…
     truncated: Only the first part of a long selection is translated.
+  reading:
+    title: Reading
+    size: Text size
+    smaller: Smaller text
+    larger: Larger text
+    typeface: Typeface
+    typefaces:
+      serif: Serif
+      sans: Sans
+    width: Line width
+    widths:
+      narrow: Narrow
+      medium: Medium
+      full: Full
+    theme: Theme
+    themes:
+      system: System
+      light: Light
+      paper: Paper
+      dark: Dark
   shortcuts:
     title: Keyboard shortcuts
     note: The letters and arrows work while a block or one of its buttons has focus. Tab reaches the list once; the arrows move through it.

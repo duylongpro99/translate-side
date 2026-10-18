@@ -17,8 +17,8 @@ A fresh session resumes from this file alone.
 
 | # | Phase | Status | Commit |
 |---|---|---|---|
-| 1 | Foundations: tokens, themes, fonts, components, reading store | Committed, verifying in a clean worktree | |
-| 2 | Panel chrome: control row, popovers, menu, progress | Pending | |
+| 1 | Foundations: tokens, themes, fonts, components, reading store | **Accepted 2026-10-18 10:20** | ab98e57 |
+| 2 | Panel chrome: control row, popovers, menu, progress | Review fixed, checks running | |
 | 3 | Reading view: typography, rhythm, block states, scripts | Pending | |
 | 4 | Options page on the design system | Pending | |
 | 5 | Onboarding on the design system | Pending | |
@@ -67,6 +67,38 @@ A fresh session resumes from this file alone.
 - Visual review against the anti-pattern list (light, paper and dark at 320px, panel, settings and onboarding):
   no gradient, blur, emoji icon, shimmer, decorative motion or second accent. The only shadow is on overlays.
   Remaining older patterns as noted above. The settings page's native buttons stay as they are until phase 4.
+
+- Phase 1 accepted: on the commit alone in a clean worktree, `pnpm check` green and `pnpm run e2e` 42 passed.
+
+## Phase 2 log
+
+- The hook list was written before editing: `reports/phase-02-hooks.md` in the plan folder.
+- Decisions:
+  - The page view's job bar keeps today's progress sentence as `.sr-only` text inside the bar, which stays the
+    live region; visibly it shows only failures, the rest of a long page, kept and edited blocks, notes, errors
+    and limits. The selection view keeps its full bar (with Cancel and the cost).
+  - The cost is shown only in the Translation popover's page line.
+  - `quality-lock-note` stays beside the quality select; when Best is locked and still the stored choice it moves
+    to the notice strip (one element either way).
+  - Under 380px the Translation button is a sliders icon (its name still says the style) and the header's icon
+    buttons are 28px, so the row fits 320px with "Vietnamese" in full. New icon `sliders`, with its test and a line
+    in `docs/design-system.md`.
+  - The header's popovers and menu open under the whole header, inset to its padding, so they never cover the
+    notice strip and fit 320px; they scroll when the panel is short.
+  - `jobSettled` waits on the `data-status` attribute: with nothing to say, the bar is a 1px strip.
+  - `chunks/sidepanel.js` (26590 B) and `assets/sidepanel.css` (4768 B) budget lines measured again in this phase,
+    plus 10%, so `pnpm check` stays green.
+    The plan reserved budget edits for phases 1 and 6.
+- The first full e2e run had three page tests time out (globalvoices, mkdocs, large-table); all three passed alone
+  and in a second full run (43 passed). Treated as load flakes; watched in later runs.
+- Review (code-reviewer subagent, `reports/review-phase-02.md`): no blocking findings. Fixed: the Vietnamese e2e
+  check now targets the More button and the Settings menu item exactly; the bar is a live region again, with the
+  visible "N failed" hidden from screen readers (it is in the sentence); popovers open under the whole header; the
+  size stepper uses `aria-disabled` so focus stays at 13 and 24, and two quick clicks are two steps; no empty band
+  under the header when only the live region is there; popovers scroll in a short panel; the unused `.panel__error`
+  CSS and `panel.header.close` string are gone; a test covers Escape in the More menu while the help is open.
+  Kept as planned: the More trigger says expanded while the help is open (the plan moves `aria-expanded` there).
+  Not changed: the offer stays a `section` styled as a flat notice (its `role="status"` and hooks are kept).
 
 ## Open items
 

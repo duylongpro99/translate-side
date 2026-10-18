@@ -43,6 +43,13 @@ export const MoreIcon = (p: IconProps) => (
     <path d="M3.5 8h.01M8 8h.01M12.5 8h.01" stroke-width="2.4" />
   </Icon>
 );
+export const SlidersIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M2.5 5h7M12.5 5h1M2.5 11h1M6.5 11h7" />
+    <circle cx="11" cy="5" r="1.5" />
+    <circle cx="5" cy="11" r="1.5" />
+  </Icon>
+);
 export const SettingsIcon = (p: IconProps) => (
   <Icon {...p}>
     <circle cx="8" cy="8" r="2" />

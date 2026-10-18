@@ -110,7 +110,7 @@ describe('icons', () => {
   it('are 16px stroke SVGs in currentColor, hidden from assistive technology', async () => {
     await draw(<div>{Object.values(icons).map((I, i) => <I key={i} />)}</div>);
     const svgs = [...root.querySelectorAll('svg')];
-    expect(svgs).toHaveLength(13);
+    expect(svgs).toHaveLength(14);
     for (const s of svgs) {
       expect(s.getAttribute('aria-hidden')).toBe('true');
       expect(s.getAttribute('width')).toBe('16');

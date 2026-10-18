@@ -137,7 +137,10 @@ describe('segments by kind', () => {
   it('has a dev segment view with ids in dev builds', () => {
     mount({ kind: 'ready', docId: 'doc12345', result: { ok: true, via: 'walk', url: 'https://x/', title: 'Page', segments } });
     expect(import.meta.env.DEV).toBe(true);
-    act(() => (root.querySelector('.panel__dev') as HTMLButtonElement).click());
+    // The segment view is an item of the header's More menu.
+    act(() => (root.querySelector('[data-testid=more-button]') as HTMLButtonElement).click());
+    expect(root.querySelector('[data-testid=menu-dev]')?.getAttribute('aria-checked')).toBe('false');
+    act(() => (root.querySelector('[data-testid=menu-dev]') as HTMLButtonElement).click());
     const dev = root.querySelector('[data-testid=dev-view]');
     expect(dev?.querySelectorAll('tbody tr')).toHaveLength(segments.length);
     expect(dev?.textContent).toContain(segments[0]?.id);
@@ -269,6 +272,56 @@ describe('translation in the panel (plan M1-E10)', () => {
     expect(root.querySelector('[data-testid=job-cost]')?.textContent).toBe('$0.0072');
   });
 
+  it('a 2px progress bar while running, gone at once when done; the live region says start, failures and done', async () => {
+    const f = mountJob(jobView([[p1, { status: 'final', text: 'x', revision: 1 }]]));
+    const bar = root.querySelector('[role=progressbar]');
+    expect(bar?.getAttribute('aria-valuenow')).toBe('1');
+    expect(bar?.getAttribute('aria-valuemax')).toBe('4');
+    const live = () => root.querySelector('[data-testid=job-live]');
+    expect(root.querySelector('[data-testid=job]')?.getAttribute('role')).toBe('status');
+    expect(live()?.textContent).toBe('Translating into Vietnamese… 1 of 4');
+    // The progress sentence is for screen readers only on the page view: the bar shows it.
+    expect(live()?.classList.contains('sr-only')).toBe(true);
+    await f.j.push(jobView([[p2, { status: 'failed', error: { kind: 'rate_limit', message: '429' } }]], { status: 'done', counts: { total: 4, final: 3, failed: 1 }, endedAt: 2001 }));
+    expect(root.querySelector('[role=progressbar]')).toBeNull();
+    expect(live()?.textContent).toBe('Vietnamese · 3 of 4 · 1 failed · 2.0 s');
+    // A failure is something to say: it stays in view, with its Retry.
+    const say = root.querySelector('[data-testid=job] .job__say');
+    expect(say?.textContent).toContain('1 failed');
+    expect(say?.querySelector('[data-testid=retry-failed]')).not.toBeNull();
+  });
+
+  it('the page line in the Translation popover carries the model, blocks, time and cost', async () => {
+    mountJob(jobView([], { status: 'done', counts: { total: 4, final: 4, failed: 0 }, endedAt: 3001, cost: 0.0072 }));
+    expect(root.querySelector('[data-testid=page-line]')?.textContent).toBe('Model gemini-3.5-flash-lite · 4 of 4 blocks · 3.0 s · $0.0072');
+    expect(root.querySelector('[data-testid=translation-popover]')?.contains(root.querySelector('[data-testid=job-cost]'))).toBe(true);
+  });
+
+  it('Escape in a popover closes only the popover while the shortcut list is open', async () => {
+    mountJob(jobView([], { status: 'done', counts: { total: 4, final: 4, failed: 0 } }));
+    document.body.append(root);
+    await act(() => root.querySelector<HTMLButtonElement>('[data-testid=more-button]')?.click());
+    await act(() => root.querySelector<HTMLButtonElement>('[data-testid=shortcuts-button]')?.click());
+    expect(root.querySelector('[data-testid=shortcuts]')).not.toBeNull();
+    await act(() => root.querySelector<HTMLButtonElement>('[data-testid=translation-button]')?.click());
+    const popover = root.querySelector<HTMLElement>('[data-testid=translation-popover]') as HTMLElement;
+    expect(popover.hidden).toBe(false);
+    await act(() => void document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+    expect(popover.hidden).toBe(true);
+    expect(root.querySelector('[data-testid=shortcuts]')).not.toBeNull();
+    expect(document.activeElement).toBe(root.querySelector('[data-testid=translation-button]'));
+    // Escape in the More menu closes only the menu too.
+    await act(() => root.querySelector<HTMLButtonElement>('[data-testid=more-button]')?.click());
+    expect(root.querySelector<HTMLElement>('[data-testid=more-menu]')?.hidden).toBe(false);
+    await act(() => void document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+    expect(root.querySelector<HTMLElement>('[data-testid=more-menu]')?.hidden).toBe(true);
+    expect(root.querySelector('[data-testid=shortcuts]')).not.toBeNull();
+    expect(document.activeElement).toBe(root.querySelector('[data-testid=more-button]'));
+    // A second Escape, now outside any popover, closes the list.
+    await act(() => void document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+    expect(root.querySelector('[data-testid=shortcuts]')).toBeNull();
+  });
+
   it('About this document: collapsed, shows genre, audience, purpose, tone and key terms as text (plan M2 §2)', async () => {
     const f = mountJob(jobView([]));
     expect(root.querySelector('[data-testid=about]')).toBeNull();
@@ -321,13 +374,16 @@ describe('translation in the panel (plan M1-E10)', () => {
 });
 
 describe('shortcut list (M5-E10)', () => {
-  it('the ? button opens and closes the list; Esc closes it and returns focus to the button', async () => {
+  it('More › Keyboard shortcuts opens the list; Esc closes it and returns focus to the More button', async () => {
     mount({ kind: 'idle' } as PanelView);
-    const button = root.querySelector<HTMLButtonElement>('[data-testid="shortcuts-button"]') as HTMLButtonElement;
-    expect(button.getAttribute('aria-expanded')).toBe('false');
+    document.body.append(root);
+    // The list opens from the More menu, so the menu's trigger says the list is open and takes focus back.
+    const button = root.querySelector<HTMLButtonElement>('[data-testid="more-button"]') as HTMLButtonElement;
     expect(root.querySelector('[data-testid="shortcuts"]')).toBeNull();
     await act(() => button.click());
+    await act(() => root.querySelector<HTMLButtonElement>('[data-testid="shortcuts-button"]')?.click());
     expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(button.getAttribute('aria-controls')).toBe('shortcuts');
     expect(root.querySelector('[data-testid="shortcuts"]')?.textContent).toContain('Alt+T');
     expect(root.querySelector('[data-testid="shortcuts"]')?.textContent).toContain('Retranslate this block');
     await act(() => void root.querySelector('[data-testid="shortcuts"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
