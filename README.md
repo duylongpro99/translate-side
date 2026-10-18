@@ -14,7 +14,7 @@ so it reads like a native writer wrote it.
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-34A853)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow)
-![Version 1.1](https://img.shields.io/badge/version-1.1.0-blue)
+![Version 1.2](https://img.shields.io/badge/version-1.2.0-blue)
 
 [Features](#-features) · [How it works](#-how-it-works) · [Getting started](#-getting-started) · [Providers](#-providers-and-local-models) · [Privacy](#-privacy) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 
@@ -224,8 +224,8 @@ how to delete it, is in [`docs/privacy.md`](docs/privacy.md).
 | ✅ | **M4** Providers | Claude, OpenAI, Gemini, OpenRouter, Ollama and LM Studio, with connection test and fallback |
 | ✅ | **M5** Reading UX complete | Hover link, scroll sync, single-page apps, long documents, keyboard and screen readers |
 | ✅ | **M6** Release hardening → **v1.0** | Eval gate, end-to-end tests, storage migration, performance, Vietnamese interface, store package and docs |
-| ⏳ | **M7** Stronger translation → **v1.1** | Quality modes, edits and a translation memory |
-| ⏳ | **M8** UI/UX refresh → **v1.2** | A reading-first panel, reading settings, one design system for every page |
+| ✅ | **M7** Stronger translation → **v1.1** | Quality modes, edits and a translation memory |
+| ✅ | **M8** UI/UX refresh → **v1.2** | A reading-first panel, reading settings, one design system for every page |
 | 🔭 | **M9** Beyond | Firefox and other independent tracks |
 
 The full plan is in [`ROADMAP.md`](ROADMAP.md) and [`docs/plans/`](docs/plans/). The design and its
