@@ -1,0 +1,87 @@
+<!doctype html>
+<!--
+  Dev only (outside src/, never packaged): does each serif candidate draw every Vietnamese letter itself?
+  Open it in Chrome on each platform. Every vowel with every tone mark, plus Ơ Ư Đ, is drawn in each font,
+  and the script below draws each letter twice, once with a monospace fallback and once with a cursive one,
+  and compares the pixels. A font that draws the whole letter gives the same pixels both times; a font that
+  lacks the letter or one of its marks (a horn, a tone) borrows it from the fallback, and the two drawings
+  differ. Widths alone miss a borrowed combining mark, which has none. The verdict line per font names the
+  letters it lacks.
+
+  A font can have every glyph and still draw it wrong: on macOS, Iowan Old Style and Charter draw the horn
+  of ơ and ư like a hook above, so ơ reads as ỏ. No measurement sees that, so each font also gets a large
+  pair row (ơ ỏ, ư ủ, ờ ở, Ơ Ở): the two letters of a pair must look different. docs/design-system.md has the result.
+-->
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vietnamese glyph check</title>
+<style>
+  body { margin: 24px; font: 14px/1.5 system-ui, sans-serif; }
+  h2 { margin: 24px 0 4px; font-size: 15px; }
+  .sample { font-size: 28px; line-height: 1.6; word-break: break-all; }
+  .verdict { font-weight: 600; }
+  .pairs { font-size: 56px; line-height: 1.4; }
+  .pairs span { margin-right: 0.6em; }
+</style>
+</head>
+<body>
+<h1>Vietnamese glyph check</h1>
+<p id="platform"></p>
+<div id="out"></div>
+<script>
+  const FONTS = ['Iowan Old Style', 'Charter', 'Georgia', 'Noto Serif', 'Times New Roman'];
+  const VOWELS = 'aăâeêioôơuưy';
+  const TONES = ['', '̀', '́', '̉', '̃', '̣'];
+  const letters = [];
+  for (const v of VOWELS + VOWELS.toUpperCase()) for (const t of TONES) letters.push((v + t).normalize('NFC'));
+  letters.push('Ơ', 'Ư', 'Đ', 'đ');
+  const sample = letters.join(' ');
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 120;
+  canvas.height = 120;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const pixels = (font, fallback, ch) => {
+    ctx.clearRect(0, 0, 120, 120);
+    ctx.font = `60px "${font}", ${fallback}`;
+    ctx.fillText(ch, 20, 85);
+    return ctx.getImageData(0, 0, 120, 120).data.join(',');
+  };
+  const installed = (font) => pixels(font, 'monospace', 'mw') !== pixels('no-such-font-xyz', 'monospace', 'mw');
+
+  document.getElementById('platform').textContent = navigator.userAgent;
+  const out = document.getElementById('out');
+  const results = {};
+  for (const font of FONTS) {
+    const h = document.createElement('h2');
+    h.textContent = font;
+    const verdict = document.createElement('p');
+    verdict.className = 'verdict';
+    const p = document.createElement('p');
+    p.className = 'sample';
+    p.style.fontFamily = `"${font}", monospace`;
+    p.textContent = sample;
+    if (!installed(font)) {
+      verdict.textContent = 'not installed';
+      results[font] = 'not installed';
+    } else {
+      const missing = letters.filter((ch) => pixels(font, 'monospace', ch) !== pixels(font, 'cursive', ch));
+      verdict.textContent = missing.length === 0 ? 'draws every letter' : `lacks ${missing.length}: ${missing.join(' ')}`;
+      results[font] = missing.length === 0 ? 'complete' : missing;
+    }
+    const pairs = document.createElement('p');
+    pairs.className = 'pairs';
+    pairs.style.fontFamily = `"${font}", monospace`;
+    for (const pair of ['ơ ỏ', 'ư ủ', 'ờ ở', 'Ơ Ở']) {
+      const span = document.createElement('span');
+      span.textContent = pair;
+      pairs.append(span);
+    }
+    out.append(h, verdict, pairs, p);
+  }
+  window.glyphResults = results;
+</script>
+</body>
+</html>

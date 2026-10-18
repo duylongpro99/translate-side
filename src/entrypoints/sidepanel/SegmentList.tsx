@@ -8,6 +8,8 @@ import { markerKinds, parseMarkup, plainText, type MarkupNode } from './markup.t
 import { i18n } from '#i18n';
 import { failureText } from './status.ts';
 import { blocksIn, handleBlockKey, rove } from './blocks-nav.ts';
+import { isRtl } from '@/shared/language';
+import type { Reading } from '@/shared/reading';
 
 /** Per-segment actions (M3-E8, M3-E5); absent for a list with nothing to act on. */
 export interface SegmentActions {
@@ -55,14 +57,18 @@ function Markup({ nodes }: { nodes: MarkupNode[] }) {
 }
 
 /** The job's languages, so a screen reader speaks the translation in the target language and the original in the source's. */
-const Langs = createContext<{ target?: string | undefined; source?: string | undefined }>({});
+type Langs = { target?: string | undefined; source?: string | undefined; rtl?: boolean };
+const Langs = createContext<Langs>({});
 
 /** The translation if there is one, else the original; formatting only where the source has it (NB6). */
 function Text({ seg, state }: { seg: Segment; state: SegState | undefined }) {
-  const { target } = useContext(Langs);
+  const { target, source } = useContext(Langs);
   const src = state?.text ?? seg.inlineMarkup;
   const nodes = <Markup nodes={parseMarkup(src, markerKinds(seg))} />;
-  return state?.text !== undefined && target ? <span lang={target}>{nodes}</span> : nodes;
+  if (state?.text !== undefined && target) return <span lang={target}>{nodes}</span>;
+  // The original while a block waits: in its own language, so it is spoken and drawn as that.
+  if (seg.translate && source) return <span lang={source}>{nodes}</span>;
+  return nodes;
 }
 
 type Props = {
@@ -144,17 +150,21 @@ function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraf
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setCopied(undefined), 1500);
   };
+  // Icon buttons: the icon is a CSS mask and the name is aria-label. A state ("Copied", "Explain again") is also
+  // said as hidden text and in the tooltip; with no state the button holds no text node (a toolbar per block adds up).
+  const explainText = i18n.t(state?.explain?.status === 'loading' ? 'panel.segment.explaining' : state?.explain ? 'panel.segment.explainAgain' : 'panel.segment.explain');
+  const copyWord = i18n.t(copied === 'ok' ? 'panel.segment.copied' : copied === 'failed' ? 'panel.segment.copyFailed' : 'panel.segment.copy');
   return (
     <span class="seg__actions" role="group" aria-label={i18n.t('panel.segment.actionsFor', [name])}>
       {done && onOriginal ? (
-        <button type="button" class="seg__action" data-testid="seg-original" aria-keyshortcuts="O" aria-pressed={original === true} aria-label={i18n.t(original ? 'panel.segment.hideOriginalFor' : 'panel.segment.showOriginalFor', [name])} onClick={() => onOriginal(seg.id)}>
+        <button type="button" class="seg__action seg__action--text" data-testid="seg-original" aria-keyshortcuts="O" aria-pressed={original === true} aria-label={i18n.t(original ? 'panel.segment.hideOriginalFor' : 'panel.segment.showOriginalFor', [name])} onClick={() => onOriginal(seg.id)}>
           {original ? i18n.t('panel.segment.hideOriginal') : i18n.t('panel.segment.original')}
         </button>
       ) : null}
       {done && state.draft !== undefined && onDraft ? (
         <button
           type="button"
-          class="seg__action"
+          class="seg__action seg__action--text"
           data-testid="seg-draft"
           aria-pressed={draft === true}
           aria-label={i18n.t(draft ? 'panel.segment.hideDraftFor' : 'panel.segment.showDraftFor', [name])}
@@ -167,7 +177,7 @@ function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraf
       {done && actions?.retranslate ? (
         <button
           type="button"
-          class="seg__action"
+          class="seg__action seg__action--icon seg__action--retranslate"
           data-testid="seg-retranslate"
           aria-keyshortcuts="R"
           aria-label={i18n.t('panel.segment.retranslateFor', [name])}
@@ -175,30 +185,28 @@ function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraf
           // An edit is replaced only after the user confirms it.
           onClick={() => (state.edited && actions.discardEdit ? ui.confirm(seg.id) : actions.retranslate?.(seg.id))}
         >
-          {i18n.t('panel.segment.retranslate')}
         </button>
       ) : null}
       {done && seg.translate && actions?.edit ? (
-        <button type="button" class="seg__action" data-testid="seg-edit" aria-label={i18n.t('panel.segment.editFor', [name])} title={i18n.t('panel.segment.editTitle')} onClick={() => ui.edit(seg.id)}>
-          {i18n.t('panel.segment.edit')}
+        <button type="button" class="seg__action seg__action--icon seg__action--edit" data-testid="seg-edit" aria-label={i18n.t('panel.segment.editFor', [name])} title={i18n.t('panel.segment.editTitle')} onClick={() => ui.edit(seg.id)}>
         </button>
       ) : null}
       {done && actions?.explain ? (
         <button
           type="button"
-          class="seg__action"
+          class="seg__action seg__action--icon seg__action--explain"
           data-testid="seg-explain"
           aria-keyshortcuts="E"
           aria-label={i18n.t('panel.segment.explainFor', [name])}
-          title={i18n.t('panel.segment.explainTitle')}
+          title={`${explainText}. ${i18n.t('panel.segment.explainTitle')}`}
           disabled={state?.explain?.status === 'loading'}
           onClick={() => actions.explain?.(seg.id)}
         >
-          {i18n.t(state?.explain?.status === 'loading' ? 'panel.segment.explaining' : state?.explain ? 'panel.segment.explainAgain' : 'panel.segment.explain')}
+          {state?.explain ? <span class="sr-only">{explainText}</span> : null}
         </button>
       ) : null}
-      <button type="button" class="seg__action" data-testid="seg-copy" aria-keyshortcuts="C" aria-label={i18n.t('panel.segment.copyFor', [name])} onClick={copy}>
-        {i18n.t(copied === 'ok' ? 'panel.segment.copied' : copied === 'failed' ? 'panel.segment.copyFailed' : 'panel.segment.copy')}
+      <button type="button" class={`seg__action seg__action--icon seg__action--${copied === 'ok' ? 'copied' : 'copy'}`} data-testid="seg-copy" aria-keyshortcuts="C" aria-label={i18n.t('panel.segment.copyFor', [name])} title={copyWord} onClick={copy}>
+        {copied ? <span class="sr-only">{copyWord}</span> : null}
       </button>
     </span>
   );
@@ -209,7 +217,7 @@ function Original({ seg, state, original }: Props) {
   const { source } = useContext(Langs);
   if (!original || !translated(state)) return null;
   return (
-    <span class="seg__original" data-testid="seg-original-text" {...(source ? { lang: source } : {})}>
+    <span class="seg__original" data-testid="seg-original-text" {...(source ? { lang: source, dir: isRtl(source) ? 'rtl' : 'ltr' } : {})}>
       <Markup nodes={parseMarkup(seg.inlineMarkup, markerKinds(seg))} />
     </span>
   );
@@ -229,7 +237,11 @@ function Draft({ seg, state, draft }: Props) {
 /** Best: a small dot after a block whose text is the review's revision (DESIGN.md §5.2 "refined"). */
 function RefinedMark({ state }: Props) {
   if (state?.status !== 'final' || !state.refined) return null;
-  return <span class="seg__refined" data-testid="seg-refined" role="img" aria-label={i18n.t('panel.segment.refined')} title={i18n.t('panel.segment.refinedTitle')} />;
+  return (
+    <span class="seg__marker seg__refined" data-testid="seg-refined" role="img" aria-label={i18n.t('panel.segment.refined')} title={i18n.t('panel.segment.refinedTitle')}>
+      <span aria-hidden="true">{i18n.t('panel.segment.refined')}</span>
+    </span>
+  );
 }
 
 /** A small label after a block that shows a correction: the user's ("edited") or an imported one. */
@@ -354,6 +366,18 @@ function ReplaceEdit({ seg, state, actions, confirming }: Props) {
   );
 }
 
+/**
+ * A block's language and direction. A block showing a translation carries the target `lang` itself,
+ * so `text-align: start` and logical padding mirror for Arabic or Hebrew; any other block runs in its
+ * source's direction, stated when the list around it runs the other way.
+ */
+function langAttrs(seg: Segment, state: SegState | undefined, langs: { target?: string | undefined; source?: string | undefined; rtl?: boolean }): { lang?: string; dir?: 'rtl' | 'ltr' | 'auto' } {
+  if (seg.translate && state?.text !== undefined && langs.target) return { lang: langs.target, ...(isRtl(langs.target) ? { dir: 'rtl' } : {}) };
+  if (isRtl(langs.source)) return { dir: 'rtl' };
+  // Inside a right-to-left list: left to right for a known source, the text's own direction otherwise.
+  return langs.rtl ? { dir: langs.source ? 'ltr' : 'auto' } : {};
+}
+
 function statusAttrs(seg: Segment, state: SegState | undefined, extra = '') {
   const status = seg.translate ? (state?.status ?? 'original') : 'kept';
   const refined = status === 'final' && state?.refined === true;
@@ -404,10 +428,11 @@ function Notes(props: Props) {
       <Original {...props} />
       {seg.hidden ? <span class="seg__note">{i18n.t('panel.segment.hidden')}</span> : null}
       {state?.status === 'failed' && state.error ? (
-        <span class="seg__note seg__note--failed" role="note">
-          {i18n.t('panel.segment.failed', [failureText(state.error)])}
+        // A note, not an alert: a page with many failed blocks would otherwise interrupt for each one.
+        <span class="ui-notice ui-notice--danger seg__failed" role="note">
+          <span>{i18n.t('panel.segment.failed', [failureText(state.error)])}</span>
           {actions && state.error.kind !== 'auth' ? (
-            <button type="button" class="seg__retry" data-testid="segment-retry" onClick={() => actions.retry(seg.id)}>
+            <button type="button" class="ui-button seg__retry" data-testid="segment-retry" onClick={() => actions.retry(seg.id)}>
               {i18n.t('panel.segment.retry')}
             </button>
           ) : null}
@@ -455,18 +480,27 @@ const changed = (a: Props, b: Props) => a.seg !== b.seg || a.state !== b.state |
 
 /** The block's text, or its editor while that is open. */
 function Shown(props: Props) {
-  return props.editing && translated(props.state) ? <Editor {...props} /> : <Text seg={props.seg} state={props.state} />;
+  if (props.editing && translated(props.state)) return <Editor {...props} />;
+  return (
+    <>
+      <Text seg={props.seg} state={props.state} />
+      {/* A block still streaming ends in a still caret (no blinking). */}
+      {props.state?.status === 'streaming' ? <span class="seg__caret" aria-hidden="true" /> : null}
+    </>
+  );
 }
 
 /** Re-renders only when its segment's state object changes: a stream updates one block at a time. */
 class Block extends Component<Props> {
+  static override contextType = Langs;
+
   override shouldComponentUpdate(next: Props): boolean {
     return changed(this.props, next);
   }
 
   override render(props: Props) {
     const { seg, state } = props;
-    const common = statusAttrs(seg, state);
+    const common = { ...statusAttrs(seg, state), ...langAttrs(seg, state, this.context as Langs) };
     switch (seg.kind) {
       case 'heading':
         return (
@@ -516,13 +550,15 @@ class Block extends Component<Props> {
 }
 
 class Cell extends Component<Props> {
+  static override contextType = Langs;
+
   override shouldComponentUpdate(next: Props): boolean {
     return changed(this.props, next);
   }
 
   override render(props: Props) {
     const { seg, state } = props;
-    const { class: cls, ...attrs } = statusAttrs(seg, state);
+    const { class: cls, ...attrs } = { ...statusAttrs(seg, state), ...langAttrs(seg, state, this.context as Langs) };
     return (
       <div {...attrs} class={cls.replace(`seg--${seg.kind}`, 'seg--table-cell')} role="cell">
         <Shown {...props} />
@@ -566,7 +602,9 @@ function Table({ cells, states, actions, originals, onOriginal, drafts, onDraft,
   );
 }
 
-export function SegmentList({ segments, states, actions, model, targetLang, sourceLang, busy }: { segments: readonly Segment[]; states?: States; actions?: SegmentActions; model?: string; targetLang?: string; sourceLang?: string; busy?: boolean }) {
+const MEASURE: Record<Reading['width'], string> = { narrow: '34em', medium: '40em', full: 'none' };
+
+export function SegmentList({ segments, states, actions, model, targetLang, sourceLang, busy, reading }: { segments: readonly Segment[]; states?: States; actions?: SegmentActions; model?: string; targetLang?: string; sourceLang?: string; busy?: boolean; reading?: Reading | undefined }) {
   const root = useRef<HTMLDivElement>(null);
   // One Tab stop for the list, whatever re-rendered (a block that arrived, a button that appeared).
   useEffect(() => {
@@ -626,6 +664,9 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
     rove(root.current, block);
     block.focus({ preventScroll: true });
   }, [editing, confirming]);
+  // A list translated into Arabic or Hebrew runs right to left.
+  const rtl = states !== undefined && isRtl(targetLang);
+  const langs = useMemo(() => ({ target: targetLang, source: sourceLang, rtl }), [targetLang, sourceLang, rtl]);
   // Only a translated list has originals (and drafts) to show.
   const toggle = states ? onOriginal : undefined;
   const toggleDraft = states ? onDraft : undefined;
@@ -656,9 +697,18 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
     }
   }
   return (
-    <Langs.Provider value={{ target: targetLang, source: sourceLang }}>
+    <Langs.Provider value={langs}>
       <Ui.Provider value={ui}>
-      <div class="segments" ref={root} role="region" aria-label={i18n.t('panel.segment.region')} aria-busy={busy === true} onKeyDown={(e) => root.current && handleBlockKey(e, root.current)} onFocusIn={(e) => root.current && rove(root.current, (e.target as Element).closest<HTMLElement>('[data-id]') ?? undefined)}>
+      <div
+        class="segments"
+        ref={root}
+        role="region"
+        aria-label={i18n.t('panel.segment.region')}
+        aria-busy={busy === true}
+        {...(rtl ? { dir: 'rtl' } : {})}
+        // The reading settings: typeface, size and line width apply here, through CSS only (no block re-renders, no job).
+        data-typeface={reading?.typeface ?? 'sans'}
+        style={{ '--reading-size': `${reading?.size ?? 16}px`, '--reading-measure': MEASURE[reading?.width ?? 'medium'], '--waiting-label': JSON.stringify(i18n.t('panel.segment.waiting')) }} onKeyDown={(e) => root.current && handleBlockKey(e, root.current)} onFocusIn={(e) => root.current && rove(root.current, (e.target as Element).closest<HTMLElement>('[data-id]') ?? undefined)}>
           {out}
         </div>
       </Ui.Provider>

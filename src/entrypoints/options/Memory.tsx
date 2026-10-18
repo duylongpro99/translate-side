@@ -5,7 +5,9 @@
 // Imported entries only guide translations unless the user ticks "Also replace matching blocks".
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
+import { Button } from '@/ui/Button';
 import { i18n } from '#i18n';
+import { More } from './More.tsx';
 import { MAX_MEMORY_ENTRIES, MAX_MEMORY_IMPORT_BYTES, MEMORY_ACROSS_SITES_KEY, memoryExportFileName, parseMemoryImport, readAcrossSites, type ImportEntry, type TranslationMemory } from '@/shared/memory';
 import { download } from './Transfer.tsx';
 
@@ -166,27 +168,27 @@ export function MemorySection({ memory, api }: { memory: TranslationMemory | und
         </>
       ) : null}
       <div class="opt__row">
-        <button type="button" data-testid="memory-export" disabled={busy} onClick={() => void runExport()}>
+        <Button data-testid="memory-export" disabled={busy} onClick={() => void runExport()}>
           {i18n.t('options.memory.export')}
-        </button>
-        <button type="button" ref={clearButton} data-testid="memory-clear" disabled={busy || clearing || !count} onClick={() => setClearing(true)}>
+        </Button>
+        <Button ref={clearButton} data-testid="memory-clear" disabled={busy || clearing || !count} onClick={() => setClearing(true)}>
           {i18n.t('options.memory.clear')}
-        </button>
+        </Button>
       </div>
       {clearing ? (
         <div class="opt__status opt__status--warn" role="alertdialog" aria-labelledby="memory-clear-q" data-testid="memory-clear-confirm">
           <p id="memory-clear-q">{i18n.t('options.memory.clearConfirm', [num(count ?? 0)])}</p>
-          <button type="button" ref={clearCancel} data-testid="memory-clear-no" onClick={() => setClearing(false)}>
+          <Button ref={clearCancel} data-testid="memory-clear-no" onClick={() => setClearing(false)}>
             {i18n.t('options.memory.cancel')}
-          </button>{' '}
-          <button type="button" data-testid="memory-clear-yes" onClick={() => void runClear()}>
+          </Button>{' '}
+          <Button data-testid="memory-clear-yes" onClick={() => void runClear()}>
             {i18n.t('options.memory.clearYes')}
-          </button>
+          </Button>
         </div>
       ) : null}
       <div class="opt__row">
-        <label for="memory-file">{i18n.t('options.memory.file')}</label>
-        <input id="memory-file" ref={fileInput} type="file" accept=".json,application/json" data-testid="memory-file" onChange={(e) => void onFile(e)} />
+        <label for="memory-file" class="ui-button opt__file-label">{i18n.t('options.memory.file')}</label>
+        <input id="memory-file" class="opt__file-input" ref={fileInput} type="file" accept=".json,application/json" data-testid="memory-file" onChange={(e) => void onFile(e)} />
       </div>
       {pending ? (
         <div ref={previewBox} data-testid="memory-preview" role="group" aria-label={pending.fileName}>
@@ -194,16 +196,18 @@ export function MemorySection({ memory, api }: { memory: TranslationMemory | und
           <label class="opt__check">
             <input type="checkbox" data-testid="memory-replace" checked={override} aria-describedby="memory-replace-hint" onChange={(e) => setOverride((e.target as HTMLInputElement).checked)} /> {i18n.t('options.memory.replaceMatching')}
           </label>
-          <p class="opt__hint" id="memory-replace-hint">
-            {i18n.t('options.memory.replaceHint')}
-          </p>
+          <More>
+            <p class="opt__hint" id="memory-replace-hint">
+              {i18n.t('options.memory.replaceHint')}
+            </p>
+          </More>
           <p>
-            <button type="button" data-testid="memory-import-apply" disabled={busy || pending.entries.length === 0} onClick={() => void runImport()}>
+            <Button data-testid="memory-import-apply" disabled={busy || pending.entries.length === 0} onClick={() => void runImport()}>
               {i18n.t('options.memory.apply')}
-            </button>{' '}
-            <button type="button" data-testid="memory-import-cancel" onClick={() => setPending(undefined)}>
+            </Button>{' '}
+            <Button data-testid="memory-import-cancel" onClick={() => setPending(undefined)}>
               {i18n.t('options.memory.cancel')}
-            </button>
+            </Button>
           </p>
         </div>
       ) : null}

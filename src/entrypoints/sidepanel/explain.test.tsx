@@ -155,7 +155,8 @@ describe('Explain this in the block', () => {
     const asked: string[] = [];
     const el = mount(new Map([['s0', { status: 'final' as const, text: 'vi' }]]), (id) => asked.push(id));
     const button = el.querySelector<HTMLButtonElement>('[data-testid=seg-explain]');
-    expect(button?.textContent).toBe('Explain this');
+    // An icon button: its word is the tooltip, its name the aria-label.
+    expect(button?.getAttribute('title')).toMatch(/^Explain this\. /);
     act(() => button?.click());
     expect(asked).toEqual(['s0']);
   });

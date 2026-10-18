@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { render } from 'preact';
+import { browser } from 'wxt/browser';
 import { act } from 'preact/test-utils';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Segment } from '@/engine/types';
@@ -137,7 +138,10 @@ describe('segments by kind', () => {
   it('has a dev segment view with ids in dev builds', () => {
     mount({ kind: 'ready', docId: 'doc12345', result: { ok: true, via: 'walk', url: 'https://x/', title: 'Page', segments } });
     expect(import.meta.env.DEV).toBe(true);
-    act(() => (root.querySelector('.panel__dev') as HTMLButtonElement).click());
+    // The segment view is an item of the header's More menu.
+    act(() => (root.querySelector('[data-testid=more-button]') as HTMLButtonElement).click());
+    expect(root.querySelector('[data-testid=menu-dev]')?.getAttribute('aria-checked')).toBe('false');
+    act(() => (root.querySelector('[data-testid=menu-dev]') as HTMLButtonElement).click());
     const dev = root.querySelector('[data-testid=dev-view]');
     expect(dev?.querySelectorAll('tbody tr')).toHaveLength(segments.length);
     expect(dev?.textContent).toContain(segments[0]?.id);
@@ -269,6 +273,85 @@ describe('translation in the panel (plan M1-E10)', () => {
     expect(root.querySelector('[data-testid=job-cost]')?.textContent).toBe('$0.0072');
   });
 
+  it('a reading settings change restyles the text at once and sends nothing: no action, no page message, no block re-render', async () => {
+    const f = mountJob(jobView([[p1, { status: 'final', text: 'Một', revision: 1 }]], { status: 'done', counts: { total: 4, final: 1, failed: 0 } }));
+    let sent = 0;
+    f.translator.send = () => void sent++;
+    await act(() => new Promise((r) => setTimeout(r, 0)));
+    const before = root.querySelector(`[data-id="${p1.id}"]`) as HTMLElement;
+    // Any change inside the block (text, attributes, children) would mean the blocks were drawn again.
+    const changes: MutationRecord[] = [];
+    const watch = new MutationObserver((records) => changes.push(...records));
+    watch.observe(before, { subtree: true, childList: true, attributes: true, characterData: true });
+    await act(async () => {
+      await browser.storage.sync.set({ reading: { theme: 'system', typeface: 'serif', size: 21, width: 'narrow' } });
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    const region = root.querySelector('.segments') as HTMLElement;
+    expect(region.dataset.typeface).toBe('serif');
+    expect(region.style.getPropertyValue('--reading-size')).toBe('21px');
+    expect(region.style.getPropertyValue('--reading-measure')).toBe('34em');
+    expect(f.calls).toEqual([]);
+    expect(sent).toBe(0);
+    // The same block, untouched: the change went through the region's CSS, not a new render of the blocks.
+    watch.disconnect();
+    expect(root.querySelector(`[data-id="${p1.id}"]`)).toBe(before);
+    // (The list's one Tab stop is set again on each of its renders: tabindex and data-roving are not the block's content.)
+    const drawn = changes.filter((c) => !(c.type === 'attributes' && (c.attributeName === 'tabindex' || c.attributeName === 'data-roving')));
+    expect(drawn.map((c) => `${c.type}:${c.attributeName ?? ''}`)).toEqual([]);
+    await browser.storage.sync.remove('reading');
+  });
+
+  it('a 2px progress bar while running, gone at once when done; the live region says start, failures and done', async () => {
+    const f = mountJob(jobView([[p1, { status: 'final', text: 'x', revision: 1 }]]));
+    const bar = root.querySelector('[role=progressbar]');
+    expect(bar?.getAttribute('aria-valuenow')).toBe('1');
+    expect(bar?.getAttribute('aria-valuemax')).toBe('4');
+    const live = () => root.querySelector('[data-testid=job-live]');
+    expect(root.querySelector('[data-testid=job]')?.getAttribute('role')).toBe('status');
+    expect(live()?.textContent).toBe('Translating into Vietnamese… 1 of 4');
+    // The progress sentence is for screen readers only on the page view: the bar shows it.
+    expect(live()?.classList.contains('sr-only')).toBe(true);
+    await f.j.push(jobView([[p2, { status: 'failed', error: { kind: 'rate_limit', message: '429' } }]], { status: 'done', counts: { total: 4, final: 3, failed: 1 }, endedAt: 2001 }));
+    expect(root.querySelector('[role=progressbar]')).toBeNull();
+    expect(live()?.textContent).toBe('Vietnamese · 3 of 4 · 1 failed · 2.0 s');
+    // A failure is something to say: it stays in view, with its Retry.
+    const say = root.querySelector('[data-testid=job] .job__say');
+    expect(say?.textContent).toContain('1 failed');
+    expect(say?.querySelector('[data-testid=retry-failed]')).not.toBeNull();
+  });
+
+  it('the page line in the Translation popover carries the model, blocks, time and cost', async () => {
+    mountJob(jobView([], { status: 'done', counts: { total: 4, final: 4, failed: 0 }, endedAt: 3001, cost: 0.0072 }));
+    expect(root.querySelector('[data-testid=page-line]')?.textContent).toBe('Model gemini-3.5-flash-lite · 4 of 4 blocks · 3.0 s · $0.0072');
+    expect(root.querySelector('[data-testid=translation-popover]')?.contains(root.querySelector('[data-testid=job-cost]'))).toBe(true);
+  });
+
+  it('Escape in a popover closes only the popover while the shortcut list is open', async () => {
+    mountJob(jobView([], { status: 'done', counts: { total: 4, final: 4, failed: 0 } }));
+    document.body.append(root);
+    await act(() => root.querySelector<HTMLButtonElement>('[data-testid=more-button]')?.click());
+    await act(() => root.querySelector<HTMLButtonElement>('[data-testid=shortcuts-button]')?.click());
+    expect(root.querySelector('[data-testid=shortcuts]')).not.toBeNull();
+    await act(() => root.querySelector<HTMLButtonElement>('[data-testid=translation-button]')?.click());
+    const popover = root.querySelector<HTMLElement>('[data-testid=translation-popover]') as HTMLElement;
+    expect(popover.hidden).toBe(false);
+    await act(() => void document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+    expect(popover.hidden).toBe(true);
+    expect(root.querySelector('[data-testid=shortcuts]')).not.toBeNull();
+    expect(document.activeElement).toBe(root.querySelector('[data-testid=translation-button]'));
+    // Escape in the More menu closes only the menu too.
+    await act(() => root.querySelector<HTMLButtonElement>('[data-testid=more-button]')?.click());
+    expect(root.querySelector<HTMLElement>('[data-testid=more-menu]')?.hidden).toBe(false);
+    await act(() => void document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+    expect(root.querySelector<HTMLElement>('[data-testid=more-menu]')?.hidden).toBe(true);
+    expect(root.querySelector('[data-testid=shortcuts]')).not.toBeNull();
+    expect(document.activeElement).toBe(root.querySelector('[data-testid=more-button]'));
+    // A second Escape, now outside any popover, closes the list.
+    await act(() => void document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+    expect(root.querySelector('[data-testid=shortcuts]')).toBeNull();
+  });
+
   it('About this document: collapsed, shows genre, audience, purpose, tone and key terms as text (plan M2 §2)', async () => {
     const f = mountJob(jobView([]));
     expect(root.querySelector('[data-testid=about]')).toBeNull();
@@ -292,7 +375,8 @@ describe('translation in the panel (plan M1-E10)', () => {
     expect(field('purpose')).toBe('explain lazy futures');
     expect(field('tone')).toBe('<b>dry</b>');
     expect(about.querySelector('b')).toBeNull();
-    expect([...about.querySelectorAll('[data-field=glossary] li')].map((li) => li.textContent)).toEqual(['future · keep English', 'executor → bộ thực thi']);
+    // The key terms are a definition list: the term, then its rendering and note.
+    expect([...about.querySelectorAll('[data-field=glossary] > div')].map((d) => d.textContent)).toEqual(['future · keep English', 'executor → bộ thực thi']);
     expect(about.textContent).toContain('LanguageEnglish');
     // Empty fields are left out.
     await f.j.push(jobView([], { brief: { ...brief, audience: '', glossary: [] }, sourceLang: '' }));
@@ -321,13 +405,16 @@ describe('translation in the panel (plan M1-E10)', () => {
 });
 
 describe('shortcut list (M5-E10)', () => {
-  it('the ? button opens and closes the list; Esc closes it and returns focus to the button', async () => {
+  it('More › Keyboard shortcuts opens the list; Esc closes it and returns focus to the More button', async () => {
     mount({ kind: 'idle' } as PanelView);
-    const button = root.querySelector<HTMLButtonElement>('[data-testid="shortcuts-button"]') as HTMLButtonElement;
-    expect(button.getAttribute('aria-expanded')).toBe('false');
+    document.body.append(root);
+    // The list opens from the More menu, so the menu's trigger says the list is open and takes focus back.
+    const button = root.querySelector<HTMLButtonElement>('[data-testid="more-button"]') as HTMLButtonElement;
     expect(root.querySelector('[data-testid="shortcuts"]')).toBeNull();
     await act(() => button.click());
+    await act(() => root.querySelector<HTMLButtonElement>('[data-testid="shortcuts-button"]')?.click());
     expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(button.getAttribute('aria-controls')).toBe('shortcuts');
     expect(root.querySelector('[data-testid="shortcuts"]')?.textContent).toContain('Alt+T');
     expect(root.querySelector('[data-testid="shortcuts"]')?.textContent).toContain('Retranslate this block');
     await act(() => void root.querySelector('[data-testid="shortcuts"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));

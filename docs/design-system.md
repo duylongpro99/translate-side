@@ -1,0 +1,259 @@
+# Design system
+
+The panel, the settings page and onboarding are built from one set of tokens and components in
+`src/ui/`. There is no UI library and no web font. Colors, spacing, radii, type sizes and font
+stacks all come from `src/ui/tokens.css`. `scripts/check-tokens.mjs` is part of `pnpm check` and
+fails on any color literal or system color outside that file.
+
+Each page's stylesheet imports `@/ui/tokens.css` and `@/ui/base.css` first. Onboarding loads the
+settings page's stylesheet before its own, so it gets them without a second copy.
+
+## Themes
+
+There are four themes: system, light, paper and dark. The reading settings hold the choice (see
+"Reading settings" below), and it applies to every page.
+
+| Theme | Selector | `color-scheme` |
+|---|---|---|
+| System | `:root:not([data-theme])`: light, or dark under `prefers-color-scheme: dark` | `light dark` |
+| Light | `:root[data-theme='light']` (the `:root` values) | `light` |
+| Paper | `:root[data-theme='paper']` | `light` |
+| Dark | `:root[data-theme='dark']` | `dark` |
+
+**Before the first paint.** `storage.sync` is asynchronous, so each page keeps a copy of the
+reading item in `localStorage` (`ts.reading`). A classic script in each page's `<head>`,
+`public/theme-boot.js`, reads the copy's theme and sets `data-theme` on `<html>` before the body is
+laid out. (A module script runs only after its whole import graph has loaded, which is too late.)
+Each page's `main.tsx` then calls `applyThemeSync()` (`src/ui/theme.ts`) as its first statement,
+which applies the cleaned copy, and `followTheme(api)`, which reads `storage.sync`, applies it,
+rewrites the copy and follows later changes. A failed read leaves the copy as it is. Every value
+goes through `cleanReading` before it touches the DOM.
+
+System colors (`Canvas`, `CanvasText`, `Field`, `LinkText`) are not used. In a forced theme they
+would follow the operating system instead of the theme.
+
+## Color tokens
+
+Text contrast is at least 4.5:1 in every theme. `src/ui/tokens.test.ts` computes it from
+`tokens.css` for `--ink`, `--muted`, `--accent`, `--danger`, `--warn`, `--ok`, `--hidden` and
+`--quote` on `--ground`, `--raised` and `--tint`, and for `--on-accent` on `--accent`.
+
+| Token | Use | Light | Paper | Dark |
+|---|---|---|---|---|
+| `--ground` | Page background | `#ffffff` | `#faf8f3` | `#1c1b19` |
+| `--ink` | Text | `#1f1e1c` | `#22201c` | `#e7e3da` |
+| `--muted` | Secondary text, pending source text | `#66635d` | `#67635b` | `#9c978c` |
+| `--line` | Hairlines and borders | `#e4e2de` | `#e6e1d6` | `#34312c` |
+| `--tint` | Hover, notices | `#f4f3f0` | `#f1ece1` | `#26241f` |
+| `--pressed` | A pressed or open control, the linked block (hover link) | `#eae8e3` | `#eae3d5` | `#302d27` |
+| `--raised` | Popovers and menus | `#ffffff` | `#ffffff` | `#24221f` |
+| `--accent` | The one accent: links, focus ring, progress, the primary button | `#2f5d8a` | `#2f5d8a` | `#8fb3d9` |
+| `--on-accent` | Text on `--accent` | `#ffffff` | `#ffffff` | `#1c1b19` |
+| `--danger` | Errors | `#b3261e` | `#a8321f` | `#ff8a80` |
+| `--warn` | Warnings | `#7f6300` | `#775d00` | `#d6b44a` |
+| `--ok` | Success | `#1d7a35` | `#2a6b35` | `#6cc283` |
+| `--hidden` | Text the page hides | `#7f6300` | `#775d00` | `#d6b44a` |
+| `--code-bg` | Code blocks | `#f3f2ef` | `#f1ece1` | `#24221f` |
+| `--quote` | Block quotes | `#45423d` | `#4a463f` | `#c9c4b9` |
+| `--shadow-overlay` | The one shadow, on popovers and menus only | | | |
+
+## Spacing, radii and type
+
+| Spacing | Value | Radius | Value |
+|---|---|---|---|
+| `--space-1` | 4px | `--radius-s` | 5px |
+| `--space-2` | 8px | `--radius-m` | 8px (nothing is rounder) |
+| `--space-3` | 12px | | |
+| `--space-4` | 16px | | |
+| `--space-5` | 24px | | |
+| `--space-6` | 32px | | |
+
+The interface text is 14px (`--text-base`). The UI scale is `--text-xs` 11px, `--text-s` 12px,
+`--text-m` 13px, `--text-base` 14px, `--text-l` 16px and `--text-xl` 18px. The panel's reading
+text has its own size, which the reader chooses (13 to 24px).
+
+## Fonts
+
+Fonts are system fonts only.
+
+| Token | Stack |
+|---|---|
+| `--font-ui` | `system-ui, -apple-system, 'Segoe UI', sans-serif` |
+| `--font-sans` | The same stack, for reading |
+| `--font-serif` | `Georgia, 'Noto Serif', 'Times New Roman', serif` |
+| `--font-mono` | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` |
+
+**Why Georgia leads the serif stack.** `scripts/glyph-check.html` draws every Vietnamese vowel with
+every tone mark, plus Ơ Ư Đ, in each candidate. On macOS (Chrome 156, 2026-10-18) Iowan Old Style
+and Charter have every glyph, but they draw the horn of ơ and ư like a hook above, so ơ reads as ỏ
+and Ở loses its horn. Georgia draws them correctly. Windows was not checked: no Windows machine
+was available for M8. Georgia ships with Windows and covers Vietnamese, and sans stays the default
+typeface, so a Windows reader who picks serif gets Georgia; open `scripts/glyph-check.html` there to
+confirm.
+
+### Per-script stacks and why `lang` matters
+
+Chinese, Japanese and Korean share one set of Han code points (Han unification). The same
+character, for example 直 or 骨, has a different correct shape in Japanese, Simplified Chinese and
+Traditional Chinese. Only the `lang` attribute tells the browser which one to draw. So every
+translated block carries `lang={target}`, and every source block carries `lang={source}`.
+
+The per-script stacks are plain tokens. They are applied with `font-family` rules on the elements
+that carry `lang`, because a `:lang()` override of a variable cannot reach text through a variable
+already resolved on an ancestor.
+
+| Token | First choices (macOS, Windows), then Noto |
+|---|---|
+| `--font-ja-sans`, `--font-ja-serif` | Hiragino Sans, Yu Gothic; Hiragino Mincho, Yu Mincho |
+| `--font-zh-hans-sans`, `--font-zh-hans-serif` | PingFang SC, Microsoft YaHei; Songti SC, SimSun |
+| `--font-zh-hant-sans`, `--font-zh-hant-serif` | PingFang TC, Microsoft JhengHei; Songti TC, PMingLiU |
+| `--font-ko-sans`, `--font-ko-serif` | Apple SD Gothic Neo, Malgun Gothic; AppleMyungjo, Batang |
+| `--font-th` | Thonburi, Leelawadee UI |
+| `--font-ar` | Geeza Pro, Segoe UI |
+| `--font-he` | Arial Hebrew, Segoe UI |
+| `--font-hi` | Kohinoor Devanagari, Nirmala UI |
+
+## Components
+
+Each component lives in `src/ui/` and is tested there (`*.test.tsx`). The styles are in
+`src/ui/base.css`, under `ui-` classes.
+
+| Component | What it is | Accessibility contract |
+|---|---|---|
+| `Button` | Variants `primary` (accent fill, at most once per view), `default` (hairline) and `quiet` | A native `<button type="button">`; every prop passes through |
+| `IconButton` | A 32×32 hit area around an icon | A required `label` sets `aria-label` and the tooltip (`title` can say more); an optional `pressed` sets `aria-pressed`, shown with the accent icon color as well as a fill |
+| `Select` | A native `<select>` restyled with `appearance: none`, a chevron, and a `quiet` variant | Native keyboard and screen-reader behaviour. Every single-choice list (language, style, quality, model) uses it |
+| `Segmented` | Native radios in a `<fieldset>` with a `<legend>`, drawn as segments; the chosen one is bold with a `--muted` outline | Native arrow keys. Only for free settings (reading settings, the theme), never for `prefs` or `quality`, where each change starts a paid job |
+| `Popover` | A non-modal dialog under its trigger | The trigger has `aria-expanded` and `aria-controls`; the popover is `role="dialog"` with a label and stays mounted while closed (`hidden`). Opening focuses its first tab stop (the checked radio of a group), or the dialog itself when it holds no control. Escape closes it, stops the event, and returns focus to the trigger; so does a second press of the trigger. A press outside closes it. Tab or Shift+Tab out of it closes it and lets focus move on. In the panel header it lines up with the row's edge, so it fits a 320px panel |
+| `Menu` | A menu of actions; a focused item shows the accent focus ring | The trigger has `aria-haspopup="menu"`, `aria-expanded` and `aria-controls`. `role="menu"` with `menuitem` (or `menuitemcheckbox`) entries. Arrow keys and Home/End move, skipping disabled items; Enter or Space runs an item. Escape closes it, stops the event and returns focus to the trigger; Tab and a press outside close it. No typeahead |
+| `Field` | A label, a control and help text | The label's `for` points at the control, and the control's `aria-describedby` points at the help text |
+| `Notice` | A flat tinted block in tones `info`, `warn` and `danger` | `info` is `role="status"`; `warn` and `danger` are `role="alert"`. No shadow, no left border |
+| Icons (`icons.tsx`) | chevron-down, arrow-right, follow, refresh, stop, more, sliders, settings, close, copy, edit, explain, check, alert | Inline 16px stroke SVGs in `currentColor`, always `aria-hidden`; the control carries the name |
+
+**Adding a component.** A new component goes in `src/ui/` with a test file next to it and a line
+in the table above. Prefer a native element: only `Popover` and `Menu` are custom.
+
+## The panel header
+
+One control row, then a muted title line, the 2px progress bar and the notice strip.
+
+- **The row**, left to right: the source language (muted), an arrow and the target language as a
+  quiet `Select`; the Translation button (the current style and a chevron); a spacer; `Aa` (the
+  reading settings `Popover`); scroll follow (`IconButton`, `pressed`); retranslate, or Stop while
+  a job runs; and More (a `Menu` with Keyboard shortcuts, Settings, the dev-only segment view and
+  Close panel).
+- **The Translation popover** holds the style and quality `Select`s, the model switcher and a
+  page line: the model, the blocks done, the time and, when a price is set, the cost. The cost is
+  shown only there.
+- **The title line** is the page title, one muted line with a tooltip. It is the panel's `h1`.
+- **The progress bar** is a `role="progressbar"` of done blocks over all blocks. It shows only
+  while a job runs and goes at once when it stops.
+- **The notice strip** holds what must stay in view and never goes inside a popover: the site rule
+  that wins over a tab choice, a failed model switch, a locked Best that is still chosen, and a
+  setting that could not be saved.
+- **The job bar** under the header shows only what needs attention: failures with Retry failed,
+  the rest of a long page with Translate the rest, kept and edited blocks, fallback and review
+  notes, the backoff list, errors and limits. Its progress sentence is an `.sr-only` live region,
+  so screen readers still hear start, progress, failures and done. With nothing to say it is a
+  1px strip.
+- **Stacking.** The header sits above the job bar, which sits above the block actions. The
+  header's popovers line up with the row's edges, so they fit a 320px panel. While the privacy
+  notice waits, the Translation, `Aa` and More triggers are `inert`.
+
+## The reading view
+
+The translated text in the panel (`.segments`, `SegmentList.tsx`).
+
+- **Reading settings on the region.** `data-typeface="sans|serif"`, `--reading-size` (px) and
+  `--reading-measure` (narrow 34em, medium 40em, full none, centred) are set on the region. A change
+  goes through CSS only: no block re-renders and no job starts. The panel keeps the reader's place:
+  it takes the anchor (the top block and how far into it) before the change and scrolls back to it
+  under the follow guard, so the source page never moves (`holdAnchor` in `follow.ts`).
+- **Rhythm**, all from the size: line height 1.6 (sans) or 1.65 (serif); 0.9 × size between
+  paragraphs; 0.25 × size between list items; 1.5 × size above a heading and 0.5 × size below it at
+  any level; headings at 1.55, 1.2 and 1.05 × size. Lists keep a disc marker (the segment model has
+  no ordered flag). Quotes are italic and indented in `--quote`, with no border. Code blocks use
+  `--code-bg` and `--font-mono` at 0.85em and scroll sideways. `e2e/reading.spec.ts` measures the
+  gaps between neighbouring blocks' line boxes and holds them to these values plus 2px.
+- **Per-block toolbar.** Absolutely placed at the block's top end corner (it mirrors in RTL), shown on
+  hover or keyboard focus, taking no space when hidden. While it shows, a float at the block's start as
+  wide and tall as the toolbar keeps the first lines clear, so it never covers text. On touch screens
+  it sits in the flow at the end of the block. "Original" and "Show draft" are text buttons; the
+  others are icons with a tooltip and their word as hidden text.
+- **Block states.** A pending block shows its original in `--muted`, tagged with the source language;
+  the first of a run carries a "Waiting" label (CSS, from `--waiting-label`). A block retranslating
+  keeps its old translation. A streaming block ends in a still 1.5px accent caret. A failed block holds
+  a `danger` `Notice` (as a note, not an alert) with its Retry. Refined, edited, fallback model and
+  basic translation markers are small muted words, not pills. The linked block (hover link) has a
+  `--pressed` fill.
+- **Scripts and direction.** Each script's font rule sits on the element that carries `lang` (see
+  "Per-script stacks"). A translated block carries the target `lang` itself. When the target is Arabic,
+  Hebrew, Persian or Urdu (`isRtl` in `src/shared/language.ts`), the region and every translated block
+  get `dir="rtl"`; an original still waiting there runs `ltr`. Block CSS uses logical properties only.
+
+## The settings page (forms)
+
+- **Layout.** Wider than 900px, a sticky section index (`OptionsNav.tsx`, a labelled `nav`) beside
+  the content, which is at most 720px wide. Narrower, the index is a wrapping row at the top. The
+  index links to each section's id (`#providers`, `#sites`, `#memory` and so on), so deep links keep
+  working, and marks the section in view with `aria-current`.
+- **Sections.** An `h2` in the UI font at 1.05rem, weight 650. Fields sit on a grid: the label in a
+  160px column and the control beside it, stacked under 560px. A row with no leading label (a
+  checkbox, a set of buttons, a small form) flows on one line.
+- **Help text** sits under its control in `--muted` at 0.85rem. A long explanation of how a setting
+  works is folded under "More about this" (`More.tsx`), with its full text and ids kept. Text that
+  says where data goes or how keys are kept is never folded; `Options.test.tsx` holds the list and
+  checks it.
+- **Controls.** Selects are `Select` and buttons are `Button`: Add is `default`, Remove `quiet` in
+  `--danger`, and a form's Save is the one `primary`. Checkboxes and radios are native with
+  `accent-color`. A file input is visually hidden behind a button-styled label and keeps its focus
+  ring there. The Theme field is a `Segmented` over the same `reading.theme` as the panel's `Aa`.
+- **Lists** (connections, models, glossary, sites, rules, presets) are hairline rows, not cards. A
+  connection's state is a dot and a word (Connected, failed), never color alone. A tag beside a name
+  is a muted word, not a pill.
+
+## Onboarding
+
+Onboarding loads the settings page's stylesheet (tokens, base, fields) and adds only its layout in
+`onboarding/style.css`. The steps are a numbered list: the current step has `aria-current="step"`
+and a filled accent number, a done step a check in `--ok`. The path choice is a set of hairline
+rows, each a native radio with a large label and one line under it; the chosen row is tinted and
+shows its preset `Select`. The sample's translation is drawn in the reader's typeface and size
+from the reading settings. The privacy acknowledgement is a one-shot button inside a `warn`
+`Notice` (an alert). Each step has one primary button (Next, Translate sample, then Finish once the
+sample is done); Back and Skip are `quiet`.
+
+## Reading settings
+
+`src/shared/reading.ts` holds the reading settings as their own `storage.sync` item, `reading`.
+They follow the user across devices and travel with the settings export, with a line in the import
+preview.
+
+| Field | Values | Default |
+|---|---|---|
+| `theme` | `system`, `light`, `paper`, `dark` | `system` |
+| `typeface` | `sans`, `serif` | `sans` |
+| `size` | An integer from 13 to 24 (px) | 16 |
+| `width` | `narrow`, `medium`, `full` | `medium` |
+
+The theme applies to every page; typeface, size and width apply to the panel only. The item is
+never a field of `prefs`: the translator's settings key includes `prefs`, so a reading field there
+would translate the page again on every change. A write lands on the raw stored record, so fields
+a newer version wrote survive it.
+
+## Anti-patterns
+
+None of these may be added, and each phase's review checks the UI against this list. The older
+left-border notices and the onboarding step pills are gone.
+
+- Gradients.
+- Glassmorphism: blur, translucent panels.
+- Emoji or ✨ as icons.
+- Large rounded cards with shadows. A shadow appears only on popovers and menus.
+- Cards with a colored left border as an accent.
+- Pill clutter: rows of rounded tags and badges.
+- Shimmer or skeleton animation.
+- Decorative motion. The only motion allowed is an opacity or transform of 150ms or less on an
+  overlay, and none under `prefers-reduced-motion`. The progress bar hides without a fade.
+- More than one accent color.
+- System colors (`Canvas`, `CanvasText`, `Field`) and color literals outside `src/ui/tokens.css`.

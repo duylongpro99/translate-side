@@ -5,6 +5,12 @@
 // it is acknowledged, and acknowledging here is the same acknowledgement the panel keeps.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
+import { Button } from '@/ui/Button';
+import { CheckIcon } from '@/ui/icons';
+import { Notice } from '@/ui/Notice';
+import { Select } from '@/ui/Select';
+import { useReading } from '@/ui/use-reading';
+import { isRtl } from '@/shared/language';
 import { i18n } from '#i18n';
 import type { Segment } from '@/engine/index';
 import { languageName } from '@/shared/language-name';
@@ -101,9 +107,9 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
 
   const presetId = path === 'key' ? cloud : local;
   const skip = (
-    <button type="button" class="onb__skip" data-testid="onboarding-skip" onClick={() => close('skipped')}>
+    <Button variant="quiet" class="onb__skip" data-testid="onboarding-skip" onClick={() => close('skipped')}>
       {i18n.t('onboarding.skip')}
-    </button>
+    </Button>
   );
 
   return (
@@ -111,8 +117,12 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
       <h1>{i18n.t('onboarding.title')}</h1>
       <ol class="onb__steps" aria-label={i18n.t('onboarding.stepsLabel')}>
         {[i18n.t('onboarding.step1'), i18n.t('onboarding.step2'), i18n.t('onboarding.step3')].map((name, i) => (
-          <li key={name} aria-current={Math.min(step, 3) === i + 1 ? 'step' : undefined} data-testid={`onboarding-step-${i + 1}`}>
-            {i + 1}. {name}
+          <li key={name} aria-current={Math.min(step, 3) === i + 1 ? 'step' : undefined} data-testid={`onboarding-step-${i + 1}`} class={Math.min(step, 3) > i + 1 ? 'onb__step--done' : undefined}>
+            <span class="onb__num" aria-hidden="true">
+              {Math.min(step, 3) > i + 1 ? <CheckIcon size={12} /> : i + 1}
+            </span>
+            <span class="sr-only">{i + 1}. </span>
+            {name}
           </li>
         ))}
       </ol>
@@ -123,19 +133,19 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
           <p class="opt__hint">{i18n.t('onboarding.langHint')}</p>
           <div class="opt__row">
             <label for="onb-lang">{i18n.t('onboarding.translateInto')}</label>
-            <select id="onb-lang" data-testid="onboarding-lang" value={lang} onChange={(e) => setLang((e.target as HTMLSelectElement).value)}>
+            <Select id="onb-lang" data-testid="onboarding-lang" value={lang} onChange={(e) => setLang((e.target as HTMLSelectElement).value)}>
               {(LANGUAGES.some((l) => l.code === lang) || lang === '' ? LANGUAGES : [{ code: lang, name: languageName(lang) }, ...LANGUAGES]).map((l) => (
                 <option key={l.code} value={l.code}>
                   {languageName(l.code)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           {note ? <p class="opt__status opt__status--warn" role="alert">{note}</p> : null}
           <div class="onb__nav">
-            <button type="button" data-testid="onboarding-next" disabled={lang === ''} onClick={() => void saveLang()}>
+            <Button variant="primary" data-testid="onboarding-next" disabled={lang === ''} onClick={() => void saveLang()}>
               {i18n.t('onboarding.next')}
-            </button>
+            </Button>
             {skip}
           </div>
         </section>
@@ -153,13 +163,13 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
               {path === 'key' ? (
                 <p class="onb__sub">
                   <label for="onb-cloud">{i18n.t('onboarding.provider')} </label>
-                  <select id="onb-cloud" data-testid="cloud-preset" value={cloud} onChange={(e) => setCloud((e.target as HTMLSelectElement).value as PresetId)}>
+                  <Select id="onb-cloud" data-testid="cloud-preset" value={cloud} onChange={(e) => setCloud((e.target as HTMLSelectElement).value as PresetId)}>
                     {CLOUD_CHOICES.map((id) => (
                       <option key={id} value={id}>
                         {id === 'anthropic' ? i18n.t('onboarding.recommended', { provider: presetLabel(id) }) : presetLabel(id)}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </p>
               ) : null}
             </div>
@@ -170,13 +180,13 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
               {path === 'local' ? (
                 <p class="onb__sub">
                   <label for="onb-local">{i18n.t('onboarding.runsWith')} </label>
-                  <select id="onb-local" data-testid="local-preset" value={local} onChange={(e) => setLocal((e.target as HTMLSelectElement).value as PresetId)}>
+                  <Select id="onb-local" data-testid="local-preset" value={local} onChange={(e) => setLocal((e.target as HTMLSelectElement).value as PresetId)}>
                     {LOCAL_CHOICES.map((id) => (
                       <option key={id} value={id}>
                         {presetLabel(id)}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </p>
               ) : null}
             </div>
@@ -187,12 +197,12 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
             </div>
           </fieldset>
           <div class="onb__nav">
-            <button type="button" onClick={() => setStep(1)} data-testid="onboarding-back">
+            <Button variant="quiet" onClick={() => setStep(1)} data-testid="onboarding-back">
               {i18n.t('onboarding.back')}
-            </button>
-            <button type="button" data-testid="onboarding-next" onClick={() => setStep(3)}>
+            </Button>
+            <Button variant="primary" data-testid="onboarding-next" onClick={() => setStep(3)}>
               {i18n.t('onboarding.next')}
-            </button>
+            </Button>
             {skip}
           </div>
         </section>
@@ -225,9 +235,9 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
                 }}
               />
               <div class="onb__nav">
-                <button type="button" onClick={() => setStep(2)} data-testid="onboarding-back">
+                <Button variant="quiet" onClick={() => setStep(2)} data-testid="onboarding-back">
                   {i18n.t('onboarding.back')}
-                </button>
+                </Button>
                 {skip}
               </div>
             </>
@@ -262,6 +272,7 @@ function Sample({ api, lang, saved, injected, injectedGate, onDone, onChange, on
   const [asked, setAsked] = useState(false);
   const [to, setTo] = useState<Routed | undefined>();
   const noticeButton = useRef<HTMLButtonElement>(null);
+  const reading = useReading(api);
   const sample = sampleFor(lang);
   useEffect(() => jobs.subscribe((id) => id === SAMPLE_TAB && setView(jobs.get(SAMPLE_TAB))), [jobs]);
   // The notice is an alert: its button takes focus when it appears, so Enter acknowledges it.
@@ -296,21 +307,24 @@ function Sample({ api, lang, saved, injected, injectedGate, onDone, onChange, on
         <strong>{i18n.t('onboarding.sampleTitle', { language: languageName(sample.lang) })}</strong>
         <blockquote data-testid="sample-original">{sample.text}</blockquote>
         {asked && privacy !== 'acknowledged' ? (
-          <div class="onb__notice" role="alert" data-testid="onboarding-privacy">
+          <Notice tone="warn" class="onb__notice" data-testid="onboarding-privacy">
             <p>
               {to
                 ? slots(i18n.t('onboarding.privacyNow', { provider: '{provider}', host: '{host}' }), { provider: <strong data-testid="onboarding-privacy-provider">{to.label}</strong>, host: to.host ? ` (${to.host})` : '' })
                 : i18n.t('onboarding.privacy')}
             </p>
-            <button type="button" ref={noticeButton} data-testid="onboarding-privacy-ok" onClick={() => void gate.acknowledge().catch(() => {})}>
+            <button type="button" class="ui-button" ref={noticeButton} data-testid="onboarding-privacy-ok" onClick={() => void gate.acknowledge().catch(() => {})}>
               {i18n.t('onboarding.privacyOk')}
             </button>
-          </div>
+          </Notice>
         ) : null}
         {state?.status === 'final' || state?.status === 'streaming' ? (
           <>
             <strong>{languageName(lang)}</strong>
-            <blockquote data-testid="sample-translation">{state.text}</blockquote>
+            {/* The reader's own look: the panel's typeface and size, in the target language. */}
+            <blockquote class="onb__reading" data-testid="sample-translation" data-typeface={reading.typeface} lang={lang} {...(isRtl(lang) ? { dir: 'rtl' } : {})} style={{ fontSize: `${reading.size}px` }}>
+              {state.text}
+            </blockquote>
           </>
         ) : null}
         {failure ? (
@@ -324,21 +338,22 @@ function Sample({ api, lang, saved, injected, injectedGate, onDone, onChange, on
           </p>
         ) : null}
         <div class="opt__row">
-          <button type="button" data-testid="translate-sample" disabled={view?.status === 'running'} onClick={translate}>
+          <Button variant={finished ? 'default' : 'primary'} data-testid="translate-sample" disabled={view?.status === 'running'} onClick={translate}>
             {view?.status === 'running' ? i18n.t('onboarding.translating') : finished || failure ? i18n.t('onboarding.translateAgain') : i18n.t('onboarding.translateSample')}
-          </button>
-          <button type="button" onClick={onChange} data-testid="onboarding-change">
+          </Button>
+          <Button onClick={onChange} data-testid="onboarding-change">
             {i18n.t('onboarding.changeConnection')}
-          </button>
+          </Button>
         </div>
       </div>
       <div class="onb__nav">
-        <button type="button" data-testid="onboarding-finish" onClick={onDone}>
+        {/* One primary per step: Finish once the sample is done; until then Translate sample is it. */}
+        <Button variant={finished ? 'primary' : 'default'} data-testid="onboarding-finish" onClick={onDone}>
           {finished ? i18n.t('onboarding.finish') : i18n.t('onboarding.finishNoSample')}
-        </button>
-        <button type="button" class="onb__skip" onClick={onSkip}>
+        </Button>
+        <Button variant="quiet" class="onb__skip" onClick={onSkip}>
           {i18n.t('onboarding.skip')}
-        </button>
+        </Button>
       </div>
     </div>
   );

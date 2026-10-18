@@ -44,7 +44,7 @@ export function PrivacyNotice({ to, onAcknowledge }: { to?: { label: string; hos
         <li data-testid="privacy-corrections">{i18n.t('panel.privacy.corrections')}</li>
         <li data-testid="privacy-diagnostics">{i18n.t('panel.privacy.diagnostics')}</li>
       </ul>
-      <button type="button" ref={ok} class="privacy__ok" data-testid="privacy-ok" onClick={onAcknowledge}>
+      <button type="button" ref={ok} class="ui-button ui-button--primary" data-testid="privacy-ok" onClick={onAcknowledge}>
         {i18n.t('panel.privacy.ok')}
       </button>
     </section>

@@ -78,6 +78,45 @@ test('a rate-limited provider shows the retry state, then recovers', async ({ ex
   expect(Object.keys(await blockStatuses(panel)).filter((s) => s !== 'final' && s !== 'kept')).toEqual([]);
 });
 
+test('the header: one row at 320 and 480 px, its overlays inside the panel, and the Translation popover above a failure notice', async ({ extension, mock, allowedConsole }) => {
+  allowedConsole.push(/^Could not parse message into JSON/, /^From chunk:/);
+  await extension.seed();
+  mock.malformed(1);
+  const page = await extension.open('spa/docusaurus.html?p=intro');
+  const panel = await extension.panel();
+  await extension.translate(page);
+  expect(await jobSettled(panel)).toBe('done');
+  // A failure is something to say: the job bar shows it, under the header.
+  await expect(panel.getByTestId('job')).toContainText('failed');
+  await expect(panel.getByTestId('retry-failed')).toBeVisible();
+  for (const width of [320, 480]) {
+    await panel.setViewportSize({ width, height: 700 });
+    const row = await panel.locator('.panel__bar').evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth, height: el.getBoundingClientRect().height }));
+    expect(row.scroll, `the row at ${width}px`).toBeLessThanOrEqual(row.client);
+    expect(row.height, `one row at ${width}px`).toBeLessThan(48);
+    for (const [trigger, overlay] of [
+      ['translation-button', 'translation-popover'],
+      ['reading-button', 'reading-popover'],
+      ['more-button', 'more-menu'],
+    ] as const) {
+      await panel.getByTestId(trigger).click();
+      const box = (await panel.getByTestId(overlay).boundingBox()) ?? { x: -1, width: 0 };
+      expect(box.x, `${overlay} left edge at ${width}px`).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width, `${overlay} right edge at ${width}px`).toBeLessThanOrEqual(width);
+      // A second press of the trigger closes it.
+      await panel.getByTestId(trigger).click();
+      await expect(panel.getByTestId(overlay)).toBeHidden();
+    }
+  }
+  // The popover is drawn above the job bar: the point at the quality select's center is the select.
+  await panel.getByTestId('translation-button').click();
+  const hit = await panel.getByTestId('quality-mode').evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === el;
+  });
+  expect(hit).toBe(true);
+});
+
 test('a malformed stream fails its blocks, and Retry failed translates them', async ({ extension, mock, allowedConsole }) => {
   // The OpenAI SDK logs the chunk it could not parse; that is the provoked failure.
   allowedConsole.push(/^Could not parse message into JSON/, /^From chunk:/);
@@ -186,7 +225,9 @@ test.describe('Vietnamese UI', () => {
     await expect(panel.locator('html')).toHaveAttribute('lang', 'vi');
     await expect(panel.getByTestId('privacy-notice')).toBeVisible();
     await expect(panel.locator('#privacy-title')).toHaveText('Trước khi dịch');
-    await expect(panel.getByRole('button', { name: 'Cài đặt' })).toBeVisible();
+    // The header's More button, and Settings as its menu item (the menu stays closed while the notice waits).
+    await expect(panel.getByRole('button', { name: 'Thêm', exact: true })).toBeVisible();
+    await expect(panel.getByTestId('menu-settings')).toHaveText('Cài đặt');
     expect(await extension.worker.evaluate(() => chrome.i18n.getUILanguage())).toMatch(/^vi/);
     expect(await extension.worker.evaluate(() => chrome.i18n.getMessage('actionTitle'))).toBe('Mở Translate Side');
   });
@@ -299,6 +340,8 @@ test.describe('Best', () => {
     await expect(panel.getByTestId('quality-mode')).toHaveValue('balanced');
     await panel.waitForTimeout(500);
 
+    // The quality select lives in the header's Translation popover.
+    await panel.getByTestId('translation-button').click();
     await panel.getByTestId('quality-mode').selectOption('best');
     await expect.poll(() => mock.calls.filter((c) => c.kind === 'review').length).toBeGreaterThan(0);
     expect(await jobSettled(panel)).toBe('done');

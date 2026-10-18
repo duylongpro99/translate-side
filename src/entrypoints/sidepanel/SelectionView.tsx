@@ -11,7 +11,7 @@ export function SelectionView({ snippet, job, actions, onClose, pageReady }: { s
     <section class="selection" data-testid="selection">
       <div class="selection__head">
         <h2 class="selection__title">{i18n.t('panel.selection.title')}</h2>
-        <button type="button" class="job__button" data-testid="selection-close" onClick={onClose}>
+        <button type="button" class="ui-button" data-testid="selection-close" onClick={onClose}>
           {pageReady ? i18n.t('panel.selection.back') : i18n.t('panel.selection.close')}
         </button>
       </div>

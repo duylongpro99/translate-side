@@ -1,21 +1,30 @@
-/* Onboarding (plan M4-E13) on top of the options page's styles. */
-.onb { max-width: 40rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
-.onb__steps { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0 0 1.25rem; font-size: 0.9em; color: var(--muted, #666); }
-.onb__steps li { padding: 0.15rem 0.6rem; border-radius: 1rem; border: 1px solid currentColor; }
-.onb__steps li[aria-current='step'] { font-weight: 600; color: inherit; }
-.onb__cards { display: grid; gap: 0.75rem; margin: 1rem 0; }
-.onb__cards { border: 0; padding: 0; min-inline-size: 0; }
-.onb__legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-.onb__card { border: 1px solid #8884; border-radius: 0.5rem; padding: 0.75rem 1rem; display: block; }
-.onb__card .onb__title { cursor: pointer; }
+/* Onboarding, on top of the settings page's stylesheet (tokens, base and fields come from there). Layout only. */
+.onb { max-width: 40rem; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-6); }
+.onb h1 { margin: 0 0 var(--space-3); font-size: var(--text-xl); }
+.onb__steps { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0 0 var(--space-5); padding: 0; list-style: none; color: var(--muted); font-size: var(--text-m); }
+.onb__steps li { display: inline-flex; align-items: center; gap: var(--space-2); }
+.onb__steps li[aria-current='step'] { color: var(--ink); font-weight: 600; }
+.onb__num { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid currentColor; border-radius: 50%; font-size: var(--text-xs); }
+.onb__steps li[aria-current='step'] .onb__num { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+.onb__step--done .onb__num { border-color: var(--ok); color: var(--ok); }
 h2[tabindex='-1']:focus { outline: none; }
-.onb__card[aria-disabled='true'] { opacity: 0.6; cursor: not-allowed; }
-.onb__card input[type='radio'] { margin-right: 0.5rem; }
-.onb__card--on { border-color: #4a7bd8; box-shadow: 0 0 0 1px #4a7bd8; }
-.onb__title { font-weight: 600; }
-.onb__sub { margin: 0.25rem 0 0 1.5rem; font-size: 0.9em; opacity: 0.8; }
-.onb__nav { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 1.25rem; }
-.onb__skip { margin-left: auto; }
-.onb__sample { border: 1px solid #8884; border-radius: 0.5rem; padding: 0.75rem 1rem; margin-top: 1rem; }
-.onb__sample blockquote { margin: 0.25rem 0 0.75rem; padding-left: 0.75rem; border-left: 3px solid #8886; }
-.onb__notice { border: 1px solid #c9a227; border-radius: 0.5rem; padding: 0.75rem 1rem; margin: 0.75rem 0; }
+/* Step 2: each path a selectable row, the radio with a large label, its line below, the preset under the chosen one. */
+.onb__cards { margin: var(--space-3) 0; padding: 0; border: 0; border-top: 1px solid var(--line); min-inline-size: 0; }
+.onb__legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.onb__card { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px var(--space-3); padding: var(--space-3) var(--space-2); border-bottom: 1px solid var(--line); }
+.onb__card input[type='radio'] { margin: 0; accent-color: var(--accent); }
+.onb__card--on { background: var(--tint); }
+.onb__card[aria-disabled='true'] { color: var(--muted); }
+.onb__title { font-weight: 600; cursor: pointer; }
+.onb__card[aria-disabled='true'] .onb__title { cursor: not-allowed; }
+.onb__sub { grid-column: 2; margin: 0; color: var(--muted); font-size: var(--text-m); }
+.onb__nav { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-top: var(--space-5); }
+.onb__skip { margin-inline-start: auto; }
+/* Step 3: the sample, the translation in the reader's typeface and size. */
+.onb__sample { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
+.onb__sample blockquote { margin: var(--space-1) 0 var(--space-4); }
+.onb__sample blockquote:not(.onb__reading) { color: var(--quote); font-style: italic; }
+.onb__reading { color: var(--ink); font-style: normal; line-height: 1.6; font-family: var(--font-sans); }
+.onb__reading[data-typeface='serif'] { font-family: var(--font-serif); line-height: 1.65; }
+.onb__notice { margin: var(--space-3) 0; }
+.onb__notice p { margin: 0 0 var(--space-2); color: var(--ink); }

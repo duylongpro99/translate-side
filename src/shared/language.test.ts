@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Segment } from '@/engine/types';
-import { chromeLanguageDetector, DETECTOR_MIN_CONFIDENCE, detectionSample, detectSourceLanguage, normalizeLang, sameLanguage, SAMPLE_CHARS, segmentsInLanguage, type LanguageDetectorPort } from './language';
+import { chromeLanguageDetector, DETECTOR_MIN_CONFIDENCE, detectionSample, detectSourceLanguage, isRtl, normalizeLang, sameLanguage, SAMPLE_CHARS, segmentsInLanguage, type LanguageDetectorPort } from './language';
 
 const seg = (id: string, text: string, over: Partial<Segment> = {}): Segment => ({ id, kind: 'p', text, inlineMarkup: text, domPath: `/p[${id}]`, translate: true, ...over });
 
@@ -142,5 +142,15 @@ describe('chromeLanguageDetector (the port over Chrome 138+ LanguageDetector)', 
     });
     expect(await needsGesture?.detect('x')).toEqual([]);
     expect(await needsGesture?.detect('x')).toEqual([{ detectedLanguage: 'fr', confidence: 0.8 }]);
+  });
+});
+
+describe('isRtl', () => {
+  it('is true for Arabic, Hebrew, Persian and Urdu, in any case, with _ or - and a region', () => {
+    for (const tag of ['ar', 'AR', 'ar-EG', 'ar_eg', 'he', 'he-IL', 'HE_il', 'fa', 'fa-IR', 'ur', 'ur-PK']) expect(isRtl(tag), tag).toBe(true);
+  });
+
+  it('is false for left-to-right languages, and for empty or malformed tags', () => {
+    for (const tag of ['en', 'vi', 'zh-TW', 'ja', 'arn', 'hebrew', '', 'und', undefined]) expect(isRtl(tag), String(tag)).toBe(false);
   });
 });

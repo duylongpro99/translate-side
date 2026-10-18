@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { i18n } from '#i18n';
+import { Button } from '@/ui/Button';
 import type { PageOffer } from './offers.ts';
 
 // A page the panel read but does not translate on its own (plan M5-E3, DESIGN §8): after a
@@ -13,22 +14,18 @@ export function OfferBar({ offer, blocks, onTranslate, onAllow, onSettings }: { 
         <p class="offer__text">
           {offer.site ? i18n.t('panel.offer.neverSite', blocks, [offer.site, String(blocks)]) : i18n.t('panel.offer.never', blocks)}
         </p>
-        <button type="button" class="job__button" onClick={onSettings}>
-          {i18n.t('panel.offer.siteRules')}
-        </button>
+        <Button onClick={onSettings}>{i18n.t('panel.offer.siteRules')}</Button>
       </section>
     );
   return (
     <section class="offer" data-testid="offer" data-reason="ask" role="status">
       <p class="offer__text">{i18n.t('panel.offer.ask', blocks)}</p>
       <div class="offer__actions">
-        <button type="button" class="job__button job__button--primary" data-testid="translate-page" onClick={onTranslate}>
+        <Button variant="primary" data-testid="translate-page" onClick={onTranslate}>
           {i18n.t('panel.offer.translate')}
-        </button>
+        </Button>
         {offer.site ? (
-          <button
-            type="button"
-            class="job__button"
+          <Button
             data-testid="allow-site"
             title={i18n.t('panel.offer.allowTitle', [offer.site])}
             onClick={() => {
@@ -41,7 +38,7 @@ export function OfferBar({ offer, blocks, onTranslate, onAllow, onSettings }: { 
             }}
           >
             {i18n.t('panel.offer.allow', [offer.site])}
-          </button>
+          </Button>
         ) : null}
       </div>
       {note ? <p class="state__hint">{note}</p> : null}

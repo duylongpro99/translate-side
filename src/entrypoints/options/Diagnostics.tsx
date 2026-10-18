@@ -3,6 +3,7 @@
 // sent anywhere: the user saves the file and decides who gets it (DESIGN.md §8).
 import { useEffect, useState } from 'preact/hooks';
 import type { browser } from 'wxt/browser';
+import { Button } from '@/ui/Button';
 import { i18n } from '#i18n';
 import { clearDiagnostics, DIAG_PREFIX, DIAG_SITES_KEY, diagnosticsFile, MAX_ENTRIES, readDiagnostics, type DiagnosticEntry } from '@/shared/diagnostics';
 import { download } from './Transfer.tsx';
@@ -57,8 +58,7 @@ export function DiagnosticsSection({ api, now = Date.now }: { api: Browser; now?
         {entries === undefined ? i18n.t('options.reading') : i18n.t('options.diagnostics.count', entries.length)}
       </p>
       <div class="opt__row">
-        <button
-          type="button"
+        <Button
           data-testid="diag-review"
           disabled={!entries?.length}
           onClick={() => {
@@ -67,9 +67,8 @@ export function DiagnosticsSection({ api, now = Date.now }: { api: Browser; now?
           }}
         >
           {i18n.t('options.diagnostics.review')}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
           data-testid="diag-clear"
           disabled={!entries?.length}
           onClick={() => {
@@ -78,7 +77,7 @@ export function DiagnosticsSection({ api, now = Date.now }: { api: Browser; now?
           }}
         >
           {i18n.t('options.diagnostics.clear')}
-        </button>
+        </Button>
       </div>
       {review ? (
         <div data-testid="diag-export" role="group" aria-label={i18n.t('options.diagnostics.fileLabel')}>
@@ -92,8 +91,7 @@ export function DiagnosticsSection({ api, now = Date.now }: { api: Browser; now?
             {file}
           </pre>
           <p>
-            <button
-              type="button"
+            <Button
               data-testid="diag-save"
               onClick={() => {
                 download(file, fileName(now()));
@@ -102,10 +100,10 @@ export function DiagnosticsSection({ api, now = Date.now }: { api: Browser; now?
               }}
             >
               {i18n.t('options.diagnostics.save')}
-            </button>{' '}
-            <button type="button" data-testid="diag-cancel" onClick={() => setReview(undefined)}>
+            </Button>{' '}
+            <Button data-testid="diag-cancel" onClick={() => setReview(undefined)}>
               {i18n.t('options.diagnostics.cancel')}
-            </button>
+            </Button>
           </p>
         </div>
       ) : null}

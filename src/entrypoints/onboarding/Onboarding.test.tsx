@@ -285,6 +285,28 @@ describe('onboarding (M4-E13)', () => {
     expect(client.requests.length).toBeGreaterThan(0);
   });
 
+  it('the sample is drawn in the reader\'s typeface and size; Finish takes over as the one primary once it is done; done steps are checked', async () => {
+    const f = fakeApi({ local: { [PRIVACY_KEY]: { version: PRIVACY_NOTICE_VERSION, at: 1 } } });
+    await f.api.storage.sync.set({ reading: { theme: 'paper', typeface: 'serif', size: 20, width: 'medium' } });
+    const { jobs } = sampleJobs(f);
+    await mount(f, server(), { jobs });
+    await toStep3();
+    expect(t('onboarding-step-1')?.classList.contains('onb__step--done')).toBe(true);
+    expect(t('onboarding-step-1')?.querySelector('svg')).not.toBeNull();
+    expect(t('onboarding-step-3')?.getAttribute('aria-current')).toBe('step');
+    await connectAnthropic();
+    expect(t('translate-sample')?.classList.contains('ui-button--primary')).toBe(true);
+    expect(t('onboarding-finish')?.classList.contains('ui-button--primary')).toBe(false);
+    click(t('translate-sample'));
+    await waitFor(() => t('sample-model') !== null);
+    const sample = t('sample-translation') as HTMLElement;
+    expect(sample.dataset.typeface).toBe('serif');
+    expect(sample.style.fontSize).toBe('20px');
+    expect(sample.getAttribute('lang')).toBe('vi');
+    expect(t('translate-sample')?.classList.contains('ui-button--primary')).toBe(false);
+    expect(t('onboarding-finish')?.classList.contains('ui-button--primary')).toBe(true);
+  });
+
   it('a sample that fails says why and can be tried again', async () => {
     const f = fakeApi({ local: { [PRIVACY_KEY]: { version: PRIVACY_NOTICE_VERSION, at: 1 } } });
     const { jobs } = sampleJobs(f, true);

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// Header controls (plan M3-E6): language pair with a target-language switch, model (read-only),
-// style mode, settings, Cancel / Retranslate page, scroll-follow toggle.
+// Header controls (plan M3-E6): language pair with a target-language switch, the Translation popover
+// (style mode, quality, model), settings in the More menu, Stop / Retranslate page, scroll-follow toggle.
 import { PRIVACY_NOTICE_VERSION } from './privacy.ts';
 import { IDBFactory } from 'fake-indexeddb';
 import { render } from 'preact';
@@ -121,7 +121,8 @@ describe('panel header (M3-E6)', () => {
     expect(model?.tagName).toBe('SPAN');
     expect(q<HTMLSelectElement>('style-mode')?.value).toBe('natural');
     expect([...(q<HTMLSelectElement>('style-mode')?.options ?? [])].map((o) => o.textContent)).toEqual(['Natural', 'Faithful', 'Simplified']);
-    expect(root.querySelector('header [aria-label=Settings]')).not.toBeNull();
+    // Settings is an item of the header's More menu.
+    expect(root.querySelector('header [data-testid=menu-settings]')?.textContent).toBe('Settings');
     expect(root.querySelector('header [data-testid=scroll-follow]')).not.toBeNull();
     expect(q('page-retranslate')).not.toBeNull();
     expect(q('page-cancel')).toBeNull();

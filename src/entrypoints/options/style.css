@@ -1,99 +1,252 @@
-:root {
-  color-scheme: light dark;
-  font-family: system-ui, sans-serif;
-  font-size: 14px;
-  --muted: #6b6b70;
-  --line: #e2e2e6;
-  --warn: #8a6d00;
-  --ok: #1d7a35;
-  --code-bg: #f2f2f5;
+@import '@/ui/tokens.css';
+@import '@/ui/base.css';
+
+/* The settings page: a section index beside the content on a wide window, above it on a narrow one. */
+.opt__page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--space-4);
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --muted: #9a9aa2;
-    --line: #34343a;
-    --warn: #d6b44a;
-    --ok: #5cc27a;
-    --code-bg: #26262b;
+@media (min-width: 900px) {
+  .opt__page {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 720px);
+    gap: var(--space-6);
+    align-items: start;
+  }
+  .opt__nav {
+    position: sticky;
+    top: var(--space-4);
+  }
+  .opt__nav ul {
+    flex-direction: column;
   }
 }
-body {
-  margin: 0;
-}
-.opt {
-  max-width: 640px;
-  padding: 16px;
-}
-.opt__section {
-  border-top: 1px solid var(--line);
-  padding: 8px 0 16px;
-}
-.opt__row {
+.opt__nav ul {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 8px 0;
-}
-.opt__row label {
-  min-width: 120px;
-}
-.opt__row input {
-  flex: 1;
-  min-width: 200px;
-  font: inherit;
-  padding: 4px 6px;
-}
-.opt__row input[type='checkbox'],
-.opt__row input[type='radio'] {
-  flex: none;
-  min-width: 0;
-}
-.opt__hint,
-.opt__honest {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-.opt__status--warn {
-  color: var(--warn);
-}
-.opt__link {
-  border: none;
-  background: none;
+  gap: 2px var(--space-1);
+  margin: 0 0 var(--space-4);
   padding: 0;
-  color: LinkText;
-  text-decoration: underline;
-  cursor: pointer;
-  font: inherit;
-}
-.opt__row label.opt__check {
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.opt__glossary {
   list-style: none;
-  padding: 0;
-  margin: 8px 0;
 }
-.opt__glossary li {
-  padding: 4px 0;
+.opt__nav a {
+  display: block;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-s);
+  color: var(--muted);
+  font-size: var(--text-m);
+  text-decoration: none;
 }
-.opt__term {
-  font-family: ui-monospace, monospace;
+.opt__nav a:hover {
+  background: var(--tint);
+  color: var(--ink);
 }
-.opt__row textarea,
-.opt__row select {
-  font: inherit;
+.opt__nav a[aria-current='true'] {
+  background: var(--pressed);
+  color: var(--ink);
+  font-weight: 600;
+}
+.opt {
+  min-width: 0;
+}
+.opt h1 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xl);
+}
+
+/* Sections: a heading in the UI font, then fields on one grid. */
+.opt__section {
+  padding: var(--space-5) 0 var(--space-4);
+  border-top: 1px solid var(--line);
+  scroll-margin-top: var(--space-4);
+}
+.opt__section h2 {
+  margin: 0 0 var(--space-3);
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+.opt__section h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+/* A field row: the label in a 160px column and the control beside it; stacked on a narrow window. */
+.opt__row {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0;
+}
+.opt__row > :nth-child(n + 3) {
+  grid-column: 2;
+}
+/* A row with no label first, or with several labels (a checkbox and its label, buttons, a form of inputs), or a
+   file button (its label is the button): one flowing line. */
+.opt__row:not(:has(> label[for]:first-child)),
+.opt__row:has(> label ~ label),
+.opt__row:has(> .opt__file-label) {
+  display: flex;
+  flex-wrap: wrap;
+}
+.opt__row:has(> input[type='checkbox']:first-child, > input[type='radio']:first-child) {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+}
+@media (max-width: 559px) {
+  .opt__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .opt__row > :nth-child(n + 3) {
+    grid-column: 1;
+  }
+}
+.opt__row input:not([type='checkbox'], [type='radio'], [type='file']),
+.opt__row textarea {
+  min-width: 0;
+  min-height: 28px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--ground);
+  color: var(--ink);
+}
+.opt__row:not(:has(> label[for]:first-child)) input:not([type='checkbox'], [type='radio'], [type='file']) {
+  flex: 1;
+  min-width: 12em;
 }
 .opt__row textarea {
   flex: 1;
   min-width: 200px;
 }
-/* Providers (plan M4 sub-goal C) */
+.opt__row .ui-select,
+.opt__row .ui-select select {
+  max-width: 100%;
+}
+.opt input[type='checkbox'],
+.opt input[type='radio'] {
+  margin: 0;
+  accent-color: var(--accent);
+}
+.opt__field {
+  margin: var(--space-3) 0;
+}
+.opt__field .ui-segmented {
+  max-width: 360px;
+}
+
+/* Help text under its control; long explanations folded, the full text kept. */
+.opt__hint,
+.opt__honest,
+.opt__note {
+  margin: var(--space-1) 0 var(--space-2);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.opt__more {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.opt__more summary {
+  width: fit-content;
+  color: var(--accent);
+  cursor: pointer;
+}
+.opt__more > .opt__hint {
+  margin-top: var(--space-1);
+}
+.opt__status {
+  margin: var(--space-1) 0;
+}
+.opt__status--warn {
+  color: var(--warn);
+}
+.opt__link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.opt__danger {
+  color: var(--danger);
+}
+.opt__row label.opt__check,
+label.opt__check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.opt__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.opt__row:has(.opt__file-input:focus-visible) .opt__file-label {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Lists (glossary, sites, connections, models, rules): hairline rows, not cards. */
+.opt__glossary {
+  margin: var(--space-2) 0;
+  padding: 0;
+  list-style: none;
+}
+.opt__glossary li {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+.opt__glossary li:first-child {
+  border-top: 1px solid var(--line);
+}
+.opt__term {
+  font-family: var(--font-mono);
+}
+.opt__table {
+  width: 100%;
+  margin: var(--space-2) 0;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.opt__table caption {
+  text-align: start;
+}
+.opt__table th,
+.opt__table td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--line);
+  text-align: end;
+}
+.opt__table th[scope='row'],
+.opt__table thead th:first-child {
+  font-weight: normal;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+/* The diagnostics file shown before it is saved. */
+.opt__preview {
+  max-height: 20rem;
+  overflow: auto;
+  padding: var(--space-2);
+  border-radius: var(--radius-s);
+  background: var(--code-bg);
+  font-family: var(--font-mono);
+  font-size: var(--text-s);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Providers */
 .prov__block {
-  margin: 8px 0 16px;
+  margin: var(--space-2) 0 var(--space-4);
 }
 .prov__head {
   display: flex;
@@ -101,153 +254,174 @@ body {
   justify-content: space-between;
 }
 .prov__block h3 {
-  font-size: 1rem;
-  margin: 8px 0;
+  margin: var(--space-2) 0;
+}
+.prov__group {
+  margin: var(--space-4) 0 var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-s);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .prov__list {
-  list-style: none;
+  margin: var(--space-1) 0;
   padding: 0;
-  margin: 4px 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  list-style: none;
+  border-top: 1px solid var(--line);
 }
 .prov__row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-}
-.prov__row + .prov__row {
-  border-top: 1px solid var(--line);
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
 }
 .prov__name {
   font-weight: 600;
 }
 .prov__where,
-.prov__status--muted {
+.prov__status--muted,
+.prov__dot--muted {
   color: var(--muted);
 }
-.prov__status--ok {
+.prov__status--ok,
+.prov__dot--ok {
   color: var(--ok);
 }
 .prov__status--warn,
 .prov__dot--warn {
   color: var(--warn);
 }
-.prov__dot--ok {
-  color: var(--ok);
-}
-.prov__dot--muted {
-  color: var(--muted);
-}
 .prov__actions {
-  margin-left: auto;
   display: inline-flex;
-  gap: 6px;
   flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-inline-start: auto;
 }
+/* A tag next to a name: a muted word, not a pill. */
 .prov__tag {
-  font-size: 0.8rem;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 0 6px;
+  color: var(--muted);
+  font-size: var(--text-s);
 }
+/* The presets: a hairline list of choices, each a full-width row with its title and one line about it. */
 .prov__presets {
-  list-style: none;
-  padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0 var(--space-4);
+  margin: var(--space-1) 0 var(--space-3);
+  padding: 0;
+  list-style: none;
 }
 .prov__preset {
-  width: 100%;
-  text-align: left;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 6px 8px;
+  width: 100%;
+  padding: var(--space-2);
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
   font: inherit;
+  text-align: start;
   cursor: pointer;
 }
+.prov__preset:hover {
+  background: var(--tint);
+}
+.prov__preset .opt__hint {
+  margin: 0;
+}
 .prov__outcome {
-  border-left: 3px solid var(--line);
-  padding: 2px 10px;
-  margin: 8px 0;
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-s);
+  background: var(--tint);
 }
 .prov__outcome--ok {
-  border-color: var(--ok);
+  color: var(--ok);
 }
 .prov__outcome--error {
-  border-color: var(--warn);
+  color: var(--warn);
 }
 .prov__outcome p {
-  margin: 4px 0;
+  margin: var(--space-1) 0;
+  color: var(--ink);
 }
 .prov__fixes {
-  margin: 4px 0;
-  padding-left: 18px;
+  margin: var(--space-1) 0;
+  padding-inline-start: 1.25em;
   font-size: 0.85rem;
 }
 .prov__command {
   display: flex;
-  gap: 6px;
   align-items: flex-start;
-  margin: 6px 0;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
 }
 .prov__command code {
   flex: 1;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-s);
+  background: var(--code-bg);
+  font-family: var(--font-mono);
   white-space: pre-wrap;
   word-break: break-all;
-  font-family: ui-monospace, monospace;
-  background: var(--code-bg);
-  padding: 4px 6px;
-  border-radius: 4px;
 }
 .prov__guide {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 4px 12px 10px;
-  margin: 8px 0;
+  margin: var(--space-2) 0;
+  padding: var(--space-2) 0;
+  border-block: 1px solid var(--line);
 }
 .prov__guide h4 {
-  margin: 8px 0;
+  margin: var(--space-2) 0;
 }
 .prov__tabs {
   display: flex;
-  gap: 4px;
+  gap: 2px;
+}
+.prov__tabs [role='tab'] {
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-s);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
 }
 .prov__tabs [aria-selected='true'] {
+  background: var(--pressed);
+  color: var(--ink);
   font-weight: 600;
 }
 .prov__advanced {
-  margin: 8px 0;
+  margin: var(--space-3) 0;
 }
-.prov__switch select {
-  font: inherit;
+.prov__advanced summary {
+  color: var(--accent);
+  cursor: pointer;
 }
-
 .prov__protocol {
-  border: none;
+  margin: var(--space-2) 0;
   padding: 0;
-  margin: 8px 0;
+  border: none;
 }
 .prov__protocol legend {
+  margin-bottom: var(--space-1);
   padding: 0;
-  margin-bottom: 4px;
 }
 .prov__radios {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .prov__radios label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-}
-.prov__radios input {
-  margin: 0;
+  gap: var(--space-2);
 }
 .prov__label {
   min-width: 120px;
@@ -256,48 +430,19 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  list-style: none;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
+  list-style: none;
 }
 .prov__small {
-  font: inherit;
-  padding: 1px 8px;
+  min-height: 24px;
+  padding: 0 var(--space-2);
 }
 .prov__fallback .opt__hint {
   flex-basis: 100%;
 }
-.opt__table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 8px 0;
-  font-variant-numeric: tabular-nums;
-}
-.opt__table caption {
-  text-align: start;
-}
-.opt__table th,
-.opt__table td {
-  border-bottom: 1px solid var(--line);
-  padding: 4px 6px;
-  text-align: end;
-}
-.opt__table th[scope='row'],
-.opt__table thead th:first-child {
-  text-align: start;
-  font-weight: normal;
-  overflow-wrap: anywhere;
-}
-/* The diagnostics file shown before it is saved. */
-.opt__preview {
-  max-height: 20rem;
-  overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
-  font-family: ui-monospace, monospace;
-  font-size: 0.8rem;
-  background: var(--code-bg);
-  padding: 6px 8px;
-  border-radius: 4px;
+/* A select keeps its own width in the grid (its chevron stays beside the text). */
+.opt__row > .ui-select {
+  justify-self: start;
 }

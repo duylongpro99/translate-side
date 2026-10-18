@@ -122,6 +122,11 @@ export function useScrollFollow(viewports: ViewportStore | undefined, tabId: num
     let frame: number | undefined;
     let latest = viewports.get(tabId, docId)?.anchor;
     let sent: Viewport['anchor'];
+    // A reflow the panel made itself (a reading setting) and undid: where it left the panel is not news either.
+    const restored = (anchor: Viewport['anchor']) => {
+      sent = anchor;
+    };
+    RESTORED.add(restored);
     const find = blockFinder(document);
     // One scroll per frame, to the latest anchor.
     const follow = () => {
@@ -166,6 +171,7 @@ export function useScrollFollow(viewports: ViewportStore | undefined, tabId: num
     };
     if (send) window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
+      RESTORED.delete(restored);
       unsubscribe();
       if (frame !== undefined) cancelAnimationFrame(frame);
       if (sendFrame !== undefined) cancelAnimationFrame(sendFrame);
@@ -176,6 +182,25 @@ export function useScrollFollow(viewports: ViewportStore | undefined, tabId: num
 }
 
 const SHARED_GUARD = createGuard();
+const RESTORED = new Set<(anchor: Viewport['anchor']) => void>();
+
+/**
+ * Keeps the reader's place across a change that reflows the panel, such as a reading setting. Call
+ * it before the change and the returned function after the DOM has it: the panel scrolls back to the
+ * same block and offset under the follow guard, and the follow is told where the panel is, so the
+ * page never moves.
+ */
+export function holdAnchor(doc: Document, guard: Guard = SHARED_GUARD): () => void {
+  // At the very top there is no place to keep: the panel stays at the top (notices above the text stay in view).
+  if ((doc.defaultView?.scrollY ?? 0) < 1) return () => undefined;
+  const anchor = panelAnchor(doc);
+  return () => {
+    if (!anchor) return;
+    scrollToAnchor(doc, anchor, undefined, () => guard.mark());
+    const now = panelAnchor(doc);
+    for (const fn of RESTORED) fn(now);
+  };
+}
 
 /** An attribute, not a class: a re-render that changes the block's class leaves it alone. */
 const LINKED = 'data-linked';

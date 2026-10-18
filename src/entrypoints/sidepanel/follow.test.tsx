@@ -58,7 +58,7 @@ describe('scroll follow in the panel (plan M3-E7)', () => {
     act(() => render(null, root));
   });
 
-  function mount(viewports: ViewportStore) {
+  async function mount(viewports: ViewportStore) {
     const view: PanelView = { kind: 'ready', docId: 'd', result: { ok: true, via: 'walk', url: 'https://x/', title: 'Page', segments } };
     const controller = { view, tabId: 7, subscribe: (fn: (v: PanelView, t: number | undefined) => void) => (fn(view, 7), () => undefined), retry: () => undefined };
     const jobs = { docOf: () => undefined, get: () => undefined, subscribe: () => () => undefined };
@@ -67,6 +67,8 @@ describe('scroll follow in the panel (plan M3-E7)', () => {
     // Layout: header 40 px tall; block b at 600 px from the window top, 100 px tall.
     (root.querySelector('.panel__header') as HTMLElement).getBoundingClientRect = () => rect(0, 40);
     (root.querySelector('[data-id="b"]') as HTMLElement).getBoundingClientRect = () => rect(600, 100);
+    // The follow starts once the reading settings are read and applied.
+    await act(() => new Promise((r) => setTimeout(r, 0)));
   }
 
   const button = () => root.querySelector<HTMLButtonElement>('[data-testid="scroll-follow"]');
@@ -74,7 +76,7 @@ describe('scroll follow in the panel (plan M3-E7)', () => {
 
   it('scrolls the panel to the block the page is at, on every viewport change', async () => {
     const viewports = new ViewportStore();
-    mount(viewports);
+    await mount(viewports);
     expect(button()?.getAttribute('aria-pressed')).toBe('true');
     viewports.set(7, 'd', { visible: ['b', 'c'], anchor: { id: 'b', offset: 0.25 } });
     await frame();
@@ -89,7 +91,7 @@ describe('scroll follow in the panel (plan M3-E7)', () => {
 
   it('turned off: no scrolling, and the choice is kept; turned on again: catches up at once', async () => {
     const viewports = new ViewportStore();
-    mount(viewports);
+    await mount(viewports);
     act(() => button()?.click());
     expect(button()?.getAttribute('aria-pressed')).toBe('false');
     expect(localStorage.getItem(FOLLOW_KEY)).toBe('0');
@@ -101,9 +103,9 @@ describe('scroll follow in the panel (plan M3-E7)', () => {
     expect(scrollTo).toHaveBeenLastCalledWith({ top: 560, behavior: 'instant' });
   });
 
-  it('looks blocks up once, and again only when a block was replaced (R4)', () => {
+  it('looks blocks up once, and again only when a block was replaced (R4)', async () => {
     const viewports = new ViewportStore();
-    mount(viewports);
+    await mount(viewports);
     const spy = vi.spyOn(document, 'querySelectorAll');
     const find = blockFinder(document);
     const b = find('b');
@@ -118,9 +120,9 @@ describe('scroll follow in the panel (plan M3-E7)', () => {
     spy.mockRestore();
   });
 
-  it('an anchor with no block in the panel is ignored', () => {
+  it('an anchor with no block in the panel is ignored', async () => {
     const viewports = new ViewportStore();
-    mount(viewports);
+    await mount(viewports);
     expect(scrollToAnchor(document, { id: 'nope', offset: 0 })).toBe(false);
     expect(scrollToAnchor(document, undefined)).toBe(false);
   });

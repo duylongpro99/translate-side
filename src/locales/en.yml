@@ -16,8 +16,16 @@ panel:
     followOff: Follow the page as it scrolls
     shortcuts: Keyboard shortcuts
     settings: Settings
-    close: Close
     closePanel: Close panel
+    more: More
+    translation: Translation
+    translationButton: "Translation: $1"
+    translationTitle: Style, quality and model for this page
+    progress: Translation progress
+    devView: Segment view (dev build only)
+    page:
+      model: Model $1
+      blocks: $1 of $2 blocks
     prefsFailed: "Couldn't save that setting. Try again, or change it in settings."
     switchFailed: "Couldn't switch the model for this tab. Try again."
     defaultFailed: "Couldn't save the default. Try again, or set it in settings."
@@ -39,7 +47,7 @@ panel:
       faithful: Closer to the source wording
       simplified: "Easier reading: shorter sentences, plain words"
     cancel: Cancel
-    retranslatePage: ↻ Retranslate page
+    retranslatePage: Retranslate page
     retranslatePageTitle: Translate the whole page again, skipping saved translations
     qualityLabel: Quality
     quality:
@@ -124,6 +132,26 @@ panel:
     blockedTitle: Can't translate this selection
     translating: Translating the selection…
     truncated: Only the first part of a long selection is translated.
+  reading:
+    title: Reading
+    size: Text size
+    smaller: Smaller text
+    larger: Larger text
+    typeface: Typeface
+    typefaces:
+      serif: Serif
+      sans: Sans
+    width: Line width
+    widths:
+      narrow: Narrow
+      medium: Medium
+      full: Full
+    theme: Theme
+    themes:
+      system: System
+      light: Light
+      paper: Paper
+      dark: Dark
   shortcuts:
     title: Keyboard shortcuts
     note: The letters and arrows work while a block or one of its buttons has focus. Tab reaches the list once; the arrows move through it.
@@ -144,6 +172,7 @@ panel:
     copied: (copied)
     details: "{app}: {kind} in {name}"
   segment:
+    waiting: Waiting
     region: Translation
     image: Image
     codeKept: code, kept as is
@@ -317,6 +346,12 @@ errors:
   unknown: unknown error
 
 options:
+  nav:
+    label: Settings sections
+  more: More about this
+  theme:
+    label: Theme
+    hint: "For this page, the panel and the setup guide; it follows you to your other devices, as the panel’s Aa settings do."
   languages:
     title: "Languages"
     target: "Translate into"
@@ -521,6 +556,7 @@ options:
       n: "Per-site models: $1 rules added or replaced."
     prefs: "Preferences: the ones in the file replace yours."
     quality: "Quality: the mode and options in the file replace yours."
+    reading: "Reading settings: the theme, typeface, size and line width in the file replace yours."
     glossary:
       1: "Glossary: 1 entry added or replaced; yours stay."
       n: "Glossary: $1 entries added or replaced; yours stay."
@@ -577,6 +613,8 @@ options:
       n: "($1 keys replace one you have saved)"
     apply: "Import"
   providers:
+    groupConnection: Connection
+    groupAuth: Authentication
     accessHint: "Chrome asks for access to $1 only."
     accessHintPorts: "Chrome asks for access to $1 only (all its ports, not just $2)."
     accessHintServer: "Chrome asks for access to this server only."
@@ -744,6 +782,7 @@ options:
     ignorePref: "Ignored the preference \"{name}\": not a valid value."
     skipRouting: "Skipped the routing: it names no valid model to translate with."
     skipQuality: "Skipped the quality setting: it could not be read."
+    skipReading: "Skipped the reading settings: they could not be read."
     dropRoutingIds: "Dropped model ids in the routing that are not valid."
     cappedConnections: "The file lists {count} connections; only the first {max} were read."
     cappedProfiles: "The file lists {count} model profiles; only the first {max} were read."

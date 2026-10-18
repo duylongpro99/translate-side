@@ -22,10 +22,10 @@ export function ShortcutList({ id, onClose }: { id: string; onClose: () => void 
       </dl>
       <p class="panel__meta">{i18n.t('panel.shortcuts.note')}</p>
       <p class="panel__meta">{screenReaderNote()}</p>
-      <button type="button" class="panel__action" data-testid="shortcut-settings" onClick={() => void openShortcutSettings(browser)}>
+      <button type="button" class="ui-button" data-testid="shortcut-settings" onClick={() => void openShortcutSettings(browser)}>
         {i18n.t('panel.shortcuts.changeKey')}
       </button>{' '}
-      <button type="button" class="panel__action" data-testid="shortcuts-close" onClick={onClose}>
+      <button type="button" class="ui-button" data-testid="shortcuts-close" onClick={onClose}>
         {i18n.t('panel.shortcuts.close')}
       </button>
     </section>

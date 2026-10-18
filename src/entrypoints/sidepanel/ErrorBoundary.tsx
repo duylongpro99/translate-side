@@ -44,11 +44,12 @@ export class ErrorBoundary extends Component<Props, State> {
         <div class="state" role="alert" data-testid="panel-crash">
           <p>{i18n.t('panel.crash.message')}</p>
           <p>
-            <button type="button" data-testid="panel-reload" onClick={() => (this.props.reload ?? (() => location.reload()))()}>
+            <button type="button" class="ui-button ui-button--primary" data-testid="panel-reload" onClick={() => (this.props.reload ?? (() => location.reload()))()}>
               {i18n.t('panel.crash.reload')}
             </button>{' '}
             <button
               type="button"
+              class="ui-button"
               data-testid="panel-copy"
               onClick={() =>
                 void navigator.clipboard.writeText(details).then(
