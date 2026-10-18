@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { render } from 'preact';
+import { browser } from 'wxt/browser';
 import { act } from 'preact/test-utils';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Segment } from '@/engine/types';
@@ -272,6 +273,35 @@ describe('translation in the panel (plan M1-E10)', () => {
     expect(root.querySelector('[data-testid=job-cost]')?.textContent).toBe('$0.0072');
   });
 
+  it('a reading settings change restyles the text at once and sends nothing: no action, no page message, no block re-render', async () => {
+    const f = mountJob(jobView([[p1, { status: 'final', text: 'Một', revision: 1 }]], { status: 'done', counts: { total: 4, final: 1, failed: 0 } }));
+    let sent = 0;
+    f.translator.send = () => void sent++;
+    await act(() => new Promise((r) => setTimeout(r, 0)));
+    const before = root.querySelector(`[data-id="${p1.id}"]`) as HTMLElement;
+    // Any change inside the block (text, attributes, children) would mean the blocks were drawn again.
+    const changes: MutationRecord[] = [];
+    const watch = new MutationObserver((records) => changes.push(...records));
+    watch.observe(before, { subtree: true, childList: true, attributes: true, characterData: true });
+    await act(async () => {
+      await browser.storage.sync.set({ reading: { theme: 'system', typeface: 'serif', size: 21, width: 'narrow' } });
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    const region = root.querySelector('.segments') as HTMLElement;
+    expect(region.dataset.typeface).toBe('serif');
+    expect(region.style.getPropertyValue('--reading-size')).toBe('21px');
+    expect(region.style.getPropertyValue('--reading-measure')).toBe('34em');
+    expect(f.calls).toEqual([]);
+    expect(sent).toBe(0);
+    // The same block, untouched: the change went through the region's CSS, not a new render of the blocks.
+    watch.disconnect();
+    expect(root.querySelector(`[data-id="${p1.id}"]`)).toBe(before);
+    // (The list's one Tab stop is set again on each of its renders: tabindex and data-roving are not the block's content.)
+    const drawn = changes.filter((c) => !(c.type === 'attributes' && (c.attributeName === 'tabindex' || c.attributeName === 'data-roving')));
+    expect(drawn.map((c) => `${c.type}:${c.attributeName ?? ''}`)).toEqual([]);
+    await browser.storage.sync.remove('reading');
+  });
+
   it('a 2px progress bar while running, gone at once when done; the live region says start, failures and done', async () => {
     const f = mountJob(jobView([[p1, { status: 'final', text: 'x', revision: 1 }]]));
     const bar = root.querySelector('[role=progressbar]');
@@ -345,7 +375,8 @@ describe('translation in the panel (plan M1-E10)', () => {
     expect(field('purpose')).toBe('explain lazy futures');
     expect(field('tone')).toBe('<b>dry</b>');
     expect(about.querySelector('b')).toBeNull();
-    expect([...about.querySelectorAll('[data-field=glossary] li')].map((li) => li.textContent)).toEqual(['future · keep English', 'executor → bộ thực thi']);
+    // The key terms are a definition list: the term, then its rendering and note.
+    expect([...about.querySelectorAll('[data-field=glossary] > div')].map((d) => d.textContent)).toEqual(['future · keep English', 'executor → bộ thực thi']);
     expect(about.textContent).toContain('LanguageEnglish');
     // Empty fields are left out.
     await f.j.push(jobView([], { brief: { ...brief, audience: '', glossary: [] }, sourceLang: '' }));

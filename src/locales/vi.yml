@@ -169,6 +169,7 @@ panel:
     copied: (đã sao chép)
     details: "{app}: {kind} trong {name}"
   segment:
+    waiting: Đang chờ
     region: Bản dịch
     image: Hình ảnh
     codeKept: mã, giữ nguyên

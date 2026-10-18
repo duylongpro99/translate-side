@@ -158,6 +158,37 @@ One control row, then a muted title line, the 2px progress bar and the notice st
   header's popovers line up with the row's edges, so they fit a 320px panel. While the privacy
   notice waits, the Translation, `Aa` and More triggers are `inert`.
 
+## The reading view
+
+The translated text in the panel (`.segments`, `SegmentList.tsx`).
+
+- **Reading settings on the region.** `data-typeface="sans|serif"`, `--reading-size` (px) and
+  `--reading-measure` (narrow 34em, medium 40em, full none, centred) are set on the region. A change
+  goes through CSS only: no block re-renders and no job starts. The panel keeps the reader's place:
+  it takes the anchor (the top block and how far into it) before the change and scrolls back to it
+  under the follow guard, so the source page never moves (`holdAnchor` in `follow.ts`).
+- **Rhythm**, all from the size: line height 1.6 (sans) or 1.65 (serif); 0.9 × size between
+  paragraphs; 0.25 × size between list items; 1.5 × size above a heading and 0.5 × size below it at
+  any level; headings at 1.55, 1.2 and 1.05 × size. Lists keep a disc marker (the segment model has
+  no ordered flag). Quotes are italic and indented in `--quote`, with no border. Code blocks use
+  `--code-bg` and `--font-mono` at 0.85em and scroll sideways. `e2e/reading.spec.ts` measures the
+  gaps between neighbouring blocks' line boxes and holds them to these values plus 2px.
+- **Per-block toolbar.** Absolutely placed at the block's top end corner (it mirrors in RTL), shown on
+  hover or keyboard focus, taking no space when hidden. While it shows, a float at the block's start as
+  wide and tall as the toolbar keeps the first lines clear, so it never covers text. On touch screens
+  it sits in the flow at the end of the block. "Original" and "Show draft" are text buttons; the
+  others are icons with a tooltip and their word as hidden text.
+- **Block states.** A pending block shows its original in `--muted`, tagged with the source language;
+  the first of a run carries a "Waiting" label (CSS, from `--waiting-label`). A block retranslating
+  keeps its old translation. A streaming block ends in a still 1.5px accent caret. A failed block holds
+  a `danger` `Notice` (as a note, not an alert) with its Retry. Refined, edited, fallback model and
+  basic translation markers are small muted words, not pills. The linked block (hover link) has a
+  `--pressed` fill.
+- **Scripts and direction.** Each script's font rule sits on the element that carries `lang` (see
+  "Per-script stacks"). A translated block carries the target `lang` itself. When the target is Arabic,
+  Hebrew, Persian or Urdu (`isRtl` in `src/shared/language.ts`), the region and every translated block
+  get `dir="rtl"`; an original still waiting there runs `ltr`. Block CSS uses logical properties only.
+
 ## Reading settings
 
 `src/shared/reading.ts` holds the reading settings as their own `storage.sync` item, `reading`.

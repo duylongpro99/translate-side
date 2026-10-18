@@ -234,91 +234,171 @@
   font-size: var(--text-m);
 }
 
-/* States */
+/* States: loading, empty, error and access messages, and the crash screen. */
 .state {
-  margin-top: 24px;
+  margin-top: var(--space-5);
   color: var(--muted);
 }
 .state__title {
+  margin: 0 0 var(--space-2);
   color: var(--ink);
+  font-size: var(--text-l);
   font-weight: 600;
-  font-size: 1.05rem;
+}
+.state p {
+  margin: 0 0 var(--space-2);
 }
 .state__detail {
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: var(--text-m);
   word-break: break-word;
 }
 .state__hint {
-  font-size: 0.85rem;
+  font-size: var(--text-m);
+}
+.state .ui-button + .ui-button {
+  margin-inline-start: var(--space-2);
 }
 
-/* Segments */
+/* The reading text (direction A): the reader's typeface, size and line width, on one spacing scale
+   derived from the size. SegmentList sets data-typeface and --reading-size / --reading-measure. */
 .segments {
-  line-height: 1.55;
+  --reading-size: 16px;
+  --reading-measure: 40em;
+  max-inline-size: var(--reading-measure);
+  margin-inline: auto;
+  padding-block-start: var(--space-4);
+  font-size: var(--reading-size);
+  line-height: 1.6;
 }
+.segments[data-typeface='sans'] {
+  font-family: var(--font-sans);
+}
+.segments[data-typeface='serif'] {
+  font-family: var(--font-serif);
+  line-height: 1.65;
+}
+/* Per script, on the element that carries lang: a :lang() override of a variable cannot reach text
+   through a font-family already resolved on an ancestor. Bare zh is Simplified. Every element with a
+   lang first takes the reader's typeface again, so a translated block's script font does not pass down
+   to the original shown inside it. */
+.segments[data-typeface='sans'] [lang] {
+  font-family: var(--font-sans);
+}
+.segments[data-typeface='serif'] [lang] {
+  font-family: var(--font-serif);
+}
+.segments[data-typeface] :lang(ja) {
+  font-family: var(--font-ja-sans);
+}
+.segments[data-typeface] :is(:lang(zh), :lang(zh-CN), :lang(zh-SG), :lang(zh-Hans)) {
+  font-family: var(--font-zh-hans-sans);
+}
+.segments[data-typeface] :is(:lang(zh-TW), :lang(zh-HK), :lang(zh-MO), :lang(zh-Hant)) {
+  font-family: var(--font-zh-hant-sans);
+}
+.segments[data-typeface] :lang(ko) {
+  font-family: var(--font-ko-sans);
+}
+.segments[data-typeface='serif'] :lang(ja) {
+  font-family: var(--font-ja-serif);
+}
+.segments[data-typeface='serif'] :is(:lang(zh), :lang(zh-CN), :lang(zh-SG), :lang(zh-Hans)) {
+  font-family: var(--font-zh-hans-serif);
+}
+.segments[data-typeface='serif'] :is(:lang(zh-TW), :lang(zh-HK), :lang(zh-MO), :lang(zh-Hant)) {
+  font-family: var(--font-zh-hant-serif);
+}
+.segments[data-typeface='serif'] :lang(ko) {
+  font-family: var(--font-ko-serif);
+}
+.segments[data-typeface] :lang(th) {
+  font-family: var(--font-th);
+  line-height: 1.8;
+}
+.segments[data-typeface] :lang(ar) {
+  font-family: var(--font-ar);
+  line-height: 1.8;
+}
+.segments[data-typeface] :lang(he) {
+  font-family: var(--font-he);
+}
+.segments[data-typeface] :lang(hi) {
+  font-family: var(--font-hi);
+  line-height: 1.8;
+}
+
+/* Blocks. Logical properties only, so a right-to-left list mirrors. */
 .seg {
-  margin: 0 0 10px;
+  position: relative;
+  margin: 0 0 calc(var(--reading-size) * 0.9);
+  text-align: start;
 }
 .seg--heading {
+  margin-block: calc(var(--reading-size) * 1.5) calc(var(--reading-size) * 0.5);
   font-weight: 650;
-  margin-top: 20px;
+  line-height: 1.3;
 }
 .seg--heading[data-level='1'] {
-  font-size: 1.45rem;
+  font-size: 1.55em;
+  font-weight: 700;
 }
 .seg--heading[data-level='2'] {
-  font-size: 1.25rem;
+  font-size: 1.2em;
 }
-.seg--heading[data-level='3'] {
-  font-size: 1.1rem;
+.seg--heading[data-level='3'],
+.seg--heading:not([data-level='1'], [data-level='2'], [data-level='3']) {
+  font-size: 1.05em;
 }
-.seg--li {
-  position: relative;
-  padding-left: 16px;
+.segments > .seg:first-child,
+.segments > .about + .seg {
+  margin-block-start: 0;
 }
-.seg--li::before {
-  content: '•';
-  position: absolute;
-  left: 2px;
-  color: var(--muted);
+.seg-list {
+  margin: 0 0 calc(var(--reading-size) * 0.9);
+  padding-inline-start: 1.25em;
+}
+.seg-list > .seg--li {
+  display: list-item;
+  list-style: disc;
+  margin-block-end: calc(var(--reading-size) * 0.25);
+}
+.seg-list > .seg--li:last-child {
+  margin-block-end: 0;
 }
 .seg--quote {
-  margin-left: 0;
-  padding-left: 12px;
-  border-left: 3px solid var(--line);
-  color: var(--muted);
+  margin-inline: 0;
+  padding-inline-start: 1.25em;
+  color: var(--quote);
+  font-style: italic;
 }
 .seg--caption {
-  font-size: 0.9rem;
+  font-size: 0.9em;
   font-style: italic;
   color: var(--muted);
 }
-.seg--code {
-  margin: 0 0 12px;
-}
 .seg--code pre {
   margin: 0;
-  padding: 10px 12px;
-  background: var(--code-bg);
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  padding: var(--space-2) var(--space-3);
   overflow-x: auto;
-  font-size: 0.85rem;
+  border-radius: var(--radius-s);
+  background: var(--code-bg);
+  font-size: 0.85em;
   line-height: 1.45;
 }
 .seg__label {
-  font-size: 0.75rem;
+  margin-block-end: var(--space-1);
   color: var(--muted);
-  margin-bottom: 4px;
+  font-family: var(--font-ui);
+  font-size: var(--text-s);
 }
 .seg code {
   font-family: var(--font-mono);
 }
 .seg :not(pre) > code {
+  padding: 0 0.25em;
+  border-radius: 3px;
   background: var(--code-bg);
-  padding: 0 4px;
-  border-radius: 4px;
   font-size: 0.9em;
 }
 .seg__link {
@@ -326,46 +406,330 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.seg--hidden {
-  opacity: 0.65;
-}
-.seg__note {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--hidden);
-}
 .seg-table {
   display: table;
   width: 100%;
+  margin: 0 0 calc(var(--reading-size) * 0.9);
   border-collapse: collapse;
-  margin: 0 0 12px;
-  font-size: 0.9rem;
+  font-size: 0.9em;
 }
 .seg-row {
   display: table-row;
 }
 .seg-row > .seg--table-cell {
   display: table-cell;
-  padding: 4px 8px;
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--line);
   vertical-align: top;
+}
+
+/* Block states. A block waiting for its text shows its original, muted; the first one of a run says so. */
+.seg--pending,
+.seg--failed {
+  color: var(--muted);
+}
+/* "Waiting" on the first block of a run that has no text yet (a block keeping its old text carries lang).
+   A run goes on across a list: a list whose last item waits continues it, one whose first item waits joins it. */
+.segments > .seg--pending:not([lang]):not(.seg--pending:not([lang]) + *, .seg-list:has(> .seg--pending:not([lang]):last-child) + *)::before,
+.segments > .seg-list:has(> .seg--pending:not([lang]):first-child):not(.seg--pending:not([lang]) + *, .seg-list:has(> .seg--pending:not([lang]):last-child) + *)::before {
+  content: var(--waiting-label);
+  display: block;
+  margin-block-end: 2px;
+  color: var(--muted);
+  font: 600 var(--text-xs) / 1.6 var(--font-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+/* On a list the label sits above it, out at the bullets' edge; on an item further down, inline before its text. */
+.segments > .seg-list::before {
+  margin-inline-start: calc(var(--reading-size) * -1.25);
+}
+.seg-list > .seg--pending:not([lang]):not(:first-child):not(.seg--pending:not([lang]) + *)::before {
+  content: var(--waiting-label);
+  margin-inline-end: 0.5em;
+  color: var(--muted);
+  font: 600 var(--text-xs) / 1.6 var(--font-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.seg__caret {
+  display: inline-block;
+  width: 1.5px;
+  height: 1em;
+  margin-inline-start: 2px;
+  vertical-align: -0.12em;
+  background: var(--accent);
+}
+.seg--hidden {
+  opacity: 0.65;
+}
+.seg__note {
+  display: block;
+  margin-block-start: var(--space-1);
+  color: var(--hidden);
+  font-family: var(--font-ui);
+  font-size: var(--text-s);
+}
+.seg__note--failed {
+  color: var(--danger);
+}
+.seg__failed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin-block-start: var(--space-1);
+  font-family: var(--font-ui);
+  font-size: var(--text-s);
+}
+/* Markers after a block's text: small muted words, not pills. */
+.seg__badge,
+.seg__marker {
+  margin-inline-start: 0.5em;
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-style: normal;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.seg__original {
+  line-height: 1.6;
+}
+.seg__original,
+.seg__draft {
+  display: block;
+  margin-block-start: var(--space-1);
+  color: var(--muted);
+  font-size: 0.9em;
+  font-weight: normal;
+}
+.seg__draft {
+  font-style: italic;
+}
+.seg__explain {
+  display: block;
+  margin-block-start: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-s);
+  background: var(--tint);
+  font-family: var(--font-ui);
+  font-size: var(--text-m);
+  white-space: pre-wrap;
+}
+.seg__explain-label {
+  font-weight: 600;
+}
+/* The block of the page the pointer is over (hover link): a fill a step stronger than hover that reaches past the text, no left border. */
+.seg[data-linked] {
+  background: var(--pressed);
+  box-shadow: 0 0 0 6px var(--pressed);
+  border-radius: var(--radius-s);
+}
+
+/* Per-block actions: a toolbar over the block's top end corner on hover or keyboard focus,
+   taking no space when hidden. While it shows, the block reserves its width so no text is covered. */
+.seg__actions {
+  position: absolute;
+  inset-block-start: -2px;
+  inset-inline-end: 0;
+  z-index: 1;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--raised);
+  font-family: var(--font-ui);
+  font-size: var(--text-s);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1;
+}
+.seg:is(:hover, :focus-within) > .seg__actions {
+  opacity: 1;
+}
+/* The space it needs: a float at the block's start as wide and tall as the toolbar, so only the lines
+   beside it make room (the rest of the block does not rewrap). The width follows its buttons. */
+.seg {
+  --seg-actions-w: 34px;
+  --seg-actions-text: 0px;
+}
+.seg:has(> .seg__actions > :nth-child(2)) {
+  --seg-actions-w: 62px;
+}
+.seg:has(> .seg__actions > :nth-child(3)) {
+  --seg-actions-w: 90px;
+}
+.seg:has(> .seg__actions > :nth-child(4)) {
+  --seg-actions-w: 118px;
+}
+.seg:has(> .seg__actions > :nth-child(5)) {
+  --seg-actions-w: 146px;
+}
+.seg:has(> .seg__actions > :nth-child(6)) {
+  --seg-actions-w: 174px;
+}
+.seg:has(> .seg__actions > .seg__action--text) {
+  --seg-actions-text: 64px;
+}
+.seg:has(> .seg__actions > .seg__action--text + .seg__action--text) {
+  --seg-actions-text: 128px;
+}
+/* A table cell keeps its toolbar in the flow at its end (a float would widen the column), and a code
+   block keeps its caption clear instead (a float would narrow the scrolling pre). */
+.seg--table-cell > .seg__actions {
+  position: static;
+  display: inline-flex;
+  margin-inline-start: var(--space-1);
+  border: none;
+  background: none;
+}
+.seg--code:is(:hover, :focus-within) > .seg__label {
+  padding-inline-end: var(--seg-actions-w);
+}
+.seg:not(.seg--table-cell, .seg--code):is(:hover, :focus-within):has(> .seg__actions)::before {
+  content: '';
+  float: inline-end;
+  width: calc(var(--seg-actions-w) + var(--seg-actions-text));
+  height: 30px;
+}
+@media (hover: none) {
+  /* Touch: in the flow at the end of the block, always there. */
+  .seg__actions {
+    position: static;
+    display: inline-flex;
+    margin-inline-start: var(--space-2);
+    border: none;
+    background: none;
+    opacity: 1;
+  }
+  .seg:is(:hover, :focus-within):has(> .seg__actions)::before {
+    content: none;
+  }
+}
+.seg__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 var(--space-1);
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+/* The toolbar's icons are drawn by CSS masks (the same paths as src/ui/icons.tsx), not SVG elements: a long page
+   has a toolbar on every block, and an SVG per button costs thousands of nodes. */
+.seg__action--icon::before {
+  content: '';
+  display: block;
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  mask: var(--icon) center / contain no-repeat;
+}
+.seg__action--retranslate {
+  --icon: <path d='M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3'/>;
+}
+.seg__action--edit {
+  --icon: <path d='M10.5 2.5l3 3L6 13H3v-3z'/>;
+}
+.seg__action--explain {
+  --icon: <circle cx='8' cy='8' r='6'/><path d='M6.3 6.2a1.8 1.8 0 0 1 3.4.8c0 1.2-1.7 1.5-1.7 2.5M8 11.5h.01'/>;
+}
+.seg__action--copy {
+  --icon: <rect x='5.5' y='5.5' width='8' height='8' rx='1.5'/><path d='M10.5 3.5v-.5a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h.5'/>;
+}
+.seg__action--copied {
+  --icon: <path d='M3 8.5l3 3 7-7'/>;
+}
+.seg__action--text {
+  max-inline-size: 92px;
+  padding: 0 var(--space-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.seg__action:hover,
+.seg__action[aria-pressed='true'] {
+  background: var(--tint);
+  color: var(--ink);
+}
+.seg__action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The inline editor and "Replace your edit?": blocks of their own under the block's text. */
+.seg__editor,
+.seg__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  margin-block-start: var(--space-1);
+  font-family: var(--font-ui);
+}
+.seg__edit-text {
+  flex-basis: 100%;
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-s);
+  background: var(--ground);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+.seg__edit-hint,
+.seg__note--warn {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: var(--text-s);
+}
+.seg__note--warn {
+  color: var(--hidden);
+}
+.seg__note--warn:empty {
+  display: none;
+}
+.seg__edit-buttons {
+  display: flex;
+  gap: var(--space-1);
+}
+.seg__editor .seg__action,
+.seg__confirm .seg__action {
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.seg__confirm {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-s);
+  background: var(--tint);
+  font-size: var(--text-m);
 }
 
 /* Dev-only segment view */
 .dev__meta {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: var(--text-s);
 }
 .dev__table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
 }
 .dev__table th,
 .dev__table td {
   border-bottom: 1px solid var(--line);
-  padding: 3px 4px;
-  text-align: left;
+  padding: 3px var(--space-1);
+  text-align: start;
   vertical-align: top;
 }
 .dev__id,
@@ -377,7 +741,7 @@
   word-break: break-all;
 }
 
-/* Translation job (plan M1-E10). On the page view it holds only what needs attention; empty, it is a 1px strip. */
+/* Translation job. On the page view it holds only what needs attention; empty, it is a 1px strip. */
 .job {
   position: sticky;
   /* Under the header, whatever height its rows give it (App.tsx sets the variable). */
@@ -447,184 +811,6 @@
 .job__button--fix {
   border-color: var(--accent);
 }
-/* A translatable block before its text arrives: the original, dimmed. */
-.seg--pending,
-.seg--failed {
-  color: var(--muted);
-}
-.seg--streaming {
-  border-left: 2px solid var(--accent);
-  margin-left: -10px;
-  padding-left: 8px;
-}
-.seg__badge {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 0 6px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  font-size: 0.7rem;
-  line-height: 1.4;
-  color: var(--muted);
-  vertical-align: middle;
-  white-space: nowrap;
-}
-/* Chrome's Translator stood in for the model (M5-E7): easy to tell from a model's text. */
-.seg__badge--basic {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.job__fallback,
-.job__review,
-.job__kept {
-  flex-basis: 100%;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-.seg__note--failed {
-  color: var(--danger);
-}
-.seg__retry {
-  font: inherit;
-  margin-left: 8px;
-  padding: 1px 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--tint);
-  color: var(--ink);
-  cursor: pointer;
-}
-
-/* About this document (plan M2-E1) */
-.about {
-  margin: 8px 0 4px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--tint);
-}
-.about__summary {
-  padding: 8px 10px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.about__list {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 4px 12px;
-  margin: 0;
-  padding: 0 10px 10px;
-  font-size: 0.9rem;
-}
-.about__list dt {
-  color: var(--muted);
-}
-.about__list dd {
-  margin: 0;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.about__terms {
-  margin: 0;
-  padding-left: 1.1em;
-}
-.about__term {
-  font-weight: 600;
-}
-.about__note {
-  color: var(--muted);
-}
-
-/* Selection mode (plan M3-E4) */
-.selection__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-.selection__title {
-  flex: 1;
-  margin: 0;
-  font-size: 1rem;
-}
-
-/* First-run privacy notice (M3-E10) */
-.privacy {
-  margin: 12px 0;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--accent);
-  border-radius: 6px;
-  background: var(--tint);
-  font-size: 0.9rem;
-  line-height: 1.45;
-}
-.privacy__title {
-  margin: 0 0 6px;
-  font-size: 1rem;
-}
-.privacy p {
-  margin: 0 0 8px;
-}
-.privacy__list {
-  margin: 0 0 10px;
-  padding-left: 18px;
-  color: var(--muted);
-}
-.privacy__list li {
-  margin-bottom: 4px;
-}
-.privacy__ok {
-  font: inherit;
-  padding: 5px 12px;
-  border: none;
-  border-radius: 6px;
-  background: var(--accent);
-  color: var(--on-accent);
-  cursor: pointer;
-}
-
-/* Per-block actions (M3-E5): shown on hover or keyboard focus, always reachable by Tab. */
-.seg__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 2px;
-  opacity: 0;
-  transition: opacity 0.12s;
-}
-.seg:hover .seg__actions,
-.seg:focus-within .seg__actions {
-  opacity: 1;
-}
-@media (hover: none) {
-  .seg__actions {
-    opacity: 1;
-  }
-}
-.seg__action {
-  font: inherit;
-  font-size: 0.75rem;
-  color: var(--muted);
-  background: none;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 0 6px;
-  cursor: pointer;
-}
-.seg__action:hover,
-.seg__action[aria-pressed='true'] {
-  color: var(--ink);
-  background: var(--tint);
-}
-.seg__original {
-  display: block;
-  margin-top: 4px;
-  padding-left: 8px;
-  border-left: 2px solid var(--line);
-  color: var(--muted);
-  font-size: 0.9em;
-  font-weight: normal;
-}
 .setup-offer {
   display: flex;
   flex-wrap: wrap;
@@ -663,23 +849,87 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-.seg__explain {
-  display: block;
-  margin: 4px 0 0;
-  padding: 4px 8px;
-  border-left: 2px solid var(--accent);
-  font-size: 0.8125rem;
-  white-space: pre-wrap;
+/* About this document: a quiet disclosure, the key terms as a definition list. */
+.about {
+  margin: var(--space-3) 0 0;
+  border-block: 1px solid var(--line);
 }
-.seg__explain-label {
+.about__summary {
+  padding: var(--space-2) 0;
+  color: var(--muted);
+  font-size: var(--text-m);
   font-weight: 600;
-  color: var(--accent);
+  cursor: pointer;
 }
-/* The block of the page the pointer is over (hover link, M5-E1): a fill a step stronger than hover that reaches past the text, no left border. */
-.seg[data-linked] {
-  background: var(--pressed);
-  box-shadow: 0 0 0 6px var(--pressed);
-  border-radius: var(--radius-s);
+.about__list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0 0 var(--space-3);
+  font-size: var(--text-m);
+}
+.about__list dt {
+  color: var(--muted);
+}
+.about__list dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.about__terms {
+  margin: 0;
+}
+.about__terms dt {
+  display: inline;
+  color: var(--ink);
+  font-weight: 600;
+}
+.about__terms dd {
+  display: inline;
+  margin: 0;
+}
+.about__note {
+  color: var(--muted);
+}
+
+/* Selection mode (plan M3-E4) */
+.selection__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.selection__title {
+  flex: 1;
+  margin: 0;
+  font-size: var(--text-l);
+}
+
+/* First-run privacy notice: flat, in its place under the header, with the one primary button. */
+.privacy {
+  margin: var(--space-3) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--raised);
+  font-size: var(--text-m);
+  line-height: 1.5;
+}
+.privacy__title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-l);
+}
+.privacy p {
+  margin: 0 0 var(--space-2);
+}
+.privacy__list {
+  margin: 0 0 var(--space-3);
+  padding-inline-start: 1.25em;
+  color: var(--muted);
+}
+.privacy__list li {
+  margin-bottom: var(--space-1);
 }
 
 /* Keyboard (plan M5-E10): a visible focus on everything the keyboard reaches, a block's ring in the panel's accent. */
@@ -696,20 +946,21 @@
   border-radius: 4px;
 }
 .shortcuts {
-  margin: 0.5rem 0.75rem;
-  padding: 0.5rem 0.75rem;
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 0.4rem;
+  border-radius: var(--radius-m);
+  background: var(--raised);
 }
 .shortcuts h2 {
-  margin: 0 0 0.4rem;
-  font-size: 0.95rem;
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-base);
 }
 .shortcuts dl {
-  margin: 0;
+  margin: 0 0 var(--space-2);
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 0.25rem 0.75rem;
+  gap: var(--space-1) var(--space-3);
 }
 .shortcuts dl > div {
   display: contents;
@@ -719,96 +970,13 @@
   margin: 0;
 }
 .shortcuts kbd {
-  font: inherit;
-  font-size: 0.8rem;
   padding: 0 5px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 3px;
   background: var(--tint);
-}
-/* Best: a review refined the block (a quiet dot after its text); Show draft puts the draft under it. */
-.seg__refined {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-left: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  vertical-align: middle;
-  animation: seg-refined-in 0.4s ease-out;
-}
-@keyframes seg-refined-in {
-  from {
-    opacity: 0;
-  }
-}
-.seg__draft {
-  display: block;
-  margin-top: 4px;
-  padding-left: 8px;
-  border-left: 2px dashed var(--line);
-  color: var(--muted);
-  font-size: 0.9em;
-}
-/* The user's correction (the translation memory), and one from an imported file. */
-.seg__badge--edited {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.seg__badge--imported {
-  border-style: dashed;
-  border-color: var(--hidden);
-  color: var(--hidden);
-}
-/* The inline editor and "Replace your edit?": blocks of their own under the block's text. */
-.seg__editor,
-.seg__confirm {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-  margin-top: 2px;
-}
-.seg__edit-text {
-  flex-basis: 100%;
-  box-sizing: border-box;
-  width: 100%;
   font: inherit;
-  color: var(--ink);
-  background: var(--tint);
-  border: 1px solid var(--accent);
-  border-radius: 4px;
-  padding: 4px 6px;
-  resize: vertical;
+  font-size: var(--text-s);
 }
-.seg__edit-hint,
-.seg__note--warn {
-  flex-basis: 100%;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-.seg__note--warn {
-  color: var(--hidden);
-}
-.seg__note--warn:empty {
-  display: none;
-}
-.seg__edit-buttons {
-  display: flex;
-  gap: 4px;
-}
-.seg__confirm {
-  font-size: 0.8rem;
-  padding: 4px 6px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--tint);
-}
-@media (prefers-reduced-motion: reduce) {
-  .seg__actions {
-    transition: none;
-  }
-  .seg__refined {
-    animation: none;
-  }
+.shortcuts .ui-button + .ui-button {
+  margin-inline-start: var(--space-2);
 }

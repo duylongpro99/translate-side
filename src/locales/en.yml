@@ -172,6 +172,7 @@ panel:
     copied: (copied)
     details: "{app}: {kind} in {name}"
   segment:
+    waiting: Waiting
     region: Translation
     image: Image
     codeKept: code, kept as is

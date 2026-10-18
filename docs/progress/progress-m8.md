@@ -18,8 +18,8 @@ A fresh session resumes from this file alone.
 | # | Phase | Status | Commit |
 |---|---|---|---|
 | 1 | Foundations: tokens, themes, fonts, components, reading store | **Accepted 2026-10-18 10:20** | ab98e57 |
-| 2 | Panel chrome: control row, popovers, menu, progress | Review fixed, checks running | |
-| 3 | Reading view: typography, rhythm, block states, scripts | Pending | |
+| 2 | Panel chrome: control row, popovers, menu, progress | **Accepted 2026-10-18 10:45** | 1bb2a02 |
+| 3 | Reading view: typography, rhythm, block states, scripts | **Accepted 2026-10-18 11:35** (pnpm check, e2e 48 passed) | see git log |
 | 4 | Options page on the design system | Pending | |
 | 5 | Onboarding on the design system | Pending | |
 | 6 | Verification, screenshots, docs and 1.2.0 RC | Pending | |
@@ -99,6 +99,45 @@ A fresh session resumes from this file alone.
   CSS and `panel.header.close` string are gone; a test covers Escape in the More menu while the help is open.
   Kept as planned: the More trigger says expanded while the help is open (the plan moves `aria-expanded` there).
   Not changed: the offer stays a `section` styled as a flat notice (its `role="status"` and hooks are kept).
+
+- Phase 2 accepted: `pnpm check` green (after the `assets/sidepanel.css` line), e2e 44 passed, visual review at
+  320px and 480px with every overlay open: one row, nothing clipped, popovers under the header.
+
+## Phase 3 log
+
+- Gaps measured first (`reports/phase-03-rhythm.md` in the plan folder). Before: about 30px between paragraphs and
+  40px before headings at the e2e browser's 10.5px body; the hidden action row in the flow was the cause, as the
+  plan expected. After, at 16px: p→p 14.4px, li→li 4px, into a heading 23.8px, all within the plan's limits; the
+  e2e checks them at 16px and 20px.
+- Decisions:
+  - Gaps are measured between line boxes (each text rect widened by half the leading). A raw text box has no
+    leading, and at line height 1.6 the leading alone (about 0.4 × size) is over the li→li limit.
+  - The toolbar's space is a float at the block's start, as wide and tall as the toolbar (sized by its button
+    count; text buttons capped with an ellipsis), so only the lines beside it rewrap. Padding the whole block, as
+    the plan put it, rewraps every line on hover and is heavy at 320px. Table cells keep the toolbar in the flow
+    at their end; a code block clears its caption instead.
+  - The hidden toolbar is `opacity: 0`, not `display: none`, so its buttons stay in the accessibility tree and
+    clickable by tests and scripts.
+  - A failed block's notice is a `note`, not an alert, so a page with many failures does not interrupt for each.
+  - The Waiting label marks the first block of a run with no text yet; a run continues across lists; a block
+    retranslating (it keeps its old text and its target `lang`) gets none, nor do table cells.
+  - A reading change keeps the reader's place only when it reflows (typeface, size or width) and the panel is
+    not at the top.
+  - Every element with a `lang` takes the reader's typeface again before the per-script rules, so a translated
+    block's script font does not reach the original shown inside it.
+  - In this harness a script scroll of the page is pulled back by the background panel tab (also on the base
+    build), so the follow e2e scrolls the panel and lets the page follow.
+- The panel perf e2e (100-screen page) failed its heap budget (about 21.6 MB of 16.8 MB) and once its 100 ms long
+  task: SVG icons in every block's toolbar. The toolbar icons are now CSS masks, and a button carries its word as
+  hidden text only while it has a state ("Copied", "Explain again"); its name is the `aria-label`. The heap test
+  then passed three runs in a row and in the full run. The budget was not raised.
+- `assets/sidepanel.css` budget line measured again (5530 B plus 10%).
+- Review (`reports/review-phase-03.md`): the blocker (toolbar `display: none` broke the existing toolbar clicks in
+  e2e and hid the buttons from screen readers) and all should-fixes fixed as above; the J/K test now asserts the
+  toolbar is shown and presses Original (the widest label) under the Vietnamese UI; the no-re-render test watches
+  the block with a MutationObserver. Nits fixed: `dir="auto"` for an unknown source inside an RTL list, no `div`
+  inside a `p` for the failed notice, plan ids out of the comments rewritten here, the basic and edited markers
+  muted. Kept: the block-state tests live in `reading-view.test.tsx`.
 
 ## Open items
 

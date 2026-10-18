@@ -30,15 +30,17 @@ export function AboutDocument({ brief, sourceLang }: { brief: DocumentBrief; sou
           <>
             <dt>{i18n.t('panel.about.keyTerms')}</dt>
             <dd>
-              <ul class="about__terms" data-field="glossary">
+              <dl class="about__terms" data-field="glossary">
                 {brief.glossary.map((g) => (
-                  <li key={g.term}>
-                    <span class="about__term">{g.term}</span>
-                    {g.rendering !== g.term ? <> → {g.rendering}</> : null}
-                    {g.note ? <span class="about__note"> · {g.note}</span> : null}
-                  </li>
+                  <div key={g.term}>
+                    <dt class="about__term">{g.term}</dt>
+                    <dd>
+                      {g.rendering !== g.term ? ` → ${g.rendering}` : null}
+                      {g.note ? <span class="about__note"> · {g.note}</span> : null}
+                    </dd>
+                  </div>
                 ))}
-              </ul>
+              </dl>
             </dd>
           </>
         ) : null}

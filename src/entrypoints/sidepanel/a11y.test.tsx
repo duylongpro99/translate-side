@@ -121,7 +121,7 @@ describe('segment list a11y', () => {
     expect(keys).toEqual(['O', 'R', 'E', 'C']);
   });
 
-  it('names the refined marker and the draft toggle, keeps the draft in the target language, and stills the marker for reduced motion', async () => {
+  it('names the refined marker and the draft toggle, keeps the draft in the target language, and keeps the marker still', async () => {
     const refined = new Map(states);
     refined.set('b', { status: 'final', text: 'VI refined', revision: 3, refined: true, draft: 'VI draft', reviewModel: 'big' });
     await draw({ states: refined });
@@ -135,9 +135,8 @@ describe('segment list a11y', () => {
     await act(() => toggle?.click());
     expect(toggle?.getAttribute('aria-label')).toBe('Hide draft: "First paragraph text"');
     expect(block('b').querySelector('[data-testid="seg-draft-text"]')?.getAttribute('lang')).toBe('vi');
-    // Its fade-in is switched off under prefers-reduced-motion.
+    // The marker is a still word: no animation at all, so there is nothing to switch off for reduced motion.
     const css = fs.readFileSync('src/entrypoints/sidepanel/style.css', 'utf8');
-    const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
-    expect(reduced).toMatch(/\.seg__refined\s*\{\s*animation: none;/);
+    expect(css).not.toMatch(/animation|@keyframes/);
   });
 });

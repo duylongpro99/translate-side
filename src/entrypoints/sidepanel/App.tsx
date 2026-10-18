@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { browser } from 'wxt/browser';
 import { i18n } from '#i18n';
 import type { PanelController, PanelView } from './controller.ts';
@@ -14,7 +14,9 @@ import { IconButton } from '@/ui/IconButton';
 import { FollowIcon, MoreIcon, RefreshIcon, StopIcon } from '@/ui/icons';
 import { Menu, type MenuEntry } from '@/ui/Menu';
 import { Notice } from '@/ui/Notice';
-import { readFollow, useHoverLink, useScrollFollow, writeFollow, type SendToPage } from './follow.ts';
+import { holdAnchor, readFollow, useHoverLink, useScrollFollow, writeFollow, type SendToPage } from './follow.ts';
+import { cleanReading, READING_KEY, readReading, type Reading } from '@/shared/reading';
+import { mirroredReading } from '@/ui/theme';
 import { JobBar, type JobActions } from './JobBar.tsx';
 import type { Jobs, JobView } from './jobs.ts';
 import { SegmentList } from './SegmentList.tsx';
@@ -105,6 +107,45 @@ function useSwitcher(translator: TranslatorProps | undefined, tabId: number | un
       browser.storage.session.onChanged.removeListener(on);
     };
   }, [translator, tabId, url, status, version]);
+  return state;
+}
+
+/**
+ * The reading settings for the text: the page's mirrored copy at first (so the first paint has
+ * them), then storage.sync, then every change, cleaned. A change keeps the reader's place: the
+ * anchor is taken before it lands and restored once it is drawn, so the page does not move.
+ * `ready` is false until storage.sync has been read and applied.
+ */
+function useReadingView(): { reading: Reading; ready: boolean } {
+  const [state, setState] = useState(() => ({ reading: mirroredReading(), ready: false }));
+  const restore = useRef<(() => void) | undefined>(undefined);
+  useEffect(() => {
+    let live = true;
+    let current = state.reading;
+    const apply = (reading: Reading) => {
+      if (!live) return;
+      // Only typeface, size and width reflow the text; the theme or unchanged values move nothing.
+      const layout = (r: Reading) => `${r.typeface}|${r.size}|${r.width}`;
+      if (layout(reading) !== layout(current)) restore.current = holdAnchor(document);
+      current = reading;
+      setState({ reading, ready: true });
+    };
+    readReading(browser).then(apply, () => live && setState((s) => ({ ...s, ready: true })));
+    const on = (changes: Record<string, { newValue?: unknown }>) => {
+      if (READING_KEY in changes) apply(cleanReading(changes[READING_KEY]?.newValue));
+    };
+    browser.storage.sync.onChanged.addListener(on);
+    return () => {
+      live = false;
+      browser.storage.sync.onChanged.removeListener(on);
+    };
+    // Mounted once: `current` tracks the applied value from here on.
+  }, []);
+  useLayoutEffect(() => {
+    const done = restore.current;
+    restore.current = undefined;
+    done?.();
+  }, [state]);
   return state;
 }
 
@@ -278,7 +319,9 @@ export function App({ controller, translator }: { controller: PanelController; t
   const selecting = snippet !== undefined && translator?.snippets !== undefined && !(view.kind === 'blocked' && view.reason === 'denylisted');
   // Both ways (M3-E7, M5-E1); not over the dev view, whose blocks are not the reading list, nor a selection's.
   const pageDoc = view.kind === 'ready' ? view.docId : undefined;
-  useScrollFollow(translator?.viewports, tabId, pageDoc, follow && !dev && !selecting, translator?.send);
+  const readingView = useReadingView();
+  // The first follow exchange waits for the reading settings, so the panel is in its final layout before it lines up with the page.
+  useScrollFollow(translator?.viewports, tabId, pageDoc, follow && !dev && !selecting && readingView.ready, translator?.send);
   useHoverLink(translator?.hovers, tabId, pageDoc, translator?.send, !dev && !selecting);
   const toggleFollow = () => {
     writeFollow(!follow);
@@ -394,7 +437,7 @@ export function App({ controller, translator }: { controller: PanelController; t
             </p>
           )}
           {job?.brief ? <AboutDocument brief={job.brief} sourceLang={job.sourceLang} /> : null}
-          <SegmentList segments={job?.segments ?? view.result.segments} states={job?.segs} busy={job?.status === 'running'} {...(job ? { targetLang: job.targetLang, ...(job.sourceLang ? { sourceLang: job.sourceLang } : {}) } : {})} {...(job?.model ? { model: job.model } : {})} {...(job && pageActions ? { actions: { retry: pageActions.retrySegment, retranslate: pageActions.retranslateSegment, explain: pageActions.explainSegment, ...(pageActions.editSegment ? { edit: pageActions.editSegment } : {}), ...(pageActions.discardEdit ? { discardEdit: pageActions.discardEdit } : {}) } } : {})} />
+          <SegmentList reading={readingView.reading} segments={job?.segments ?? view.result.segments} states={job?.segs} busy={job?.status === 'running'} {...(job ? { targetLang: job.targetLang, ...(job.sourceLang ? { sourceLang: job.sourceLang } : {}) } : {})} {...(job?.model ? { model: job.model } : {})} {...(job && pageActions ? { actions: { retry: pageActions.retrySegment, retranslate: pageActions.retranslateSegment, explain: pageActions.explainSegment, ...(pageActions.editSegment ? { edit: pageActions.editSegment } : {}), ...(pageActions.discardEdit ? { discardEdit: pageActions.discardEdit } : {}) } } : {})} />
         </>
       )}
     </main>

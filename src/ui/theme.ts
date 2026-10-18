@@ -14,7 +14,8 @@ export function setTheme(reading: Reading, root: HTMLElement = document.document
   else root.dataset.theme = reading.theme;
 }
 
-function readMirror(): Reading {
+/** The reading settings as the page's localStorage copy has them (cleaned): what to draw before storage.sync answers. */
+export function mirroredReading(): Reading {
   try {
     const raw = localStorage.getItem(READING_MIRROR);
     return cleanReading(raw === null ? undefined : JSON.parse(raw));
@@ -33,7 +34,7 @@ function writeMirror(reading: Reading): void {
 
 /** Applies the mirrored theme synchronously. Each page calls it first, before render. Returns what it applied. */
 export function applyThemeSync(root: HTMLElement = document.documentElement): Reading {
-  const reading = readMirror();
+  const reading = mirroredReading();
   setTheme(reading, root);
   return reading;
 }

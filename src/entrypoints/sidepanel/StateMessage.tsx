@@ -56,7 +56,7 @@ export function StateMessage({ view, onRetry }: { view: Exclude<PanelView, { kin
           <p class="state__title">{i18n.t('panel.state.errorTitle')}</p>
           <p class="state__detail">{view.message}</p>
           <p class="state__hint">{i18n.t('panel.state.extractionHint')}</p>
-          <button type="button" onClick={onRetry}>
+          <button type="button" class="ui-button" onClick={onRetry}>
             {i18n.t('panel.state.retry')}
           </button>
         </div>

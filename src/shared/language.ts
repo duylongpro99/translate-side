@@ -60,6 +60,13 @@ export function normalizeLang(tag: string | undefined): string {
   }
 }
 
+const RTL = new Set(['ar', 'he', 'fa', 'ur']);
+
+/** Whether text in `tag` runs right to left (Arabic, Hebrew, Persian, Urdu), whatever its case, separator or region. */
+export function isRtl(tag: string | undefined): boolean {
+  return RTL.has(normalizeLang(tag).split('-')[0]?.toLowerCase() ?? '');
+}
+
 const HANT_REGIONS = new Set(['TW', 'HK', 'MO']);
 
 /** Chinese script: "Hant", "Hans", or undefined when the tag does not say. */
