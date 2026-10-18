@@ -1,0 +1,134 @@
+/*
+ * The design tokens: the only place a color literal may appear (scripts/check-tokens.mjs).
+ * Themes: light on :root, paper and dark by data-theme. "System" is no attribute: light, or dark
+ * under prefers-color-scheme. See docs/design-system.md.
+ */
+:root {
+  /* Color: light */
+  --ground: #ffffff;
+  --ink: #1f1e1c;
+  --muted: #66635d;
+  --line: #e4e2de;
+  --tint: #f4f3f0;
+  --pressed: #eae8e3;
+  --raised: #ffffff;
+  --accent: #2f5d8a;
+  --on-accent: #ffffff;
+  --danger: #b3261e;
+  --warn: #7f6300;
+  --ok: #1d7a35;
+  --code-bg: #f3f2ef;
+  --hidden: #7f6300;
+  --quote: #45423d;
+  --shadow-overlay: 0 4px 16px rgb(0 0 0 / 0.12);
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Radii: nothing larger */
+  --radius-s: 5px;
+  --radius-m: 8px;
+
+  /* UI type scale */
+  --text-xs: 11px;
+  --text-s: 12px;
+  --text-m: 13px;
+  --text-base: 14px;
+  --text-l: 16px;
+  --text-xl: 18px;
+
+  /* Font stacks: system fonts only */
+  --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Georgia first: Iowan Old Style and Charter draw the horn of ơ ư like a hook above (scripts/glyph-check.html). */
+  --font-serif: Georgia, 'Noto Serif', 'Times New Roman', serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Per-script stacks. Han characters take Japanese or Chinese forms only through `lang`. */
+  --font-ja-sans: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', Meiryo, 'Noto Sans JP', 'Noto Sans CJK JP', sans-serif;
+  --font-ja-serif: 'Hiragino Mincho ProN', 'Yu Mincho', YuMincho, 'Noto Serif JP', 'Noto Serif CJK JP', serif;
+  --font-zh-hans-sans: 'PingFang SC', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', sans-serif;
+  --font-zh-hans-serif: 'Songti SC', STSong, SimSun, 'Noto Serif SC', 'Noto Serif CJK SC', serif;
+  --font-zh-hant-sans: 'PingFang TC', 'Microsoft JhengHei UI', 'Microsoft JhengHei', 'Noto Sans TC', 'Noto Sans CJK TC', sans-serif;
+  --font-zh-hant-serif: 'Songti TC', PMingLiU, 'Noto Serif TC', 'Noto Serif CJK TC', serif;
+  --font-ko-sans: 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', 'Noto Sans CJK KR', sans-serif;
+  --font-ko-serif: AppleMyungjo, Batang, 'Noto Serif KR', 'Noto Serif CJK KR', serif;
+  --font-th: Thonburi, 'Leelawadee UI', Tahoma, 'Noto Sans Thai', sans-serif;
+  --font-ar: 'Geeza Pro', 'Segoe UI', Tahoma, 'Noto Naskh Arabic', 'Noto Sans Arabic', sans-serif;
+  --font-he: 'Arial Hebrew', 'Segoe UI', Arial, 'Noto Sans Hebrew', sans-serif;
+  --font-hi: 'Kohinoor Devanagari', 'Devanagari Sangam MN', 'Nirmala UI', Mangal, 'Noto Sans Devanagari', sans-serif;
+}
+
+:root:not([data-theme]) {
+  color-scheme: light dark;
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='paper'] {
+  color-scheme: light;
+  --ground: #faf8f3;
+  --ink: #22201c;
+  --muted: #67635b;
+  --line: #e6e1d6;
+  --tint: #f1ece1;
+  --pressed: #eae3d5;
+  --raised: #ffffff;
+  --accent: #2f5d8a;
+  --on-accent: #ffffff;
+  --danger: #a8321f;
+  --warn: #775d00;
+  --ok: #2a6b35;
+  --code-bg: #f1ece1;
+  --hidden: #775d00;
+  --quote: #4a463f;
+  --shadow-overlay: 0 4px 16px rgb(60 45 20 / 0.14);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --ground: #1c1b19;
+  --ink: #e7e3da;
+  --muted: #9c978c;
+  --line: #34312c;
+  --tint: #26241f;
+  --pressed: #302d27;
+  --raised: #24221f;
+  --accent: #8fb3d9;
+  --on-accent: #1c1b19;
+  --danger: #ff8a80;
+  --warn: #d6b44a;
+  --ok: #6cc283;
+  --code-bg: #24221f;
+  --hidden: #d6b44a;
+  --quote: #c9c4b9;
+  --shadow-overlay: 0 4px 16px rgb(0 0 0 / 0.4);
+}
+
+/* System theme on a dark system: the same values as data-theme="dark". */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --ground: #1c1b19;
+    --ink: #e7e3da;
+    --muted: #9c978c;
+    --line: #34312c;
+    --tint: #26241f;
+    --pressed: #302d27;
+    --raised: #24221f;
+    --accent: #8fb3d9;
+    --on-accent: #1c1b19;
+    --danger: #ff8a80;
+    --warn: #d6b44a;
+    --ok: #6cc283;
+    --code-bg: #24221f;
+    --hidden: #d6b44a;
+    --quote: #c9c4b9;
+    --shadow-overlay: 0 4px 16px rgb(0 0 0 / 0.4);
+  }
+}

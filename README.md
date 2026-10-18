@@ -162,11 +162,12 @@ With a screen reader, the letter and arrow shortcuts need focus mode (forms or a
 | Command | What it does |
 |---|---|
 | `pnpm dev` | Runs the extension with hot reload |
-| `pnpm check` | Runs lint, typecheck, the engine boundary check, tests, the build, the bundle size budget and the manifest check (the same as CI) |
+| `pnpm check` | Runs lint, the design-token check, typecheck, the engine boundary check, tests, the build, the bundle size budget and the manifest check (the same as CI) |
 | `pnpm test` | Runs the unit, snapshot and boundary tests (Vitest) |
 | `pnpm run e2e` | Runs the end-to-end tests: the built extension in Chromium against a mock provider (build first) |
 | `pnpm run zip` | Builds the Chrome Web Store package (see [`docs/store/submission.md`](docs/store/submission.md)) |
 | `pnpm run store:screenshots` | Regenerates the store screenshots and tile in `docs/store/assets/` |
+| `pnpm run ui:screens -- before\|after` | Takes screenshots of the panel, settings and onboarding in every theme at 320 and 480 px |
 | `pnpm engine:node` | Runs the translation engine in plain Node |
 | `pnpm eval -- --set eval` | Translates the eval set with the current strategy and prompt |
 | `pnpm eval:report -- <runs…>` | Compares runs side by side on fidelity, naturalness, tone, terminology and cost |
@@ -225,7 +226,8 @@ how to delete it, is in [`docs/privacy.md`](docs/privacy.md).
 | 🔭 | **M8** Beyond | Firefox and other independent tracks |
 
 The full plan is in [`ROADMAP.md`](ROADMAP.md) and [`docs/plans/`](docs/plans/). The design and its
-reasoning are in [`DESIGN.md`](DESIGN.md).
+reasoning are in [`DESIGN.md`](DESIGN.md). The interface's tokens, components and rules are in
+[`docs/design-system.md`](docs/design-system.md).
 
 ## 🧱 Project layout
 
@@ -237,6 +239,7 @@ src/
   segment/       segmenter and inline markers
   llm/           provider adapters, error classifier, presets
   shared/        settings, protocol, language detection, cost
+  ui/            design tokens, themes and shared interface components (docs/design-system.md)
 e2e/             end-to-end tests: the built extension, fixture pages and a mock provider
 eval/            eval passages and scored runs
 docs/            privacy policy, local-model guide, provider matrix, store listing; plans, decisions, progress logs

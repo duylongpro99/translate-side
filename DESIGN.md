@@ -83,6 +83,9 @@ terms consistent, and rewrite idioms. That's the core of this design (§5).
   reading).
 - **Glossary**: terms detected automatically for each document, plus a personal glossary you edit
   (e.g. always keep "deploy" in English).
+- **Look**: every page is built from the tokens and components in `src/ui/`, with system fonts
+  chosen per script and four themes (system, light, paper, dark). The rules, including what the
+  interface never does, are in [`docs/design-system.md`](docs/design-system.md).
 
 ---
 

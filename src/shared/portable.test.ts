@@ -4,6 +4,7 @@ import { readProviderSettings, saveConnection, saveProfile, saveRouting } from '
 import { readApiKey, saveApiKey, savePreferences, saveGlossary, readPreferences, readGlossary, DEFAULT_PROFILE } from './settings.ts';
 import { readSiteLists } from './sites.ts';
 import { QUALITY_KEY, readQuality, updateQuality } from './quality.ts';
+import { READING_KEY, readReading, updateReading } from './reading.ts';
 
 type Api = Parameters<typeof buildExport>[0];
 
@@ -391,5 +392,48 @@ describe('the quality setting travels with the file', () => {
     const bad = planOf(file({ quality: 'best' }));
     expect(bad.quality).toBeUndefined();
     expect(bad.notes.join(' ')).toContain('quality');
+  });
+});
+
+describe('the reading settings travel with the file', () => {
+  const file = (settings: Record<string, unknown>) => JSON.stringify({ format: EXPORT_FORMAT, formatVersion: EXPORT_VERSION, settings });
+  const planOf = (text: string): ImportPlan => {
+    const parsed = parseImport(text);
+    if (!parsed.ok) throw new Error(parsed.error);
+    return parsed.plan;
+  };
+
+  it('are exported, previewed and imported into a fresh profile', async () => {
+    const src = fakeApi();
+    await updateReading(src.api, { theme: 'dark', typeface: 'serif', size: 19, width: 'full' });
+    const out = await buildExport(src.api);
+    expect(out.file.settings.reading).toEqual({ theme: 'dark', typeface: 'serif', size: 19, width: 'full' });
+
+    const fresh = fakeApi();
+    const plan = planOf(out.json);
+    expect((await previewImport(fresh.api, plan, { withKeys: false })).reading).toBe(true);
+    expect(fresh.sync.has(READING_KEY)).toBe(false);
+    const report = await applyImport(fresh.api, plan, { withKeys: false });
+    expect(report.reading).toBe(true);
+    expect(await readReading(fresh.api)).toEqual({ theme: 'dark', typeface: 'serif', size: 19, width: 'full' });
+  });
+
+  it('a file from before they existed leaves the stored settings alone', async () => {
+    const t = fakeApi();
+    await updateReading(t.api, { theme: 'paper' });
+    const plan = planOf(file({ prefs: { targetLang: 'de' } }));
+    expect(plan.reading).toBeUndefined();
+    const report = await applyImport(t.api, plan, { withKeys: false });
+    expect(report.reading).toBe(false);
+    expect((await readReading(t.api)).theme).toBe('paper');
+  });
+
+  it('are cleaned on import, and an unreadable value is skipped with a note', () => {
+    expect(planOf(file({ reading: { theme: 'dark', size: 60, width: 'wide' } })).reading).toEqual({ theme: 'dark', typeface: 'sans', size: 24, width: 'medium' });
+    for (const bad of [{}, { theme: 'neon' }, 'dark', [1]]) {
+      const skipped = planOf(file({ reading: bad }));
+      expect(skipped.reading).toBeUndefined();
+      expect(skipped.notes.join(' ')).toContain('reading settings');
+    }
   });
 });

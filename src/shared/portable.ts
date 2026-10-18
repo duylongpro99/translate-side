@@ -48,6 +48,7 @@ import {
 } from './settings.ts';
 import { cleanSiteList, readSiteLists, SITE_ALLOWLIST_KEY, SITE_NEVER_KEY, sitePattern } from './sites.ts';
 import { cleanQuality, hasKnownQuality, QUALITY_KEY, readQuality, type Quality } from './quality.ts';
+import { cleanReading, hasKnownReading, READING_KEY, readReading, type Reading } from './reading.ts';
 import { assertFits, saveListWithOverflow } from './sync-quota.ts';
 
 type Browser = typeof browser;
@@ -86,6 +87,8 @@ export interface ExportFile {
     prefs: Preferences;
     /** The quality setting (its own sync item); a file from before it existed has none. */
     quality?: Quality;
+    /** The reading settings (their own sync item); a file from before they existed has none. */
+    reading?: Reading;
     glossary: GlossaryEntry[];
     siteAllowlist: string[];
     siteNever: string[];
@@ -160,7 +163,7 @@ function redactConnection(c: ProviderConnection, omitted: string[]): ProviderCon
  * A connection's test outcome is device state, so it is written as unverified.
  */
 export async function buildExport(api: Browser, { includeKeys = false, now = () => new Date() }: { includeKeys?: boolean; now?: () => Date } = {}): Promise<ExportResult> {
-  const [settings, prefs, quality, glossary, lists] = await Promise.all([readProviderSettings(api), readPreferences(api), readQuality(api), readGlossary(api), readSiteLists(api)]);
+  const [settings, prefs, quality, reading, glossary, lists] = await Promise.all([readProviderSettings(api), readPreferences(api), readQuality(api), readReading(api), readGlossary(api), readSiteLists(api)]);
   const implicit = settings.implicit ?? { connections: [], profiles: [] };
   const omitted: string[] = [];
   const connections = settings.connections
@@ -194,6 +197,7 @@ export async function buildExport(api: Browser, { includeKeys = false, now = () 
       siteRules: siteOverrides ?? [],
       prefs,
       quality,
+      reading,
       glossary,
       siteAllowlist: lists.allow,
       siteNever: lists.never,
@@ -231,6 +235,7 @@ export interface ImportPlan {
   siteRules: SiteRule[];
   prefs?: Partial<Preferences>;
   quality?: Quality;
+  reading?: Reading;
   glossary?: GlossaryEntry[];
   allow?: string[];
   never?: string[];
@@ -419,6 +424,8 @@ export function parseImport(text: string): ParseResult {
   // An imported strategy is kept as written: whether `refine` may run is decided when a job starts.
   const quality = isRecord(s.quality) && hasKnownQuality(s.quality) ? cleanQuality(s.quality) : undefined;
   if (s.quality !== undefined && quality === undefined) notes.push(i18n.t('options.portable.skipQuality'));
+  const reading = isRecord(s.reading) && hasKnownReading(s.reading) ? cleanReading(s.reading) : undefined;
+  if (s.reading !== undefined && reading === undefined) notes.push(i18n.t('options.portable.skipReading'));
 
   const keys: Record<string, string> = {};
   if (root.keys !== undefined) {
@@ -441,6 +448,7 @@ export function parseImport(text: string): ParseResult {
       siteRules,
       ...(prefs && Object.keys(prefs).length > 0 ? { prefs } : {}),
       ...(quality ? { quality } : {}),
+      ...(reading ? { reading } : {}),
       ...(glossary ? { glossary } : {}),
       ...(Array.isArray(s.siteAllowlist) ? { allow: cleanSiteList(s.siteAllowlist) } : {}),
       ...(Array.isArray(s.siteNever) ? { never: cleanSiteList(s.siteNever) } : {}),
@@ -459,6 +467,7 @@ export interface ImportReport {
   siteRules: number;
   prefs: boolean;
   quality: boolean;
+  reading: boolean;
   glossary: number | null;
   sites: { allow: number; never: number };
   /**
@@ -565,6 +574,7 @@ async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKey
   }
   if (plan.prefs) items[PREFS_KEY] = { ...prefs, ...plan.prefs };
   if (plan.quality) items[QUALITY_KEY] = plan.quality;
+  if (plan.reading) items[READING_KEY] = plan.reading;
 
   let glossaryCount: number | null = null;
   if (plan.glossary && plan.glossary.length > 0) {
@@ -626,6 +636,7 @@ async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKey
       siteRules: Array.isArray(items[SITE_RULES_KEY]) ? plan.siteRules.filter((r) => profileIds.has(r.translate)).length : 0,
       prefs: plan.prefs !== undefined,
       quality: plan.quality !== undefined,
+      reading: plan.reading !== undefined,
       glossary: glossaryCount,
       sites: { allow: plan.allow?.length ?? 0, never: plan.never?.length ?? 0 },
       keys: { inFile, wouldWrite, wouldReplace, written: Object.keys(secrets).length, removed: removeSecrets.length },

@@ -514,6 +514,7 @@ options:
       n: "Mô hình theo trang web: $1 quy tắc được thêm hoặc thay thế."
     prefs: "Tùy chọn: các tùy chọn trong tệp sẽ thay thế tùy chọn của bạn."
     quality: "Chất lượng: chế độ và tùy chọn trong tệp sẽ thay thế của bạn."
+    reading: "Cài đặt đọc: giao diện, kiểu chữ, cỡ chữ và độ rộng dòng trong tệp sẽ thay thế của bạn."
     glossary:
       n: "Bảng thuật ngữ: $1 mục được thêm hoặc thay thế; các mục của bạn vẫn được giữ."
     sites: "Trang web: $1 trang luôn dịch (mỗi trang cần được cấp lại quyền trong Quy tắc theo trang web), $2 trang không bao giờ dịch."
@@ -729,6 +730,7 @@ options:
     ignorePref: "Đã bỏ qua tùy chọn \"{name}\": giá trị không hợp lệ."
     skipRouting: "Đã bỏ qua phần định tuyến: nó không nêu mô hình hợp lệ nào để dịch."
     skipQuality: "Đã bỏ qua cài đặt chất lượng: không đọc được."
+    skipReading: "Đã bỏ qua cài đặt đọc: không đọc được."
     dropRoutingIds: "Đã bỏ các mã mô hình không hợp lệ trong phần định tuyến."
     cappedConnections: "Tệp liệt kê {count} kết nối; chỉ {max} kết nối đầu tiên được đọc."
     cappedProfiles: "Tệp liệt kê {count} hồ sơ mô hình; chỉ {max} hồ sơ đầu tiên được đọc."

@@ -1,32 +1,6 @@
-:root {
-  color-scheme: light dark;
-  font-family: system-ui, sans-serif;
-  font-size: 14px;
-  --fg: #1d1d1f;
-  --muted: #6b6b70;
-  --line: #e2e2e6;
-  --surface: #f5f5f7;
-  --code-bg: #f3f3f5;
-  --accent: #2459c9;
-  --hidden: #8a6d00;
-  --danger: #b3261e;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fg: #e8e8ea;
-    --muted: #9a9aa2;
-    --line: #34343a;
-    --surface: #222226;
-    --code-bg: #1b1b1f;
-    --accent: #8ab0ff;
-    --hidden: #d6b44a;
-    --danger: #ff8a80;
-  }
-}
-body {
-  margin: 0;
-  color: var(--fg);
-}
+@import '@/ui/tokens.css';
+@import '@/ui/base.css';
+
 .panel {
   padding: 0 16px 24px;
 }
@@ -34,7 +8,7 @@ body {
   position: sticky;
   top: 0;
   padding: 10px 0;
-  background: Canvas;
+  background: var(--ground);
   border-bottom: 1px solid var(--line);
   z-index: 1;
 }
@@ -63,7 +37,7 @@ body {
 .panel__select {
   font: inherit;
   color: inherit;
-  background: var(--surface);
+  background: var(--tint);
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 2px 4px;
@@ -108,7 +82,7 @@ body {
   cursor: pointer;
 }
 .panel__action:hover {
-  background: var(--surface);
+  background: var(--tint);
 }
 .panel__header h1 {
   flex: 1;
@@ -130,7 +104,7 @@ body {
 }
 .panel__icon:hover,
 .panel__icon[aria-pressed='true'] {
-  background: var(--surface);
+  background: var(--tint);
 }
 .panel__meta {
   color: var(--muted);
@@ -143,12 +117,12 @@ body {
   color: var(--muted);
 }
 .state__title {
-  color: var(--fg);
+  color: var(--ink);
   font-weight: 600;
   font-size: 1.05rem;
 }
 .state__detail {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.85rem;
   word-break: break-word;
 }
@@ -216,7 +190,7 @@ body {
   margin-bottom: 4px;
 }
 .seg code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
 }
 .seg :not(pre) > code {
   background: var(--code-bg);
@@ -273,7 +247,7 @@ body {
 }
 .dev__id,
 .dev__path {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .dev__path {
   color: var(--muted);
@@ -290,7 +264,7 @@ body {
   flex-wrap: wrap;
   gap: 8px;
   padding: 8px 0;
-  background: Canvas;
+  background: var(--ground);
   border-bottom: 1px solid var(--line);
   font-size: 0.85rem;
   color: var(--muted);
@@ -305,7 +279,7 @@ body {
 }
 .job__cost {
   font-variant-numeric: tabular-nums;
-  color: var(--fg);
+  color: var(--ink);
 }
 .job__cost-note {
   color: var(--muted);
@@ -326,8 +300,8 @@ body {
   padding: 3px 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--surface);
-  color: var(--fg);
+  background: var(--tint);
+  color: var(--ink);
   cursor: pointer;
 }
 /* A translatable block before its text arrives: the original, dimmed. */
@@ -373,8 +347,8 @@ body {
   padding: 1px 8px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--surface);
-  color: var(--fg);
+  background: var(--tint);
+  color: var(--ink);
   cursor: pointer;
 }
 
@@ -383,7 +357,7 @@ body {
   margin: 8px 0 4px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface);
+  background: var(--tint);
 }
 .about__summary {
   padding: 8px 10px;
@@ -437,7 +411,7 @@ body {
   border: 1px solid var(--line);
   border-left: 3px solid var(--accent);
   border-radius: 6px;
-  background: var(--surface);
+  background: var(--tint);
   font-size: 0.9rem;
   line-height: 1.45;
 }
@@ -462,7 +436,7 @@ body {
   border: none;
   border-radius: 6px;
   background: var(--accent);
-  color: Canvas;
+  color: var(--on-accent);
   cursor: pointer;
 }
 
@@ -496,8 +470,8 @@ body {
 }
 .seg__action:hover,
 .seg__action[aria-pressed='true'] {
-  color: var(--fg);
-  background: var(--surface);
+  color: var(--ink);
+  background: var(--tint);
 }
 .seg__original {
   display: block;
@@ -516,7 +490,7 @@ body {
 .setup-offer {
   margin: 0.5rem 0.75rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--muted, #888);
+  border: 1px solid var(--line);
   border-radius: 0.4rem;
 }
 .panel__sr {
@@ -534,7 +508,7 @@ body {
   border: 1px solid var(--line);
   border-left: 3px solid var(--accent);
   border-radius: 6px;
-  background: var(--surface);
+  background: var(--tint);
 }
 .offer[data-reason='never'] {
   border-left-color: var(--muted);
@@ -559,7 +533,7 @@ body {
 .job__button--primary {
   border-color: var(--accent);
   background: var(--accent);
-  color: Canvas;
+  color: var(--on-accent);
 }
 .seg__explain {
   display: block;
@@ -573,19 +547,11 @@ body {
   font-weight: 600;
   color: var(--accent);
 }
-/* The block of the page the pointer is over (hover link, M5-E1): the same amber as the page's highlight. */
+/* The block of the page the pointer is over (hover link, M5-E1): a fill a step stronger than hover that reaches past the text, no left border. */
 .seg[data-linked] {
-  background: rgba(255, 200, 0, 0.22);
-  box-shadow: -3px 0 0 rgba(255, 200, 0, 0.8);
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+  background: var(--pressed);
+  box-shadow: 0 0 0 6px var(--pressed);
+  border-radius: var(--radius-s);
 }
 
 /* Keyboard (plan M5-E10): a visible focus on everything the keyboard reaches, a block's ring in the panel's accent. */
@@ -630,7 +596,7 @@ body {
   padding: 0 5px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  background: var(--surface);
+  background: var(--tint);
 }
 /* Best: a review refined the block (a quiet dot after its text); Show draft puts the draft under it. */
 .seg__refined {
@@ -680,8 +646,8 @@ body {
   box-sizing: border-box;
   width: 100%;
   font: inherit;
-  color: var(--fg);
-  background: var(--surface);
+  color: var(--ink);
+  background: var(--tint);
   border: 1px solid var(--accent);
   border-radius: 4px;
   padding: 4px 6px;
@@ -708,7 +674,7 @@ body {
   padding: 4px 6px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  background: var(--surface);
+  background: var(--tint);
 }
 @media (prefers-reduced-motion: reduce) {
   .seg__actions {

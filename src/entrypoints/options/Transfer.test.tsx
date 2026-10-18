@@ -96,6 +96,16 @@ describe('TransferSection', () => {
     expect(await readApiKey(t.api, 'gw')).toBe('sk-IN');
   });
 
+  it('previews the reading settings in a file, and writes them only on confirm', async () => {
+    const t = fakeApi();
+    render(<TransferSection api={t.api} />, root);
+    await pick(JSON.stringify({ format: EXPORT_FORMAT, formatVersion: 1, settings: { reading: { theme: 'paper', typeface: 'serif', size: 18, width: 'narrow' } } }));
+    expect(q('import-summary').textContent).toContain('Reading settings');
+    expect(t.sync.has('reading')).toBe(false);
+    await click('import-apply');
+    expect(t.sync.get('reading')).toEqual({ theme: 'paper', typeface: 'serif', size: 18, width: 'narrow' });
+  });
+
   it('says why a file is refused, and changes nothing', async () => {
     const t = fakeApi();
     render(<TransferSection api={t.api} />, root);

@@ -74,11 +74,11 @@ other `http://` address is refused, so page text never crosses the internet unen
 | Where | What | Leaves the device? |
 |---|---|---|
 | Extension local storage (`storage.local`) | Your API keys, one per connection. The first-run notice acknowledgement and the setup guide's state. The diagnostics log. The usage and cost totals (token counts and estimated cost by month, day and model profile). The "Use corrections from other sites" setting. Settings too large to sync. | No. Keys are never synced. |
-| Extension sync storage (`storage.sync`) | Connections (name, address, protocol), models, routing and site rules, preferences (languages, style, per-page token budget), the quality mode, your glossary, and your allowlist and never-translate lists. No keys and no page text. | Only through Chrome Sync, if you have it turned on: it goes to your Google account, with your other Chrome devices. |
+| Extension sync storage (`storage.sync`) | Connections (name, address, protocol), models, routing and site rules, preferences (languages, style, per-page token budget), the quality mode, the reading settings (theme, typeface, text size, line width), your glossary, and your allowlist and never-translate lists. No keys and no page text. | Only through Chrome Sync, if you have it turned on: it goes to your Google account, with your other Chrome devices. |
 | Browser database (IndexedDB `translate-side-memory`) | Your corrections: the original text of the block, your version, the languages, when you made it, and the site (its address up to the host) you made it on. Whether it was made on a site that is local-only is also kept. At most 5,000 entries. | No, never synced. Only through the export file you save yourself (see "Your corrections"). |
 | Browser database (IndexedDB `translate-side-cache`) | Translations already made (the translated text, found again by a hash of the source text and settings), and the short document briefs, each found by the page address it was made for. At most 50 MB of translations and 200 briefs, oldest unused first. | No. |
 | Per-session storage (`storage.session`) | Per tab: whether the page could be read, the selected text and its page address for a context-menu translation, and a per-tab provider choice. | No. Chrome clears it when the browser closes. |
-| The panel's own `localStorage` | One on/off setting (whether the panel follows the page's scroll). | No. |
+| The extension pages' own `localStorage` | Whether the panel follows the page's scroll, and a copy of the reading settings on each extension page (panel, settings, setup guide), read before the page draws so it opens in your theme. | No. |
 
 Keys are saved as Chrome stores any extension data: in your browser profile on disk, not encrypted by the extension.
 Anyone who can read your computer account can read them. Settings › Export and import settings writes the settings to a file you
@@ -187,7 +187,9 @@ Stored on the device
 - Cache: src/shared/cache.ts:12-15 (database, 50 MB, 200 briefs), :17-21 (a cached segment holds the translation),
   :100-107 (a brief row keyed by the brief key, which contains the page address).
 - storage.session: src/shared/access.ts:52, src/shared/snippet.ts:12-54, src/shared/providers.ts:692-705 (tab route).
-- localStorage: src/entrypoints/sidepanel/follow.ts:16.
+- localStorage: src/entrypoints/sidepanel/follow.ts:16 (scroll follow), src/ui/theme.ts (READING_MIRROR, the copy of the
+  reading settings) and public/theme-boot.js (reads it before the first paint).
+- Reading settings in storage.sync: src/shared/reading.ts (READING_KEY).
 - Export leaves keys out by default: src/shared/portable.ts:1-10.
 
 Corrections and examples

@@ -1,25 +1,6 @@
-:root {
-  color-scheme: light dark;
-  font-family: system-ui, sans-serif;
-  font-size: 14px;
-  --muted: #6b6b70;
-  --line: #e2e2e6;
-  --warn: #8a6d00;
-  --ok: #1d7a35;
-  --code-bg: #f2f2f5;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --muted: #9a9aa2;
-    --line: #34343a;
-    --warn: #d6b44a;
-    --ok: #5cc27a;
-    --code-bg: #26262b;
-  }
-}
-body {
-  margin: 0;
-}
+@import '@/ui/tokens.css';
+@import '@/ui/base.css';
+
 .opt {
   max-width: 640px;
   padding: 16px;
@@ -61,7 +42,7 @@ body {
   border: none;
   background: none;
   padding: 0;
-  color: LinkText;
+  color: var(--accent);
   text-decoration: underline;
   cursor: pointer;
   font: inherit;
@@ -81,7 +62,7 @@ body {
   padding: 4px 0;
 }
 .opt__term {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .opt__row textarea,
 .opt__row select {
@@ -199,7 +180,7 @@ body {
   flex: 1;
   white-space: pre-wrap;
   word-break: break-all;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   background: var(--code-bg);
   padding: 4px 6px;
   border-radius: 4px;
@@ -295,7 +276,7 @@ body {
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-all;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
   background: var(--code-bg);
   padding: 6px 8px;

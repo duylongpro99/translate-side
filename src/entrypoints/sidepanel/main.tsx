@@ -1,5 +1,6 @@
 import { render } from 'preact';
 import { browser } from 'wxt/browser';
+import { applyThemeSync, followTheme } from '@/ui/theme';
 import { i18n } from '#i18n';
 import { App } from './App.tsx';
 import { ErrorBoundary } from './ErrorBoundary.tsx';
@@ -10,6 +11,10 @@ import { injectInto } from '@/shared/inject';
 import { autoTranslates } from '@/shared/sites';
 import { closePanel, listenForCloseRequests } from './toggle.ts';
 import './style.css';
+
+// The theme first, from the synchronous mirror, so the first paint is already in it; storage.sync then reconciles.
+applyThemeSync();
+followTheme(browser);
 
 // The page's title and language follow the browser's UI language (the static ones in index.html are the English default).
 document.title = i18n.t('panel.appName');

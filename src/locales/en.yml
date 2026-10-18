@@ -521,6 +521,7 @@ options:
       n: "Per-site models: $1 rules added or replaced."
     prefs: "Preferences: the ones in the file replace yours."
     quality: "Quality: the mode and options in the file replace yours."
+    reading: "Reading settings: the theme, typeface, size and line width in the file replace yours."
     glossary:
       1: "Glossary: 1 entry added or replaced; yours stay."
       n: "Glossary: $1 entries added or replaced; yours stay."
@@ -744,6 +745,7 @@ options:
     ignorePref: "Ignored the preference \"{name}\": not a valid value."
     skipRouting: "Skipped the routing: it names no valid model to translate with."
     skipQuality: "Skipped the quality setting: it could not be read."
+    skipReading: "Skipped the reading settings: they could not be read."
     dropRoutingIds: "Dropped model ids in the routing that are not valid."
     cappedConnections: "The file lists {count} connections; only the first {max} were read."
     cappedProfiles: "The file lists {count} model profiles; only the first {max} were read."
