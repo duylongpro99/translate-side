@@ -21,7 +21,7 @@ A fresh session resumes from this file alone.
 | 2 | Panel chrome: control row, popovers, menu, progress | **Accepted 2026-10-18 10:45** | 1bb2a02 |
 | 3 | Reading view: typography, rhythm, block states, scripts | **Accepted 2026-10-18 11:35** (pnpm check, e2e 48 passed) | see git log |
 | 4 | Options page on the design system | **Accepted 2026-10-18 12:30** (pnpm check, e2e 48 passed) | see git log |
-| 5 | Onboarding on the design system | Pending | |
+| 5 | Onboarding on the design system | **Accepted 2026-10-18 13:05** (pnpm check, e2e 49 passed) | see git log |
 | 6 | Verification, screenshots, docs and 1.2.0 RC | Pending | |
 
 ## Decisions
@@ -173,6 +173,23 @@ A fresh session resumes from this file alone.
 
 - Phase 4 checks: e2e 48 passed. One `pnpm check` run failed a timing test in `sync.test.tsx` (a 100 ms follow
   window) under the full parallel coverage run; it passed five runs alone and two more full coverage runs. Watched.
+
+## Phase 5 log
+
+- Hook list: `reports/phase-05-hooks.md` in the plan folder; every id, test id and the heading focus kept.
+- Step numbers become checks once done; the path rows keep their structure (no select inside a label, as the
+  tests require) and are restyled as hairline rows; the sample's translation takes the reader's typeface and size.
+  Finish is the primary button only once the sample is done; until then Translate sample is, so each step has one.
+- `assets/onboarding.css` measured again (754 B plus 10%): no rule in it duplicates the settings stylesheet.
+- Visual review of steps 1 and 2 in light, paper and dark at 600px: flat rows, no pills, tokens only. Step 3 needs a
+  working connection in the harness and was not viewed; a unit test now checks the sample's typeface, size and lang,
+  the primary moving to Finish once the sample is done, and the done steps' checks.
+- Review (`reports/review-phase-05.md`): the blocker (the sample's translation drawn italic in the quote color by
+  the original's more specific rule) fixed; an Arabic or Hebrew sample gets `dir="rtl"`; the phase numbers left the
+  design doc. Accepted gap: the sample does not carry the panel's per-script font rules (the onboarding stylesheet
+  budget is tight and the sample is one paragraph); the system fallback draws every script.
+- Phase 5 checks: one `pnpm check` run failed an unrelated timing unit test (`src/engine/context/memory.test.ts`,
+  5,000 entries ranked in under 50 ms, 302 ms under load); the next full run passed.
 
 ## Open items
 

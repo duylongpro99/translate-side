@@ -210,6 +210,17 @@ The translated text in the panel (`.segments`, `SegmentList.tsx`).
   connection's state is a dot and a word (Connected, failed), never color alone. A tag beside a name
   is a muted word, not a pill.
 
+## Onboarding
+
+Onboarding loads the settings page's stylesheet (tokens, base, fields) and adds only its layout in
+`onboarding/style.css`. The steps are a numbered list: the current step has `aria-current="step"`
+and a filled accent number, a done step a check in `--ok`. The path choice is a set of hairline
+rows, each a native radio with a large label and one line under it; the chosen row is tinted and
+shows its preset `Select`. The sample's translation is drawn in the reader's typeface and size
+from the reading settings. The privacy acknowledgement is a one-shot button inside a `warn`
+`Notice` (an alert). Each step has one primary button (Next, Translate sample, then Finish once the
+sample is done); Back and Skip are `quiet`.
+
 ## Reading settings
 
 `src/shared/reading.ts` holds the reading settings as their own `storage.sync` item, `reading`.
@@ -230,9 +241,8 @@ a newer version wrote survive it.
 
 ## Anti-patterns
 
-None of these may be added, and each phase's review checks the UI against this list. Two older
-patterns remain until their phase replaces them: the panel's notices with a left accent border
-(the privacy notice, phase 3) and the onboarding step pills (phase 5).
+None of these may be added, and each phase's review checks the UI against this list. The older
+left-border notices and the onboarding step pills are gone.
 
 - Gradients.
 - Glassmorphism: blur, translucent panels.
