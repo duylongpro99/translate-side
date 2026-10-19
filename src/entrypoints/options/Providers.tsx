@@ -730,6 +730,7 @@ export function ConnectionForm({
   retestMs,
   initialPreset,
   hideCancel = false,
+  routeOnSave = false,
   onDone,
 }: {
   api: Browser;
@@ -741,6 +742,8 @@ export function ConnectionForm({
   initialPreset?: PresetId | undefined;
   /** Onboarding has its own Back: the form's Cancel would do the same. */
   hideCancel?: boolean;
+  /** Onboarding: the saved model becomes the translate route, even over one chosen before. */
+  routeOnSave?: boolean;
   onDone: (text?: string) => void;
 }) {
   const routedModel = editing ? loaded.settings.profiles.find((p) => p.connectionId === editing.id && p.id === loaded.settings.routing.translate)?.model : undefined;
@@ -868,7 +871,7 @@ export function ConnectionForm({
     const profile = model ? toProfile(connection, model, newId(), loaded.settings.profiles, models, dual ? protocol : undefined) : undefined;
     const movedFrom = editing && editing.baseUrl !== connection.baseUrl ? editing.baseUrl : undefined;
     void (async () => {
-      const { routed } = await saveSetup(api, { connection, apiKey: draft.authStyle === 'none' ? undefined : draft.apiKey, profile });
+      const { routed } = await saveSetup(api, { connection, apiKey: draft.authStyle === 'none' ? undefined : draft.apiKey, profile, route: routeOnSave });
       // A connection moved to another origin gives back the old one's permission (§4.3.4), and
       // what a test of another URL was granted.
       if (movedFrom && safeOrigin(movedFrom) !== safeOrigin(connection.baseUrl)) await revokeUnusedOrigin(api, movedFrom, id);

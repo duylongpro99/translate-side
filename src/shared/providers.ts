@@ -553,6 +553,8 @@ export interface SetupInput {
   apiKey?: string | undefined;
   /** The profile for the chosen model; none when only the connection changed. */
   profile?: ModelProfile | undefined;
+  /** Make the profile the translate route whatever was routed before: onboarding, where this setup is the user's choice. */
+  route?: boolean | undefined;
 }
 
 /**
@@ -560,8 +562,8 @@ export interface SetupInput {
  * profile for the chosen model (§4.3.3 step 5). The profile becomes the translate route when it is
  * the first one: the user never chose a route (no stored `routing`) and the route in effect cannot
  * run on this device (no key), as on a fresh install. A device already translating with a
- * migrated or default route keeps it until the user picks another (carry-over B4). Returns
- * whether the route was set.
+ * migrated or default route keeps it until the user picks another (carry-over B4). With `route`
+ * it becomes the translate route regardless. Returns whether the route was set.
  */
 export async function saveSetup(api: Browser, input: SetupInput): Promise<{ routed: boolean }> {
   const before = await readProviderSettings(api);
@@ -569,9 +571,11 @@ export async function saveSetup(api: Browser, input: SetupInput): Promise<{ rout
   await saveConnection(api, input.connection);
   if (!input.profile) return { routed: false };
   await saveProfile(api, input.profile);
-  if (before.routingStored) return { routed: false };
-  const current = resolveRouteIn(before, 'translate');
-  if (current.ok && current.connection.id !== input.connection.id && (await isUsable(api, current.connection))) return { routed: false };
+  if (!input.route) {
+    if (before.routingStored) return { routed: false };
+    const current = resolveRouteIn(before, 'translate');
+    if (current.ok && current.connection.id !== input.connection.id && (await isUsable(api, current.connection))) return { routed: false };
+  }
   await saveRouting(api, { ...before.routing, translate: input.profile.id });
   return { routed: true };
 }

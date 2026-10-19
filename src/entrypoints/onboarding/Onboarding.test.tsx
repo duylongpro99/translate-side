@@ -12,7 +12,9 @@ import type { Protocol } from '@/llm/types';
 import { markOnboarding, ONBOARDING_KEY, ONBOARDING_PAGE, openOnboarding, readOnboarding } from '@/shared/onboarding';
 import { PRIVACY_KEY, PRIVACY_NOTICE_VERSION } from '../sidepanel/privacy.ts';
 import { Jobs } from '../sidepanel/jobs.ts';
-import { resolveRoute } from '@/shared/providers';
+import { resolveRoute, saveRouting } from '@/shared/providers';
+import { DEFAULT_PROFILE } from '@/shared/settings';
+import { translateClient } from '../sidepanel/route.ts';
 import { Onboarding } from './Onboarding.tsx';
 
 type Api = Parameters<typeof Onboarding>[0]['api'];
@@ -269,6 +271,19 @@ describe('onboarding (M4-E13)', () => {
     click(t('onboarding-finish'));
     await waitFor(() => t('onboarding-closed') !== null);
     expect(await readOnboarding(f.api)).toBe('done');
+  });
+
+  it('the model saved here becomes the route even over one chosen before, so the sample uses the key just entered', async () => {
+    const f = fakeApi();
+    // A route stored earlier (the panel's model switcher, an import, an older install): the built-in APIBOX, with no key.
+    await saveRouting(f.api, { translate: DEFAULT_PROFILE.id });
+    await mount(f);
+    await toStep3();
+    await connectAnthropic();
+    const route = await resolveRoute(f.api, 'translate');
+    expect(route.ok && route.profile.model).toBe('claude-haiku-4-5');
+    const client = await translateClient(f.api);
+    expect(client.ok ? client.profile.model : client.error.message).toBe('claude-haiku-4-5');
   });
 
   it('with the notice already acknowledged the sample translates at once; an English reader gets a Spanish sample', async () => {

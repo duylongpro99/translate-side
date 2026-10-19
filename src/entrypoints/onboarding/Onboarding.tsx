@@ -228,6 +228,8 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
                 retestMs={retestMs}
                 initialPreset={presetId}
                 hideCancel
+                // The sample translates through what was just set up, not a route chosen before.
+                routeOnSave
                 onDone={(text) => {
                   if (text === undefined) return setStep(2);
                   void reload();
