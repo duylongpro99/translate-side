@@ -178,6 +178,8 @@ panel:
     actionsFor: Thao tác cho "$1"
     original: Bản gốc
     hideOriginal: Ẩn bản gốc
+    originalTitle: Hiện văn bản gốc bên dưới bản dịch này để so sánh
+    hideOriginalTitle: Ẩn văn bản gốc bên dưới bản dịch này
     showOriginalFor: "Hiện bản gốc: \"$1\""
     hideOriginalFor: "Ẩn bản gốc: \"$1\""
     retranslate: Dịch lại
@@ -192,6 +194,7 @@ panel:
     copied: Đã sao chép
     copyFailed: Không sao chép được
     copyFor: "Sao chép: \"$1\""
+    copyTitle: Sao chép đoạn này dưới dạng văn bản thuần
     basic: bản dịch cơ bản
     basicTitle: Được dịch ngay trên thiết bị này bởi $1 vì không kết nối được mô hình nào. Bản dịch này sát từng chữ; hãy dịch lại khi mô hình hoạt động trở lại.
     chromeTranslator: trình dịch tích hợp của Chrome

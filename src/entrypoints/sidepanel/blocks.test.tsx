@@ -298,7 +298,7 @@ describe('refined blocks (Best, DESIGN §5.2: the text is replaced and marked "r
   it('Show draft shows the draft the review replaced, under the text, and only where the draft is known', () => {
     const show = block('1').querySelector<HTMLButtonElement>('[data-testid=seg-draft]');
     expect(show?.textContent).toBe('Show draft');
-    expect(show?.title).toBe('Reviewed by big-model. Show the draft it replaced');
+    expect(show?.dataset.tip).toBe('Reviewed by big-model. Show the draft it replaced');
     // Refined from the cache (no draft kept) and not refined: no button.
     expect(block('2').querySelector('[data-testid=seg-draft]')).toBeNull();
     expect(block('3').querySelector('[data-testid=seg-draft]')).toBeNull();

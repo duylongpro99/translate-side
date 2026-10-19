@@ -118,6 +118,11 @@ export function copyText(seg: Segment, state: SegState | undefined): string {
   return plainText(parseMarkup(state?.text ?? seg.inlineMarkup, markerKinds(seg)));
 }
 
+/** A toolbar button's tooltip: its name (icon buttons only; a text button shows its own) over what it does. */
+function tip(description: string, name?: string) {
+  return { 'data-name': name, 'data-tip': description, 'aria-description': description };
+}
+
 async function writeClipboard(text: string): Promise<void> {
   if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
   throw new Error('no clipboard');
@@ -152,12 +157,13 @@ function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraf
   };
   // Icon buttons: the icon is a CSS mask and the name is aria-label. A state ("Copied", "Explain again") is also
   // said as hidden text and in the tooltip; with no state the button holds no text node (a toolbar per block adds up).
+  // Each button's tooltip is drawn by CSS from data-name and data-tip; aria-description says the same to a screen reader.
   const explainText = i18n.t(state?.explain?.status === 'loading' ? 'panel.segment.explaining' : state?.explain ? 'panel.segment.explainAgain' : 'panel.segment.explain');
   const copyWord = i18n.t(copied === 'ok' ? 'panel.segment.copied' : copied === 'failed' ? 'panel.segment.copyFailed' : 'panel.segment.copy');
   return (
     <span class="seg__actions" role="group" aria-label={i18n.t('panel.segment.actionsFor', [name])}>
       {done && onOriginal ? (
-        <button type="button" class="seg__action seg__action--text" data-testid="seg-original" aria-keyshortcuts="O" aria-pressed={original === true} aria-label={i18n.t(original ? 'panel.segment.hideOriginalFor' : 'panel.segment.showOriginalFor', [name])} onClick={() => onOriginal(seg.id)}>
+        <button type="button" class="seg__action seg__action--text" data-testid="seg-original" aria-keyshortcuts="O" aria-pressed={original === true} aria-label={i18n.t(original ? 'panel.segment.hideOriginalFor' : 'panel.segment.showOriginalFor', [name])} {...tip(i18n.t(original ? 'panel.segment.hideOriginalTitle' : 'panel.segment.originalTitle'))} onClick={() => onOriginal(seg.id)}>
           {original ? i18n.t('panel.segment.hideOriginal') : i18n.t('panel.segment.original')}
         </button>
       ) : null}
@@ -168,7 +174,7 @@ function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraf
           data-testid="seg-draft"
           aria-pressed={draft === true}
           aria-label={i18n.t(draft ? 'panel.segment.hideDraftFor' : 'panel.segment.showDraftFor', [name])}
-          title={i18n.t('panel.segment.draftTitle', [state.reviewModel ?? ''])}
+          {...tip(i18n.t('panel.segment.draftTitle', [state.reviewModel ?? '']))}
           onClick={() => onDraft(seg.id)}
         >
           {draft ? i18n.t('panel.segment.hideDraft') : i18n.t('panel.segment.showDraft')}
@@ -181,14 +187,14 @@ function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraf
           data-testid="seg-retranslate"
           aria-keyshortcuts="R"
           aria-label={i18n.t('panel.segment.retranslateFor', [name])}
-          title={i18n.t('panel.segment.retranslateTitle')}
+          {...tip(i18n.t('panel.segment.retranslateTitle'), i18n.t('panel.segment.retranslate'))}
           // An edit is replaced only after the user confirms it.
           onClick={() => (state.edited && actions.discardEdit ? ui.confirm(seg.id) : actions.retranslate?.(seg.id))}
         >
         </button>
       ) : null}
       {done && seg.translate && actions?.edit ? (
-        <button type="button" class="seg__action seg__action--icon seg__action--edit" data-testid="seg-edit" aria-label={i18n.t('panel.segment.editFor', [name])} title={i18n.t('panel.segment.editTitle')} onClick={() => ui.edit(seg.id)}>
+        <button type="button" class="seg__action seg__action--icon seg__action--edit" data-testid="seg-edit" aria-label={i18n.t('panel.segment.editFor', [name])} {...tip(i18n.t('panel.segment.editTitle'), i18n.t('panel.segment.edit'))} onClick={() => ui.edit(seg.id)}>
         </button>
       ) : null}
       {done && actions?.explain ? (
@@ -198,14 +204,14 @@ function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraf
           data-testid="seg-explain"
           aria-keyshortcuts="E"
           aria-label={i18n.t('panel.segment.explainFor', [name])}
-          title={`${explainText}. ${i18n.t('panel.segment.explainTitle')}`}
+          {...tip(i18n.t('panel.segment.explainTitle'), explainText)}
           disabled={state?.explain?.status === 'loading'}
           onClick={() => actions.explain?.(seg.id)}
         >
           {state?.explain ? <span class="sr-only">{explainText}</span> : null}
         </button>
       ) : null}
-      <button type="button" class={`seg__action seg__action--icon seg__action--${copied === 'ok' ? 'copied' : 'copy'}`} data-testid="seg-copy" aria-keyshortcuts="C" aria-label={i18n.t('panel.segment.copyFor', [name])} title={copyWord} onClick={copy}>
+      <button type="button" class={`seg__action seg__action--icon seg__action--${copied === 'ok' ? 'copied' : 'copy'}`} data-testid="seg-copy" aria-keyshortcuts="C" aria-label={i18n.t('panel.segment.copyFor', [name])} {...tip(i18n.t('panel.segment.copyTitle'), copyWord)} onClick={copy}>
         {copied ? <span class="sr-only">{copyWord}</span> : null}
       </button>
     </span>

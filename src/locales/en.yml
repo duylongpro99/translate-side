@@ -181,6 +181,8 @@ panel:
     actionsFor: Actions for "$1"
     original: Original
     hideOriginal: Hide original
+    originalTitle: Show the source text under this translation, to compare the two
+    hideOriginalTitle: Hide the source text under this translation
     showOriginalFor: "Show original: \"$1\""
     hideOriginalFor: "Hide original: \"$1\""
     retranslate: Retranslate
@@ -195,6 +197,7 @@ panel:
     copied: Copied
     copyFailed: Couldn't copy
     copyFor: "Copy: \"$1\""
+    copyTitle: Copy this block as plain text
     basic: basic translation
     basicTitle: Translated on this device by $1, because no model could be reached. It is literal; Retranslate when the model is back.
     chromeTranslator: Chrome's built-in translator

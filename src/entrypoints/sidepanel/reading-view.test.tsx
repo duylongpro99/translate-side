@@ -58,12 +58,13 @@ describe('block states', () => {
 
   it('the toolbar buttons are icons that keep their word for screen readers and tests', async () => {
     await draw({ states: new Map([['a', { status: 'final', text: 'Một', revision: 1 }]]), actions: { retry: vi.fn(), retranslate: vi.fn(), explain: vi.fn() } });
-    const copy = block('a').querySelector('[data-testid=seg-copy]');
+    const copy = block('a').querySelector<HTMLElement>('[data-testid=seg-copy]');
     expect(copy?.classList.contains('seg__action--icon')).toBe(true);
     // With no state the name is aria-label only; a state ("Copied") is said as hidden text too.
     expect(copy?.textContent).toBe('');
     expect(copy?.getAttribute('aria-label')).toBe('Copy: "Source a"');
-    expect(copy?.getAttribute('title')).toBe('Copy');
+    expect(copy?.dataset.name).toBe('Copy');
+    expect(copy?.dataset.tip).toBe('Copy this block as plain text');
     expect(block('a').querySelector('[data-testid=seg-retranslate]')?.classList.contains('seg__action--retranslate')).toBe(true);
   });
 });
