@@ -104,10 +104,13 @@ connection.
 ## Remote code
 
 No. All code is in the package. The extension loads no remote scripts, no remote modules and no remote fonts.
+Chrome's on-device translation models (its Translator and Prompt APIs) are downloaded and run by Chrome itself, after
+the user's click, as Chrome components; they are not code of the extension and need no permission.
 
 ## Data
 
 Page text and the user's glossary go only to the provider the user chose (see the [privacy policy](../privacy.md)).
+With no provider set up, Chrome's on-device APIs translate the page and no page text leaves the device.
 There is no developer server, no telemetry and no account.
 
 <!--
@@ -122,15 +125,15 @@ source, not a progress log).
 - activeTab / scripting on a gesture: src/shared/inject.ts:25 (injectInto, files: the bundled content script),
   src/shared/panel.ts:82-102. Never injected into restricted pages: src/shared/denylist.ts:31 (classifyUrl).
 - contextMenus: src/shared/panel.ts:89-97 (one item, contexts page and selection), :100+ (onClicked).
-- storage: src/shared/settings.ts:182-198 (keys, storage.local), src/shared/providers.ts:48-62 (sync records),
+- storage: src/shared/settings.ts:205-223 (keys, storage.local), src/shared/providers.ts:49-63 (sync records),
   src/shared/access.ts:52 and src/shared/snippet.ts:50 (storage.session), src/shared/diagnostics.ts:133 and
   src/shared/spend.ts:255 (storage.local).
-- Per-origin requests on a click, given back on removal: src/entrypoints/options/Providers.tsx:818 (Test connection),
-  src/entrypoints/sidepanel/translator.ts:529 and :555 (Grant access), src/shared/sites.ts:167 (allowlist),
-  :187 and src/shared/providers.ts:673 (permissions.remove), src/shared/settings.ts:206 (originPattern: one origin).
+- Per-origin requests on a click, given back on removal: src/entrypoints/options/Providers.tsx:892 (Test connection),
+  src/entrypoints/sidepanel/translator.ts:573 and :609 (Grant access), src/shared/sites.ts:167 (allowlist),
+  :187 and src/shared/providers.ts:706 (permissions.remove), src/shared/settings.ts:231 (originPattern: one origin).
 - Plain-HTTP rule: src/llm/endpoint.ts:31 (isPlainHttpRefused, with isLoopbackHost and isPrivateNetworkHost),
   src/llm/errors.ts:18 and :31 (checkBaseUrl, used by testConnection and by every request through preflight in
-  src/llm/sdk.ts:54), src/shared/settings.ts:225 (resolveConnection, for stored, imported or synced connections),
+  src/llm/sdk.ts:54), src/shared/settings.ts:245 (resolveConnection, for stored, imported or synced connections),
   src/entrypoints/options/Providers.tsx (save and Test refuse it; the unencrypted note is shown for a private-network
   address). Tests: src/llm/endpoint.test.ts, src/shared/settings.test.ts, src/shared/connect.test.ts,
   src/entrypoints/options/Providers.test.tsx.

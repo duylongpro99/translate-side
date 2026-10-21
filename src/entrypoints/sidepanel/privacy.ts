@@ -1,7 +1,9 @@
 // First-run privacy notice (DESIGN.md §8, plan M3-E10): page text goes to the chosen provider, so
 // the panel says so once before it sends anything. Until the notice is acknowledged, a page is read
 // (locally) and shown as the original, but no translation starts; the work waiting for it runs as
-// soon as it is acknowledged. The acknowledgement is kept in storage.local (this device): it is not
+// soon as it is acknowledged. The jobs ask for it once their route is resolved (jobs.ts), and only a
+// route that sends text off the device waits: on-device translation needs no notice, so the panel
+// shows it only while something waits (`waiting`). The acknowledgement is kept in storage.local (this device): it is not
 // a secret, but which provider gets the text is a per-device choice until settings sync (M4).
 import type { browser } from 'wxt/browser';
 
@@ -41,6 +43,12 @@ export class PrivacyGate {
     return this.current;
   }
 
+  /** Is any work held for the notice (the panel shows it only then)? */
+  get pending(): boolean {
+    return this.waiting.size > 0;
+  }
+
+  /** Called when the state changes, and when work starts or stops waiting (`pending`). */
   subscribe(fn: (state: PrivacyState) => void): () => void {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
@@ -49,14 +57,22 @@ export class PrivacyGate {
   /** Runs `fn` now if the notice was acknowledged, else when it is. A later call with the same key replaces a held one. */
   whenAcknowledged(key: string, fn: () => void): void {
     if (this.current === 'acknowledged') {
-      this.waiting.delete(key);
+      this.forget(key);
       fn();
-    } else this.waiting.set(key, fn);
+      return;
+    }
+    const was = this.waiting.size;
+    this.waiting.set(key, fn);
+    if (was === 0) this.notify();
   }
 
   /** Drops held work (its page or tab went away). */
   forget(key: string): void {
-    this.waiting.delete(key);
+    if (this.waiting.delete(key) && this.waiting.size === 0) this.notify();
+  }
+
+  private notify(): void {
+    for (const fn of this.listeners) fn(this.current);
   }
 
   /** The notice's button. Releases the held work at once, then persists. */
@@ -68,10 +84,9 @@ export class PrivacyGate {
   private set(state: PrivacyState): void {
     if (state === this.current) return;
     this.current = state;
-    for (const fn of this.listeners) fn(state);
-    if (state !== 'acknowledged') return;
-    const held = [...this.waiting.values()];
-    this.waiting.clear();
+    const held = state === 'acknowledged' ? [...this.waiting.values()] : [];
+    if (state === 'acknowledged') this.waiting.clear();
+    this.notify();
     for (const fn of held) fn();
   }
 }

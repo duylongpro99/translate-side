@@ -6,6 +6,8 @@
 import type { browser } from 'wxt/browser';
 import { i18n } from '#i18n';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
+import { NANO_MODEL } from '@/llm/chrome-builtin';
+import { CHROME_TRANSLATOR_MODEL } from '@/llm/chrome-translator';
 import { isPlainHttpRefused } from '@/llm/endpoint';
 import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS, GEMINI_OPENAI_BASE_URL } from '@/llm/presets';
 import type { Protocol, AuthStyle, LLMErrorKind, Quirks, ResolvedConnection } from '@/llm/types';
@@ -169,6 +171,28 @@ export const ANTHROPIC_HAIKU_PROFILE: ModelProfile = {
 /** The connection and profile the extension uses (M2-D11, M2-D16). */
 export const DEFAULT_CONNECTION = APIBOX_CONNECTION;
 export const DEFAULT_PROFILE = APIBOX_QWEN_PROFILE;
+
+/**
+ * The on-device route (src/llm/on-device.ts): Chrome's own models, run when no provider can. Never
+ * stored or synced, so it is not in the built-in lists below; no base URL, no key. One request at
+ * a time: both models run on this device.
+ */
+export const ON_DEVICE_CONNECTION: BuiltinConnection = {
+  id: 'chrome-on-device',
+  label: 'Chrome on-device',
+  presetId: 'chrome-builtin',
+  protocol: 'chrome-builtin',
+  baseUrl: '',
+  auth: { style: 'none' },
+  quirks: {},
+  status: 'ok',
+};
+
+/** Gemini Nano: a small context, so small chunks (S8 decides the final size). */
+export const NANO_PROFILE: ModelProfile = { id: 'chrome-nano', connectionId: ON_DEVICE_CONNECTION.id, model: NANO_MODEL, maxConcurrency: 1, chunkTokens: 1000 };
+
+/** Chrome's Translator: the `basic` strategy, block by block (chunks do not apply). */
+export const TRANSLATOR_PROFILE: ModelProfile = { id: 'chrome-translator', connectionId: ON_DEVICE_CONNECTION.id, model: CHROME_TRANSLATOR_MODEL, maxConcurrency: 1, chunkTokens: 1000 };
 
 /** The built-in connections and profiles: what the M1 → M4 migration seeds from (src/shared/providers.ts). */
 export const BUILTIN_CONNECTIONS: readonly BuiltinConnection[] = [APIBOX_CONNECTION, GEMINI_CONNECTION, ANTHROPIC_CONNECTION];

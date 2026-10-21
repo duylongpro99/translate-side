@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>S8 built-in AI</title>
+<style>
+  body { font: 13px/1.4 system-ui, sans-serif; margin: 8px; }
+  fieldset { margin: 0 0 8px; padding: 6px 8px; }
+  legend { font-weight: 600; }
+  label { display: inline-block; margin: 2px 8px 2px 0; }
+  input[type=text], input[type=number] { width: 4.5em; }
+  #pairs { width: 100%; box-sizing: border-box; }
+  button { margin: 2px 4px 2px 0; }
+  #log { font: 11px/1.35 ui-monospace, monospace; white-space: pre-wrap; word-break: break-word; border: 1px solid #ccc; padding: 4px; max-height: 45vh; overflow: auto; }
+  #log .err { color: #b00020; }
+  #status { font-weight: 600; }
+</style>
+<body>
+<fieldset>
+  <legend>Translator / detector (Q1, Q2, Q5, Q6)</legend>
+  <label>source <input id="src" type="text" value="en"></label>
+  <label>target <input id="tgt" type="text" value="vi"></label>
+  <label title="pairs checked by 'availability (all)'">pairs <input id="pairs" type="text" value="en-es en-ja en-vi ja-vi ja-en es-en en-de en-fr fr-vi"></label>
+  <div>
+    <button id="avail">availability (all)</button>
+    <button id="tr-click">create Translator (in click)</button>
+    <button id="tr-deferred">create Translator (deferred 10 s)</button>
+    <button id="bg">ask background to create Translator</button>
+  </div>
+  <label><input id="auto-avail" type="checkbox" checked> availability at panel load</label>
+  <label><input id="auto-create" type="checkbox"> create Translator + Nano at panel load (no click)</label>
+</fieldset>
+<fieldset>
+  <legend>Nano (Q2, Q3, Q4, Q5)</legend>
+  <label>Nano target <select id="nano-tgt"><option>es</option><option>en</option><option>ja</option><option>de</option><option>fr</option></select></label>
+  <label>chunk tokens <input id="chunk-tokens" type="number" value="1000" min="100" step="100"></label>
+  <label>chunks per fixture <input id="chunks" type="number" value="3" min="1"></label>
+  <div>
+    <button id="nano-click">create Nano</button>
+    <button id="nano-deferred">create Nano (deferred 10 s)</button>
+  </div>
+  <div>
+    <button id="q4-limits">Q4 limits</button>
+    <button id="q4-speed">Q4 speed (1,200-token chunk)</button>
+    <button id="q4-max">Q4 largest chunk</button>
+    <button id="q3-format">Q3 markers vs JSON</button>
+    <button id="stop">stop</button>
+  </div>
+</fieldset>
+<div><button id="copy">copy log as JSON</button> <button id="clear">clear log</button> <span id="status"></span></div>
+<div id="log"></div>
+<script src="probe.js"></script>
+<script src="engine.js"></script>
+<script src="sidepanel.js"></script>
+</body>
+</html>

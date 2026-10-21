@@ -484,7 +484,7 @@ describe('Jobs: contextual (plan M2-E1) and same-language skip (M2-E5)', () => {
     await jobs.start(1, 'd', doc(3, 700));
     const v = jobs.get(1) as JobView;
     expect(v.status).toBe('done');
-    expect(targets).toEqual([{ tabId: 1, url: expect.any(String), analyze: true }]);
+    expect(targets).toEqual([{ tabId: 1, url: expect.any(String), sourceLang: 'en', targetLang: 'vi', analyze: true }]);
     expect(v.brief).toEqual(BRIEF);
     expect(analyze.requests.length).toBeGreaterThan(0);
     expect(analyze.requests.every(isAnalyze)).toBe(true);

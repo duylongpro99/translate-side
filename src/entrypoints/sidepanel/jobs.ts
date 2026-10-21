@@ -36,6 +36,8 @@
 import { BASIC_ID, BASIC_SWITCH_STAGE, CONTEXT_STAGE, DRAFTS_STAGE, REFINE_ID, REVIEWED_REVISION, basic, briefCacheKey, contextual, estimateTokens, createDefaultPromptRegistry, createEngine, decideRetry, explain, normalizeBrief, refine, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy, type BasicSwitchInfo } from '@/engine/index';
 import type { ReviewReport, SnippetRequest } from '@/engine/types';
 import type { LLMClient, LLMError, LLMErrorKind, MTClient, NormalizedRequest } from '@/llm/types';
+import type { OnDeviceEngine } from '@/llm/on-device';
+import { needsActivation } from '@/llm/chrome-translator';
 import { BEST_MODE_RELEASED } from '@/shared/quality';
 import { keyScope, scopeHash, segmentKey, type CachedSegment, type TranslationCache } from '@/shared/cache';
 import { cleanEditText, createMemorySnapshots, examplesFor, memoryKey, NO_ORIGIN, type MemoryEntry, type MemorySnapshots, type TranslationMemory } from '@/shared/memory';
@@ -183,6 +185,16 @@ export interface JobView {
   localOnly?: string;
   /** Best asked for, but the review route cannot run (no key, no access…): this run goes on as Balanced, and says why. */
   reviewUnavailable?: LLMError;
+  /**
+   * Blocks failed because Chrome's Translator needs the reader's click for their pair first (a
+   * second language on a mixed page, found mid-run): the first such pair, for its turn-on button.
+   */
+  onDeviceSetup?: { engine: OnDeviceEngine; from: string; to: string };
+  /**
+   * The turn-on click's download for a pair (src/llm/on-device.ts prepareOnDevice): its progress,
+   * 0 to 1, or why it failed. Absent when none runs; the job runs again once it is done.
+   */
+  onDeviceDownload?: { engine: OnDeviceEngine; from: string; to: string; loaded: number; error?: string };
   /** Epoch ms: when this run started, when its first text became visible, when it ended. */
   startedAt: number;
   firstVisibleAt?: number;
@@ -391,6 +403,8 @@ export interface FallbackLink {
   client: LLMClient;
   profile: ModelProfile;
   connection?: JobConnection;
+  /** The link runs on the device (a stored Gemini Nano profile): kept when it stands in for a primary with no key. */
+  onDevice?: OnDeviceEngine;
 }
 
 /** A role's client for the routed profile, or why there is none. */
@@ -410,6 +424,11 @@ export type ClientResult =
       /** The local-only site rule (its pattern) that routed the page: no cloud link in `fallback` (§4.3.5). */
       localOnly?: string;
       /**
+       * The route runs on this device (src/llm/on-device.ts): Gemini Nano (`single-pass`) or Chrome's
+       * Translator (the `basic` strategy, `client` takes no prompt). The run has no analyze or review.
+       */
+      onDevice?: OnDeviceEngine;
+      /**
        * Resolves the `analyze` role's client (the document brief); called only when the run will
        * make an analyze call. Undefined from it = the translate client serves it (§4.3.1).
        */
@@ -423,6 +442,9 @@ export type ClientResult =
 export interface ClientTarget {
   tabId: number;
   url: string;
+  /** The page's languages: the on-device route needs the pair ('' = the page's language is not known). */
+  sourceLang?: string;
+  targetLang?: string;
   /** The run may make an analyze call (not single-pass, not a segment retry): give a resolver for that role too. */
   analyze?: boolean;
   /** The run reviews its drafts (`refine`): give a resolver for the `review` role too. */
@@ -458,9 +480,25 @@ function spendingProfile(job: Job, event: { role: string; model: string; client?
   return job.fallbackProfiles.find((p) => p.model === event.model) ?? (event.role === 'analyze' && job.analyzeProfile ? job.analyzeProfile : profile);
 }
 
+/**
+ * The first-run privacy notice (privacy.ts PrivacyGate, §8), as the jobs ask it: once the route is
+ * resolved, a route that sends text off the device waits until the notice is acknowledged.
+ */
+export interface PrivacyPort {
+  acknowledged(): boolean;
+  /** Runs `run` once acknowledged (now if it is); a later call with the same key replaces a held one. */
+  whenAcknowledged(key: string, run: () => void): void;
+  forget(key: string): void;
+}
+
 export interface JobDeps {
   /** Resolves the `translate` role (§4.3.5) for a page: key, host permission, profile. Called once per run. */
   translateClient: (target: ClientTarget) => Promise<ClientResult>;
+  /**
+   * The privacy notice, checked on the route each run resolves (a key added meanwhile can't send
+   * unasked). Absent: nothing waits (tests, the latency script).
+   */
+  privacy?: PrivacyPort;
   now?: () => number;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
   /** The engine's retry policy (default DEFAULT_RETRY_POLICY); the backoff and fallback notes follow the same one. */
@@ -607,6 +645,8 @@ export interface JobDoc {
 }
 
 interface Job {
+  /** The run is on the device (ClientResult.onDevice): its finals are cached, a basic one included. */
+  onDevice?: OnDeviceEngine;
   /**
    * The strategy this run runs, resolved once at its start (JobDeps.strategy, else the document's,
    * else PANEL_STRATEGY; `refine` without `best-mode`, or without a review route, is `contextual`).
@@ -1046,7 +1086,8 @@ export class Jobs {
 
     const signal = job.controller.signal;
     // A refine request asks for the review resolver too; it is called only if the run stays refine.
-    const routing = this.deps.translateClient({ tabId, url: doc.url, analyze: requested !== 'single-pass', ...(access ? { review: true } : {}) });
+    const target: ClientTarget = { tabId, url: doc.url, sourceLang: doc.sourceLang, targetLang: doc.targetLang, analyze: requested !== 'single-pass', ...(access ? { review: true } : {}) };
+    const routing = this.deps.translateClient(target);
     // The translation-memory gate is read here, once for this run, together with the snapshot and
     // the setting, while the route resolves; all of it raced against the cache timeout, so a slow
     // store never delays the first request. A timeout or an error means no examples for this run.
@@ -1072,15 +1113,21 @@ export class Jobs {
       delete job.unsettled;
       this.record(job, 'started');
     }
-    const refining = job.strategy === REFINE_ID;
-    const resolved = await routing;
-    if (signal.aborted || this.jobs.get(tabId) !== job) return;
+    const resolved = await this.cleared(routing, () => this.deps.translateClient(target), `page:${tabId}`, signal);
+    if (resolved === undefined || signal.aborted || this.jobs.get(tabId) !== job) return;
     if (resolved.connection) this.patch(tabId, job, { connection: resolved.connection });
     if (!resolved.ok) {
       this.finish(tabId, job, 'stopped', resolved.error);
       return;
     }
     const { client, profile } = resolved;
+    // On the device the route decides the strategy, before the cache is read (its scope names it):
+    // Gemini Nano translates single-pass, Chrome's Translator block by block; no brief, no review.
+    if (resolved.onDevice) {
+      job.onDevice = resolved.onDevice;
+      job.strategy = resolved.onDevice === 'nano' ? singlePass.id : BASIC_ID;
+    }
+    const refining = job.strategy === REFINE_ID;
     if (resolved.localOnly !== undefined) {
       job.localOnly = true;
       this.patch(tabId, job, { localOnly: resolved.localOnly });
@@ -1151,7 +1198,7 @@ export class Jobs {
     }
     // The analyze role is resolved only when the brief will be asked for: a kept or cached brief
     // means no analyze call, so its route must not stop the run.
-    const analyze = resolved.analyze && !job.view.brief ? await (analyzeAhead ?? resolved.analyze()) : undefined;
+    const analyze = resolved.analyze && !job.view.brief && !job.onDevice ? await (analyzeAhead ?? resolved.analyze()) : undefined;
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
     if (analyze && !analyze.ok) {
       if (analyze.connection) this.patch(tabId, job, { connection: analyze.connection });
@@ -1164,7 +1211,7 @@ export class Jobs {
     // The sending rules (src/shared/memory.ts examplesFor): the route decides what may leave the device.
     const looked = await memoryAhead;
     if (signal.aborted || this.jobs.get(tabId) !== job) return;
-    const examples = looked?.on ? examplesFor(looked.entries, { origin: originOf(doc.url), localOnly: resolved.localOnly !== undefined, acrossSites: looked.acrossSites }) : undefined;
+    const examples = looked?.on && !job.onDevice ? examplesFor(looked.entries, { origin: originOf(doc.url), localOnly: resolved.localOnly !== undefined, acrossSites: looked.acrossSites }) : undefined;
     const engineJob: TranslationJob = {
       doc: {
         url: doc.url,
@@ -1192,9 +1239,9 @@ export class Jobs {
         maxConcurrency: profile.maxConcurrency,
         chunkTokens: profile.chunkTokens,
         // A resumed run keeps its brief: no second analyze call (and none made from the leftover segments only).
-        ...(job.view.brief ? { brief: job.view.brief } : {}),
-        // The chain ends in Chrome's Translator (M5-E7).
-        ...(resolved.basic ? { basicFallback: true } : {}),
+        ...(job.view.brief && !job.onDevice ? { brief: job.view.brief } : {}),
+        // The chain ends in Chrome's Translator (M5-E7); on Gemini Nano, what Nano can't do goes there too.
+        ...(resolved.basic ? { basicFallback: true, ...(job.onDevice === 'nano' ? { onDeviceSwitch: true } : {}) } : {}),
         ...(examples && examples.length > 0 ? { memory: examples } : {}),
       },
     };
@@ -1302,6 +1349,22 @@ export class Jobs {
     const job = this.jobs.get(tabId);
     if (!job?.view.limit) return;
     this.patch(tabId, job, { limit: { ...job.view.limit, failed: message } });
+  }
+
+  /**
+   * The turn-on click's download for the tab's job (JobView.onDeviceDownload); undefined clears it.
+   * `ready`: the pair is set up, so its turn-on prompt (JobView.onDeviceSetup) goes too.
+   */
+  onDeviceDownload(tabId: number, download: JobView['onDeviceDownload'], ready = false): void {
+    const job = this.jobs.get(tabId);
+    if (!job) return;
+    if (download) return this.patch(tabId, job, { onDeviceDownload: download });
+    if (!job.view.onDeviceDownload && !(ready && job.view.onDeviceSetup)) return;
+    const view = { ...job.view };
+    delete view.onDeviceDownload;
+    if (ready) delete view.onDeviceSetup;
+    job.view = view;
+    this.emit(tabId, view);
   }
 
   /** Translates what the tab's job left (cancelled, failed or stopped segments) for the same document. */
@@ -1478,8 +1541,9 @@ export class Jobs {
     };
     set({ status: 'loading' });
     try {
-      const resolved = await this.deps.translateClient({ tabId, url: job.doc.url });
-      if (signal.aborted) return set(undefined);
+      const route = () => this.deps.translateClient({ tabId, url: job.doc.url, sourceLang: job.doc.sourceLang, targetLang: job.doc.targetLang });
+      const resolved = await this.cleared(route(), route, `explain:${tabId}:${id}`, signal);
+      if (resolved === undefined || signal.aborted) return set(undefined);
       const limit = await this.deps.spendLimit?.().catch(() => undefined);
       if (signal.aborted) return set(undefined);
       if (limit) {
@@ -1489,6 +1553,8 @@ export class Jobs {
         return set({ status: 'failed', error: limitError(limit) });
       }
       if (!resolved.ok) return set({ status: 'failed', error: resolved.error });
+      // Chrome's Translator takes text, not a question.
+      if (resolved.onDevice === 'translator') return set({ status: 'failed', error: uiError('bad_request', 'Explain needs a language model', 'explainNeedsModel') });
       // Usage from a fallback link is priced with its own profile (as in redoSegment).
       job.fallbackProfiles = resolved.fallback?.map((l) => l.profile) ?? [];
       const { doc } = job;
@@ -1538,8 +1604,9 @@ export class Jobs {
     // A retranslated block keeps its earlier text on screen until the new one streams in.
     settle(mode === 'retry' ? { status: 'pending' } : { status: 'pending', ...(before.text === undefined ? {} : { text: before.text }) });
     try {
-      const resolved = await this.deps.translateClient({ tabId, url: job.doc.url });
-      if (signal.aborted) return settle(before);
+      const route = () => this.deps.translateClient({ tabId, url: job.doc.url, sourceLang: job.doc.sourceLang, targetLang: job.doc.targetLang });
+      const resolved = await this.cleared(route(), route, `redo:${tabId}:${id}`, signal);
+      if (resolved === undefined || signal.aborted) return settle(before);
       const limit = await this.deps.spendLimit?.().catch(() => undefined);
       if (signal.aborted) return settle(before);
       if (limit) {
@@ -1557,14 +1624,16 @@ export class Jobs {
       const request: SnippetRequest = {
         doc: { url: doc.url, title: doc.title, sourceLang: doc.sourceLang, targetLang: doc.targetLang, outline: [] },
         segments: [segment],
+        // On Chrome's Translator the block is translated as text (basic); on Nano single-pass, the snippet default.
+        ...(resolved.onDevice === 'translator' ? { strategy: BASIC_ID } : {}),
         options: {
           style: doc.style ?? 'natural',
           ...(doc.gloss ? { gloss: doc.gloss } : {}),
           glossary: [...(doc.glossary ?? [])],
           maxConcurrency: 1,
           chunkTokens: resolved.profile.chunkTokens,
-          ...(job.view.brief ? { brief: job.view.brief } : {}),
-          ...(resolved.basic ? { basicFallback: true } : {}),
+          ...(job.view.brief && !resolved.onDevice ? { brief: job.view.brief } : {}),
+          ...(resolved.basic ? { basicFallback: true, ...(resolved.onDevice === 'nano' ? { onDeviceSwitch: true } : {}) } : {}),
         },
       };
       let outcome: SegState | undefined;
@@ -1610,6 +1679,41 @@ export class Jobs {
     } finally {
       if (job.retrying.get(id) === controller) job.retrying.delete(id);
     }
+  }
+
+  /**
+   * The route this run may send text over (§8): `first`, when it stays on the device (no fallback
+   * link) or the privacy notice was acknowledged. Otherwise the run waits for the notice, then
+   * resolves the route again with `again`: settings changed while the notice waited (a local-only
+   * rule, another model) apply, and nothing goes out over the route resolved before. Undefined when
+   * `signal` aborted first.
+   */
+  private async cleared(first: Promise<ClientResult>, again: () => Promise<ClientResult>, key: string, signal: AbortSignal): Promise<ClientResult | undefined> {
+    let resolved = await first;
+    for (;;) {
+      if (signal.aborted) return undefined;
+      const gate = this.deps.privacy;
+      const offDevice = resolved.ok && (resolved.onDevice === undefined || (resolved.fallback?.length ?? 0) > 0);
+      if (!gate || !offDevice || gate.acknowledged()) return resolved;
+      if (!(await this.acknowledged(gate, key, signal))) return undefined;
+      resolved = await again();
+    }
+  }
+
+  /** Waits for the privacy notice; false when `signal` aborted first. */
+  private acknowledged(gate: PrivacyPort, key: string, signal: AbortSignal): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      if (signal.aborted) return resolve(false);
+      const onAbort = () => {
+        gate.forget(key);
+        resolve(false);
+      };
+      signal.addEventListener('abort', onAbort, { once: true });
+      gate.whenAcknowledged(key, () => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(!signal.aborted);
+      });
+    });
   }
 
   private stopRetries(job: Job): void {
@@ -1748,6 +1852,8 @@ export class Jobs {
         job.segs.set(event.id, next);
         if (!restored) this.remember(job, event.id, next);
         const patch: Partial<JobView> = { counts: count(job.segs) };
+        const pair = event.type === 'segment.failed' && job.view.onDeviceSetup === undefined ? needsActivation(event.error) : undefined;
+        if (pair) patch.onDeviceSetup = { engine: 'translator', from: pair.from, to: pair.to };
         if (job.view.firstVisibleAt === undefined && next.text) patch.firstVisibleAt = this.now();
         // A model translated a block again after Chrome's Translator took over in an earlier run of
         // the page (a lazy round, Retry: the note was carried over). See `basicCarried`.
@@ -1873,7 +1979,7 @@ export class Jobs {
         const hit = hits.get(job.keys.get(s.id) as string);
         // Best: an entry at the review revision was reviewed (refined, or kept as drafted); below it, it is a draft.
         if (hit && (!refining || hit.revision >= REVIEWED_REVISION)) {
-          job.segs.set(s.id, { status: 'final', text: hit.text, revision: hit.revision, attempt: hit.attempt, ...(hit.refined ? { refined: true as const } : {}) });
+          job.segs.set(s.id, { status: 'final', text: hit.text, revision: hit.revision, attempt: hit.attempt, ...(hit.refined ? { refined: true as const } : {}), ...(job.onDevice ? { model: run.model } : {}), ...(job.onDevice === 'translator' ? { basic: true as const } : {}) });
         } else {
           const draft = hit ?? (draftHits === undefined ? undefined : draftHits.get(draftKey(s) as string));
           if (!draft) continue;
@@ -1915,9 +2021,10 @@ export class Jobs {
 
   /** Stores the final a segment now shows (the highest revision only), or drops the entry of one that failed. */
   private remember(job: Job, id: string, state: SegState): void {
-    // A basic translation (M5-E7) is a stopgap: not stored, so the next run asks the model again.
-    // An edit is the user's, kept in the memory: the cache holds what the model translated.
-    if (state.basic || state.edited) return;
+    // A basic translation (M5-E7) is a stopgap: not stored, so the next run asks the model again;
+    // on the device it is the translation, stored under its own model (a provider set up later
+    // translates again). An edit is the user's, kept in the memory: the cache holds what the model translated.
+    if ((state.basic && job.onDevice === undefined) || state.edited) return;
     // A final is stored under the model that produced it (§7); a failure drops the job model's entry.
     // A review's final goes under the job's own key (the reviewer is in its scope), so a reload finds it.
     const key = state.status === 'final' && !state.refined ? this.keyFor(job, id, state.model) : job.keys.get(id);

@@ -7,6 +7,7 @@ import { createOpenAIAdapter } from '@/llm/openai';
 import { anthropicStream, openaiStream } from '@/llm/testing';
 import type { Protocol } from '@/llm/types';
 import { ProvidersSection } from './Providers.tsx';
+import { fakeBuiltinAI } from '@/llm/testing';
 import { overflowNotice } from '@/shared/sync-quota';
 
 const flags = vi.hoisted(() => ({ released: true }));
@@ -118,8 +119,8 @@ const byText = (sel: string, text: string) => $$(sel).find((e) => e.textContent?
 const submit = () => act(() => void $('[data-testid=connection-form]').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
 const rowOf = (label: string) => $$('[data-testid=connection-row]').find((r) => r.querySelector('.prov__name')?.textContent === label);
 
-async function mount(f: ReturnType<typeof fakeApi>, srv: ReturnType<typeof server>, retestMs = 3000) {
-  act(() => render(<ProvidersSection api={f.api} adapterFor={srv.adapterFor} retestMs={retestMs} />, root));
+async function mount(f: ReturnType<typeof fakeApi>, srv: ReturnType<typeof server>, retestMs = 3000, scope: object = {}) {
+  act(() => render(<ProvidersSection api={f.api} adapterFor={srv.adapterFor} retestMs={retestMs} scope={scope} />, root));
   await waitFor(() => $('[data-testid=connections]') !== null);
 }
 
@@ -726,5 +727,65 @@ describe('Settings ▸ Providers (DESIGN §4.3.3 A)', () => {
     click($('[data-testid=confirm-remove-yes]'));
     await waitFor(() => rowOf('Google Gemini') === undefined);
     expect($('[data-testid=providers-note]').textContent).toContain('It is built in and now hidden');
+  });
+});
+
+describe('Settings ▸ Providers: the on-device engine', () => {
+  const pick = (value: string) =>
+    act(() => {
+      const el = $<HTMLSelectElement>('[data-testid=route-on-device]');
+      el.value = value;
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  const option = (value: string) => $<HTMLOptionElement>(`[data-testid=route-on-device] option[value=${value}]`);
+
+  it('offers Auto, Gemini Nano and Chrome Translator, and saves the choice with the routing', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1 } });
+    const ai = fakeBuiltinAI({ nano: { en: 'available' } });
+    await mount(f, server(() => openaiList()), 3000, ai.scope);
+    await waitFor(() => !option('nano').disabled);
+    expect($<HTMLSelectElement>('[data-testid=route-on-device]').value).toBe('auto');
+    expect(option('translator').disabled).toBe(false);
+    expect(root.textContent).toContain('Removing “basic translation” from the fallback list turns Chrome Translator off');
+    await pick('translator');
+    await waitFor(() => (f.sync.get('routing') as { onDevice?: string } | undefined)?.onDevice === 'translator');
+  });
+
+  it('disables what this device or the fallback list cannot run, and says why', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1, routing: { translate: 'apibox-qwen', basicMigrated: true } } });
+    await mount(f, server(() => openaiList()), 3000, fakeBuiltinAI({ languageModel: false }).scope);
+    await waitFor(() => option('nano') !== null);
+    expect(option('nano').disabled).toBe(true);
+    expect(option('nano').textContent).toContain("can't run it");
+    // "basic translation" is not in the stored fallback list.
+    expect(option('translator').disabled).toBe(true);
+    expect(option('translator').textContent).toContain('off');
+    // No key and neither engine can run: the line says how to translate.
+    expect($('[data-testid=on-device-status]').textContent).toContain('put “basic translation” back');
+  });
+
+  it('with no key, says pages are translated on the device, or that the browser has no on-device translation', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1 } });
+    await mount(f, server(() => openaiList()), 3000, fakeBuiltinAI({}).scope);
+    await waitFor(() => $('[data-testid=on-device-status]') !== null);
+    expect($('[data-testid=on-device-status]').textContent).toContain('pages are translated on this device by Chrome');
+    act(() => render(null, root));
+    await mount(fakeApi({ sync: { schemaVersion: 1 } }), server(() => openaiList()), 3000, {});
+    await waitFor(() => $('[data-testid=on-device-status]') !== null);
+    expect($('[data-testid=on-device-status]').textContent).toContain('needs desktop Chrome 138 or later');
+  });
+
+  it('with no key, a synced engine setting that leaves out the engine this browser has says to set it to Auto', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1, routing: { translate: 'apibox-qwen', fallback: ['basic'], onDevice: 'nano' } } });
+    await mount(f, server(() => openaiList()), 3000, fakeBuiltinAI({ languageModel: false }).scope);
+    await waitFor(() => $('[data-testid=on-device-status]') !== null);
+    expect($('[data-testid=on-device-status]').textContent).toContain('Set it to Auto');
+  });
+
+  it('says nothing about the device when a provider can run', async () => {
+    const f = fakeApi({ sync: { schemaVersion: 1 }, local: { 'secret:apibox': 'sk-apibox-0123456789' } });
+    await mount(f, server(() => openaiList()), 3000, fakeBuiltinAI({}).scope);
+    await waitFor(() => $('[data-testid=route-on-device]') !== null);
+    expect($('[data-testid=on-device-status]')).toBeNull();
   });
 });

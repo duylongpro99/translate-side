@@ -5,6 +5,7 @@ import type { Backoff, JobView } from './jobs.ts';
 import { i18n } from '#i18n';
 import { failureText, noBasicText } from './status.ts';
 import type { LLMError } from '@/llm/types';
+import type { OnDeviceEngine } from '@/llm/on-device';
 
 // The job's status line (plan M1-E10): progress, Cancel, and the cost readout. On the page view
 // (`inHeader`) the header carries the progress (its 2px bar), Cancel (its Stop icon) and the cost
@@ -34,6 +35,15 @@ export interface JobActions {
   grantAccess(): void;
   /** Past the monthly soft limit (M4-E10): no more warnings this month, and the translation goes on. */
   continuePastLimit(): void;
+  /**
+   * Turns on on-device translation for a pair: creates the engine (downloading it when needed),
+   * then translates again. Must run inside the click: Chrome's Translator needs the gesture.
+   */
+  turnOnDevice?(engine: OnDeviceEngine, from: string, to: string): void;
+  /** Stops the turn-on download. */
+  cancelOnDevice?(): void;
+  /** Opens the first-run guide, to set up a provider (on-device translation can't run). */
+  setUpProvider?(): void;
 }
 
 const seconds = (ms: number) => i18n.t('panel.job.seconds', [(ms / 1000).toFixed(1)]);
@@ -68,6 +78,95 @@ function BackoffNote({ entries }: { entries: readonly Backoff[] }) {
   );
 }
 
+const pairOf = (from: string, to: string) => `${languageName(from)} → ${languageName(to)}`;
+
+/** The shell's tag on an error (status.ts uiError), with its arguments. */
+const uiOf = (error: LLMError | undefined): { ui: string; args: string[] } | undefined => {
+  const raw = error?.raw as { ui?: unknown; args?: unknown } | undefined;
+  return typeof raw?.ui === 'string' ? { ui: raw.ui, args: Array.isArray(raw.args) ? raw.args.map(String) : [] } : undefined;
+};
+
+/** The turn-on button for a pair: creates the engine in this click (the Translator needs the gesture). */
+function TurnOn({ engine, from, to, actions, label }: { engine: OnDeviceEngine; from: string; to: string; actions: JobActions; label?: string }) {
+  if (!actions.turnOnDevice) return null;
+  return (
+    <button type="button" class="ui-button ui-button--primary" data-testid="on-device-turn-on" onClick={() => actions.turnOnDevice?.(engine, from, to)}>
+      {label ?? i18n.t('panel.job.onDevice.turnOn')}
+    </button>
+  );
+}
+
+/** The turn-on download: its progress and Cancel, or why it failed and Try again. */
+function DownloadNote({ download, actions }: { download: NonNullable<JobView['onDeviceDownload']>; actions: JobActions }) {
+  const { engine, from, to, loaded, error } = download;
+  if (error !== undefined) {
+    return (
+      <div class="job__say job__say--warn" data-testid="on-device-download-failed">
+        <span class="job__text">{i18n.t('panel.job.onDevice.failed', [pairOf(from, to), error])}</span>
+        <TurnOn engine={engine} from={from} to={to} actions={actions} label={i18n.t('panel.job.tryAgain')} />
+      </div>
+    );
+  }
+  const percent = Math.round(Math.min(1, Math.max(0, loaded)) * 100);
+  return (
+    <div class="job__say" data-testid="on-device-download">
+      <span class="job__text">{i18n.t(engine === 'nano' ? 'panel.job.onDevice.downloadingNano' : 'panel.job.onDevice.downloading', [pairOf(from, to), String(percent)])}</span>
+      <progress class="job__download" max={100} value={percent} aria-label={i18n.t('panel.job.onDevice.progress')} />
+      {actions.cancelOnDevice ? (
+        <button type="button" class="ui-button" data-testid="on-device-cancel" onClick={actions.cancelOnDevice}>
+          {i18n.t('panel.job.cancel')}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * On-device translation can't run yet (the route's stop, route.ts): what to click, or why it can't
+ * and the way to a provider. Undefined for any other stop.
+ */
+function onDeviceStop(job: JobView, actions: JobActions) {
+  const tag = uiOf(job.stopError);
+  if (tag === undefined || !tag.ui.startsWith('onDevice')) return undefined;
+  if (job.onDeviceDownload) return <DownloadNote download={job.onDeviceDownload} actions={actions} />;
+  const [first = '', from = '', to = ''] = tag.args;
+  const setUp = actions.setUpProvider ? (
+    <button type="button" class="ui-button" data-testid="on-device-set-up" onClick={actions.setUpProvider}>
+      {i18n.t('panel.job.onDevice.setUp')}
+    </button>
+  ) : null;
+  switch (tag.ui) {
+    case 'onDeviceSetup': {
+      const engine = first === 'nano' ? 'nano' : 'translator';
+      return (
+        <div class="job__say" data-testid="on-device-setup">
+          <span class="job__text">{i18n.t(engine === 'nano' ? 'panel.job.onDevice.setupNano' : 'panel.job.onDevice.setup', [pairOf(from, to)])}</span>
+          <TurnOn engine={engine} from={from} to={to} actions={actions} />
+          {setUp}
+        </div>
+      );
+    }
+    case 'onDeviceDownloading':
+      return (
+        <div class="job__say" data-testid="on-device-downloading">
+          <span class="job__text">{i18n.t('panel.job.onDevice.chromeDownloading', [pairOf(from, to)])}</span>
+          <button type="button" class="ui-button" onClick={actions.resume}>
+            {i18n.t('panel.job.onDevice.checkAgain')}
+          </button>
+        </div>
+      );
+    default: {
+      const text = tag.ui === 'onDeviceNoSource' ? i18n.t('panel.job.onDevice.noSource') : first === 'pair' ? i18n.t('panel.job.onDevice.pair', [pairOf(from, to)]) : first === 'setting' ? i18n.t('panel.job.onDevice.setting') : i18n.t('panel.job.onDevice.noApi');
+      return (
+        <div class="job__say job__say--warn" data-testid="on-device-unavailable">
+          <span class="job__text">{text}</span>
+          {setUp}
+        </div>
+      );
+    }
+  }
+}
+
 export function JobBar({ job, actions, inHeader = false }: { job: JobView; actions: JobActions; inHeader?: boolean }) {
   const showCancel = !inHeader;
   const { final, failed, total } = job.counts;
@@ -99,6 +198,16 @@ export function JobBar({ job, actions, inHeader = false }: { job: JobView; actio
         return i18n.t(running ? 'panel.job.fallback.continuing' : 'panel.job.fallback.continued', [from, why, to]);
       })()}
     </span>
+  ) : null;
+  // A second language on the page needs its own turn-on click (found mid-run, a mixed page).
+  const second = job.onDeviceSetup;
+  const pairNote = job.onDeviceDownload && job.status !== 'stopped' ? (
+    <DownloadNote download={job.onDeviceDownload} actions={actions} />
+  ) : second ? (
+    <div class="job__say" data-testid="on-device-second-pair" role="note">
+      <span class="job__text">{i18n.t('panel.job.onDevice.second', [languageName(second.from), pairOf(second.from, second.to)])}</span>
+      <TurnOn engine={second.engine} from={second.from} to={second.to} actions={actions} />
+    </div>
   ) : null;
   // Best was asked for but its review route cannot run: the page is translated without the review.
   const reviewNote = job.reviewUnavailable ? (
@@ -198,6 +307,7 @@ export function JobBar({ job, actions, inHeader = false }: { job: JobView; actio
         {editsNote}
         {fallbackNote}
         {reviewNote}
+        {pairNote}
       </div>
     );
   }
@@ -221,6 +331,7 @@ export function JobBar({ job, actions, inHeader = false }: { job: JobView; actio
           {editsNote}
           {fallbackNote}
           {reviewNote}
+          {pairNote}
         </div>
       );
     case 'done':
@@ -242,6 +353,7 @@ export function JobBar({ job, actions, inHeader = false }: { job: JobView; actio
           ) : null}
           {fallbackNote}
           {reviewNote}
+          {pairNote}
         </div>
       );
     case 'cancelled':
@@ -274,6 +386,14 @@ export function JobBar({ job, actions, inHeader = false }: { job: JobView; actio
       );
     }
     case 'stopped': {
+      const onDevice = onDeviceStop(job, actions);
+      if (onDevice) {
+        return (
+          <div {...attrs} role="alert" data-testid="job-on-device">
+            {onDevice}
+          </div>
+        );
+      }
       const error = job.stopError;
       const fix =
         error?.kind === 'auth' ? (

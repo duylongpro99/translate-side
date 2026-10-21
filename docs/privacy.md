@@ -14,8 +14,10 @@ what it reads, where that text goes, what it keeps on your device, and how to de
 - Mail and sign-in pages, browser pages and the Chrome Web Store are never read. Password and other form fields are
   never read.
 - A local model (Ollama or LM Studio, see [local-models.md](local-models.md)) keeps the text on your computer.
+- With no provider set up, Chrome translates the page on your computer (its own Translator, or Gemini Nano). No text
+  is sent anywhere, so the panel shows no notice for it.
 
-Effective for version 1.1.0. If a later version changes what is described here, this page changes with it, and the
+Effective for version 1.3.0. If a later version changes what is described here, this page changes with it, and the
 panel asks you to read its notice again.
 
 ## What the extension reads
@@ -61,7 +63,14 @@ other providers. The provider sees what any API call shows: your key, your netwo
 Your routing decides which provider gets a page: the model you picked, a rule for that site, or a fallback you
 listed if the first one is busy or down. Chrome's own on-device translator ("Chrome basic translation") is the last
 fallback by default; it runs on your computer, and you can remove it in Settings › Providers › Routing. A rule
-marked local-only never falls back to a cloud provider. The
+marked local-only never falls back to a cloud provider.
+
+**On this device, with no provider.** If no provider can run (you have not added a key), the page is translated by
+Chrome on your computer: Chrome's Translator, or Gemini Nano for the languages it writes (Settings › Providers ›
+Routing › On-device engine). Nothing is sent to any server. The first time a language pair is used, Chrome needs one
+click on "Turn on" to download it; the download comes from Google, like any Chrome component, and carries no page
+text. The first-run notice is asked only before text would leave your device: it is checked on the route each
+translation actually takes, so adding a key later brings the notice before anything is sent. The
 provider's own terms and privacy policy govern what it does with the text. Use a local model for sensitive pages.
 
 **Plain HTTP.** Provider addresses must use HTTPS, with one exception: `http://` is accepted only for this computer

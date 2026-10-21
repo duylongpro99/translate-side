@@ -11,12 +11,14 @@ import { Button } from '@/ui/Button';
 import { i18n } from '#i18n';
 import { slots } from '../sidepanel/slots.tsx';
 import { createAdapter } from '@/llm/client';
+import { nanoLanguages, nanoOf } from '@/llm/chrome-builtin';
+import { translatorOf, type OnDeviceSetting } from '@/llm/on-device';
 import type { ModelInfo, Protocol, ProtocolAdapter } from '@/llm/types';
 import { connectMessage, corsGuide, displayModels, fixBaseUrl, isClaudeModel, preferredProtocol, testConnection, urlFixText, type ConnectMessage, type GuideKind, type GuideStep, type TestResult } from '@/shared/connect';
 import { authLabel, pickerGroups, presetBlurb, presetFor, presetNote, presetTitle, protocolLabel, type PresetId } from '@/shared/presets';
 import { pricingFor } from '@/shared/pricing';
 import { overflowNotice } from '@/shared/sync-quota';
-import { BASIC_FALLBACK, isLocalConnection, onProviderSettingsChanged, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnectionStatus, saveProfile, saveRouting, saveSetup, type ProviderSettings, type SiteRule } from '@/shared/providers';
+import { BASIC_FALLBACK, hasBasicFallback, isLocalConnection, onDeviceSettingOf, onProviderSettingsChanged, readProviderSettings, removeConnection, removeProfile, revokeUnusedOrigin, saveConnectionStatus, saveProfile, saveRouting, saveSetup, type ProviderSettings, type SiteRule } from '@/shared/providers';
 import { sitePattern } from '@/shared/sites';
 import { isPlainHttpRefused, isUnencryptedPrivate } from '@/llm/endpoint';
 import { BUILTIN_CONNECTIONS, hasHostPermission, maskKey, originPattern, readApiKey, resolveConnection, SECRET_PREFIX, type ModelProfile, type ProviderConnection } from '@/shared/settings';
@@ -109,7 +111,7 @@ const profileName = (p: ModelProfile, connections: readonly ProviderConnection[]
 
 type View = { kind: 'list' } | { kind: 'add' } | { kind: 'edit'; id: string; guide?: boolean | undefined } | { kind: 'model' };
 
-export function ProvidersSection({ api, adapterFor = createAdapter, retestMs = RETEST_MS }: { api: Browser; adapterFor?: AdapterFor; retestMs?: number }) {
+export function ProvidersSection({ api, adapterFor = createAdapter, retestMs = RETEST_MS, scope = globalThis }: { api: Browser; adapterFor?: AdapterFor; retestMs?: number; scope?: object }) {
   const [loaded, setLoaded] = useState<Loaded | undefined>();
   const [view, setView] = useState<View>({ kind: 'list' });
   const [note, setNote] = useState<{ text: string; warn?: boolean | undefined } | undefined>();
@@ -159,7 +161,7 @@ export function ProvidersSection({ api, adapterFor = createAdapter, retestMs = R
         <>
           <Connections api={api} loaded={loaded} onAdd={() => open({ kind: 'add' })} onEdit={(id, guide) => open({ kind: 'edit', id, guide })} onNote={(text, warn) => (setNote({ text, warn }), void reload())} />
           <Models api={api} loaded={loaded} onAdd={() => open({ kind: 'model' })} onNote={(text, warn) => (setNote({ text, warn }), void reload())} />
-          <RoutingView api={api} loaded={loaded} onNote={(text, warn) => (setNote({ text, warn }), void reload())} />
+          <RoutingView api={api} loaded={loaded} scope={scope} onNote={(text, warn) => (setNote({ text, warn }), void reload())} />
         </>
       )}
       {note ? (
@@ -344,7 +346,79 @@ const saveProfileProtocol = (api: Browser, p: ModelProfile, protocol: Protocol) 
 
 // ---- Routing ----------------------------------------------------------------------------------
 
-function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; onNote: (text: string, warn?: boolean) => void }) {
+/**
+ * Can this device run each on-device engine at all (src/llm/on-device.ts)? Gemini Nano when the
+ * Prompt API has a model for some language (English checked: every Nano writes it), Chrome
+ * Translator when the browser has the API. Pairs are checked when a page runs.
+ */
+function useOnDeviceAbility(scope: object): { nano: boolean; translator: boolean } {
+  const [nano, setNano] = useState(false);
+  useEffect(() => {
+    const api = nanoOf(scope);
+    if (!api) return setNano(false);
+    let live = true;
+    api.availability(nanoLanguages('', 'en')).then(
+      (state) => live && setNano(state !== 'unavailable'),
+      () => live && setNano(false),
+    );
+    return () => void (live = false);
+  }, [scope]);
+  return { nano, translator: translatorOf(scope) !== undefined };
+}
+
+/**
+ * Does no provider run (route.ts translateClient): the default route has no key and no fallback
+ * link can run in its place. Site rules and tab choices are left to the page.
+ */
+const noProviderRuns = ({ settings, keyed }: Loaded) => {
+  const usable = (profileId: string) => {
+    const profile = settings.profiles.find((p) => p.id === profileId);
+    const connection = profile && settings.connections.find((c) => c.id === profile.connectionId);
+    return connection !== undefined && (connection.auth.style === 'none' || keyed.has(connection.id));
+  };
+  return !usable(settings.routing.translate) && !(settings.routing.fallback ?? []).some((id) => id !== BASIC_FALLBACK && usable(id));
+};
+
+/**
+ * "On-device engine" (Routing.onDevice): which of Chrome's own models the keyless route takes. With
+ * `keyless` (no provider runs), a line says pages are translated on the device, or why they can't be.
+ */
+function OnDeviceEngine({ settings, scope, keyless, onSave }: { settings: ProviderSettings; scope: object; keyless: boolean; onSave: (value: OnDeviceSetting) => void }) {
+  const can = useOnDeviceAbility(scope);
+  const basicOn = hasBasicFallback(settings.routing);
+  const value = onDeviceSettingOf(settings.routing);
+  const nanoRuns = can.nano;
+  const translatorRuns = can.translator && basicOn;
+  const runs = (value !== 'translator' && nanoRuns) || (value !== 'nano' && translatorRuns);
+  // The setting (synced from another computer, say) leaves out the engine this browser has.
+  const excluded = !runs && (nanoRuns || translatorRuns);
+  return (
+    <>
+      {keyless ? (
+        <p class={runs ? 'opt__status' : 'opt__status opt__status--warn'} role="status" data-testid="on-device-status">
+          {runs ? i18n.t('options.providers.onDeviceActive') : excluded ? i18n.t('options.providers.onDeviceExcluded') : !can.nano && !can.translator ? i18n.t('options.providers.onDeviceNoBrowser') : i18n.t('options.providers.onDeviceOff')}
+        </p>
+      ) : null}
+      <div class="opt__row">
+        <label for="route-on-device">{i18n.t('options.providers.onDevice')}</label>
+        <Select id="route-on-device" data-testid="route-on-device" aria-describedby="route-on-device-hint" value={value} onChange={(e) => onSave((e.target as HTMLSelectElement).value as OnDeviceSetting)}>
+          <option value="auto">{i18n.t('options.providers.onDeviceAuto')}</option>
+          <option value="nano" disabled={!can.nano && value !== 'nano'}>
+            {can.nano ? i18n.t('options.providers.onDeviceNano') : i18n.t('options.providers.onDeviceNoNano')}
+          </option>
+          <option value="translator" disabled={(!can.translator || !basicOn) && value !== 'translator'}>
+            {!can.translator ? i18n.t('options.providers.onDeviceNoTranslator') : basicOn ? i18n.t('options.providers.onDeviceTranslator') : i18n.t('options.providers.onDeviceTranslatorOff')}
+          </option>
+        </Select>
+      </div>
+      <p class="opt__hint" id="route-on-device-hint">
+        {i18n.t('options.providers.onDeviceHint')}
+      </p>
+    </>
+  );
+}
+
+function RoutingView({ api, loaded, scope, onNote }: { api: Browser; loaded: Loaded; scope: object; onNote: (text: string, warn?: boolean) => void }) {
   const { settings } = loaded;
   const profiles = visibleProfiles(loaded);
   /** The profiles to choose from; `exclude` leaves some out (never the selected one). */
@@ -358,7 +432,7 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
       ))}
     </>
   );
-  const save = (patch: { translate?: string; analyze?: string | undefined; review?: string | undefined; fallback?: string[] }, said: string) => {
+  const save = (patch: { translate?: string; analyze?: string | undefined; review?: string | undefined; fallback?: string[]; onDevice?: OnDeviceSetting }, said: string) => {
     const { analyze, review, fallback, ...rest } = { ...settings.routing, ...patch };
     const next: ProviderSettings['routing'] = { ...rest, ...(analyze === undefined ? {} : { analyze }), ...(review === undefined ? {} : { review }), ...(fallback?.length ? { fallback } : {}) };
     saveRouting(api, next).then(
@@ -381,6 +455,7 @@ function RoutingView({ api, loaded, onNote }: { api: Browser; loaded: Loaded; on
           {options(settings.routing.translate)}
         </Select>
       </div>
+      <OnDeviceEngine settings={settings} scope={scope} keyless={noProviderRuns(loaded)} onSave={(onDevice) => save({ onDevice }, i18n.t('options.providers.onDeviceSaved'))} />
       <div class="opt__row">
         <label for="route-analyze">{i18n.t('options.providers.brief')}</label>
         <Select

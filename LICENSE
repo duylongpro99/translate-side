@@ -30,7 +30,9 @@ eval/README.md for each passage's source, author and license. Nor any non-code f
 under spikes/s2 and spikes/s3 (everything there except *.mjs and package*.json),
 which hold fixture-derived text and translations (e.g. spikes/s2/chunks*.json,
 spikes/s2/runs/, spikes/s2/results.md, spikes/s3/noise.md,
-results-*.json, walk-extra.json, structure.md and why-headings-fix.txt). The fixtures are third-party web pages
+results-*.json, walk-extra.json, structure.md and why-headings-fix.txt), nor
+spikes/s8/ext/fixtures.json and spikes/s8/results/, which hold fixture text and
+its translations. The fixtures are third-party web pages
 kept as test fixtures under their own licenses, and that text and its
 translations stay under those licenses; see fixtures/sites/ATTRIBUTION.md for
 each one's source, authors and license.

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, openaiStream, type ScriptedResponse } from '@/llm/testing';
 import type { NormalizedEvent } from '@/llm/types';
 import { routedSummary, translateClient } from '@/entrypoints/sidepanel/route';
-import { NANO_OFF_MESSAGE } from '@/llm/client';
+import { fakeBuiltinAI } from '@/llm/testing';
 import {
   BASIC_FALLBACK,
   cleanConnection,
@@ -17,6 +17,7 @@ import {
   matchesSite,
   migratedRouteFromM1,
   migrateProviders,
+  onDeviceSettingOf,
   parseStored,
   readProviderSettings,
   readTabOverride,
@@ -479,12 +480,15 @@ describe('the panel route (src/entrypoints/sidepanel/route.ts)', () => {
     expect(plain.ok && plain.client.model).toBe(DEFAULT_PROFILE.model);
   });
 
-  it('a stored Gemini Nano route (chrome-builtin, flag off) is a clear error, not a job left waiting; as a fallback it is left out (M5-D tester F3)', async () => {
+  it('a stored Gemini Nano route runs on the device with its pair, one request at a time; where Nano cannot run it says why, and as a fallback it is left out', async () => {
     const nano = { id: 'nano', label: 'Chrome built-in', presetId: 'chrome-builtin', protocol: 'chrome-builtin', baseUrl: '', auth: { style: 'none' }, quirks: {} };
-    const f = fakeApi({ sync: { schemaVersion: 1, 'conn:nano': nano, 'profile:nano-p': { id: 'nano-p', connectionId: 'nano', model: 'gemini-nano', maxConcurrency: 1, chunkTokens: 600 }, routing: { translate: 'nano-p', basicMigrated: true } }, local: M3_LOCAL, granted: [ORIGIN] });
-    expect(await translateClient(f.api)).toMatchObject({ ok: false, error: { kind: 'bad_request', message: NANO_OFF_MESSAGE }, connection: { id: 'nano' } });
+    const f = fakeApi({ sync: { schemaVersion: 1, 'conn:nano': nano, 'profile:nano-p': { id: 'nano-p', connectionId: 'nano', model: 'gemini-nano', maxConcurrency: 2, chunkTokens: 600 }, routing: { translate: 'nano-p', basicMigrated: true } }, local: M3_LOCAL, granted: [ORIGIN] });
+    const ai = fakeBuiltinAI({ nano: { en: 'available' } });
+    expect(await translateClient(f.api, { sourceLang: 'ja', targetLang: 'en' }, ai.scope)).toMatchObject({ ok: true, onDevice: 'nano', client: { model: 'gemini-nano' }, profile: { id: 'nano-p', maxConcurrency: 1, chunkTokens: 600 }, connection: { id: 'nano' } });
+    expect(await translateClient(f.api, { sourceLang: 'ja', targetLang: 'vi' }, ai.scope)).toMatchObject({ ok: false, error: { raw: { ui: 'onDeviceUnavailable', args: ['pair', 'ja', 'vi'] } }, connection: { id: 'nano' } });
+    expect(await translateClient(f.api, { sourceLang: 'ja', targetLang: 'en' }, {})).toMatchObject({ ok: false, error: { raw: { ui: 'onDeviceUnavailable', args: ['no-api', 'ja', 'en'] } } });
     await saveRouting(f.api, { translate: DEFAULT_PROFILE.id, fallback: ['nano-p'] });
-    const r = await translateClient(f.api);
+    const r = await translateClient(f.api, { sourceLang: 'ja', targetLang: 'vi' }, ai.scope);
     expect(r.ok && r.client.model).toBe(DEFAULT_PROFILE.model);
     expect(r).not.toHaveProperty('fallback');
   });
@@ -530,7 +534,11 @@ describe('the panel route (src/entrypoints/sidepanel/route.ts)', () => {
     // The M1 user's Gemini route: the key is there, the permission is not.
     expect(await translateClient(noKey.api)).toMatchObject({ ok: false, error: { kind: 'cors', cause: 'permission' }, connection: { id: 'gemini', origin: 'https://generativelanguage.googleapis.com/*' } });
     const fresh = fakeApi({ granted: [ORIGIN] });
-    expect(await translateClient(fresh.api)).toMatchObject({ ok: false, error: { kind: 'auth', message: 'Add your APIBOX API key in settings' } });
+    // No key and no on-device AI: why the device can't help either.
+    expect(await translateClient(fresh.api, {}, {})).toMatchObject({ ok: false, error: { raw: { ui: 'onDeviceUnavailable' } }, connection: { id: 'chrome-on-device' } });
+    // With "basic translation" removed and no Nano: the key is what is missing.
+    await saveRouting(fresh.api, { translate: DEFAULT_PROFILE.id });
+    expect(await translateClient(fresh.api, {}, {})).toMatchObject({ ok: false, error: { kind: 'auth', message: 'Add your APIBOX API key in settings' } });
     await saveRouting(fresh.api, { translate: 'gone' });
     expect(await translateClient(fresh.api)).toMatchObject({ ok: false, error: { kind: 'bad_request' } });
   });
@@ -560,6 +568,92 @@ describe('the panel route (src/entrypoints/sidepanel/route.ts)', () => {
     for await (const e of r2.client.stream(req)) void e;
     expect(fetch2.requests).toHaveLength(1);
     expect(fetch2.requests[0]?.body).toMatchObject({ max_completion_tokens: 64 });
+  });
+});
+
+describe('the on-device route (no usable provider)', () => {
+  const ORIGIN = 'https://api.ai-box.vn/*';
+  const GEMINI_ORIGIN = 'https://generativelanguage.googleapis.com/*';
+  const pair = { sourceLang: 'en', targetLang: 'vi' };
+
+  it('a keyless default route translates on the device: Translator for vi, Nano for en, a fresh pair asks for the click, an unknown language says so; nothing is created', async () => {
+    const f = fakeApi({ granted: [ORIGIN] });
+    const ai = fakeBuiltinAI({ pairs: { 'en>vi': 'available', 'fr>vi': 'downloadable' }, nano: { en: 'available' } });
+    expect(await translateClient(f.api, pair, ai.scope)).toMatchObject({ ok: true, onDevice: 'translator', client: { model: 'Chrome Translator' }, profile: { id: 'chrome-translator' }, connection: { id: 'chrome-on-device' } });
+    const nano = await translateClient(f.api, { sourceLang: 'ja', targetLang: 'en', analyze: true, review: true }, ai.scope);
+    expect(nano).toMatchObject({ ok: true, onDevice: 'nano', basic: true, client: { model: 'gemini-nano' } });
+    expect(nano).not.toHaveProperty('analyze');
+    expect(nano).not.toHaveProperty('review');
+    expect(await translateClient(f.api, { sourceLang: 'fr', targetLang: 'vi' }, ai.scope)).toMatchObject({ ok: false, error: { raw: { ui: 'onDeviceSetup', args: ['translator', 'fr', 'vi'] } } });
+    expect(await translateClient(f.api, { sourceLang: '', targetLang: 'vi' }, ai.scope)).toMatchObject({ ok: false, error: { raw: { ui: 'onDeviceNoSource' } } });
+    expect(ai.creates).toEqual([]);
+  });
+
+  it('a stored Gemini Nano fallback standing in for a keyless default keeps its on-device handling', async () => {
+    const nano = { id: 'nano', label: 'Chrome built-in', presetId: 'chrome-builtin', protocol: 'chrome-builtin', baseUrl: '', auth: { style: 'none' }, quirks: {} };
+    const f = fakeApi({ sync: { schemaVersion: 1, 'conn:nano': nano, 'profile:nano-p': { id: 'nano-p', connectionId: 'nano', model: 'gemini-nano', maxConcurrency: 1, chunkTokens: 600 }, routing: { translate: DEFAULT_PROFILE.id, fallback: ['nano-p', 'basic'], basicMigrated: true } }, granted: [ORIGIN] });
+    const ai = fakeBuiltinAI({ nano: { en: 'available' } });
+    expect(await translateClient(f.api, { sourceLang: 'ja', targetLang: 'en' }, ai.scope)).toMatchObject({ ok: true, onDevice: 'nano', client: { model: 'gemini-nano' }, basic: true });
+  });
+
+  it('the panel names the on-device route for a keyless default with no usable fallback, not the default it stands in for', async () => {
+    const f = fakeApi({ granted: [ORIGIN] });
+    const ai = fakeBuiltinAI({ pairs: { 'en>vi': 'available' } });
+    expect(await routedSummary(f.api, {}, ai.scope)).toEqual({ model: '', label: 'Chrome on-device', host: '' });
+    // Translator removed from the fallback list and no Gemini Nano here: "Add your key" stands, so the default is named.
+    await saveRouting(f.api, { translate: DEFAULT_PROFILE.id, fallback: [] });
+    expect(await routedSummary(f.api, {}, {})).toMatchObject({ label: 'APIBOX' });
+    expect(await routedSummary(f.api, {}, fakeBuiltinAI({ nano: { en: 'available' } }).scope)).toMatchObject({ label: 'Chrome on-device' });
+  });
+
+  it('follows the engine setting', async () => {
+    const f = fakeApi({ granted: [ORIGIN] });
+    await saveRouting(f.api, { translate: DEFAULT_PROFILE.id, fallback: ['basic'], onDevice: 'translator' });
+    const ai = fakeBuiltinAI({ pairs: { 'ja>en': 'available' }, nano: { en: 'available' } });
+    expect(await translateClient(f.api, { sourceLang: 'ja', targetLang: 'en' }, ai.scope)).toMatchObject({ ok: true, onDevice: 'translator' });
+  });
+
+  it('keeps every other route: a site rule or a tab override without a key, a keyless default with a usable fallback, a route with a key', async () => {
+    const ai = fakeBuiltinAI({ pairs: { 'en>vi': 'available' } });
+    const ruled = fakeApi({ granted: [ORIGIN] });
+    await saveRouting(ruled.api, { translate: DEFAULT_PROFILE.id, fallback: ['basic'], siteOverrides: [{ pattern: 'x.com', translate: APIBOX_FLASH_PROFILE.id }] });
+    expect(await translateClient(ruled.api, { ...pair, url: 'https://x.com/a' }, ai.scope)).toMatchObject({ ok: false, error: { kind: 'auth', raw: { ui: 'noKey' } } });
+    await ruled.session.set({ 'tabRoute:7': APIBOX_FLASH_PROFILE.id });
+    expect(await translateClient(ruled.api, { ...pair, tabId: 7 }, ai.scope)).toMatchObject({ ok: false, error: { raw: { ui: 'noKey' } } });
+
+    const spare = fakeApi({ local: { 'secret:gemini': 'AIzaSyExampleKey1234' }, granted: [ORIGIN, GEMINI_ORIGIN] });
+    await migrateProviders(spare.api);
+    await saveConnection(spare.api, GEMINI_CONNECTION);
+    await saveProfile(spare.api, GEMINI_PROFILE);
+    await saveRouting(spare.api, { translate: DEFAULT_PROFILE.id, fallback: [GEMINI_PROFILE.id, 'basic'] });
+    const r = await translateClient(spare.api, { ...pair, analyze: true }, ai.scope);
+    expect(r).toMatchObject({ ok: true, client: { model: GEMINI_PROFILE.model }, basic: true, connection: { id: 'gemini' } });
+    expect(r).not.toHaveProperty('onDevice');
+    expect(r).not.toHaveProperty('fallback');
+    // The routed (keyless) profile's roles are served by the link that stands in for it.
+    expect(await (r.ok ? r.analyze?.() : undefined)).toBeUndefined();
+
+    const keyed = fakeApi({ local: M3_LOCAL, granted: [ORIGIN] });
+    expect(await translateClient(keyed.api, pair, ai.scope)).toMatchObject({ ok: true, client: { model: DEFAULT_PROFILE.model } });
+    expect(await translateClient(keyed.api, pair, ai.scope)).not.toHaveProperty('onDevice');
+  });
+
+  it('a protocol override on a chrome-builtin profile is dropped, and only the protocol it runs on makes a connection local', () => {
+    expect(isLocalConnection({ protocol: 'chrome-builtin', baseUrl: '' }, { protocolOverride: 'openai-chat' })).toBe(false);
+    expect(isLocalConnection({ protocol: 'chrome-builtin', baseUrl: '' })).toBe(true);
+    const parsed = parseStored({ schemaVersion: 1, 'conn:nano': { id: 'nano', label: 'N', presetId: 'chrome-builtin', protocol: 'chrome-builtin', baseUrl: '', auth: { style: 'none' }, quirks: {} }, 'profile:p': { id: 'p', connectionId: 'nano', model: 'gemini-nano', protocolOverride: 'openai-chat' } });
+    expect(parsed?.profiles.find((p) => p.id === 'p')).not.toHaveProperty('protocolOverride');
+  });
+
+  it('the engine setting: unknown values read as auto and survive a save', async () => {
+    expect(onDeviceSettingOf({})).toBe('auto');
+    expect(onDeviceSettingOf({ onDevice: 'nano' })).toBe('nano');
+    expect(onDeviceSettingOf({ onDevice: 'future-engine' })).toBe('auto');
+    const f = fakeApi({ sync: { schemaVersion: 1, routing: { translate: DEFAULT_PROFILE.id, onDevice: 'future-engine', basicMigrated: true } } });
+    const read = await readProviderSettings(f.api);
+    expect(read.routing.onDevice).toBe('future-engine');
+    await saveRouting(f.api, read.routing);
+    expect(f.sync.data.get('routing')).toMatchObject({ onDevice: 'future-engine' });
   });
 });
 

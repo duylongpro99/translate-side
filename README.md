@@ -110,7 +110,8 @@ imports. It runs the same way in the panel and in Node, which is how the eval ha
 
 ## 🚀 Getting started
 
-**You'll need:** Chrome 138+ on desktop, and either an API key for a provider or a local model.
+**You'll need:** Chrome 138+ on desktop. It works without an API key on supported Chrome, after one click per
+language pair: Chrome translates on your computer. For better quality, add an API key for a provider or a local model.
 
 ### Install
 
@@ -127,11 +128,13 @@ imports. It runs the same way in the panel and in Node, which is how the eval ha
 
 ### First run
 
-1. A setup guide opens on install (you can reopen it from Settings). Pick a provider, paste its API key, and press
-   **Test connection**; Chrome asks for access to that provider only. For a local model, follow
+1. A setup guide opens on install (you can reopen it from Settings). Where Chrome can translate on your computer,
+   **Translate on this device with Chrome** is chosen for you: no key, and the text stays on your computer; the first
+   time each language pair is used, press **Turn on** once. For better quality pick a provider, paste its API key,
+   and press **Test connection**; Chrome asks for access to that provider only. For a local model, follow
    [`docs/local-models.md`](docs/local-models.md) instead.
-2. Go to any article and press <kbd>Alt</kbd>+<kbd>T</kbd> (or click the toolbar icon). The first time, the panel
-   says where the text will go and waits for you to confirm.
+2. Go to any article and press <kbd>Alt</kbd>+<kbd>T</kbd> (or click the toolbar icon). The first time a page would
+   go to a provider, the panel says where the text will go and waits for you to confirm.
 3. Set your target language, style and glossary in Settings (the gear in the panel).
 
 <kbd>Alt</kbd>+<kbd>T</kbd> is the default on every system, macOS included (<kbd>Option</kbd>+<kbd>T</kbd> there).

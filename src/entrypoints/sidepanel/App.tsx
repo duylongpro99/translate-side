@@ -228,11 +228,16 @@ function useOffer(store: OfferStore | undefined, tabId: number | undefined, docI
   return offer;
 }
 
+/**
+ * The notice's state, as the panel shows it: `needed` only while a run waits for it (a route that
+ * sends text off the device, jobs.ts); on-device translation never asks.
+ */
 function usePrivacy(gate: PrivacyGate | undefined): PrivacyState | undefined {
-  const [state, setState] = useState(() => gate?.state);
+  const read = () => (gate?.state === 'needed' && !gate.pending ? 'unknown' : gate?.state);
+  const [state, setState] = useState(read);
   useEffect(() => {
-    setState(gate?.state);
-    return gate?.subscribe(setState);
+    setState(read());
+    return gate?.subscribe(() => setState(read()));
   }, [gate]);
   return state;
 }
@@ -412,7 +417,7 @@ export function App({ controller, translator }: { controller: PanelController; t
       {help ? <ShortcutList id="shortcuts" onClose={closeHelp} /> : null}
       {offerSetup ? (
         <Notice class="setup-offer" data-testid="setup-offer">
-          <p class="setup-offer__text">{i18n.t('panel.setup.text')}</p>
+          <p class="setup-offer__text">{switcherState?.onDevice ? i18n.t('panel.setup.onDeviceText') : i18n.t('panel.setup.text')}</p>
           <Button variant="primary" data-testid="setup-open" onClick={() => void openOnboarding(browser)}>
             {i18n.t('panel.setup.button')}
           </Button>

@@ -290,8 +290,25 @@ The probe also catches common URL mistakes: a trailing `/v1` added twice, a miss
 
 #### 4.2.6 Chrome built-in
 `chrome-builtin` doesn't take a prompt (Translator) or has a tiny context (Nano). It's treated as a
-**degraded mode**: no brief, segment-by-segment translation, and blocks marked "basic". It's used
-only as the last fallback or by explicit choice.
+**degraded mode**: no brief, no review, one request at a time. It is the **zero-setup route** and the
+last fallback (`src/llm/on-device.ts`, decision S8 in `docs/decisions/S8-chrome-builtin.md`):
+
+- **When.** The default route has no key and no fallback link can run. A site rule or tab override with
+  no key still stops with "Add your key", because the reader chose that model for that page.
+- **Which engine.** `Routing.onDevice` (`auto` by default, or `nano` or `translator`). Auto takes Gemini
+  Nano when it can write the target language (`en`, `es`, `ja`; `de`, `fr` from Chrome 149) and
+  `availability()` is `available`. Otherwise it takes Chrome Translator, through the `basic` strategy,
+  block by block. Removing "basic translation" from the fallback list turns the Translator off.
+- **`create()` only on a click.** Chrome reports a model or pair it has not created for this extension as
+  `downloadable`, and Translator `create()` consumes the click's activation. So the route reads
+  `availability()` only. A job never creates a model or pair that is not `available`: it stops with
+  "Turn on" for the pair, and that button's click creates it synchronously, shows the download, and
+  translates again. Each new language pair needs one click.
+- **Nano to Translator.** On Nano, a chunk Nano can't do (`context_length`, `model_not_found`, or an
+  answer that can't be read) goes to Chrome Translator (the engine's `onDeviceSwitch`).
+- **Privacy.** The first-run notice is checked on the route each job resolves: an on-device route sends
+  nothing and never waits for it; any other route waits (§8).
+- **Cache.** On-device results are cached under their own model, so a provider set up later translates again.
 
 ---
 
@@ -346,6 +363,7 @@ interface Routing {
   review?: string;            // used by the `refine` strategy; defaults to `translate`
   fallback?: string[];        // tried in order on hard failure, e.g. [ollama, chrome-builtin]
   siteOverrides?: { pattern: string; translate: string; localOnly?: boolean }[];
+  onDevice?: "auto" | "nano" | "translator";  // the zero-setup route's engine (§4.2.6); default auto
 }
 ```
 Connections, profiles, and routing are stored in `chrome.storage.sync` (no secrets), so the setup

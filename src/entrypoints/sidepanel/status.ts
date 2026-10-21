@@ -7,9 +7,15 @@ import type { LLMError } from '@/llm/types';
 
 /** `LLMError.raw` of a failure the shell raises: which message says it, and what goes into it. */
 export interface UiRaw {
-  ui: 'noKey' | 'noProtocol' | 'nanoOff' | 'noAccess' | 'settingsRead' | 'limit' | 'noExplanation' | 'noTranslation';
+  ui: 'noKey' | 'noProtocol' | 'noAccess' | 'settingsRead' | 'limit' | 'noExplanation' | 'explainNeedsModel' | 'noTranslation' | OnDeviceUi;
   args?: string[];
 }
+
+/**
+ * The on-device route can't run yet (src/entrypoints/sidepanel/route.ts): `onDeviceSetup` and
+ * `onDeviceDownloading` with `[engine, from, to]`, `onDeviceUnavailable` with `[reason, from, to]`.
+ */
+export type OnDeviceUi = 'onDeviceSetup' | 'onDeviceDownloading' | 'onDeviceNoSource' | 'onDeviceUnavailable';
 
 /** A failure the shell raises: `message` stays the developer's English, `ui` picks the message the reader sees. */
 export function uiError(kind: LLMError['kind'], message: string, ui: UiRaw['ui'], args: string[] = [], cause?: LLMError['cause']): LLMError {
@@ -43,6 +49,11 @@ export function failureText(error: LLMError): string {
     return i18n.t('errors.withNoBasic', [failureText(plain), basic.replace(/\.$/, '')]);
   }
   const ui = uiOf(error);
+  // One tag, two messages: the browser has no on-device AI at all, or not for this pair.
+  if (ui?.ui === 'onDeviceUnavailable') {
+    const [reason = 'no-api', from = '', to = ''] = ui.args ?? [];
+    return reason === 'pair' ? i18n.t('errors.onDevicePair', [reason, from, to]) : reason === 'setting' ? i18n.t('errors.onDeviceSetting') : i18n.t('errors.onDeviceNoApi');
+  }
   // Each tag's message takes the arguments its raiser passes (uiError), so the key is not narrowed to one signature.
   if (ui !== undefined) return (i18n.t as (key: string, subs: string[]) => string)(`errors.${ui.ui}`, ui.args ?? []);
   // The engine's own failures arrive as kind `unknown` with a fixed message (review C-N8).

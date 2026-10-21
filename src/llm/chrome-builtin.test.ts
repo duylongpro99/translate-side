@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CHROME_TRANSLATOR_MODEL, CREATE_TIMEOUT_MS, chromeTranslator, unavailableMessage } from './chrome-translator.ts';
+import { CHROME_TRANSLATOR_MODEL, CREATE_TIMEOUT_MS, chromeTranslator, needsActivation, unavailableMessage } from './chrome-translator.ts';
 import { NANO_MODEL, createChromeBuiltinAdapter } from './chrome-builtin.ts';
 import type { MTAvailability, MTResult, NormalizedEvent, NormalizedRequest, ResolvedConnection } from './types.ts';
 
@@ -7,7 +7,7 @@ const named = (name: string, message = name) => Object.assign(new Error(message)
 
 // ---- Chrome's Translator behind the MTClient port (plan M5-E7) ---------------------------------
 
-function translatorScope(opts: { state?: MTAvailability; create?: () => Promise<unknown>; translate?: (text: string) => Promise<string>; detected?: { detectedLanguage: string; confidence: number }[] } = {}) {
+function translatorScope(opts: { state?: MTAvailability; create?: (o: { monitor?: (m: EventTarget) => void }) => Promise<unknown>; translate?: (text: string) => Promise<string>; detected?: { detectedLanguage: string; confidence: number }[] } = {}) {
   const log: string[] = [];
   const scope = {
     Translator: {
@@ -15,9 +15,9 @@ function translatorScope(opts: { state?: MTAvailability; create?: () => Promise<
         log.push(`availability ${o.sourceLanguage}>${o.targetLanguage}`);
         return opts.state ?? 'available';
       },
-      async create(o: { sourceLanguage: string; targetLanguage: string }) {
+      async create(o: { sourceLanguage: string; targetLanguage: string; monitor?: (m: EventTarget) => void }) {
         log.push(`create ${o.sourceLanguage}>${o.targetLanguage}`);
-        if (opts.create) return opts.create();
+        if (opts.create) return opts.create(o);
         return { translate: opts.translate ?? (async (t: string) => `vi:${t}`) };
       },
     },
@@ -57,19 +57,43 @@ describe('chromeTranslator (MTClient over Chrome Translator)', () => {
     expect(log.some((l) => l.startsWith('create'))).toBe(false);
   });
 
-  it('a model not downloaded that cannot be created (no gesture) says it is not downloaded; a later call tries again', async () => {
-    let n = 0;
-    const { scope, log } = translatorScope({ state: 'downloadable', create: async () => (n++ === 0 ? Promise.reject(named('NotAllowedError')) : { translate: async (t: string) => `vi:${t}` }) });
-    const mt = mtOf(scope);
+  it('a pair Chrome has not created for us is never created by a block: it waits on the turn-on click (prepare), then translates', async () => {
+    const { scope, log } = translatorScope({ state: 'downloadable', create: async () => ({ translate: async (t: string) => `vi:${t}` }) });
+    const mt = chromeTranslator(scope);
+    if (mt === undefined) throw new Error('no Translator in scope');
     const r = await mt.translate('Hello.', 'en', 'vi', signal());
-    expect(r.ok).toBe(false);
-    expect(!r.ok && r.error.message).toBe(unavailableMessage('en', 'vi', 'downloadable'));
+    expect(r).toMatchObject({ ok: false, error: { message: unavailableMessage('en', 'vi', 'downloadable'), raw: { reason: 'needs-activation', from: 'en', to: 'vi' } } });
+    expect(!r.ok && needsActivation(r.error)).toEqual({ reason: 'needs-activation', from: 'en', to: 'vi' });
+    expect(log.filter((l) => l.startsWith('create'))).toHaveLength(0);
+    // The click creates it; later blocks reuse that translator (Chrome still says `downloadable` here).
+    await mt.prepare('en', 'vi');
     expect(await mt.translate('Hello.', 'en', 'vi', signal())).toEqual({ ok: true, text: 'vi:Hello.' });
-    expect(log.filter((l) => l.startsWith('create'))).toHaveLength(2);
+    expect(log.filter((l) => l.startsWith('create'))).toHaveLength(1);
+  });
+
+  it('prepare reports the download and replaces a create that failed', async () => {
+    let n = 0;
+    const seen: number[] = [];
+    const { scope } = translatorScope({
+      state: 'downloadable',
+      create: async (opts: { monitor?: (m: EventTarget) => void }) => {
+        if (n++ === 0) throw named('NetworkError');
+        const m = new EventTarget();
+        opts.monitor?.(m);
+        for (const loaded of [0, 0.5, 1]) m.dispatchEvent(Object.assign(new Event('downloadprogress'), { loaded }));
+        return { translate: async (t: string) => `vi:${t}` };
+      },
+    });
+    const mt = chromeTranslator(scope);
+    if (mt === undefined) throw new Error('no Translator in scope');
+    await expect(mt.prepare('en', 'vi')).rejects.toMatchObject({ name: 'NetworkError' });
+    await mt.prepare('en', 'vi', { progress: (loaded) => seen.push(loaded) });
+    expect(seen).toEqual([0, 0.5, 1]);
+    expect(await mt.translate('Hi.', 'en', 'vi', signal())).toEqual({ ok: true, text: 'vi:Hi.' });
   });
 
   it('a create that never settles (Chrome for Testing: no download) is answered after the timeout; later blocks are answered at once', async () => {
-    const { scope, log } = translatorScope({ state: 'downloadable', create: () => new Promise(() => {}) });
+    const { scope, log } = translatorScope({ state: 'available', create: () => new Promise(() => {}) });
     // Fake timers, not the wall clock (a loaded machine made the timing flaky).
     vi.useFakeTimers();
     try {

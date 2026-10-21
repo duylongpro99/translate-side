@@ -67,6 +67,8 @@ export interface SeedOptions {
   reviewWith?: boolean;
   /** The per-page token ceiling (0: none). */
   budgetTokens?: number;
+  /** No key for the mock connection: no provider can run, so the page goes to the on-device route. */
+  keyless?: boolean;
 }
 
 /**
@@ -205,7 +207,7 @@ export const test = base.extend<Fixtures & Options, { servers: MockControl; extP
             await chrome.storage.sync.set(sync);
             await chrome.storage.local.set(local);
           },
-          [syncFor(opts), { 'secret:mock': 'placeholder-key', ...(privacy ? { privacyNotice: { version: PRIVACY_NOTICE_VERSION, at: 1 } } : {}) }] as const,
+          [syncFor(opts), { ...(opts.keyless ? {} : { 'secret:mock': 'placeholder-key' }), ...(privacy ? { privacyNotice: { version: PRIVACY_NOTICE_VERSION, at: 1 } } : {}) }] as const,
         );
       },
       async open(fixture, origin = FIXTURE_ORIGIN) {

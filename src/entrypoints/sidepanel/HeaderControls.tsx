@@ -4,7 +4,7 @@ import { i18n } from '#i18n';
 import { featureAvailable } from '@/shared/features';
 import { BEST_MODE_RELEASED, QUALITY_MODES, type Quality, type QualityMode, type QualityStrategy } from '@/shared/quality';
 import { languageName } from '@/shared/language-name';
-import { LANGUAGES, STYLES, type Preferences } from '@/shared/settings';
+import { LANGUAGES, ON_DEVICE_CONNECTION, STYLES, type Preferences } from '@/shared/settings';
 import { formatUsd } from '@/shared/cost';
 import { ArrowRightIcon, ChevronDownIcon, SlidersIcon } from '@/ui/icons';
 import { Popover } from '@/ui/Popover';
@@ -71,6 +71,8 @@ function PageLine({ job, model }: { job: JobView | undefined; model: string }) {
   const parts: string[] = [];
   if (model) parts.push(i18n.t('panel.header.page.model', [model]));
   if (job) parts.push(i18n.t('panel.header.page.blocks', [String(job.counts.final), String(job.counts.total)]));
+  // The on-device route (Chrome's own models): where the text goes, which is nowhere.
+  if (job?.connection?.id === ON_DEVICE_CONNECTION.id) parts.push(i18n.t('panel.header.page.onDevice'));
   if (job?.endedAt !== undefined) parts.push(i18n.t('panel.job.seconds', [((job.endedAt - job.startedAt) / 1000).toFixed(1)]));
   return (
     <p class="pop__meta" data-testid="page-line">

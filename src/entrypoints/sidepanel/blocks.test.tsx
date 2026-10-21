@@ -269,6 +269,21 @@ describe('model badges (plan M4-E9, DESIGN §4.3.5: the panel shows which model 
     expect(labels[0]?.getAttribute('title')).toMatch(/^Translated on this device by Chrome Translator, because no model could be reached\./);
     expect(root.querySelectorAll('[data-testid=seg-model-badge]')).toHaveLength(0);
   });
+
+  it('on the device: Translator blocks say basic translation without blaming a provider; Nano blocks name Gemini Nano (on device)', () => {
+    const root = document.createElement('div');
+    document.body.replaceChildren(root);
+    const translator = new Map<string, SegState>([['1', { status: 'final', text: 'Một', revision: 1, model: 'Chrome Translator', basic: true }]]);
+    act(() => render(<SegmentList segments={['1'].map(seg)} states={translator as JobView['segs']} model="Chrome Translator" />, root));
+    expect(root.querySelector('[data-testid=seg-basic-badge]')?.getAttribute('title')).toMatch(/^Translated on this device by Chrome's Translator\. It is literal/);
+    const nano = new Map<string, SegState>([
+      ['1', { status: 'final', text: 'Uno', revision: 1, model: 'gemini-nano' }],
+      ['2', { status: 'final', text: 'Dos', revision: 1, model: 'Chrome Translator', basic: true }],
+    ]);
+    act(() => render(<SegmentList segments={['1', '2'].map(seg)} states={nano as JobView['segs']} model="gemini-nano" />, root));
+    expect([...root.querySelectorAll('[data-testid=seg-nano-badge]')].map((b) => [b.closest('[data-id]')?.getAttribute('data-id'), b.textContent])).toEqual([['1', 'Gemini Nano (on device)']]);
+    expect(root.querySelectorAll('[data-testid=seg-basic-badge]')).toHaveLength(1);
+  });
 });
 
 describe('refined blocks (Best, DESIGN §5.2: the text is replaced and marked "refined")', () => {

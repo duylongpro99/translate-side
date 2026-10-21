@@ -2,6 +2,8 @@ import { Component, createContext, type ComponentChildren } from 'preact';
 import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { checkSegment } from '@/engine/index';
 import type { Segment } from '@/engine/types';
+import { NANO_MODEL } from '@/llm/chrome-builtin';
+import { CHROME_TRANSLATOR_MODEL } from '@/llm/chrome-translator';
 import { MAX_MEMORY_TEXT } from '@/shared/memory';
 import type { JobView, SegState } from './jobs.ts';
 import { markerKinds, parseMarkup, plainText, type MarkupNode } from './markup.ts';
@@ -410,8 +412,16 @@ function ModelBadge({ state, model }: Props) {
   // Every provider was down and Chrome's Translator translated the block (M5-E7, DESIGN §9).
   if (state?.status === 'final' && state.basic) {
     return (
-      <span class="seg__badge seg__badge--basic" data-testid="seg-basic-badge" title={i18n.t('panel.segment.basicTitle', [state.model ?? i18n.t('panel.segment.chromeTranslator')])}>
+      <span class="seg__badge seg__badge--basic" data-testid="seg-basic-badge" title={model === CHROME_TRANSLATOR_MODEL ? i18n.t('panel.segment.basicOnDeviceTitle') : i18n.t('panel.segment.basicTitle', [state.model ?? i18n.t('panel.segment.chromeTranslator')])}>
         {i18n.t('panel.segment.basic')}
+      </span>
+    );
+  }
+  // Gemini Nano on this device (the on-device route): named on every block, so the reader knows what translated it.
+  if (state?.status === 'final' && state.model === NANO_MODEL) {
+    return (
+      <span class="seg__badge" data-testid="seg-nano-badge" title={i18n.t('panel.segment.nanoTitle')}>
+        {i18n.t('panel.segment.nano')}
       </span>
     );
   }

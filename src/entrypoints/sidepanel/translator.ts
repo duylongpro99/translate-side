@@ -10,7 +10,7 @@ import { chromeLanguageDetector, detectionSample, detectSourceLanguage, MIXED_LA
 import type { GlossaryEntry } from '@/engine/types';
 import { featureAvailable } from '@/shared/features';
 import { QUALITY_KEY, readQuality, requestedStrategy, type Quality } from '@/shared/quality';
-import { GLOSSARY_KEY, PREFS_KEY, readGlossary, readPreferences, SECRET_PREFIX, type Preferences } from '@/shared/settings';
+import { GLOSSARY_KEY, ON_DEVICE_CONNECTION, PREFS_KEY, readGlossary, readPreferences, SECRET_PREFIX, type Preferences } from '@/shared/settings';
 import type { ReadInfo, SessionHooks } from './controller.ts';
 import type { ExtractResult } from '@/shared/protocol';
 import { addAllowlisted, cleanSiteList, hasSitePermission, isNeverTranslate, listedFor, readSiteLists, requestSitePermission, siteMode, siteOf, SITE_NEVER_KEY } from '@/shared/sites';
@@ -21,8 +21,12 @@ import { openTranslationMemory, readAcrossSites } from '@/shared/memory';
 import { checkSpendLimit, continuePastLimit, SpendLedger } from '@/shared/spend';
 import { createDiagnosticsLog } from '@/shared/diagnostics';
 import { anyDenylisted, clearSnippet, readSnippet, tabIdFromSnippetKey, type SnippetRecord } from '@/shared/snippet';
+import { NANO_MODEL } from '@/llm/chrome-builtin';
+import { CHROME_TRANSLATOR_MODEL } from '@/llm/chrome-translator';
 import { chromeTranslator } from '@/llm/chrome-translator';
-import { Jobs, type JobDeps, type JobDoc } from './jobs.ts';
+import { prepareOnDevice, type OnDeviceEngine } from '@/llm/on-device';
+import { openOnboarding } from '@/shared/onboarding';
+import { Jobs, type JobDeps, type JobDoc, type PrivacyPort } from './jobs.ts';
 import { snippetDocId, snippetView, SnippetStore } from './snippet.ts';
 import { chooseForTab, makeDefault, readSwitcher, type SwitcherState } from './switcher.ts';
 import { isErrorStatusWrite, onProviderSettingsChanged, readProviderSettings, saveConnectionStatus, siteRuleFor } from '@/shared/providers';
@@ -71,6 +75,9 @@ export interface Translator {
   watch(activeTab: () => number | undefined): () => void;
 }
 
+/** The job stopped because on-device translation can't run yet: Chrome may have changed that meanwhile. */
+const ON_DEVICE_STOPS: ReadonlySet<unknown> = new Set(['onDeviceSetup', 'onDeviceDownloading', 'onDeviceUnavailable']);
+
 export interface TranslatorOptions {
   /** The language-detection port (plan M2-E5); default Chrome's LanguageDetector when the browser has one. */
   detector?: LanguageDetectorPort | undefined;
@@ -78,6 +85,8 @@ export interface TranslatorOptions {
   mixedLanguage?: boolean;
   /** The first-run privacy notice; default one over `api.storage.local`. */
   privacy?: PrivacyGate;
+  /** Where Chrome's built-in AI lives (`Translator`, `LanguageModel`); default the panel's window. */
+  scope?: object;
 }
 
 /** What a job reads from the settings: the preferences, the personal glossary and the quality setting (all storage.sync). */
@@ -112,21 +121,30 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     ...deps,
   };
   // Chrome's Translator, the `basic` fallback's translator (M5-E7); undefined in a browser without it.
-  const mt = 'mt' in deps ? deps.mt : chromeTranslator();
-  const jobs = new Jobs({ translateClient: (target) => translateClient(api, target), cache: openTranslationCache(), memory: openTranslationMemory(), siteLocalOnly: async (url) => siteRuleFor((await readProviderSettings(api)).routing, url)?.localOnly === true, featureAvailable, acrossSites: () => readAcrossSites(api.storage.local), ...deps, mt });
+  const scope = options.scope ?? globalThis;
+  const privacy = options.privacy ?? new PrivacyGate(api);
+  /** The gate as one Jobs asks it: page and selection jobs of a tab wait apart. */
+  const gateFor = (prefix: string): PrivacyPort => ({
+    acknowledged: () => privacy.state === 'acknowledged',
+    whenAcknowledged: (key, run) => privacy.whenAcknowledged(`${prefix}:${key}`, run),
+    forget: (key) => privacy.forget(`${prefix}:${key}`),
+  });
+  const mt = 'mt' in deps ? deps.mt : chromeTranslator(scope);
+  const jobs = new Jobs({ translateClient: (target) => translateClient(api, target, scope), privacy: gateFor('page'), cache: openTranslationCache(), memory: openTranslationMemory(), siteLocalOnly: async (url) => siteRuleFor((await readProviderSettings(api)).routing, url)?.localOnly === true, featureAvailable, acrossSites: () => readAcrossSites(api.storage.local), ...deps, mt });
   // The corrections for the language in use are read while the panel opens, not on the first run's way.
   void readPreferences(api).then((p) => jobs.warmMemory(p.targetLang), () => {});
   // No cache and no translation memory: a selection is a one-off, and its text is not kept beyond the session.
   // Single-pass: one request per chunk, never the contextual brief (analyze) call for a selection.
-  const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target), ...deps, mt, strategy: 'single-pass', cache: undefined, memory: undefined, lazyAbove: Infinity, onJobRecord: undefined });
+  const snippetJobs = new Jobs({ translateClient: (target) => translateClient(api, target, scope), privacy: gateFor('snippet'), ...deps, mt, strategy: 'single-pass', cache: undefined, memory: undefined, lazyAbove: Infinity, onJobRecord: undefined });
   const snippetStore = new SnippetStore();
   const viewports = new ViewportStore();
   const hovers = new HoverStore();
   const detector = 'detector' in options ? options.detector : chromeLanguageDetector();
   const mixed = options.mixedLanguage ?? MIXED_LANGUAGE_DETECTION;
-  const privacy = options.privacy ?? new PrivacyGate(api);
   const prefs = new PrefsStore(api);
   const offers = new OfferStore();
+  /** The turn-on downloads in flight, per tab job (pages and selections apart), for Cancel. */
+  const downloads = new Map<string, AbortController>();
   const pageKey = (tabId: number) => `page:${tabId}`;
   const snippetKey = (tabId: number) => `snippet:${tabId}`;
 
@@ -289,15 +307,12 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       // Detection only informs the prompt; a selection already in the target language is still translated (the user asked).
       const { doc } = await docFor(settings, view.url, '', undefined, view.segments);
       if (snippetStore.get(tabId)?.docId !== view.docId) return;
-      // Nothing is sent before the first-run privacy notice is acknowledged (M3-E10); once it is,
-      // the settings are read again, so a change made meanwhile applies.
-      if (privacy.state === 'acknowledged') void snippetJobs.start(tabId, view.docId, doc);
-      else privacy.whenAcknowledged(snippetKey(tabId), () => void translate().catch(() => {}));
+      // A route that sends text off the device waits for the first-run privacy notice (jobs.ts).
+      void snippetJobs.start(tabId, view.docId, doc);
     };
     await translate();
   };
   const closeSnippet = (tabId: number) => {
-    privacy.forget(snippetKey(tabId));
     snippetJobs.drop(tabId);
     snippetStore.clear(tabId);
     clearSnippet(api, tabId).catch(() => {});
@@ -327,19 +342,14 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
         got.unmark();
         return hold(tabId, docId, result, 'never');
       }
-      if (privacy.state === 'acknowledged') return void begin(tabId, docId, got.prepared, opts);
-      // Nothing is sent before the first-run privacy notice is acknowledged (M3-E10). Once it
-      // is, the settings are read again: the page never goes out once under stale ones.
-      got.unmark();
-      privacy.whenAcknowledged(pageKey(tabId), () => {
-        if (isLive(tabId, docId) && isLatest(tabId, result)) translateRead(tabId, docId, result, opts);
-      });
+      // Nothing leaves the device before the first-run privacy notice is acknowledged (M3-E10):
+      // the job checks it on the route it resolves, so an on-device route never waits for it.
+      begin(tabId, docId, got.prepared, opts);
     });
 
   /** The page is shown as the original and waits (an offer); a job of an earlier read of it is let go. */
   const hold = (tabId: number, docId: string, result: Page, reason: 'ask' | 'never') => {
     pending.delete(tabId);
-    privacy.forget(pageKey(tabId));
     if (jobs.docOf(tabId) === docId) jobs.drop(tabId);
     jobs.setViewport(tabId, docId, result.visible ?? [], result.fixed);
     offers.set(tabId, { docId, url: result.url, reason, site: siteOf(result.url) });
@@ -414,7 +424,6 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   };
 
   const forgetPage = (tabId: number) => {
-    privacy.forget(pageKey(tabId));
     live.delete(tabId);
     latest.delete(tabId);
     pending.delete(tabId);
@@ -441,7 +450,6 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     navigated: (tabId) => closeSnippet(tabId),
     closed: (tabId) => {
       forgetPage(tabId);
-      privacy.forget(snippetKey(tabId));
       snippetJobs.drop(tabId);
       snippetStore.clear(tabId);
       viewports.drop(tabId);
@@ -486,19 +494,19 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       const got = await prepare(tabId, settings, doc);
       if (got === undefined) return;
       if (jobs.docOf(tabId) !== docId || !isLive(tabId, docId)) return got.unmark();
-      // Nothing is sent before the first-run privacy notice is acknowledged (M3-E10), a switch included.
-      if (privacy.state !== 'acknowledged') {
-        got.unmark();
-        return privacy.whenAcknowledged(pageKey(tabId), () => {
-          if (isLive(tabId, docId)) rerun(tabId);
-        });
-      }
       void jobs.start(tabId, docId, got.prepared.doc, { keepCost: true, keepBrief: true });
     });
   };
 
   const switcher: Translator['switcher'] = {
-    read: (target) => readSwitcher(api, target),
+    // The route the page's job resolved to decides whether it runs on the device (route.ts), the same resolution the job used.
+    read: async (target) => {
+      const state = await readSwitcher(api, target);
+      const job = target.tabId === undefined ? undefined : jobs.get(target.tabId);
+      // A job the on-device route stopped (no engine can run yet) names no model: it is not on the device.
+      const engine = job?.connection?.id !== ON_DEVICE_CONNECTION.id ? undefined : job.model === NANO_MODEL ? 'nano' : job.model === CHROME_TRANSLATOR_MODEL ? 'translator' : undefined;
+      return engine ? { ...state, onDevice: engine } : state;
+    },
     choose: async (tabId, profileId) => {
       await chooseForTab(api, tabId, profileId);
       rerun(tabId);
@@ -507,8 +515,45 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     makeDefault: (tabId, profileId) => makeDefault(api, tabId, profileId),
   };
 
+  /**
+   * The turn-on click for `owner`'s job (the page's or the selection's): the engine is created
+   * first, synchronously in the click, then the download shows in the bar and the job runs again.
+   */
+  const turnOn = (owner: Jobs, key: string, tabId: number, again: () => void) => (engine: OnDeviceEngine, from: string, to: string) => {
+    downloads.get(key)?.abort(new DOMException('replaced', 'AbortError'));
+    const controller = new AbortController();
+    const show = (loaded: number, error?: string) => owner.onDeviceDownload(tabId, { engine, from, to, loaded, ...(error === undefined ? {} : { error }) });
+    const ready = prepareOnDevice(scope, mt, engine, from, to, { signal: controller.signal, progress: (loaded) => show(loaded) });
+    downloads.set(key, controller);
+    show(0);
+    ready.then(
+      () => {
+        if (downloads.get(key) !== controller) return;
+        downloads.delete(key);
+        owner.onDeviceDownload(tabId, undefined, true);
+        // A second pair turned on while the page still runs: its blocks are translated once the run ends.
+        if (owner.get(tabId)?.status !== 'running') return again();
+        const stop = owner.subscribe((id, view) => {
+          if (id !== tabId || view?.status === 'running') return;
+          stop();
+          if (view !== undefined) again();
+        });
+      },
+      (err: unknown) => {
+        if (downloads.get(key) !== controller) return;
+        downloads.delete(key);
+        if (controller.signal.aborted) owner.onDeviceDownload(tabId, undefined);
+        else show(0, err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+      },
+    );
+  };
+  const cancelDownload = (key: string) => () => downloads.get(key)?.abort(new DOMException('cancelled', 'AbortError'));
+
   const actions = (tabId: number): JobActions => ({
     cancel: () => jobs.cancel(tabId),
+    turnOnDevice: turnOn(jobs, pageKey(tabId), tabId, () => resume(tabId)),
+    cancelOnDevice: cancelDownload(pageKey(tabId)),
+    setUpProvider: () => void openOnboarding(api).catch((err: unknown) => console.warn('[translate-side] onboarding could not open', err)),
     resume: () => resume(tabId),
     // A long page translates around the reader (M5-E4); this does all of it.
     translateRest: () => void jobs.translateRest(tabId),
@@ -552,6 +597,8 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     ...actions(tabId),
     cancel: () => snippetJobs.cancel(tabId),
     resume: () => void snippetJobs.resume(tabId),
+    turnOnDevice: turnOn(snippetJobs, snippetKey(tabId), tabId, () => void snippetJobs.resume(tabId)),
+    cancelOnDevice: cancelDownload(snippetKey(tabId)),
     continuePastLimit: () =>
       void continuePastLimit(api).then(
         () => void (snippetJobs.takeAfterLimit(tabId) ?? (() => snippetJobs.resume(tabId)))(),
@@ -628,9 +675,22 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     api.storage.sync.onChanged.addListener(onSync);
     const stopProviders = onProviderSettingsChanged(api, onProviders);
     const stopLists = onListChanged(api, [GLOSSARY_KEY, SITE_NEVER_KEY], onList);
+    // Chrome may have finished a download (or been set up) while the panel was in the background:
+    // a job stopped because on-device translation could not run yet asks again (no network, no create).
+    const onFocus = () => {
+      const tabId = activeTab();
+      if (tabId === undefined) return;
+      const stopped = (j: Jobs) => {
+        const view = j.get(tabId);
+        return view?.status === 'stopped' && view.onDeviceDownload === undefined && ON_DEVICE_STOPS.has((view.stopError?.raw as { ui?: unknown } | undefined)?.ui);
+      };
+      if (stopped(jobs)) resume(tabId);
+      if (stopped(snippetJobs)) void snippetJobs.resume(tabId);
+    };
     api.permissions.onAdded.addListener(retryStopped);
     api.storage.session.onChanged.addListener(onSession);
     addEventListener('pagehide', onPagehide);
+    addEventListener('focus', onFocus);
     return () => {
       api.storage.local.onChanged.removeListener(onLocal);
       api.storage.sync.onChanged.removeListener(onSync);
@@ -639,8 +699,9 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       api.permissions.onAdded.removeListener(retryStopped);
       api.storage.session.onChanged.removeListener(onSession);
       removeEventListener('pagehide', onPagehide);
+      removeEventListener('focus', onFocus);
     };
   };
 
-  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, hovers, privacy, prefs, offers, translatePage, allowSite, hooks, actions: pageActions, switcher, routed: (target) => routedSummary(api, target), watch };
+  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, hovers, privacy, prefs, offers, translatePage, allowSite, hooks, actions: pageActions, switcher, routed: (target) => routedSummary(api, target, scope), watch };
 }
