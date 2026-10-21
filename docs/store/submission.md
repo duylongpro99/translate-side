@@ -8,13 +8,16 @@ assets, and the steps in the Chrome Web Store developer dashboard.
 | | |
 |---|---|
 | File | `.output/translate-side-1.2.0-chrome.zip` (made by `pnpm run zip`; `.output/` is not committed) |
-| Size | 344 624 bytes |
-| SHA-256 | `5a78b7552aff633d735bff52590810fc3d0983bd7989e9c91aa8f36d05f910f8` |
-| Built from | source at commit `c1de072` (version `1.2.0` from `package.json`) |
+| Size | 377 596 bytes |
+| SHA-256 | `e3b6ac07b8c3b508745955519d7471e01bddcdef9192d58722e704cbf52e8da8` |
+| Built from | source at commit `b1f15a7` (version `1.2.0` from `package.json`) |
 
 The zip is reproducible: building the same source again gives the same hash. To rebuild it, run
 `pnpm install --frozen-lockfile && pnpm run zip` and compare the hash with the one above; if the source changed since
 the commit above, the hash changes and this table needs updating.
+
+This build includes the new logo and on-device translation with Chrome's built-in AI, for readers without a
+provider. The Chrome stable checks for on-device translation (S8 Q1–Q6) are still the owner's to run.
 
 **What was checked in the unpacked zip:**
 
@@ -27,7 +30,7 @@ the commit above, the hash changes and this table needs updating.
   under `.output/e2e-ext`, never to the build).
 - Version `1.2.0` in the manifest.
 
-**Contents** (28 files, 345 KB):
+**Contents** (28 files, 378 KB):
 
 | Path | What |
 |---|---|
