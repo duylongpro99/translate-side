@@ -10,7 +10,8 @@ import { createOpenAIAdapter } from '@/llm/openai';
 import { anthropicStream } from '@/llm/testing';
 import type { Protocol } from '@/llm/types';
 import { markOnboarding, ONBOARDING_KEY, ONBOARDING_PAGE, openOnboarding, readOnboarding } from '@/shared/onboarding';
-import { PRIVACY_KEY, PRIVACY_NOTICE_VERSION } from '../sidepanel/privacy.ts';
+import { PRIVACY_KEY, PRIVACY_NOTICE_VERSION, PrivacyGate } from '../sidepanel/privacy.ts';
+import { fakeBuiltinAI } from '@/llm/testing';
 import { Jobs } from '../sidepanel/jobs.ts';
 import { resolveRoute, saveRouting } from '@/shared/providers';
 import { DEFAULT_PROFILE } from '@/shared/settings';
@@ -112,10 +113,15 @@ const pickValue = (sel: string, value: string) =>
     el.dispatchEvent(new Event('change', { bubbles: true }));
   });
 
-/** A fake client the sample runs on, and how many requests it saw: the privacy gate must keep it at 0. */
+/**
+ * A fake client the sample runs on, and how many requests it saw: the privacy gate must keep it at 0.
+ * The jobs ask the same gate the onboarding shows (as its own jobs do).
+ */
 function sampleJobs(f: ReturnType<typeof fakeApi>, fail = false) {
   const client = translatorClient((lines) => (fail ? { text: '', stopReason: 'error' as never } : renderLines(lines, (s) => `[vi] ${s}`)), { model: 'claude-haiku-4-5' });
+  const gate = new PrivacyGate(f.api);
   const jobs = new Jobs({
+    privacy: { acknowledged: () => gate.state === 'acknowledged', whenAcknowledged: (key, run) => gate.whenAcknowledged(key, run), forget: (key) => gate.forget(key) },
     translateClient: async (target) => {
       const route = await resolveRoute(f.api, 'translate', target);
       if (!route.ok) return { ok: false as const, error: { kind: 'bad_request' as const, message: route.message } };
@@ -124,7 +130,7 @@ function sampleJobs(f: ReturnType<typeof fakeApi>, fail = false) {
     strategy: 'single-pass',
     cache: undefined,
   });
-  return { jobs, client };
+  return { jobs, client, gate };
 }
 
 async function mount(f: ReturnType<typeof fakeApi>, srv = server(), extra: Partial<Parameters<typeof Onboarding>[0]> = {}) {
@@ -161,7 +167,7 @@ describe('onboarding (M4-E13)', () => {
     expect(t('onboarding-step-2')?.getAttribute('aria-current')).toBe('step');
   });
 
-  it('step 2 offers the key path (Anthropic recommended), a local model, and Chrome built-in as coming soon', async () => {
+  it('step 2 offers the key path (Anthropic recommended), a local model, and Chrome on this device (here unavailable: it says why)', async () => {
     await mount(fakeApi());
     click(t('onboarding-next'));
     await waitFor(() => t('onboarding-how') !== null);
@@ -170,12 +176,12 @@ describe('onboarding (M4-E13)', () => {
     expect(t('cloud-preset')?.textContent).toContain('(recommended)');
     expect(t('path-local')).not.toBeNull();
     expect($<HTMLInputElement>('[data-testid=path-builtin]').disabled).toBe(true);
-    expect(t('path-builtin-card')?.textContent).toContain('Coming soon');
+    expect(t('path-builtin-card')?.textContent).toContain('On-device translation needs desktop Chrome 138 or later');
   });
 
   it('asks the browser for the chosen provider\'s origin only, and for nothing wider', async () => {
     const f = fakeApi();
-    await mount(f, server(), { jobs: sampleJobs(f).jobs });
+    await mount(f, server(), sampleJobs(f));
     await toStep3();
     await connectAnthropic();
     const origins = f.requested.flat();
@@ -200,7 +206,7 @@ describe('onboarding (M4-E13)', () => {
 
   it('focus follows the step: the new heading after Next, the privacy button when the notice appears', async () => {
     const f = fakeApi();
-    await mount(f, server(), { jobs: sampleJobs(f).jobs });
+    await mount(f, server(), sampleJobs(f));
     click(t('onboarding-next'));
     await waitFor(() => t('onboarding-how') !== null);
     expect(document.activeElement?.tagName).toBe('H2');
@@ -241,8 +247,8 @@ describe('onboarding (M4-E13)', () => {
 
   it('after Save the first route is this model; the sample waits for the privacy notice, then translates through that connection', async () => {
     const f = fakeApi();
-    const { jobs, client } = sampleJobs(f);
-    await mount(f, server(), { jobs });
+    const { jobs, client, gate } = sampleJobs(f);
+    await mount(f, server(), { jobs, gate });
     await toStep3();
     await connectAnthropic();
     const routing = f.sync.get('routing') as { translate: string };
@@ -289,8 +295,8 @@ describe('onboarding (M4-E13)', () => {
   it('with the notice already acknowledged the sample translates at once; an English reader gets a Spanish sample', async () => {
     const f = fakeApi({ local: { [PRIVACY_KEY]: { version: PRIVACY_NOTICE_VERSION, at: 1 } } });
     await f.api.storage.sync.set({ prefs: { targetLang: 'en', sourceLang: 'auto', style: 'natural' } });
-    const { jobs, client } = sampleJobs(f);
-    await mount(f, server(), { jobs });
+    const { jobs, client, gate } = sampleJobs(f);
+    await mount(f, server(), { jobs, gate });
     await toStep3();
     await connectAnthropic();
     expect(t('sample-original')?.textContent).toContain('biblioteca');
@@ -303,8 +309,8 @@ describe('onboarding (M4-E13)', () => {
   it('the sample is drawn in the reader\'s typeface and size; Finish takes over as the one primary once it is done; done steps are checked', async () => {
     const f = fakeApi({ local: { [PRIVACY_KEY]: { version: PRIVACY_NOTICE_VERSION, at: 1 } } });
     await f.api.storage.sync.set({ reading: { theme: 'paper', typeface: 'serif', size: 20, width: 'medium' } });
-    const { jobs } = sampleJobs(f);
-    await mount(f, server(), { jobs });
+    const { jobs, gate } = sampleJobs(f);
+    await mount(f, server(), { jobs, gate });
     await toStep3();
     expect(t('onboarding-step-1')?.classList.contains('onb__step--done')).toBe(true);
     expect(t('onboarding-step-1')?.querySelector('svg')).not.toBeNull();
@@ -324,8 +330,8 @@ describe('onboarding (M4-E13)', () => {
 
   it('a sample that fails says why and can be tried again', async () => {
     const f = fakeApi({ local: { [PRIVACY_KEY]: { version: PRIVACY_NOTICE_VERSION, at: 1 } } });
-    const { jobs } = sampleJobs(f, true);
-    await mount(f, server(), { jobs });
+    const { jobs, gate } = sampleJobs(f, true);
+    await mount(f, server(), { jobs, gate });
     await toStep3();
     await connectAnthropic();
     click(t('translate-sample'));
@@ -359,5 +365,82 @@ describe('onboarding (M4-E13)', () => {
     expect(f.tabs).toEqual([`chrome-extension://abc${ONBOARDING_PAGE}`]);
     await markOnboarding(f.api, 'done');
     expect(await readOnboarding(f.api)).toBe('done');
+  });
+});
+
+describe('onboarding: translate on this device with Chrome', () => {
+  const toHow = async () => {
+    click(t('onboarding-next'));
+    await waitFor(() => t('onboarding-how') !== null);
+  };
+
+  it('is chosen first when Chrome can translate here; the sample runs on the device with no key and no privacy notice', async () => {
+    const f = fakeApi();
+    const ai = fakeBuiltinAI({ pairs: { 'en>vi': 'available' } });
+    await mount(f, server(), { scope: ai.scope });
+    await toHow();
+    await waitFor(() => $<HTMLInputElement>('[data-testid=path-builtin]').checked);
+    expect($<HTMLInputElement>('[data-testid=path-builtin]').disabled).toBe(false);
+    expect(t('path-builtin-card')?.textContent).toContain('No key needed');
+    click(t('onboarding-next'));
+    await waitFor(() => t('onboarding-sample') !== null);
+    expect(t('connection-form')).toBeNull();
+    click(t('translate-sample'));
+    await waitFor(() => t('sample-translation') !== null && t('sample-model') !== null);
+    expect(t('sample-translation')?.textContent).toContain('[vi] The library');
+    expect(t('sample-model')?.textContent).toContain('Chrome Translator');
+    expect(t('onboarding-privacy')).toBeNull();
+    expect(f.local.has(PRIVACY_KEY)).toBe(false);
+  });
+
+  it('a pair not set up yet: the sample asks for the turn-on click, creates it in that click, then translates', async () => {
+    const f = fakeApi();
+    const ai = fakeBuiltinAI({ pairs: { 'en>vi': 'downloadable' } });
+    await mount(f, server(), { scope: ai.scope });
+    await toHow();
+    await waitFor(() => $<HTMLInputElement>('[data-testid=path-builtin]').checked);
+    click(t('onboarding-next'));
+    await waitFor(() => t('onboarding-sample') !== null);
+    click(t('translate-sample'));
+    await waitFor(() => t('sample-turn-on') !== null);
+    expect(ai.creates).toEqual([]);
+    // The click's activation lasts for its own task only.
+    ai.activation.transient = true;
+    click(t('sample-turn-on'));
+    ai.activation.transient = false;
+    expect(ai.creates).toEqual([{ api: 'translator', from: 'en', to: 'vi' }]);
+    await waitFor(() => t('sample-translation') !== null);
+    expect(t('sample-translation')?.textContent).toContain('[vi]');
+  });
+
+  it('Cancel stops the turn-on download and puts the turn-on back, without translating', async () => {
+    const ai = fakeBuiltinAI({ pairs: { 'en>vi': 'downloadable' }, hold: true });
+    await mount(fakeApi(), server(), { scope: ai.scope });
+    await toHow();
+    await waitFor(() => $<HTMLInputElement>('[data-testid=path-builtin]').checked);
+    click(t('onboarding-next'));
+    await waitFor(() => t('onboarding-sample') !== null);
+    click(t('translate-sample'));
+    await waitFor(() => t('sample-turn-on') !== null);
+    ai.activation.transient = true;
+    click(t('sample-turn-on'));
+    ai.activation.transient = false;
+    await waitFor(() => t('sample-turn-on-cancel') !== null);
+    click(t('sample-turn-on-cancel'));
+    await waitFor(() => t('sample-turn-on') !== null);
+    expect(t('sample-turn-on-cancel')).toBeNull();
+    ai.finish();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(t('sample-translation')).toBeNull();
+    expect(t('sample-on-device')?.textContent).not.toContain('failed');
+  });
+
+  it('stays on the key path, and the card says why, when Chrome cannot translate the pair here', async () => {
+    const ai = fakeBuiltinAI({ pairs: {} });
+    await mount(fakeApi(), server(), { scope: ai.scope });
+    await toHow();
+    await waitFor(() => t('path-builtin-card')?.textContent?.includes("Chrome can't translate English → Vietnamese on this device.") === true);
+    expect($<HTMLInputElement>('[data-testid=path-key]').checked).toBe(true);
+    expect($<HTMLInputElement>('[data-testid=path-builtin]').disabled).toBe(true);
   });
 });

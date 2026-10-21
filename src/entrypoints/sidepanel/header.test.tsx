@@ -33,7 +33,7 @@ function fakeApi(prefs: Record<string, unknown> = { targetLang: 'vi', sourceLang
   const api = {
     storage: {
       sync: {
-        get: (k: string) => Promise.resolve(sync.has(k) ? { [k]: sync.get(k) } : {}),
+        get: (k: string | null) => Promise.resolve(k === null ? Object.fromEntries(sync) : sync.has(k) ? { [k]: sync.get(k) } : {}),
         set: (items: Record<string, unknown>) => {
           if (failWrites) return Promise.reject(new Error('QUOTA_BYTES quota exceeded'));
           for (const [k, v] of Object.entries(items)) sync.set(k, v);
@@ -129,7 +129,8 @@ describe('panel header (M3-E6)', () => {
   });
 
   it('names the routed model before a job has resolved its client', async () => {
-    const f = fakeApi();
+    // Basic translation out of the fallback list and no Gemini Nano here: the keyless default stays the route (not the on-device one).
+    const f = fakeApi(undefined, false, { schemaVersion: 1, routing: { translate: DEFAULT_PROFILE.id, basicMigrated: true } });
     const t = createTranslator(f.api, { translateClient: () => new Promise(() => {}) });
     const controller = { view: { kind: 'ready', result, docId: 'd1' } as PanelView, tabId: 1, subscribe: (fn: (v: PanelView, id: number | undefined) => void) => (fn(controller.view, 1), () => undefined), retry: () => undefined };
     act(() => render(<App controller={controller as unknown as PanelController} translator={t} />, root));

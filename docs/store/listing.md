@@ -9,9 +9,9 @@ permission texts are in [permission-justifications.md](permission-justifications
 
 **Name:** Translate Side
 
-**Short description** (107 of 132 characters):
+**Short description** (125 of 132 characters):
 
-> Read any page in your own language. A natural AI translation in the side panel, right next to the original.
+> Read any page in your own language, beside the original. No key needed: Chrome translates on your device, or use your own AI.
 
 **Category:** Productivity. **Language:** English.
 
@@ -20,7 +20,7 @@ permission texts are in [permission-justifications.md](permission-justifications
 ```
 Translate Side opens a side panel next to the page you are reading and fills it with a natural translation, block for block, while the original page stays exactly as it is.
 
-It uses an AI model that you choose and pay for yourself. You add your own API key (Anthropic, OpenAI, Google Gemini, OpenRouter and other OpenAI-compatible services), or run a model on your own computer with Ollama or LM Studio so the text never leaves your device. There is no Translate Side account or server.
+It works without a key: on desktop Chrome 138 or later, Chrome's own on-device translation does the work on your computer, after one click per language pair, and no text leaves it. For more natural translations, use an AI model you choose and pay for yourself: add your own API key (Anthropic, OpenAI, Google Gemini, OpenRouter and other OpenAI-compatible services), or run a model on your own computer with Ollama or LM Studio so the text never leaves your device. There is no Translate Side account or server.
 
 WHAT IT DOES
 • Side by side: press Alt+T or click the toolbar icon. The panel opens and translates; the same key closes it. On macOS rebind the shortcut at chrome://extensions/shortcuts if you prefer.
@@ -34,12 +34,13 @@ WHAT IT DOES
 • Works with the keyboard and screen readers. The interface is available in English and Vietnamese.
 
 PRIVACY, PLAINLY
+• With no provider set up, Chrome translates on your computer and no page text is sent anywhere.
 • Page text goes only to the provider you chose, directly from your browser, when you start a translation. On a site you add to your allowlist, each page you open there is translated automatically while the panel is open, which sends its text to your provider without a click.
 • Mail and sign-in pages, browser pages and the Web Store are never read. Password fields and other form fields are never read.
 • Your API keys stay on your device. The extension has no analytics and no telemetry, and sends nothing to its developer.
 • Access to a provider address or a site (both its http and https addresses, and its subdomains if you enter *.site) is requested one at a time, only when you click, and given back when you remove the setting, unless another setting still uses it.
 
-You need an API key from a provider (many have a free tier) or a local model. Translate Side does not include a translation service.
+On supported Chrome it works without a key, using Chrome's on-device translation (literal; one click turns on each language pair). For the best results use an API key from a provider (many have a free tier) or a local model. Translate Side does not include a translation service of its own.
 
 Source code and documentation: https://github.com/duylongpro99/translate-side
 ```
@@ -102,12 +103,14 @@ a few days of use. **Regions:** all. **Pricing:** free.
 
 ## Test instructions for the reviewer
 
-> The extension needs an AI provider to translate. Without an API key it opens, reads the page and shows the original
-> text, and asks for a provider in Settings.
-> 1. Install the extension, open any English article, and press Alt+T (or click the toolbar icon). The first-run
->    notice and setup guide ask for a provider and a key; paste the test key below, or use a local model
+> Without an API key, on Chrome that can run on-device AI, the extension translates with Chrome's own on-device
+> translator: the panel shows **Turn on** for the language pair, and after that click (and Chrome's download) it
+> translates the page on the device. Where Chrome can't, it says why and offers to set up a provider.
+> 1. Install the extension, open any English article, and press Alt+T (or click the toolbar icon). To test a provider,
+>    the setup guide asks for a provider and a key; paste the test key below, or use a local model
 >    (docs/local-models.md).
-> 2. After the notice is acknowledged the panel translates the page next to the original.
+> 2. With a provider, the first-run notice says where the text goes; after it is acknowledged the panel translates
+>    the page next to the original.
 > 3. Settings (the gear in the panel) shows providers, glossary, site rules and the privacy controls. Site access is
 >    requested only when you press Test connection or add a site.
 >

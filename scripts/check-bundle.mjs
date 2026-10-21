@@ -2,7 +2,8 @@
 // scripts/bundle-budget.json. Run after `wxt build`. A file is named without its content hash
 // (`chunks/openai-Bl_F7xL3.js` is `chunks/openai.js`); files that share a name count together. A file the
 // budget does not list, or a listed one the build no longer has, fails too: the budget is then set again
-// on purpose, with `--update` (the measured sizes plus 10%) and a new `note`.
+// on purpose, with `--update` (the measured sizes plus 10%) and a new `note`. It also fails a build that
+// carries the test fakes of Chrome's built-in AI (e2e/builtin-ai.ts, src/llm/testing.ts).
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -16,10 +17,17 @@ function files(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(join(dir, e.name)) : /\.(js|css)$/.test(e.name) ? [join(dir, e.name)] : []));
 }
 
+/** What only the test fakes of Chrome's built-in AI name: none of it may ship. */
+const FAKE_AI = ['__translateSideFakeAI', 'fakeBuiltinAI'];
+
 const sizes = {};
+const fakes = [];
 for (const file of files(BUILD)) {
   const name = relative(BUILD, file).replace(/-[\w-]{8}(\.(js|css))$/, '$1');
-  sizes[name] = (sizes[name] ?? 0) + gzipSync(readFileSync(file), { level: 9 }).length;
+  const content = readFileSync(file);
+  sizes[name] = (sizes[name] ?? 0) + gzipSync(content, { level: 9 }).length;
+  const text = content.toString('utf8');
+  for (const id of FAKE_AI) if (text.includes(id)) fakes.push(`${name}: carries the test fake ${id}`);
 }
 const total = Object.values(sizes).reduce((a, b) => a + b, 0);
 const names = Object.keys(sizes).sort();
@@ -34,7 +42,7 @@ if (process.argv.includes('--update')) {
 }
 
 const budget = JSON.parse(readFileSync(BUDGET, 'utf8'));
-const problems = [];
+const problems = [...fakes];
 for (const n of names) {
   const limit = budget.files[n];
   if (limit === undefined) problems.push(`${n}: ${sizes[n]} B gzip, not in the budget`);

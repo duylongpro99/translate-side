@@ -10,6 +10,7 @@ import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { REVIEW_MODEL, blockStatuses, expect, jobSettled, test, type Extension } from './fixtures.ts';
 import type { MockCall } from './servers.ts';
+import { fakeBuiltinAI } from './builtin-ai.ts';
 
 test('the privacy notice blocks sending until it is acknowledged', async ({ extension, mock }) => {
   await extension.seed({ privacy: false });
@@ -594,5 +595,55 @@ test.describe('Corrections as examples on later pages', () => {
     await extension.worker.evaluate(() => chrome.storage.local.set({ memoryAcrossSites: true }));
     const again = await translateB(extension, mock);
     expect(again.calls.map((c) => c.prompt).filter((p) => p.includes(CORRECTION)).length).toBeGreaterThan(0);
+  });
+});
+
+test.describe('On the device, with no API key (Chrome built-in AI, faked: e2e/builtin-ai.ts)', () => {
+  test('a keyless profile shows Turn on; the click shows the download, then the page translates with basic badges and no privacy notice', async ({ extension, mock, context }) => {
+    await fakeBuiltinAI(context, { pairs: { 'en>vi': 'downloadable' } });
+    await extension.seed({ keyless: true, privacy: false });
+    const page = await extension.open('sites/goblog-pipelines.html');
+    const panel = await extension.panel();
+    await extension.translate(page);
+    await expect(panel.getByTestId('on-device-setup')).toBeVisible();
+    await expect(panel.getByTestId('on-device-setup')).toContainText('English → Vietnamese');
+    // Nothing went anywhere, and no notice: on-device text stays on this computer.
+    expect(mock.calls).toEqual([]);
+    await expect(panel.getByTestId('privacy-notice')).toBeHidden();
+
+    await panel.getByTestId('on-device-turn-on').click();
+    await expect(panel.getByTestId('on-device-download')).toBeVisible();
+    expect(await jobSettled(panel)).toBe('done');
+    await expect(panel.getByTestId('seg-basic-badge').first()).toBeVisible();
+    await expect(panel.locator('.seg[data-status=final]').first()).toContainText('[vi]');
+    expect(Object.keys(await blockStatuses(panel)).filter((s) => s !== 'final' && s !== 'kept')).toEqual([]);
+    await expect(panel.getByTestId('privacy-notice')).toBeHidden();
+    expect(mock.calls).toEqual([]);
+  });
+
+  test('no on-device AI: the panel says why and offers to set up a provider', async ({ extension, mock, context }) => {
+    await fakeBuiltinAI(context, { none: true });
+    await extension.seed({ keyless: true });
+    const page = await extension.open('sites/goblog-pipelines.html');
+    const panel = await extension.panel();
+    await extension.translate(page);
+    await expect(panel.getByTestId('on-device-unavailable')).toContainText('On-device translation needs desktop Chrome 138 or later');
+    await panel.getByTestId('on-device-set-up').click();
+    await expect.poll(() => context.pages().some((p) => p.url().endsWith('/onboarding.html'))).toBe(true);
+    expect(mock.calls).toEqual([]);
+  });
+
+  test('with a key nothing changes: the provider translates, and the notice still comes first', async ({ extension, mock, context }) => {
+    await fakeBuiltinAI(context, { pairs: { 'en>vi': 'available' } });
+    await extension.seed({ privacy: false });
+    const page = await extension.open('sites/goblog-pipelines.html');
+    const panel = await extension.panel();
+    await extension.translate(page);
+    await expect(panel.getByTestId('privacy-notice')).toBeVisible();
+    expect(mock.calls).toEqual([]);
+    await panel.getByTestId('privacy-ok').click();
+    expect(await jobSettled(panel)).toBe('done');
+    expect(mock.calls.length).toBeGreaterThan(0);
+    await expect(panel.getByTestId('seg-basic-badge')).toHaveCount(0);
   });
 });

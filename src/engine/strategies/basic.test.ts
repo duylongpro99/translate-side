@@ -297,6 +297,28 @@ describe('the terminal basic entry: every provider down switches the job to basi
     expect(failures(events).map((f) => f.error.kind)).toEqual(['network']);
   });
 
+  it('on the device (onDeviceSwitch): what Nano itself cannot do goes to basic too: too long, gone, unreadable', async () => {
+    for (const kind of ['context_length', 'model_not_found', 'unknown'] as const) {
+      const mt = fakeMT();
+      const nano = fakeClient([[{ type: 'error', error: err(kind) }]], { model: 'gemini-nano' });
+      const events = await collect(createEngine(deps(nano, mt)).translate(job([seg('a')], 'single-pass', { basicFallback: true, onDeviceSwitch: true }), new AbortController().signal));
+      expect(failures(events)).toEqual([]);
+      expect(finals(events).map((f) => [f.text, f.producedBy.strategy])).toEqual([['cơ bản:Sentence a.', BASIC_ID]]);
+    }
+    // An unreadable answer (no markers) is a parse failure: the block still ends as basic.
+    const mt = fakeMT();
+    const garbled = translatorClient(() => 'no markers here at all', { model: 'gemini-nano' });
+    const events = await collect(createEngine(deps(garbled, mt)).translate(job([seg('a')], 'single-pass', { basicFallback: true, onDeviceSwitch: true }), new AbortController().signal));
+    expect(finals(events).map((f) => f.producedBy.strategy)).toEqual([BASIC_ID]);
+  });
+
+  it('a provider job (no onDeviceSwitch) still stops on those errors: no basic for them', async () => {
+    const mt = fakeMT();
+    const events = await collect(createEngine(deps(fakeClient([[{ type: 'error', error: err('model_not_found') }]]), mt)).translate(job([seg('a')], 'single-pass', { basicFallback: true }), new AbortController().signal));
+    expect(mt.calls).toEqual([]);
+    expect(failures(events).map((f) => f.error.kind)).toEqual(['model_not_found']);
+  });
+
   it('no translator on the device: the blocks fail with the provider error and why basic did not help', async () => {
     for (const mt of [undefined, fakeMT('unavailable')]) {
       const events = await collect(createEngine(deps(down(), mt)).translate(job([seg('a'), seg('b')], 'single-pass', { basicFallback: true }), new AbortController().signal));

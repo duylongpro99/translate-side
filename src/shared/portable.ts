@@ -20,6 +20,7 @@ import {
   cleanConnection,
   cleanProfile,
   cleanRouting,
+  withoutBuiltinOverride,
   cleanSiteRules,
   connectionKey,
   profileKey,
@@ -369,6 +370,7 @@ function importRouting(raw: unknown, notes: string[]): ImportPlan['routing'] {
     ...(ok(routing.analyze) && routing.analyze ? { analyze: routing.analyze } : {}),
     ...(ok(routing.review) && routing.review ? { review: routing.review } : {}),
     ...(fallback && fallback.length > 0 ? { fallback } : {}),
+    ...(routing.onDevice === undefined ? {} : { onDevice: routing.onDevice }),
   };
 }
 
@@ -414,7 +416,7 @@ export function parseImport(text: string): ParseResult {
   const connections = unique(rawConnections.map((c) => importConnection(c, notes)), 'connection');
   // A key travels with a connection that was read: one whose record was skipped brings none (it could be a key for the id of one you already have).
   const skippedIds = new Set(rawConnections.flatMap((c) => (isRecord(c) && typeof c.id === 'string' && !connections.some((k) => k.id === c.id) ? [c.id] : [])));
-  const profiles = unique(capped(list(s.profiles), MAX_PROFILES, 'profiles', notes).map((p) => importProfile(p, notes)), 'profile');
+  const profiles = unique(capped(list(s.profiles), MAX_PROFILES, 'profiles', notes).map((p) => importProfile(p, notes)), 'profile').map((p) => withoutBuiltinOverride(p, connections.find((c) => c.id === p.connectionId)));
 
   const routing = importRouting(s.routing, notes);
   const siteRules = cleanSiteRules(capped(list(s.siteRules), MAX_SITE_RULES, 'siteRules', notes)).filter((r) => ID_RE.test(r.translate) && sitePattern(r.pattern) === r.pattern);
@@ -556,6 +558,7 @@ async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKey
         ...(known(r.analyze) ? { analyze: r.analyze } : {}),
         ...(known(r.review) ? { review: r.review } : {}),
         ...(r.fallback ? { fallback: r.fallback.filter((id) => id === BASIC_FALLBACK || profileIds.has(id)) } : {}),
+        ...(r.onDevice === undefined ? {} : { onDevice: r.onDevice }),
       };
       if (r.analyze && !known(r.analyze)) notes.push(i18n.t('options.portable.dropAnalyze', { model: r.analyze }));
       if (r.review && !known(r.review)) notes.push(i18n.t('options.portable.dropReview', { model: r.review }));

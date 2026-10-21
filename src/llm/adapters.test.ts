@@ -3,7 +3,7 @@ import { DEFAULT_RETRY_POLICY, withRetry } from '../engine/retry.ts';
 import { withFallback } from '../engine/fallback.ts';
 import { fakeSleep } from '../engine/testing.ts';
 import { createAnthropicAdapter } from './anthropic.ts';
-import { CHROME_NANO, bindClient, createAdapter, createClient } from './client.ts';
+import { bindClient, createAdapter, createClient } from './client.ts';
 import { createOpenAIAdapter } from './openai.ts';
 import { APIBOX_BASE_URL, APIBOX_DEEPSEEK_QUIRKS, APIBOX_QWEN_QUIRKS, QWEN_THINKING_RESERVE_TOKENS } from './presets.ts';
 import { anthropicStream, connection, mockFetch, openaiStream, sse, withOverrides, type Overrides, type ScriptedResponse } from './testing.ts';
@@ -770,12 +770,10 @@ describe('openai-chat adapter (wire details)', () => {
 });
 
 describe('createClient / createAdapter', () => {
-  it('picks the adapter by protocol; chrome-builtin (Gemini Nano) only with its flag on (M5-E7)', () => {
+  it('picks the adapter by protocol, chrome-builtin (Gemini Nano) included', () => {
     expect(createAdapter('anthropic-messages').protocol).toBe('anthropic-messages');
     expect(createAdapter('openai-chat').protocol).toBe('openai-chat');
-    expect(CHROME_NANO).toBe(false);
-    expect(() => createAdapter('chrome-builtin')).toThrow(/experimental/);
-    expect(createAdapter('chrome-builtin', {}, true).protocol).toBe('chrome-builtin');
+    expect(createAdapter('chrome-builtin').protocol).toBe('chrome-builtin');
     expect(createClient(connection(), 'm').model).toBe('m');
   });
 

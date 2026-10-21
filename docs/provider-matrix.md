@@ -53,6 +53,17 @@ Tokens for the eval set (the same ≈18 k in / ≈10 k out for every model; the 
 
 Method limits, stated plainly: a headless run cannot press the toolbar icon or answer Chrome's permission prompt, so the driver (a) adds `host_permissions` for 127.0.0.1 and the provider's origin to a temporary copy of the manifest, and (b) does what the worker's action handler does (inject `content-scripts/content.js`, write the tab's `access:<id>` record) instead of clicking. The panel, the job engine, the provider client and the storage reads are the real built code. The permission prompt itself and the real Alt+T gesture remain covered by unit tests and by a human check.
 
+## Chrome on-device (zero setup)
+
+With no usable provider, the page is translated on the device (DESIGN.md §4.2.6, `src/llm/on-device.ts`). Neither
+engine is in the eval set above: the harness runs in Node, where Chrome's APIs do not exist, and their numbers wait
+for the owner's run of spike S8 on Chrome stable (`docs/decisions/S8-chrome-builtin.md`).
+
+| Engine | Languages | Device | First use | Quality notes |
+|---|---|---|---|---|
+| Chrome Translator (`basic` strategy, block by block) | 39 language codes, `vi` included; pairs pivot through English (`ja → vi` needs `en↔ja` and `en↔vi`) | Desktop Chrome 138+; no published hardware bar | One "Turn on" click per new language pair (Chrome reports a pair it has not created for this extension as `downloadable`) | Literal; no brief, glossary or style; links and inline markup are not kept. Blocks are labeled "basic translation". |
+| Gemini Nano (`single-pass`, the marker format; chunk 1,000 tokens provisional until S8) | Writes `en`, `es`, `ja` (`de`, `fr` from Chrome 149); reads the same | Desktop; more than 4 GB VRAM, or 16 GB RAM and 4 cores (Chrome 140+); 22 GB free disk | One "Turn on" click downloads the model (about 4 GB) | Follows the prompt, so the glossary and style apply; a chunk it can't do goes to Chrome Translator. Not measured against the eval set. |
+
 ## What each provider showed
 
 - **Gemini via its OpenAI endpoint.** Works with no quirks. Fastest median call (3.5 s). Judge 4.24, the lowest of the three working models, mostly naturalness (3.78) and humor (3.88). One segment needed the re-request (a `script` check) and was repaired. By far the most expensive of the three that report a cost (≈ 21× APIBOX on the same set).

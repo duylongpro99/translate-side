@@ -181,7 +181,7 @@ describe('Jobs: the strategy of a run', () => {
     expect(jobs.get(1)?.counts.final).toBe(8);
     expect(c.requests.filter(isAnalyze)).toEqual([]);
     expect(c.requests.filter(isReview)).toEqual([]);
-    expect(targets[0]).toEqual({ tabId: 1, url: 'https://example.com/', analyze: false });
+    expect(targets[0]).toEqual({ tabId: 1, url: 'https://example.com/', sourceLang: 'en', targetLang: 'vi', analyze: false });
     expect(featureAvailable).not.toHaveBeenCalled();
   });
 

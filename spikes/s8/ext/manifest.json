@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "S8 Chrome built-in AI spike",
+  "version": "0.0.1",
+  "minimum_chrome_version": "138",
+  "background": { "service_worker": "background.js" },
+  "action": {},
+  "side_panel": { "default_path": "sidepanel.html" },
+  "permissions": ["sidePanel", "storage"]
+}

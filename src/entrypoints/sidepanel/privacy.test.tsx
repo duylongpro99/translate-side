@@ -4,7 +4,10 @@ import { act } from 'preact/test-utils';
 import { describe, expect, it } from 'vitest';
 import type { Segment } from '@/engine/types';
 import { translatorClient } from '@/engine/testing';
-import { GEMINI_PROFILE } from '@/shared/settings';
+import { translatorRouteClient } from '@/llm/on-device';
+import { GEMINI_PROFILE, TRANSLATOR_PROFILE } from '@/shared/settings';
+import type { ClientResult } from './jobs.ts';
+import type { LLMClient } from '@/llm/types';
 import type { SnippetRecord } from '@/shared/snippet';
 import { App } from './App.tsx';
 import type { PanelController, PanelView, SessionHooks } from './controller.ts';
@@ -59,17 +62,16 @@ const text = 'Futures decouple a value from how it is computed.';
 const segments: Segment[] = [0, 1, 2].map((i) => ({ id: `s${i}`, kind: 'p', text, inlineMarkup: text, domPath: `/p[${i + 1}]`, translate: true }));
 const result = { ok: true, via: 'walk', url: 'https://example.com/a', title: 'Page', lang: 'en', segments } as Ready;
 
-function setup(local: Record<string, unknown> = {}) {
-  const f = fakeApi(local);
-  let calls = 0;
-  const t = createTranslator(f.api, {
-    translateClient: () => {
-      calls++;
-      return Promise.resolve({ ok: true as const, client: translatorClient(), profile: GEMINI_PROFILE });
-    },
-  });
-  return { f, t, calls: () => calls };
+/** A panel whose route is `route()` (a cloud provider by default); `sent()` counts the requests that left. */
+function setup(local: Record<string, unknown> = {}, route: (client: LLMClient) => ClientResult = (client) => ({ ok: true, client, profile: GEMINI_PROFILE })) {
+  // A key for the default route, so the notice names it (with none, the route is the on-device one).
+  const f = fakeApi(Object.assign(local, { 'secret:apibox': 'sk-apibox-0123456789' }));
+  const client = translatorClient();
+  const t = createTranslator(f.api, { translateClient: () => Promise.resolve(route(client)), mt: { model: 'Chrome Translator', availability: async () => 'available', translate: async (text: string) => ({ ok: true, text: `[vi] ${text}` }) } });
+  return { f, t, client, sent: () => client.requests.length };
 }
+/** Chrome's Translator on this device: no text leaves it. */
+const onDevice = (): ClientResult => ({ ok: true, client: translatorRouteClient(), profile: TRANSLATOR_PROFILE, onDevice: 'translator' });
 
 function mount(t: ReturnType<typeof createTranslator>, view: PanelView, tabId = 1) {
   const controller = { view, tabId, subscribe: (fn: (v: PanelView, id: number | undefined) => void) => (fn(view, tabId), () => undefined), retry: () => undefined };
@@ -120,13 +122,14 @@ describe('PrivacyGate', () => {
 
 describe('first-run privacy notice in the panel', () => {
   it('sends nothing before the notice is acknowledged; the button starts the waiting page and hides the notice for good', async () => {
-    const { f, t, calls } = setup();
+    const { f, t, sent } = setup();
     const hooks = t.hooks as Required<SessionHooks>;
     hooks.active(1);
     hooks.ready(1, 'd1', result);
     await settle();
-    expect(calls()).toBe(0);
-    expect(t.jobs.get(1)).toBeUndefined();
+    // The route is resolved (it decides whether text leaves the device), and the run waits on it.
+    expect(sent()).toBe(0);
+    expect(t.privacy.pending).toBe(true);
 
     const root = mount(t, { kind: 'ready', result: result as Extract<PanelView, { kind: 'ready' }>['result'], docId: 'd1' });
     // The route is read from storage (src/shared/providers.ts).
@@ -140,7 +143,7 @@ describe('first-run privacy notice in the panel', () => {
     act(() => (root.querySelector('[data-testid=privacy-ok]') as HTMLButtonElement).click());
     await settle(60);
     expect(root.querySelector('[data-testid=privacy-notice]')).toBeNull();
-    expect(calls()).toBe(1);
+    expect(sent()).toBeGreaterThan(0);
     expect(t.jobs.get(1)?.status).toBe('done');
     expect(f.local[PRIVACY_KEY]).toMatchObject({ version: PRIVACY_NOTICE_VERSION });
 
@@ -149,51 +152,92 @@ describe('first-run privacy notice in the panel', () => {
     (again.t.hooks as Required<SessionHooks>).active(1);
     (again.t.hooks as Required<SessionHooks>).ready(1, 'd2', result);
     await settle(60);
-    expect(again.calls()).toBe(1);
+    expect(again.sent()).toBeGreaterThan(0);
     const root2 = mount(again.t, { kind: 'ready', result: result as Extract<PanelView, { kind: 'ready' }>['result'], docId: 'd2' });
     expect(root2.querySelector('[data-testid=privacy-notice]')).toBeNull();
   });
 
   it('a page that went away while the notice waited is never sent', async () => {
-    const { t, calls } = setup();
+    const { t, sent } = setup();
     const hooks = t.hooks as Required<SessionHooks>;
     hooks.active(1);
     hooks.ready(1, 'd1', result);
     await settle();
     hooks.gone(1);
+    expect(t.privacy.pending).toBe(false);
     await t.privacy.acknowledge();
     await settle();
-    expect(calls()).toBe(0);
+    expect(sent()).toBe(0);
   });
 
   it('holds a selection too, until the notice is acknowledged', async () => {
-    const { f, t, calls } = setup();
+    const { f, t, sent } = setup();
     t.hooks.active?.(1);
     t.watch(() => 1);
     f.leave(1, { at: 1, url: 'https://example.com/a', text: 'Hello there.' });
     await settle();
-    expect(calls()).toBe(0);
+    expect(sent()).toBe(0);
     await t.privacy.acknowledge();
     await settle(60);
-    expect(calls()).toBe(1);
+    expect(sent()).toBeGreaterThan(0);
     expect(t.snippets.jobs.get(1)?.status).toBe('done');
   });
 
-  it('a page held by the notice is prepared again on the click: settings changed meanwhile apply, the stale ones are never sent', async () => {
-    const { f, t, calls } = setup();
+  it('an on-device route translates at once: no text leaves the device, so no notice', async () => {
+    const { t, sent } = setup({}, onDevice);
+    const hooks = t.hooks as Required<SessionHooks>;
+    hooks.active(1);
+    hooks.ready(1, 'd1', result);
+    await settle(60);
+    expect(t.jobs.get(1)?.status).toBe('done');
+    expect(t.privacy.pending).toBe(false);
+    expect(t.privacy.state).toBe('needed');
+    expect(sent()).toBe(0);
+    const root = mount(t, { kind: 'ready', result: result as Extract<PanelView, { kind: 'ready' }>['result'], docId: 'd1' });
+    await act(() => settle());
+    expect(root.querySelector('[data-testid=privacy-notice]')).toBeNull();
+  });
+
+  it('a key added after an on-device run: the next run goes to the cloud only after the notice', async () => {
+    let cloud = false;
+    const { t, sent } = setup({}, (client) => (cloud ? { ok: true, client, profile: GEMINI_PROFILE } : onDevice()));
+    const hooks = t.hooks as Required<SessionHooks>;
+    hooks.active(1);
+    hooks.ready(1, 'd1', result);
+    await settle(60);
+    expect(t.jobs.get(1)?.status).toBe('done');
+    // The key arrives (the route now resolves to a provider) and the page is translated again.
+    cloud = true;
+    t.actions(1).retranslatePage();
+    await settle(60);
+    expect(sent()).toBe(0);
+    expect(t.privacy.pending).toBe(true);
+    await t.privacy.acknowledge();
+    await settle(60);
+    expect(sent()).toBeGreaterThan(0);
+  });
+
+  it('a route changed while the notice waited applies: the page never goes out over the route resolved before', async () => {
+    let cloud = true;
+    const { t, sent } = setup({}, (client) => (cloud ? { ok: true, client, profile: GEMINI_PROFILE } : onDevice()));
     const hooks = t.hooks as Required<SessionHooks>;
     hooks.active(1);
     hooks.ready(1, 'd1', result);
     await settle();
-    f.prefs.targetLang = 'fr';
+    expect(t.privacy.pending).toBe(true);
+    // Meanwhile the reader routes this page elsewhere (here: on the device), then acknowledges.
+    cloud = false;
     await t.privacy.acknowledge();
     await settle(60);
-    expect(calls()).toBe(1);
-    expect(t.jobs.get(1)?.targetLang).toBe('fr');
+    expect(t.jobs.get(1)?.status).toBe('done');
+    expect(sent()).toBe(0);
   });
 
   it('names the provider the translate route uses, and puts the keyboard focus on its button', async () => {
     const { t } = setup();
+    const hooks = t.hooks as Required<SessionHooks>;
+    hooks.active(1);
+    hooks.ready(1, 'd1', result);
     await settle();
     const root = mount(t, { kind: 'loading' });
     await act(() => settle());
@@ -207,6 +251,9 @@ describe('first-run privacy notice in the panel', () => {
 describe('the header while the notice waits', () => {
   it('leaves the Translation, Aa and More triggers inert, so no popover opens over the notice, and frees them on acknowledge', async () => {
     const { t } = setup();
+    const hooks = t.hooks as Required<SessionHooks>;
+    hooks.active(1);
+    hooks.ready(1, 'd1', result);
     await settle();
     const root = mount(t, { kind: 'ready', docId: 'd1', result });
     await act(() => settle());

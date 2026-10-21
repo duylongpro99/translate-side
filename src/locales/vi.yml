@@ -26,12 +26,14 @@ panel:
     page:
       model: Mô hình $1
       blocks: $1 trên $2 khối
+      onDevice: Ở lại trên thiết bị này (Chrome)
     prefsFailed: Không lưu được thiết lập đó. Hãy thử lại hoặc đổi trong phần cài đặt.
     switchFailed: Không đổi được mô hình cho thẻ này. Hãy thử lại.
     defaultFailed: Không lưu được mặc định. Hãy thử lại hoặc đặt trong phần cài đặt.
   setup:
     text: Bạn mới dùng? Hãy thiết lập nhà cung cấp dịch để bắt đầu dịch.
     button: Thiết lập Translate Side
+    onDeviceText: Đang dùng bản dịch trên thiết bị của Chrome. Hãy thiết lập nhà cung cấp để có chất lượng tốt hơn.
   controls:
     auto: Tự động
     from: Từ $1
@@ -65,6 +67,8 @@ panel:
     label: Dịch thẻ này bằng
     selectTitle: $1 (chỉ áp dụng cho thẻ này; mặc định của bạn không đổi)
     defaultOption: $1 (mặc định)
+    onDevice: Chrome trên thiết bị
+    onDeviceTitle: Được Chrome dịch ngay trên thiết bị này; không có văn bản nào rời khỏi máy của bạn
     defaultModel: Mô hình mặc định
     model: "Mô hình: $1"
     modelBare: Mô hình
@@ -197,6 +201,9 @@ panel:
     copyTitle: Sao chép đoạn này dưới dạng văn bản thuần
     basic: bản dịch cơ bản
     basicTitle: Được dịch ngay trên thiết bị này bởi $1 vì không kết nối được mô hình nào. Bản dịch này sát từng chữ; hãy dịch lại khi mô hình hoạt động trở lại.
+    basicOnDeviceTitle: Được dịch ngay trên thiết bị này bởi trình dịch của Chrome. Bản dịch sát từng chữ; hãy thiết lập nhà cung cấp để có chất lượng tốt hơn.
+    nano: Gemini Nano (trên thiết bị)
+    nanoTitle: Được dịch bởi Gemini Nano ngay trên thiết bị này. Không có văn bản nào rời khỏi máy của bạn.
     chromeTranslator: trình dịch tích hợp của Chrome
     fallbackTitle: Được dịch bởi $1 vì $2 không khả dụng
     fallbackLabel: Được dịch bởi mô hình dự phòng $1
@@ -237,6 +244,22 @@ panel:
     replaceYes: Thay
     replaceNo: Giữ lại
   job:
+    onDevice:
+      setup: "$1: Chrome có thể dịch trang này ngay trên thiết bị, không cần API key. Văn bản không rời khỏi máy của bạn."
+      setupNano: "$1: Gemini Nano có thể dịch trang này ngay trên thiết bị, không cần API key. Khi bật, mô hình sẽ được tải về (khoảng 4 GB)."
+      turnOn: Bật
+      downloading: "Đang tải bản dịch trên thiết bị ($1)… $2%"
+      downloadingNano: "Đang tải Gemini Nano ($1)… $2%"
+      progress: Tiến độ tải
+      failed: "Tải bản dịch trên thiết bị cho $1 không thành công ($2)."
+      chromeDownloading: "Chrome đang tải bản dịch trên thiết bị ($1). Trang sẽ được dịch khi tải xong."
+      checkAgain: Kiểm tra lại
+      noSource: "Chưa biết ngôn ngữ của trang, nên Chrome không dịch được trên thiết bị của bạn."
+      noApi: "Dịch trên thiết bị cần Chrome bản máy tính 138 trở lên, và trình duyệt này không có."
+      pair: "Chrome không dịch được $1 trên thiết bị này."
+      setting: "Công cụ trên thiết bị chọn trong Cài đặt không chạy được ở đây. Hãy đặt nó về Tự động trong Cài đặt › Nhà cung cấp."
+      setUp: Thiết lập nhà cung cấp
+      second: "Một số khối viết bằng $1. Hãy bật $2 để dịch chúng trên thiết bị."
     seconds: $1 giây
     running: Đang dịch sang $1… $2/$3
     done: $1 · $2/$3
@@ -323,13 +346,19 @@ errors:
   authCharacters: API key có ký tự không thể gửi đi
   noKey: Hãy thêm API key của $1 trong cài đặt
   noProtocol: $1 chưa có giao thức. Hãy kiểm tra kết nối trong cài đặt.
-  nanoOff: Chrome tích hợp (Gemini Nano) còn đang thử nghiệm và đã tắt trong phiên bản này. Hãy chọn mô hình khác trong cài đặt.
+  onDeviceSetup: Hãy bật dịch trên thiết bị ($2 → $3) để dịch trang này mà không cần API key
+  onDeviceDownloading: Chrome đang tải bản dịch trên thiết bị ($2 → $3)
+  onDeviceNoSource: Chưa biết ngôn ngữ của trang, nên Chrome không dịch được trên thiết bị
+  onDeviceNoApi: Dịch trên thiết bị cần Chrome bản máy tính 138 trở lên
+  onDevicePair: Chrome không dịch được $2 → $3 trên thiết bị này
+  onDeviceSetting: Công cụ trên thiết bị chọn trong Cài đặt không chạy được ở đây; hãy đặt nó về Tự động
   noAccess: Không có quyền truy cập $1
   noAccessProvider: không có quyền truy cập nhà cung cấp
   corsOrigin: nhà cung cấp từ chối nguồn gốc này (CORS)
   settingsRead: Không đọc được cài đặt nhà cung cấp ($1)
   limit: Chi tiêu tháng này ($1) đã đạt giới hạn mềm $2 của bạn
   noExplanation: không nhận được giải thích
+  explainNeedsModel: Giải thích cần một mô hình ngôn ngữ; trình dịch trên thiết bị của Chrome không giải thích được
   noTranslation: không nhận được bản dịch
   noBasicMissing: Thiết bị này không có trình dịch tích hợp, nên cũng không có bản dịch cơ bản.
   noBasicPair: $1 không dịch được $2 → $3 trên thiết bị này, nên cũng không có bản dịch cơ bản.
@@ -645,6 +674,19 @@ options:
     roleTranslate: "Dịch"
     translateWith: "Dịch bằng"
     translateSaved: "Đã lưu tuyến dịch."
+    onDevice: "Công cụ trên thiết bị"
+    onDeviceAuto: "Tự động (khuyên dùng)"
+    onDeviceNano: "Gemini Nano"
+    onDeviceTranslator: "Trình dịch của Chrome"
+    onDeviceSaved: "Đã lưu công cụ trên thiết bị."
+    onDeviceHint: "Dùng khi không có nhà cung cấp nào chạy được (chưa có key): trang được dịch ngay trên thiết bị và không có văn bản nào rời khỏi máy. Gemini Nano chỉ viết được một số ngôn ngữ (tiếng Anh, Tây Ban Nha, Nhật; tiếng Đức và Pháp từ Chrome 149); Tự động dùng nó cho các ngôn ngữ đó và dùng Trình dịch của Chrome cho phần còn lại. Bỏ “bản dịch cơ bản” khỏi danh sách dự phòng sẽ tắt Trình dịch của Chrome."
+    onDeviceNoNano: "Gemini Nano (thiết bị này không chạy được)"
+    onDeviceNoTranslator: "Trình dịch của Chrome (trình duyệt này không có)"
+    onDeviceTranslatorOff: "Trình dịch của Chrome (đã tắt: bản dịch cơ bản không có trong danh sách dự phòng)"
+    onDeviceActive: "Chưa có nhà cung cấp nào chạy được (chưa có key), nên trang được Chrome dịch ngay trên thiết bị này. Không có văn bản nào rời khỏi máy của bạn."
+    onDeviceExcluded: "Chưa có nhà cung cấp nào chạy được (chưa có key), và công cụ trên thiết bị chọn bên dưới không chạy được trên trình duyệt này. Hãy đặt nó về Tự động để dịch trên thiết bị."
+    onDeviceNoBrowser: "Chưa có nhà cung cấp nào chạy được (chưa có key), và dịch trên thiết bị cần Chrome bản máy tính 138 trở lên. Hãy thêm một nhà cung cấp để dịch."
+    onDeviceOff: "Chưa có nhà cung cấp nào chạy được (chưa có key). Hãy thêm một nhà cung cấp, hoặc đưa “bản dịch cơ bản” trở lại danh sách dự phòng để dịch trên thiết bị."
     brief: "Tóm tắt tài liệu"
     briefSaved: "Đã lưu tuyến tóm tắt tài liệu."
     sameAsTranslate: "Giống với dịch"
@@ -907,8 +949,8 @@ onboarding:
   pathLocalTitle: "Riêng tư và miễn phí: mô hình chạy trên máy này"
   pathLocalSub: "Chạy bằng Ollama hoặc LM Studio, nên văn bản không rời khỏi thiết bị này. Cần cài sẵn một trong hai; bước tiếp theo sẽ hướng dẫn bạn thiết lập."
   runsWith: "Chạy bằng"
-  pathBuiltinTitle: "Dùng thử ngay: trình dịch tích hợp sẵn của Chrome"
-  pathBuiltinSub: "Sắp ra mắt. Phiên bản này chưa có."
+  pathBuiltinTitle: "Dịch ngay trên thiết bị với Chrome"
+  pathBuiltinSub: "Không cần key; văn bản ở lại trên máy của bạn. Trình dịch của Chrome (và Gemini Nano cho tiếng Anh, Tây Ban Nha, Nhật; tiếng Đức và Pháp từ Chrome 149) chạy ngay trên thiết bị này."
   connectTitle: "Kết nối và kiểm tra"
   noteLocal: "Với mô hình cục bộ, không có gì rời khỏi máy này."
   noteKey: "Khóa của bạn chỉ nằm trên thiết bị này: nó không được đồng bộ sang các thiết bị khác, và chỉ được gửi tới nhà cung cấp bạn chọn."

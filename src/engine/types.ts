@@ -95,6 +95,13 @@ export interface JobOptions {
    */
   basicFallback?: boolean;
   /**
+   * The job runs on Gemini Nano (the shell's on-device route), with `basicFallback`: the switch
+   * also takes the blocks Nano itself can't do (too long for its context, a model that is gone, an
+   * answer that could not be read: `context_length`, `model_not_found`, `unknown`) to Chrome's
+   * Translator. A provider job never sets it, so `auth` and `quota` still stop there.
+   */
+  onDeviceSwitch?: boolean;
+  /**
    * The user's earlier corrections the shell chose to send for this run (the same target language,
    * already filtered by where each was made and where this run goes). The translation-memory
    * provider ranks them by similarity to a chunk and offers the closest as examples. Absent: none.

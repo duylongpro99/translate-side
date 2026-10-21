@@ -1,0 +1,249 @@
+{
+  "ranAt": "2026-10-20T13:46:22.029Z",
+  "playwright": "1.64.0",
+  "browserBuild": "chromium-1248/chrome-mac-arm64/Google Chrome for Testing.app",
+  "browser": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "fullVersionList": [
+      {
+        "brand": "Not:A-Brand",
+        "version": "8.0.0.0"
+      },
+      {
+        "brand": "Chromium",
+        "version": "156.0.8078.4"
+      }
+    ],
+    "platform": "macOS",
+    "platformVersion": "26.6.2",
+    "architecture": "arm"
+  },
+  "baseline": {
+    "url": "chrome-extension://<id>/sidepanel.html",
+    "atLoad": {
+      "at": 1792503983072,
+      "Translator": "function",
+      "LanguageModel": "function",
+      "LanguageDetector": "function",
+      "translatorFake": false,
+      "languageModelFake": false
+    },
+    "chromeRuntime": "object",
+    "now": {
+      "Translator": "function",
+      "translatorFake": false,
+      "languageModelFake": false
+    },
+    "realAvailability": {
+      "translatorEnEs": "downloadable",
+      "languageModel": "unavailable"
+    },
+    "worker": {
+      "Translator": "function",
+      "LanguageModel": "function"
+    }
+  },
+  "viaGoto": {
+    "url": "chrome-extension://<id>/sidepanel.html",
+    "atLoad": {
+      "at": 1792503983847,
+      "Translator": "object",
+      "LanguageModel": "object",
+      "LanguageDetector": "function",
+      "translatorFake": true,
+      "languageModelFake": true
+    },
+    "chromeRuntime": "object",
+    "now": {
+      "Translator": "object",
+      "translatorFake": true,
+      "languageModelFake": true
+    }
+  },
+  "viaExtensionTab": {
+    "url": "chrome-extension://<id>/sidepanel.html",
+    "atLoad": {
+      "at": 1792503983922,
+      "Translator": "object",
+      "LanguageModel": "object",
+      "LanguageDetector": "function",
+      "translatorFake": true,
+      "languageModelFake": true
+    },
+    "chromeRuntime": "object",
+    "now": {
+      "Translator": "object",
+      "translatorFake": true,
+      "languageModelFake": true
+    }
+  },
+  "viaWindowOpen": {
+    "url": "chrome-extension://<id>/sidepanel.html",
+    "atLoad": {
+      "at": 1792503983971,
+      "Translator": "object",
+      "LanguageModel": "object",
+      "LanguageDetector": "function",
+      "translatorFake": true,
+      "languageModelFake": true
+    },
+    "chromeRuntime": "undefined",
+    "now": {
+      "Translator": "object",
+      "translatorFake": true,
+      "languageModelFake": true
+    }
+  },
+  "worker": {
+    "Translator": "function",
+    "translatorFake": false
+  },
+  "harnessSmoke": {
+    "availability": [
+      "LanguageModel (no options): available",
+      "LanguageModel en→en: available",
+      "LanguageModel en→es: available",
+      "LanguageModel en→ja: available",
+      "LanguageModel en→de: available",
+      "LanguageModel en→fr: available",
+      "LanguageModel en→vi (unsupported output): unavailable",
+      "Translator en→es: available",
+      "Translator en→ja: available",
+      "Translator en→vi: available",
+      "Translator ja→vi: available",
+      "Translator ja→en: available",
+      "Translator es→en: available",
+      "Translator en→de: available",
+      "Translator en→fr: available",
+      "Translator fr→vi: available",
+      "LanguageDetector (no options): unavailable",
+      "LanguageDetector [en, ja, vi]: unavailable",
+      "LanguageModel (no options): available",
+      "LanguageModel en→en: available",
+      "LanguageModel en→es: available",
+      "LanguageModel en→ja: available",
+      "LanguageModel en→de: available",
+      "LanguageModel en→fr: available",
+      "LanguageModel en→vi (unsupported output): unavailable",
+      "Translator en→es: available",
+      "Translator en→ja: available",
+      "Translator en→vi: available",
+      "Translator ja→vi: available",
+      "Translator ja→en: available",
+      "Translator es→en: available",
+      "Translator en→de: available",
+      "Translator en→fr: available",
+      "Translator fr→vi: available",
+      "LanguageDetector (no options): unavailable",
+      "LanguageDetector [en, ja, vi]: unavailable",
+      "Translator en→vi (in click) after create: available",
+      "Nano en→es (in click) after create: available",
+      "LanguageModel en→es (harness): available",
+      "LanguageModel en→es (harness): available",
+      "LanguageModel en→es (harness): available",
+      "LanguageModel en→es (harness): available",
+      "LanguageModel es→en (harness): available"
+    ],
+    "translate": "[vi] The quick brown fox jumps over the lazy dog.",
+    "q4Limits": {
+      "at": "2026-10-20T13:46:24.140Z",
+      "ms": 290,
+      "kind": "q4.limits",
+      "target": "es",
+      "contextWindow": 4096,
+      "inputQuota": null,
+      "contextUsage": 823,
+      "inputUsage": null,
+      "systemPromptTokens": 823,
+      "systemPromptTokensEstimated": 823
+    },
+    "q4Speed": {
+      "at": "2026-10-20T13:46:24.194Z",
+      "ms": 344,
+      "kind": "q4.speed",
+      "target": "es",
+      "segments": 31,
+      "inputTokens": 1374,
+      "inputTokensEstimated": 1374,
+      "pieces": 123,
+      "ttftMs": 0,
+      "totalMs": 0,
+      "outputTokens": 1401,
+      "tokensPerSec": 7004999.9,
+      "usageAfter": 823,
+      "overflow": [],
+      "outputInputRatio": 1.02,
+      "failedSegments": 0
+    },
+    "q4Measured": {
+      "at": "2026-10-20T13:46:24.295Z",
+      "ms": 445,
+      "kind": "q4.max.measured",
+      "target": "es",
+      "contextWindow": 4096,
+      "systemPromptTokens": 823,
+      "maxSegments": 91,
+      "maxInputTokens": 3176,
+      "maxInputTokensEstimated": 3176
+    },
+    "q4Confirm": [
+      {
+        "at": "2026-10-20T13:46:24.295Z",
+        "ms": 446,
+        "kind": "q4.max.confirm",
+        "segments": 91,
+        "inputTokens": 3176,
+        "ok": true,
+        "ttftMs": 0
+      },
+      {
+        "at": "2026-10-20T13:46:24.296Z",
+        "ms": 446,
+        "kind": "q4.max.confirm",
+        "segments": 92,
+        "inputTokens": 3275,
+        "ok": false,
+        "error": {
+          "name": "QuotaExceededError",
+          "message": "input too large: 4098 > 4096"
+        }
+      }
+    ],
+    "q3": [
+      {
+        "format": "markers",
+        "sourceLang": "en",
+        "target": "es",
+        "chunks": 8,
+        "segments": 175,
+        "segmentsFailed": 0
+      },
+      {
+        "format": "json",
+        "sourceLang": "en",
+        "target": "es",
+        "chunks": 8,
+        "segments": 175,
+        "segmentsFailed": 0
+      },
+      {
+        "format": "markers",
+        "sourceLang": "es",
+        "target": "en",
+        "chunks": 9,
+        "segments": 174,
+        "segmentsFailed": 0
+      },
+      {
+        "format": "json",
+        "sourceLang": "es",
+        "target": "en",
+        "chunks": 9,
+        "segments": 174,
+        "segmentsFailed": 0
+      }
+    ],
+    "errors": []
+  },
+  "pageErrors": []
+}

@@ -32,6 +32,13 @@ export function ModelSwitcher({ state, model, onChoose, onMakeDefault }: Omit<Mo
     );
   }
   if (!state || state.options.length <= 1) {
+    if (state?.onDevice) {
+      return (
+        <span class="panel__model" data-slot="quick-switcher" data-testid="header-model" title={i18n.t('panel.switcher.onDeviceTitle')}>
+          {i18n.t('panel.switcher.onDevice')}
+        </span>
+      );
+    }
     return (
       <span class="panel__model" data-slot="quick-switcher" data-testid="header-model" title={model ? i18n.t('panel.switcher.model', [model]) : i18n.t('panel.switcher.modelBare')}>
         {model}
@@ -42,7 +49,7 @@ export function ModelSwitcher({ state, model, onChoose, onMakeDefault }: Omit<Mo
   const overridden = state.tabId !== undefined && state.tabId !== state.defaultId;
   const defaultOption = state.options.find((o) => o.id === state.defaultId);
   const chosen = overridden ? state.options.find((o) => o.id === state.tabId) : defaultOption;
-  const selectedLabel = chosen ? `${chosen.model} · ${chosen.connection}` : model;
+  const selectedLabel = state.onDevice && !overridden ? i18n.t('panel.switcher.onDevice') : chosen ? `${chosen.model} · ${chosen.connection}` : model;
   return (
     <span class="panel__model panel__switcher" data-slot="quick-switcher" data-testid="header-model">
       <Select
@@ -57,7 +64,8 @@ export function ModelSwitcher({ state, model, onChoose, onMakeDefault }: Omit<Mo
           onChoose(v === DEFAULT_VALUE ? undefined : v);
         }}
       >
-        <option value={DEFAULT_VALUE}>{defaultOption ? i18n.t('panel.switcher.defaultOption', [defaultOption.model]) : model || i18n.t('panel.switcher.defaultModel')}</option>
+        {/* No usable default: the page runs on the device, and that is what "default" means here. */}
+        <option value={DEFAULT_VALUE}>{state.onDevice ? i18n.t('panel.switcher.onDevice') : defaultOption ? i18n.t('panel.switcher.defaultOption', [defaultOption.model]) : model || i18n.t('panel.switcher.defaultModel')}</option>
         {state.options
           .filter((o) => o.id !== state.defaultId)
           .map((o) => (

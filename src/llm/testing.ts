@@ -225,3 +225,106 @@ export function connection(over: Overrides<ResolvedConnection> = {}): ResolvedCo
     over,
   );
 }
+
+// ---- Chrome's built-in AI (Translator, LanguageModel), faked ------------------------------------
+
+type Availability = 'available' | 'downloadable' | 'downloading' | 'unavailable';
+
+export interface FakeBuiltinAI {
+  /** The scope to hand to the code under test (`Translator`, `LanguageModel`, `LanguageDetector`). */
+  scope: Record<string, unknown>;
+  /** Every `create()` call: which API, and the pair (Nano: its output language). */
+  creates: { api: 'translator' | 'nano'; from: string; to: string }[];
+  /** Translator pairs (`from>to`) and Nano output languages, by state; changed by the test at will. */
+  pairs: Map<string, Availability>;
+  nano: Map<string, Availability>;
+  /**
+   * The user's activation, as Chrome checks it: a Translator `create()` of a pair that is not
+   * `available` throws `NotAllowedError` unless it is set; the create consumes it. A Nano create
+   * needs it once (sticky). Tests set it in the "click" and read whether it was still there.
+   */
+  activation: { transient: boolean; sticky: boolean };
+  /** With `hold`: lets the downloads that are waiting finish. */
+  finish(): void;
+}
+
+/**
+ * Chrome's Translator and Prompt API as this extension sees them: `pairs` and `nano` give
+ * `availability()`; a create follows Chrome's activation rules, reports download progress (0, then
+ * 1) through `monitor`, and makes the pair `available`. Translations are `[to] text`; Nano answers
+ * with `nanoAnswer` (default: echoes the prompt).
+ */
+export function fakeBuiltinAI(init: { pairs?: Record<string, Availability>; nano?: Record<string, Availability>; nanoAnswer?: (prompt: string) => string; detect?: string; translator?: boolean; languageModel?: boolean; hold?: boolean } = {}): FakeBuiltinAI {
+  const pairs = new Map(Object.entries(init.pairs ?? {}));
+  const nano = new Map(Object.entries(init.nano ?? {}));
+  const creates: FakeBuiltinAI['creates'] = [];
+  const activation = { transient: false, sticky: false };
+  const held: (() => void)[] = [];
+  /** The download: 0, then (with `hold`, once `finish()` is called) 0.5 and 1; an abort rejects it. */
+  const progress = async (monitor: ((m: EventTarget) => void) | undefined, signal: AbortSignal | undefined) => {
+    const target = new EventTarget();
+    monitor?.(target);
+    const report = (loaded: number) => target.dispatchEvent(Object.assign(new Event('downloadprogress'), { loaded, total: 1 }));
+    report(0);
+    if (init.hold) {
+      await new Promise<void>((resolve, reject) => {
+        held.push(resolve);
+        signal?.addEventListener('abort', () => reject(signal.reason), { once: true });
+      });
+      report(0.5);
+    }
+    report(1);
+  };
+  const nanoKey = (opts: { expectedOutputs?: { languages: string[] }[] } | undefined) => opts?.expectedOutputs?.[0]?.languages[0] ?? 'en';
+  const scope: Record<string, unknown> = {};
+  if (init.translator !== false) {
+    scope.Translator = {
+      availability: async ({ sourceLanguage, targetLanguage }: { sourceLanguage: string; targetLanguage: string }) => pairs.get(`${sourceLanguage}>${targetLanguage}`) ?? 'unavailable',
+      create: (opts: { sourceLanguage: string; targetLanguage: string; monitor?: (m: EventTarget) => void; signal?: AbortSignal }) => {
+        const key = `${opts.sourceLanguage}>${opts.targetLanguage}`;
+        creates.push({ api: 'translator', from: opts.sourceLanguage, to: opts.targetLanguage });
+        const state = pairs.get(key) ?? 'unavailable';
+        if (state === 'unavailable') return Promise.reject(new DOMException('unsupported pair', 'NotSupportedError'));
+        if (state !== 'available') {
+          if (!activation.transient) return Promise.reject(new DOMException('needs a user gesture', 'NotAllowedError'));
+          activation.transient = false;
+        }
+        return (async () => {
+          if (state !== 'available') await progress(opts.monitor, opts.signal);
+          pairs.set(key, 'available');
+          return { translate: async (text: string) => `[${opts.targetLanguage}] ${text}` };
+        })();
+      },
+    };
+  }
+  if (init.languageModel !== false) {
+    scope.LanguageModel = {
+      availability: async (opts?: { expectedOutputs?: { languages: string[] }[] }) => nano.get(nanoKey(opts)) ?? 'unavailable',
+      params: async () => ({ defaultTopK: 3 }),
+      create: (opts: { expectedInputs?: { languages: string[] }[]; expectedOutputs?: { languages: string[] }[]; monitor?: (m: EventTarget) => void; signal?: AbortSignal }) => {
+        const to = nanoKey(opts);
+        creates.push({ api: 'nano', from: opts.expectedInputs?.[0]?.languages[0] ?? '', to });
+        const state = nano.get(to) ?? 'unavailable';
+        if (state === 'unavailable') return Promise.reject(new DOMException('unsupported language', 'NotSupportedError'));
+        if (state === 'downloadable' && !activation.sticky && !activation.transient) return Promise.reject(new DOMException('needs a user gesture', 'NotAllowedError'));
+        return (async () => {
+          if (state !== 'available') await progress(opts.monitor, opts.signal);
+          nano.set(to, 'available');
+          return {
+            promptStreaming: (input: { content: string }[]) =>
+              (async function* () {
+                const prompt = input.map((m) => m.content).join('\n');
+                yield init.nanoAnswer ? init.nanoAnswer(prompt) : prompt;
+              })(),
+            destroy() {},
+          };
+        })();
+      },
+    };
+  }
+  if (init.detect !== undefined) {
+    const detected = init.detect;
+    scope.LanguageDetector = { create: async () => ({ detect: async () => [{ detectedLanguage: detected, confidence: 0.9 }] }) };
+  }
+  return { scope, creates, pairs, nano, activation, finish: () => held.splice(0).forEach((f) => f()) };
+}

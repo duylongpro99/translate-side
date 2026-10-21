@@ -26,6 +26,7 @@
 // Tab overrides (the quick switcher, M4-E11) are per browser session: storage.session
 // `tabRoute:<tabId>`, cleared when the tab closes (src/shared/panel.ts).
 import type { browser } from 'wxt/browser';
+import { ON_DEVICE_SETTINGS, type OnDeviceSetting } from '@/llm/on-device';
 import type { AuthStyle, ModelRole, Protocol, Quirks } from '@/llm/types';
 import { i18n } from '#i18n';
 import {
@@ -126,7 +127,21 @@ export interface Routing {
    */
   fallback?: string[];
   siteOverrides?: SiteRule[];
+  /**
+   * Which engine the on-device route takes (src/llm/on-device.ts); absent = `auto`. A value this
+   * build does not know reads as `auto` (onDeviceSettingOf) and is saved back as it was, so a newer
+   * build's choice survives an older build's save.
+   */
+  onDevice?: OnDeviceSetting | (string & {});
 }
+
+/** The on-device engine setting of `routing`: `auto` when absent or unknown. */
+export function onDeviceSettingOf(routing: Pick<Routing, 'onDevice'>): OnDeviceSetting {
+  return ON_DEVICE_SETTINGS.find((v) => v === routing.onDevice) ?? 'auto';
+}
+
+/** A stored `onDevice` value worth keeping: a short word, known to this build or not. */
+export const isOnDeviceValue = (v: unknown): v is string => typeof v === 'string' && /^[a-z][a-z-]{0,31}$/.test(v);
 
 export interface ProviderSettings {
   schemaVersion: number;
@@ -242,7 +257,20 @@ export function cleanRouting(raw: unknown): Omit<Routing, 'siteOverrides'> | nul
     ...(nonEmpty(raw.analyze) ? { analyze: raw.analyze } : {}),
     ...(nonEmpty(raw.review) ? { review: raw.review } : {}),
     ...(fallback.length > 0 ? { fallback } : {}),
+    ...(isOnDeviceValue(raw.onDevice) ? { onDevice: raw.onDevice } : {}),
   };
+}
+
+/**
+ * A profile on a `chrome-builtin` connection runs Gemini Nano whatever it says: a protocol override
+ * would turn it into a cloud request with no base URL, and make the privacy rule (isLocalConnection)
+ * misjudge it. Dropped when read (sync) and when imported.
+ */
+export function withoutBuiltinOverride(profile: ModelProfile, connection: Pick<ProviderConnection, 'protocol'> | undefined): ModelProfile {
+  if (connection?.protocol !== 'chrome-builtin' || profile.protocolOverride === undefined) return profile;
+  const out = { ...profile };
+  delete out.protocolOverride;
+  return out;
 }
 
 /** storage.sync `routing`: saved by a build that knows the `basic` fallback (see the header). */
@@ -282,6 +310,7 @@ export function parseStored(items: Record<string, unknown>, migratedRoute?: unkn
       if (p && profileKey(p.id) === key) profiles.push(p);
     }
   }
+  for (const [i, p] of profiles.entries()) profiles[i] = withoutBuiltinOverride(p, connections.find((c) => c.id === p.connectionId));
   // A built-in connection not stored applies as built in, never written (see above); one with no
   // profile stored (built in, or one a learned quirk wrote) has its built-in profiles.
   const implicit = { connections: [] as string[], profiles: [] as string[] };
@@ -487,7 +516,7 @@ export function saveConnectionStatus(api: Browser, id: string, status: Connectio
   });
 }
 
-const ROUTING_FIELDS = new Set(['translate', 'analyze', 'review', 'fallback', BASIC_MIGRATED_FIELD]);
+const ROUTING_FIELDS = new Set(['translate', 'analyze', 'review', 'fallback', 'onDevice', BASIC_MIGRATED_FIELD]);
 
 /**
  * Routing and its site rules. Without site rules their list is set to an empty one rather than
@@ -763,7 +792,7 @@ export function resolveRouteIn(settings: ProviderSettings, role: ModelRole, ctx:
     const connection = connections.get(profile.connectionId);
     if (!connection) return { ok: false, source, message: i18n.t('errors.noConnection', [profile.model]) };
     // A local-only rule fails closed: its own model must keep the text on this device too, not just the fallback.
-    if (extra.localOnly && !isLocalConnection(connection)) {
+    if (extra.localOnly && !isLocalConnection(connection, profile)) {
       return { ok: false, source, connection, message: i18n.t('errors.localOnly', [profile.model]) };
     }
     return { ok: true, profile, connection, source, localOnly: extra.localOnly === true, ...(extra.rule ? { rule: extra.rule } : {}) };
@@ -813,10 +842,12 @@ export function isLoopbackHost(hostname: string): boolean {
 /**
  * Does this connection keep text on this device (§4.3.5 privacy rule)? Its base URL is a loopback
  * address, or it runs in the browser (`chrome-builtin`, M5). A preset's `local` mark is not enough
- * on its own: an Ollama connection pointed at another host sends text there.
+ * on its own: an Ollama connection pointed at another host sends text there. With `profile`, the
+ * protocol it actually runs on decides (a profile's protocol override over the connection's).
  */
-export function isLocalConnection(connection: Pick<ProviderConnection, 'protocol' | 'baseUrl'>): boolean {
-  if (connection.protocol === 'chrome-builtin') return true;
+export function isLocalConnection(connection: Pick<ProviderConnection, 'protocol' | 'baseUrl'>, profile?: Pick<ModelProfile, 'protocolOverride'>): boolean {
+  const protocol = profile?.protocolOverride ?? connection.protocol;
+  if (protocol === 'chrome-builtin') return true;
   try {
     return isLoopbackHost(new URL(connection.baseUrl).hostname);
   } catch {
@@ -843,7 +874,7 @@ export function fallbackRoutesIn(settings: ProviderSettings, route: Extract<Rout
     const profile = profiles.get(id);
     const connection = profile && connections.get(profile.connectionId);
     if (!profile || !connection) continue;
-    if (route.localOnly && !isLocalConnection(connection)) continue;
+    if (route.localOnly && !isLocalConnection(connection, profile)) continue;
     out.push({ profile, connection });
   }
   return out;

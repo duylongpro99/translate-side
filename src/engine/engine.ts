@@ -153,6 +153,12 @@ interface BasicSwitch {
 
 const createSwitch = (): BasicSwitch => ({});
 
+/** What the switch also takes over on an on-device job (`options.onDeviceSwitch`): what Nano itself can't do. */
+const ON_DEVICE_SWITCH_KINDS: ReadonlySet<LLMError['kind']> = new Set(['context_length', 'model_not_found', 'unknown']);
+
+/** Does a block that failed on `error` go to the switch? */
+const switches = (error: LLMError, job: TranslationJob): boolean => isRetryable(error) || (job.options.onDeviceSwitch === true && ON_DEVICE_SWITCH_KINDS.has(error.kind));
+
 async function* withBasicSwitch(events: AsyncIterable<EngineEvent>, state: BasicSwitch, job: TranslationJob, ctx: StageContext): AsyncGenerator<EngineEvent> {
   // Each block with the provider error it was taken over on: a probe may end the switch (and
   // clear `state.error`) before the worker gets to it, and that error stays the block's cause.
@@ -184,7 +190,7 @@ async function* withBasicSwitch(events: AsyncIterable<EngineEvent>, state: Basic
   async function* strategy(): AsyncGenerator<EngineEvent> {
     try {
       for await (const event of events) {
-        const segment = event.type === 'segment.failed' && event.revision === undefined && isRetryable(event.error) && !ctx.memory.translated.has(event.id) ? byId.get(event.id) : undefined;
+        const segment = event.type === 'segment.failed' && event.revision === undefined && switches(event.error, job) && !ctx.memory.translated.has(event.id) ? byId.get(event.id) : undefined;
         // The providers answered again (a probe got through): the switch ends.
         if (state.announced && state.error === undefined) yield* ended(true);
         if (segment === undefined || event.type !== 'segment.failed') {

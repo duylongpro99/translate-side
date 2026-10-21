@@ -116,6 +116,19 @@ describe('round trip', () => {
     expect(await readApiKey(fresh.api, 'gw')).toBe(KEY);
   });
 
+  it('carries the on-device engine setting, and drops a protocol override on a built-in profile', async () => {
+    const src = fakeApi();
+    await saveConnection(src.api, conn({ id: 'nano', presetId: 'chrome-builtin', protocol: 'chrome-builtin', baseUrl: '', auth: { style: 'none' } }));
+    await saveProfile(src.api, { id: 'nano-m', connectionId: 'nano', model: 'gemini-nano', maxConcurrency: 1, chunkTokens: 600, protocolOverride: 'openai-chat' });
+    await saveRouting(src.api, { translate: 'nano-m', fallback: ['basic'], onDevice: 'translator' });
+    const parsed = parseImport((await buildExport(src.api, { includeKeys: false })).json);
+    if (!parsed.ok) throw new Error(parsed.error);
+    expect(parsed.plan.profiles.find((p) => p.id === 'nano-m')).not.toHaveProperty('protocolOverride');
+    const fresh = fakeApi();
+    await applyImport(fresh.api, parsed.plan, { withKeys: false });
+    expect((await readProviderSettings(fresh.api)).routing.onDevice).toBe('translator');
+  });
+
   it('merges: nothing the file lacks is removed, and no key is touched without one in the file', async () => {
     const t = fakeApi();
     await saveApiKey(t.api, 'apibox', 'apibox-key');

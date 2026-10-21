@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { chromium, expect, test, type BrowserContext, type Page, type Worker } from '@playwright/test';
 import { PRIVACY_NOTICE_VERSION } from '../src/entrypoints/sidepanel/privacy.ts';
+import { fakeBuiltinAI } from './builtin-ai.ts';
 import { blockStatuses, jobSettled } from './fixtures.ts';
 import { CHROMIUM_ARGS } from './playwright.config.ts';
 import { FIXTURE_ORIGIN, FIXTURE_PORT, MOCK_BASE_URL, MOCK_PORT, fixtureServer, listen, mockServer } from './servers.ts';
@@ -150,6 +151,28 @@ async function memoryState(panel: Page): Promise<{ exists: boolean; entries: num
   });
 }
 
+/**
+ * The current build over the same directory, then a reload as chrome://extensions does it: an update of
+ * the same extension. A reloaded unpacked extension needs developer mode (the user's toggle there).
+ * `beforeReload` runs once the new files are in place. Resolves with the new worker.
+ */
+async function upgradeInPlace(context: BrowserContext, id: string, beforeReload: () => Promise<void> = async () => {}): Promise<Worker> {
+  const extensions = await context.newPage();
+  await extensions.goto('chrome://extensions');
+  install(NEW);
+  await beforeReload();
+  const restarted = context.waitForEvent('serviceworker');
+  await extensions.evaluate(async (extensionId) => {
+    const dev = (globalThis as unknown as { chrome: { developerPrivate: { updateProfileConfiguration(c: object): Promise<void>; reload(id: string, o: object): Promise<unknown> } } }).chrome.developerPrivate;
+    await dev.updateProfileConfiguration({ inDeveloperMode: true });
+    const error = await dev.reload(extensionId, { failQuietly: false });
+    if (error) throw new Error(`reload failed: ${JSON.stringify(error)}`);
+  }, id);
+  const after = await restarted;
+  await extensions.close();
+  return after;
+}
+
 test.skip(!OLD || !NEW, 'run through `pnpm run e2e:upgrade`, which builds both versions');
 
 test('an earlier build upgrades in place: settings, glossary, key and cache survive, and the cached page makes no calls', async () => {
@@ -221,23 +244,10 @@ test('an earlier build upgrades in place: settings, glossary, key and cache surv
     await first.panel.close();
     await first.page.close();
 
-    // The current build over the same directory, then a reload as chrome://extensions does it: an update
-    // of the same extension. A reloaded unpacked extension needs developer mode (the user's toggle there).
-    const extensions = await context.newPage();
-    await extensions.goto('chrome://extensions');
-    install(NEW);
-    const watcher = await watchNextWorker(id);
-    const restarted = context.waitForEvent('serviceworker');
-    await extensions.evaluate(async (extensionId) => {
-      const dev = (globalThis as unknown as { chrome: { developerPrivate: { updateProfileConfiguration(c: object): Promise<void>; reload(id: string, o: object): Promise<unknown> } } }).chrome.developerPrivate;
-      await dev.updateProfileConfiguration({ inDeveloperMode: true });
-      const error = await dev.reload(extensionId, { failQuietly: false });
-      if (error) throw new Error(`reload failed: ${JSON.stringify(error)}`);
-    }, id);
-    const after = await restarted;
-    await extensions.close();
+    let watcher: { stop(): void } | undefined;
+    const after = await upgradeInPlace(context, id, async () => void (watcher = await watchNextWorker(id)));
     await expect.poll(() => probe.length).toBeGreaterThan(0);
-    watcher.stop();
+    watcher?.stop();
     const details = JSON.parse(probe[0] ?? '{}') as { reason?: string; previousVersion?: string };
     console.log(`onInstalled after the reload: ${probe[0]}`);
     expect(details.reason).toBe('update');
@@ -281,6 +291,58 @@ test('an earlier build upgrades in place: settings, glossary, key and cache surv
     closing = true;
     await context.close();
     await Promise.all([new Promise((r) => fixtures.close(r)), new Promise((r) => server.close(r))]);
+    fs.rmSync(profile, { recursive: true, force: true });
+  }
+  expect(errors, 'console errors from the worker, the panel and the page').toEqual([]);
+});
+
+test('an earlier install with no key upgrades to the on-device route: the page translates on the device and nothing is sent', async () => {
+  const fixtures = fixtureServer();
+  await listen(fixtures, FIXTURE_PORT);
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'translate-side-upgrade-'));
+  install(OLD);
+  const context = await chromium.launchPersistentContext(profile, {
+    channel: 'chromium',
+    headless: true,
+    args: [`--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`, ...CHROMIUM_ARGS],
+    viewport: { width: 1100, height: 800 },
+  });
+  const errors: string[] = [];
+  let closing = false;
+  const watch = (where: string) => (m: { type(): string; text(): string }) => {
+    if (m.type() === 'error' && !(closing && /The browser is shutting down/.test(m.text()))) errors.push(`${where}: ${m.text()}`);
+  };
+  context.on('page', (p) => p.on('console', watch('page')));
+  context.on('serviceworker', (w) => w.on('console', watch('worker')));
+  try {
+    let providerCalls = 0;
+    await context.route(/^https?:\/\/(?!127\.0\.0\.1[:/])/, (route) => {
+      if (route.request().url().startsWith(PROVIDER)) providerCalls++;
+      return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, body: '' });
+    });
+    const before = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+    before.on('console', watch('worker'));
+    const id = new URL(before.url()).host;
+    // The earlier build's settings, as a reader who never added a key left them (no secret, the notice seen).
+    const shape = JSON.parse(fs.readFileSync(path.join(ROOT, 'tests/fixtures/storage/m3.json'), 'utf8')) as { sync: Record<string, unknown>; local: Record<string, unknown> };
+    const local = Object.fromEntries(Object.entries(shape.local).filter(([k]) => !k.startsWith('secret:')));
+    await before.evaluate(async ([sync, l]) => {
+      await chrome.storage.sync.set(sync);
+      await chrome.storage.local.set(l);
+    }, [shape.sync, local] as const);
+
+    const after = await upgradeInPlace(context, id);
+    await fakeBuiltinAI(context, { pairs: { 'en>vi': 'available' } });
+    const { panel } = await translatePage(context, after, id);
+    expect(await jobSettled(panel)).toBe('done');
+    await expect(panel.getByTestId('seg-basic-badge').first()).toBeVisible();
+    await expect(panel.getByTestId('privacy-notice')).toBeHidden();
+    expect(providerCalls).toBe(0);
+    console.log(`keyless upgrade: blocks ${JSON.stringify(await blockStatuses(panel))}, ${providerCalls} provider calls`);
+  } finally {
+    closing = true;
+    await context.close();
+    await new Promise((r) => fixtures.close(r));
     fs.rmSync(profile, { recursive: true, force: true });
   }
   expect(errors, 'console errors from the worker, the panel and the page').toEqual([]);

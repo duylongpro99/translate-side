@@ -15,6 +15,9 @@ import { i18n } from '#i18n';
 import type { Segment } from '@/engine/index';
 import { languageName } from '@/shared/language-name';
 import { createAdapter } from '@/llm/client';
+import { chromeTranslator } from '@/llm/chrome-translator';
+import { pickEngine, prepareOnDevice, type EngineChoice, type OnDeviceEngine } from '@/llm/on-device';
+import { hasBasicFallback, onDeviceSettingOf } from '@/shared/providers';
 import { PRESETS, presetTitle, type PresetId } from '@/shared/presets';
 import { markOnboarding } from '@/shared/onboarding';
 import { SpendLedger } from '@/shared/spend';
@@ -45,7 +48,7 @@ const SAMPLES: Record<string, { lang: string; text: string }> = {
 const sampleFor = (target: string) => (target.split('-')[0] === 'en' ? SAMPLES.other : SAMPLES.en) as { lang: string; text: string };
 const SAMPLE_TAB = 0;
 
-export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_MS, jobs: injected, gate: injectedGate }: { api: Browser; adapterFor?: AdapterFor; retestMs?: number; jobs?: Jobs; gate?: PrivacyGate }) {
+export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_MS, jobs: injected, gate: injectedGate, scope = globalThis }: { api: Browser; adapterFor?: AdapterFor; retestMs?: number; jobs?: Jobs; gate?: PrivacyGate; scope?: object }) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [lang, setLang] = useState('');
   const [path, setPath] = useState<Path>('key');
@@ -57,6 +60,13 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
   const [closed, setClosed] = useState<'done' | 'skipped' | undefined>();
   const heading = useRef<HTMLHeadingElement>(null);
   const firstStep = useRef(true);
+  /** Can the sample run on this device (Chrome's own models)? Undefined while it is checked. */
+  const [builtin, setBuiltin] = useState<EngineChoice | undefined>();
+  const pathChosen = useRef(false);
+  const choosePath = (next: Path) => {
+    pathChosen.current = true;
+    setPath(next);
+  };
 
   // A step change moves focus to the new step's heading, so a keyboard or screen-reader user lands on it.
   useEffect(() => {
@@ -74,6 +84,25 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
 
   const reload = () => load(api).then(setLoaded, () => {});
   useEffect(() => void reload(), [api]);
+
+  // On-device translation for the sample's pair, as the route would pick it (availability only, nothing is created).
+  const routing = loaded?.settings.routing;
+  useEffect(() => {
+    if (lang === '') return;
+    const from = sampleFor(lang).lang;
+    let live = true;
+    pickEngine(scope, { setting: routing ? onDeviceSettingOf(routing) : 'auto', from, to: lang, translator: routing ? hasBasicFallback(routing) : true }).then(
+      (choice) => live && setBuiltin(choice),
+      () => live && setBuiltin({ unavailable: 'no-api', from, to: lang }),
+    );
+    return () => void (live = false);
+  }, [scope, lang, routing]);
+  const builtinRuns = builtin !== undefined && !('unavailable' in builtin) && !('unknownSource' in builtin);
+  // On-device first when it can run (no key to find); a choice the reader made stays.
+  useEffect(() => {
+    if (pathChosen.current || builtin === undefined) return;
+    setPath(builtinRuns ? 'builtin' : (cur) => (cur === 'builtin' ? 'key' : cur));
+  }, [builtin, builtinRuns]);
 
   const close = (status: 'done' | 'skipped') => {
     void markOnboarding(api, status).catch(() => {});
@@ -157,7 +186,7 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
           <fieldset class="onb__cards">
             <legend class="onb__legend">{i18n.t('onboarding.howLegend')}</legend>
             <div class={`onb__card${path === 'key' ? ' onb__card--on' : ''}`}>
-              <input type="radio" id="onb-path-key" name="onb-path" data-testid="path-key" aria-describedby="onb-path-key-sub" checked={path === 'key'} onChange={() => setPath('key')} />
+              <input type="radio" id="onb-path-key" name="onb-path" data-testid="path-key" aria-describedby="onb-path-key-sub" checked={path === 'key'} onChange={() => choosePath('key')} />
               <label for="onb-path-key" class="onb__title">{i18n.t('onboarding.pathKeyTitle')}</label>
               <p class="onb__sub" id="onb-path-key-sub">{i18n.t('onboarding.pathKeySub')}</p>
               {path === 'key' ? (
@@ -174,7 +203,7 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
               ) : null}
             </div>
             <div class={`onb__card${path === 'local' ? ' onb__card--on' : ''}`}>
-              <input type="radio" id="onb-path-local" name="onb-path" data-testid="path-local" aria-describedby="onb-path-local-sub" checked={path === 'local'} onChange={() => setPath('local')} />
+              <input type="radio" id="onb-path-local" name="onb-path" data-testid="path-local" aria-describedby="onb-path-local-sub" checked={path === 'local'} onChange={() => choosePath('local')} />
               <label for="onb-path-local" class="onb__title">{i18n.t('onboarding.pathLocalTitle')}</label>
               <p class="onb__sub" id="onb-path-local-sub">{i18n.t('onboarding.pathLocalSub')}</p>
               {path === 'local' ? (
@@ -190,10 +219,20 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
                 </p>
               ) : null}
             </div>
-            <div class="onb__card" aria-disabled="true" data-testid="path-builtin-card">
-              <input type="radio" id="onb-path-builtin" name="onb-path" data-testid="path-builtin" aria-describedby="onb-path-builtin-sub" disabled />
+            <div class={`onb__card${path === 'builtin' ? ' onb__card--on' : ''}`} aria-disabled={builtinRuns ? undefined : 'true'} data-testid="path-builtin-card">
+              <input type="radio" id="onb-path-builtin" name="onb-path" data-testid="path-builtin" aria-describedby="onb-path-builtin-sub" checked={path === 'builtin'} disabled={!builtinRuns} onChange={() => choosePath('builtin')} />
               <label for="onb-path-builtin" class="onb__title">{i18n.t('onboarding.pathBuiltinTitle')}</label>
-              <p class="onb__sub" id="onb-path-builtin-sub">{i18n.t('onboarding.pathBuiltinSub')}</p>
+              <p class="onb__sub" id="onb-path-builtin-sub">
+                {builtin !== undefined && !builtinRuns
+                  ? 'unknownSource' in builtin
+                    ? i18n.t('panel.job.onDevice.noSource')
+                    : 'unavailable' in builtin && builtin.unavailable === 'pair'
+                      ? i18n.t('panel.job.onDevice.pair', [`${languageName(builtin.from)} → ${languageName(builtin.to)}`])
+                      : 'unavailable' in builtin && builtin.unavailable === 'setting'
+                        ? i18n.t('panel.job.onDevice.setting')
+                        : i18n.t('panel.job.onDevice.noApi')
+                  : i18n.t('onboarding.pathBuiltinSub')}
+              </p>
             </div>
           </fieldset>
           <div class="onb__nav">
@@ -210,9 +249,13 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
 
       {step === 3 && loaded ? (
         <section data-testid="onboarding-try">
-          <h2 ref={heading} tabIndex={-1}>{saved ? i18n.t('onboarding.step3') : i18n.t('onboarding.connectTitle')}</h2>
-          {saved ? (
-            <Sample api={api} lang={lang} saved={saved} injected={injected} injectedGate={injectedGate} onDone={() => close('done')} onChange={() => setSaved(undefined)} onSkip={() => close('skipped')} />
+          <h2 ref={heading} tabIndex={-1}>{saved || path === 'builtin' ? i18n.t('onboarding.step3') : i18n.t('onboarding.connectTitle')}</h2>
+          {path === 'builtin' ? (
+            // Nothing to connect: with no provider set up, the route runs on this device (src/llm/on-device.ts).
+            // The sample's own line says what translated it, so a provider set up earlier is named, not hidden.
+            <Sample api={api} lang={lang} injected={injected} injectedGate={injectedGate} scope={scope} onDone={() => close('done')} onChange={() => setStep(2)} onSkip={() => close('skipped')} />
+          ) : saved ? (
+            <Sample api={api} lang={lang} saved={saved} injected={injected} injectedGate={injectedGate} scope={scope} onDone={() => close('done')} onChange={() => setSaved(undefined)} onSkip={() => close('skipped')} />
           ) : (
             <>
               <p class="opt__hint" data-testid="onboarding-key-note">
@@ -250,26 +293,35 @@ export function Onboarding({ api, adapterFor = createAdapter, retestMs = RETEST_
   );
 }
 
+/** The notice's state as the sample shows it: `needed` only while the sample waits for it (a cloud route). */
 function usePrivacy(gate: PrivacyGate): PrivacyState {
-  const [state, setState] = useState(gate.state);
+  const read = () => (gate.state === 'needed' && !gate.pending ? 'unknown' : gate.state);
+  const [state, setState] = useState(read);
   useEffect(() => {
-    setState(gate.state);
-    return gate.subscribe(setState);
+    setState(read());
+    return gate.subscribe(() => setState(read()));
   }, [gate]);
   return state;
 }
 
 /** Step 3b: one paragraph, translated through the route that was just saved. */
-function Sample({ api, lang, saved, injected, injectedGate, onDone, onChange, onSkip }: { api: Browser; lang: string; saved: string; injected?: Jobs | undefined; injectedGate?: PrivacyGate | undefined; onDone: () => void; onChange: () => void; onSkip: () => void }) {
+function Sample({ api, lang, saved, injected, injectedGate, scope, onDone, onChange, onSkip }: { api: Browser; lang: string; saved?: string; injected?: Jobs | undefined; injectedGate?: PrivacyGate | undefined; scope: object; onDone: () => void; onChange: () => void; onSkip: () => void }) {
   const gate = useRef(injectedGate ?? new PrivacyGate(api)).current;
   const privacy = usePrivacy(gate);
+  // Chrome's Translator as the panel has it: the on-device route runs on it, and the turn-on click creates its pair.
+  const mt = useRef(chromeTranslator(scope)).current;
   const jobs = useRef(
     injected ??
       (() => {
         const ledger = new SpendLedger(api);
-        return new Jobs({ translateClient: (target) => translateClient(api, target), strategy: 'single-pass', cache: undefined, onSpend: (delta) => void ledger.add(delta) });
+        // The notice is asked on the route the sample resolves: on the device it never is (jobs.ts).
+        const privacy = { acknowledged: () => gate.state === 'acknowledged', whenAcknowledged: (key: string, run: () => void) => gate.whenAcknowledged(key, run), forget: (key: string) => gate.forget(key) };
+        return new Jobs({ translateClient: (target) => translateClient(api, target, scope), privacy, strategy: 'single-pass', cache: undefined, mt, onSpend: (delta) => void ledger.add(delta) });
       })(),
   ).current;
+  const [download, setDownload] = useState<{ loaded: number; error?: string } | undefined>();
+  const downloadAbort = useRef<AbortController | undefined>(undefined);
+  useEffect(() => () => downloadAbort.current?.abort(), []);
   const [view, setView] = useState<JobView | undefined>(() => jobs.get(SAMPLE_TAB));
   const [asked, setAsked] = useState(false);
   const [to, setTo] = useState<Routed | undefined>();
@@ -279,7 +331,7 @@ function Sample({ api, lang, saved, injected, injectedGate, onDone, onChange, on
   useEffect(() => jobs.subscribe((id) => id === SAMPLE_TAB && setView(jobs.get(SAMPLE_TAB))), [jobs]);
   // The notice is an alert: its button takes focus when it appears, so Enter acknowledges it.
   useEffect(() => {
-    if (asked && privacy !== 'acknowledged') noticeButton.current?.focus();
+    if (asked && privacy === 'needed') noticeButton.current?.focus();
   }, [asked, privacy]);
   useEffect(() => {
     routedSummary(api).then(setTo, () => {});
@@ -294,21 +346,52 @@ function Sample({ api, lang, saved, injected, injectedGate, onDone, onChange, on
   const translate = () => {
     setAsked(true);
     routedSummary(api).then(setTo, () => {});
-    // Nothing is sent before the notice is acknowledged (§8); once it is, this runs.
-    gate.whenAcknowledged('sample', run);
+    // Nothing leaves the device before the notice is acknowledged (§8): the job waits on it for a cloud route.
+    run();
+  };
+  /**
+   * The turn-on click (on-device translation, a pair not created yet): the engine is created first,
+   * in this click (Chrome's Translator needs the gesture), then the sample runs once it is ready.
+   * Cancel (or leaving the page) stops the download and puts the turn-on back.
+   */
+  const turnOn = (engine: OnDeviceEngine, from: string, to: string) => {
+    downloadAbort.current?.abort();
+    const controller = new AbortController();
+    downloadAbort.current = controller;
+    const ready = prepareOnDevice(scope, mt, engine, from, to, { signal: controller.signal, progress: (loaded) => !controller.signal.aborted && setDownload({ loaded }) });
+    setDownload({ loaded: 0 });
+    ready.then(
+      () => {
+        if (controller.signal.aborted) return;
+        downloadAbort.current = undefined;
+        setDownload(undefined);
+        translate();
+      },
+      (err: unknown) => {
+        if (controller.signal.aborted) return;
+        downloadAbort.current = undefined;
+        setDownload({ loaded: 0, error: err instanceof Error ? `${err.name}: ${err.message}` : String(err) });
+      },
+    );
+  };
+  const cancelDownload = () => {
+    downloadAbort.current?.abort();
+    downloadAbort.current = undefined;
+    setDownload(undefined);
   };
   const state = view?.segs.get('s0');
   const finished = view?.status === 'done' && state?.status === 'final';
   const failureError = view?.stopError ?? (state?.status === 'failed' ? state.error : undefined);
-  const failure = failureError ? failureText(failureError) : undefined;
+  const setup = (failureError?.raw as { ui?: unknown; args?: string[] } | undefined)?.ui === 'onDeviceSetup' ? (failureError?.raw as { args: string[] }).args : undefined;
+  const failure = failureError && !setup ? failureText(failureError) : undefined;
 
   return (
     <div data-testid="onboarding-sample">
-      <p class="opt__status" data-testid="onboarding-saved">{saved}</p>
+      {saved ? <p class="opt__status" data-testid="onboarding-saved">{saved}</p> : null}
       <div class="onb__sample">
         <strong>{i18n.t('onboarding.sampleTitle', { language: languageName(sample.lang) })}</strong>
         <blockquote data-testid="sample-original">{sample.text}</blockquote>
-        {asked && privacy !== 'acknowledged' ? (
+        {asked && privacy === 'needed' ? (
           <Notice tone="warn" class="onb__notice" data-testid="onboarding-privacy">
             <p>
               {to
@@ -332,6 +415,26 @@ function Sample({ api, lang, saved, injected, injectedGate, onDone, onChange, on
         {failure ? (
           <p class="opt__status opt__status--warn" role="alert" data-testid="sample-error">
             {failure}
+          </p>
+        ) : null}
+        {setup && !finished ? (
+          <p class="opt__row" data-testid="sample-on-device">
+            <span class="opt__status" role="status">
+              {download?.error !== undefined
+                ? i18n.t('panel.job.onDevice.failed', [`${languageName(setup[1] ?? '')} → ${languageName(setup[2] ?? '')}`, download.error])
+                : download
+                  ? i18n.t(setup[0] === 'nano' ? 'panel.job.onDevice.downloadingNano' : 'panel.job.onDevice.downloading', [`${languageName(setup[1] ?? '')} → ${languageName(setup[2] ?? '')}`, String(Math.round(download.loaded * 100))])
+                  : i18n.t(setup[0] === 'nano' ? 'panel.job.onDevice.setupNano' : 'panel.job.onDevice.setup', [`${languageName(setup[1] ?? '')} → ${languageName(setup[2] ?? '')}`])}
+            </span>
+            {download && download.error === undefined ? (
+              <Button data-testid="sample-turn-on-cancel" onClick={cancelDownload}>
+                {i18n.t('panel.job.cancel')}
+              </Button>
+            ) : (
+              <Button variant="primary" data-testid="sample-turn-on" onClick={() => turnOn(setup[0] === 'nano' ? 'nano' : 'translator', setup[1] ?? '', setup[2] ?? '')}>
+                {download?.error === undefined ? i18n.t('panel.job.onDevice.turnOn') : i18n.t('panel.job.tryAgain')}
+              </Button>
+            )}
           </p>
         ) : null}
         {finished && view ? (

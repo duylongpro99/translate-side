@@ -26,12 +26,14 @@ panel:
     page:
       model: Model $1
       blocks: $1 of $2 blocks
+      onDevice: Stays on this device (Chrome)
     prefsFailed: "Couldn't save that setting. Try again, or change it in settings."
     switchFailed: "Couldn't switch the model for this tab. Try again."
     defaultFailed: "Couldn't save the default. Try again, or set it in settings."
   setup:
     text: New here? Set up a translation provider to start translating.
     button: Set up Translate Side
+    onDeviceText: Using Chrome's on-device translation. Set up a provider for better quality.
   controls:
     auto: Auto
     from: From $1
@@ -65,6 +67,8 @@ panel:
     label: Translate this tab with
     selectTitle: $1 (applies to this tab only; your default stays the same)
     defaultOption: $1 (default)
+    onDevice: Chrome on-device
+    onDeviceTitle: Translated on this device by Chrome; no text leaves your computer
     defaultModel: Default model
     model: "Model: $1"
     modelBare: Model
@@ -200,6 +204,9 @@ panel:
     copyTitle: Copy this block as plain text
     basic: basic translation
     basicTitle: Translated on this device by $1, because no model could be reached. It is literal; Retranslate when the model is back.
+    basicOnDeviceTitle: Translated on this device by Chrome's Translator. It is literal; set up a provider for better quality.
+    nano: Gemini Nano (on device)
+    nanoTitle: Translated by Gemini Nano on this device. No text left your computer.
     chromeTranslator: Chrome's built-in translator
     fallbackTitle: Translated by $1, because $2 was unavailable
     fallbackLabel: Translated by the fallback model $1
@@ -240,6 +247,22 @@ panel:
     replaceYes: Replace
     replaceNo: Keep it
   job:
+    onDevice:
+      setup: "$1: Chrome can translate this page on your device, with no API key. Text stays on your computer."
+      setupNano: "$1: Gemini Nano can translate this page on your device, with no API key. Turning it on downloads the model (about 4 GB)."
+      turnOn: Turn on
+      downloading: "Downloading on-device translation ($1)… $2%"
+      downloadingNano: "Downloading Gemini Nano ($1)… $2%"
+      progress: Download progress
+      failed: "The on-device download for $1 failed ($2)."
+      chromeDownloading: "Chrome is downloading on-device translation ($1). The page is translated once it is done."
+      checkAgain: Check again
+      noSource: "The page's language is not known, so Chrome can't translate it on your device."
+      noApi: "On-device translation needs desktop Chrome 138 or later, and this browser doesn't have it."
+      pair: "Chrome can't translate $1 on this device."
+      setting: "The on-device engine chosen in Settings can't run here. Set it to Auto in Settings › Providers."
+      setUp: Set up a provider
+      second: "Some blocks are in $1. Turn on $2 to translate them on your device."
     seconds: $1 s
     running: Translating into $1… $2 of $3
     done: $1 · $2 of $3
@@ -328,13 +351,19 @@ errors:
   authCharacters: Key has characters that can't be sent
   noKey: Add your $1 API key in settings
   noProtocol: $1 has no protocol yet. Test the connection in settings.
-  nanoOff: Chrome built-in (Gemini Nano) is experimental and off in this version. Choose another model in settings.
+  onDeviceSetup: Turn on on-device translation ($2 → $3) to translate this page without an API key
+  onDeviceDownloading: Chrome is downloading on-device translation ($2 → $3)
+  onDeviceNoSource: The page's language is not known, so Chrome can't translate it on the device
+  onDeviceNoApi: On-device translation needs desktop Chrome 138 or later
+  onDevicePair: Chrome can't translate $2 → $3 on this device
+  onDeviceSetting: The on-device engine chosen in Settings can't run here; set it to Auto
   noAccess: No access to $1
   noAccessProvider: no access to the provider
   corsOrigin: the provider refused this origin (CORS)
   settingsRead: Could not read the provider settings ($1)
   limit: This month's spend ($1) reached your soft limit of $2
   noExplanation: no explanation came back
+  explainNeedsModel: Explain needs a language model; Chrome's on-device translator can't explain
   noTranslation: no translation came back
   noBasicMissing: There is no built-in translator here, so there is no basic translation either.
   noBasicPair: $1 can't translate $2 → $3 on this device, so there is no basic translation either.
@@ -658,6 +687,19 @@ options:
     roleTranslate: "Translate"
     translateWith: "Translate with"
     translateSaved: "Translate route saved."
+    onDevice: "On-device engine"
+    onDeviceAuto: "Auto (recommended)"
+    onDeviceNano: "Gemini Nano"
+    onDeviceTranslator: "Chrome Translator"
+    onDeviceSaved: "On-device engine saved."
+    onDeviceHint: "Used when no provider can run (no key yet): the page is translated on this device and no text leaves it. Gemini Nano writes only some languages (English, Spanish, Japanese; German and French from Chrome 149); Auto uses it for those and Chrome Translator for the rest. Removing “basic translation” from the fallback list turns Chrome Translator off."
+    onDeviceNoNano: "Gemini Nano (this device can't run it)"
+    onDeviceNoTranslator: "Chrome Translator (this browser has none)"
+    onDeviceTranslatorOff: "Chrome Translator (off: basic translation is not in the fallback list)"
+    onDeviceActive: "No provider can run yet (no key), so pages are translated on this device by Chrome. No text leaves your computer."
+    onDeviceExcluded: "No provider can run yet (no key), and the on-device engine chosen below can't run in this browser. Set it to Auto to translate on this device."
+    onDeviceNoBrowser: "No provider can run yet (no key), and on-device translation needs desktop Chrome 138 or later. Add a provider to translate."
+    onDeviceOff: "No provider can run yet (no key). Add a provider, or put “basic translation” back in the fallback list to translate on this device."
     brief: "Document brief"
     briefSaved: "Document brief route saved."
     sameAsTranslate: "Same as translate"
@@ -922,8 +964,8 @@ onboarding:
   pathLocalTitle: "Private and free: a model on this computer"
   pathLocalSub: "Runs with Ollama or LM Studio, so the text never leaves this device. Needs one of them installed; the next step walks you through the setup."
   runsWith: "Runs with"
-  pathBuiltinTitle: "Just try it: Chrome's built-in translator"
-  pathBuiltinSub: "Coming soon. It is not available in this version."
+  pathBuiltinTitle: "Translate on this device with Chrome"
+  pathBuiltinSub: "No key needed; text stays on your computer. Chrome's own translator (and Gemini Nano for English, Spanish and Japanese; German and French from Chrome 149) runs on this device."
   connectTitle: "Connect and test"
   noteLocal: "Nothing leaves this computer with a local model."
   noteKey: "Your key stays on this device: it is not synced to your other devices, and it is sent only to the provider you choose."

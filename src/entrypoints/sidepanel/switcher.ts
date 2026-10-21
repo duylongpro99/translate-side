@@ -3,6 +3,7 @@
 // (storage.session `tabRoute:<tabId>`, cleared when the tab closes) and "Make default"
 // (`routing.translate`, storage.sync). A site rule still wins over a tab choice (§4.3.5), so a
 // page one covers shows the rule instead of a choice that would do nothing.
+import type { OnDeviceEngine } from '@/llm/on-device';
 import type { browser } from 'wxt/browser';
 import { isLocalConnection, clearTabOverride, isUsable, readProviderSettings, readTabOverride, resolveRouteIn, saveRouting, setTabOverride, siteRuleFor } from '@/shared/providers';
 
@@ -30,6 +31,8 @@ export interface SwitcherState {
   tabId?: string;
   /** A site rule covers the page: it decides the model, whatever the tab chose. */
   rule?: { pattern: string; localOnly: boolean; model: string; connection: string };
+  /** The page runs on the device (no usable provider, route.ts): the switcher names Chrome, not the keyless default. */
+  onDevice?: OnDeviceEngine;
 }
 
 /** What the switcher shows for a tab and its page now. */
