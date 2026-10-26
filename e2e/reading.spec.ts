@@ -63,6 +63,23 @@ const setTarget = (extension: Extension, lang: string) =>
     await chrome.storage.sync.set({ prefs: { ...prefs, targetLang: l } });
   }, lang);
 
+/**
+ * Moves the panel tab into a window of its own, where it draws frames: a background tab draws none
+ * (fixtures.ts), so a hover never lands and a block's toolbar, anchored to it, keeps its place from
+ * before a scroll. The page stays the active tab of the first window, so the panel keeps following it.
+ */
+const ownWindow = async (extension: Extension, panel: Page, size: { width: number; height: number }) => {
+  await extension.worker.evaluate(async (url) => {
+    const [tab] = await chrome.tabs.query({ url });
+    if (tab?.id === undefined) throw new Error(`no tab for ${url}`);
+    await chrome.windows.create({ tabId: tab.id, focused: true });
+  }, panel.url());
+  await panel.setViewportSize(size);
+};
+
+/** Waits for the panel's next frame, where anchored toolbars take their place. */
+const frame = (panel: Page) => panel.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+
 test('the gaps between blocks on the store article stay on the spacing scale', async ({ extension, mock }) => {
   mock.answerWith((text) => VI[text] ?? `vi:${text}`);
   await extension.seed();
@@ -176,11 +193,12 @@ for (const { target, ui } of [
       if (target !== 'vi') await setTarget(extension, target);
       const page = await extension.open('store/article.html');
       const panel = await extension.panel();
-      await panel.setViewportSize({ width: 360, height: 500 });
       await extension.translate(page);
       expect(await jobSettled(panel)).toBe('done');
-      const measure = () =>
-        panel.evaluate(() => {
+      await ownWindow(extension, panel, { width: 360, height: 500 });
+      const measure = async () => {
+        await frame(panel);
+        return panel.evaluate(() => {
           const block = document.activeElement as HTMLElement;
           const covered = Math.max(...[...document.querySelectorAll('.panel__header, .job')].map((e) => e.getBoundingClientRect().bottom));
           const lines: DOMRect[] = [];
@@ -198,6 +216,7 @@ for (const { target, ui } of [
           const overlaps = box && shown ? lines.some((r) => r.left < box.right - 0.5 && r.right > box.left + 0.5 && r.top < box.bottom - 0.5 && r.bottom > box.top + 0.5) : false;
           return { id: block.dataset.id, status: block.dataset.status, kind: block.dataset.kind, top: block.getBoundingClientRect().top, covered, overlaps, shown, hasBar: bar !== null };
         });
+      };
       await panel.locator('.segments .seg[data-id]').first().focus();
       for (let i = 0; i < 8; i++) {
         await panel.keyboard.press('j');
@@ -215,5 +234,117 @@ for (const { target, ui } of [
         }
       }
     });
+  });
+}
+
+for (const target of ['vi', 'ar']) {
+  test(`${target}: a block's toolbar floats over the text: hover and focus move no line, and the first block's toolbar clears the header`, async ({ extension, mock }) => {
+    mock.answerWith((text) => (target === 'ar' ? `${SAMPLES.ar} ${text}` : (VI[text] ?? `vi:${text}`)));
+    await extension.seed();
+    if (target !== 'vi') await setTarget(extension, target);
+    const page = await extension.open('store/article.html');
+    const panel = await extension.panel();
+    await extension.translate(page);
+    expect(await jobSettled(panel)).toBe('done');
+    await ownWindow(extension, panel, { width: 320, height: 600 });
+    expect(await jobSettled(panel)).toBe('done');
+    /** Every text line of every block, toolbars left out. */
+    const lines = () =>
+      panel.evaluate(() => {
+        const out: number[][] = [];
+        const walk = (n: Node) => {
+          if (n.nodeType === Node.TEXT_NODE && n.textContent?.trim()) {
+            const range = document.createRange();
+            range.selectNodeContents(n);
+            for (const r of range.getClientRects()) out.push([r.left, r.top, r.right, r.bottom]);
+          } else if (n instanceof HTMLElement && !n.matches('.seg__actions')) n.childNodes.forEach(walk);
+        };
+        walk(document.querySelector('.segments') as Node);
+        return out;
+      });
+    /** The block's toolbar box and its own top, when the toolbar shows. */
+    const toolbar = async (id: string) => {
+      await frame(panel);
+      return panel.evaluate((id) => {
+        const block = document.querySelector<HTMLElement>(`.seg[data-id="${id}"]`) as HTMLElement;
+        const bar = block.querySelector(':scope > .seg__actions') as HTMLElement;
+        const box = bar.getBoundingClientRect();
+        // What the sticky header and the job bar under it cover (blocks-nav.ts coveredBy).
+        const header = Math.max(...[...document.querySelectorAll('.panel__header, .job')].map((e) => e.getBoundingClientRect().bottom));
+        return { shown: getComputedStyle(bar).opacity === '1', top: box.top, bottom: box.bottom, blockTop: block.getBoundingClientRect().top, header };
+      }, id);
+    };
+    const kinds = ['heading', 'p', 'li', 'code'];
+    const ids = await panel.evaluate(
+      // Not the first block if there is another: the first starts right under the header, with no room above it.
+      (kinds) =>
+        kinds.map((k) => {
+          const blocks = [...document.querySelectorAll<HTMLElement>(`.segments .seg[data-kind="${k}"]:has(> .seg__actions)`)];
+          return (blocks.find((b) => b.previousElementSibling) ?? blocks[0])?.dataset.id ?? '';
+        }),
+      kinds,
+    );
+    for (const [i, id] of ids.entries()) {
+      expect(id, `a ${kinds[i]} block with a toolbar`).not.toBe('');
+      const block = panel.locator(`.seg[data-id="${id}"]`);
+      await block.evaluate((b) => b.scrollIntoView({ block: 'center', behavior: 'instant' }));
+      await panel.mouse.move(0, 599);
+      const before = await lines();
+      await block.hover({ position: { x: 20, y: 6 } });
+      const hovered = await toolbar(id);
+      expect(hovered.shown, `${kinds[i]} toolbar on hover`).toBe(true);
+      // Anchored to its own block (not the last one on the page), touching its top edge when there is room above it.
+      if (hovered.blockTop > hovered.header + 32) expect(Math.abs(hovered.bottom - hovered.blockTop), `${kinds[i]} toolbar sits on its block`).toBeLessThan(1);
+      else expect(hovered.top, `${kinds[i]} toolbar below the header`).toBeGreaterThanOrEqual(hovered.header);
+      expect(await lines(), `lines while the ${kinds[i]} is hovered`).toEqual(before);
+      await panel.mouse.move(0, 599);
+      await block.focus();
+      expect((await toolbar(id)).shown, `${kinds[i]} toolbar on focus`).toBe(true);
+      expect(await lines(), `lines while the ${kinds[i]} has the focus`).toEqual(before);
+      await block.blur();
+    }
+
+    // The first block under the sticky header: its toolbar stays below the header and its buttons take the click.
+    const id = ids[1] as string;
+    await panel.evaluate((id) => {
+      const block = document.querySelector(`.seg[data-id="${id}"]`) as HTMLElement;
+      const header = Math.max(...[...document.querySelectorAll('.panel__header, .job')].map((e) => e.getBoundingClientRect().bottom));
+      window.scrollBy({ top: block.getBoundingClientRect().top - header - 1, behavior: 'instant' });
+    }, id);
+    const block = panel.locator(`.seg[data-id="${id}"]`);
+    await block.hover({ position: { x: 20, y: 30 } });
+    const under = await toolbar(id);
+    expect(under.shown).toBe(true);
+    expect(under.top).toBeGreaterThanOrEqual(under.header);
+    const original = block.getByTestId('seg-original');
+    await original.click();
+    await expect(original).toHaveAttribute('aria-pressed', 'true');
+
+    // A focused block stays focused through a jump of the scroll (scroll follow, the scrollbar): its toolbar
+    // must not stay on screen over other blocks once the block itself is out of sight.
+    const loose = (id: string) =>
+      panel.evaluate((id) => {
+        const block = document.querySelector(`.seg[data-id="${id}"]`) as HTMLElement;
+        const bar = block.querySelector(':scope > .seg__actions') as HTMLElement;
+        const covered = Math.max(...[...document.querySelectorAll('.panel__header, .job')].map((e) => e.getBoundingClientRect().bottom));
+        const b = block.getBoundingClientRect();
+        const t = bar.getBoundingClientRect();
+        const blockSeen = b.bottom > covered && b.top < innerHeight;
+        const barSeen = getComputedStyle(bar).opacity === '1' && t.bottom > covered && t.top < innerHeight;
+        return barSeen && !blockSeen;
+      }, id);
+    // A block in the middle, so a jump to either end leaves it out of sight.
+    const middle = panel.locator('.segments .seg[data-kind=p]:has(> .seg__actions)').nth(3);
+    const middleId = (await middle.getAttribute('data-id')) as string;
+    await panel.mouse.move(0, 599);
+    await middle.evaluate((b) => b.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await middle.focus();
+    await middle.press('Shift');
+    await frame(panel);
+    for (const top of [1e6, 0, 1e6]) {
+      await panel.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), top);
+      await frame(panel);
+      expect(await loose(middleId), `toolbar of a focused block after a jump to ${top}`).toBe(false);
+    }
   });
 }

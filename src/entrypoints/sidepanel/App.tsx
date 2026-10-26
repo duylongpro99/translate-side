@@ -282,17 +282,36 @@ export function App({ controller, translator }: { controller: PanelController; t
   const [switcherVersion, setSwitcherVersion] = useState(0);
   const switcherState = useSwitcher(translator, tabId, view.kind === 'ready' ? view.result.url : undefined, job, switcherVersion);
   // The job bar sticks under the header: its offset is the header's real height, which grows when the controls wrap.
+  // The block toolbar keeps clear of both (style.css), so the job bar's height is kept too.
   const headerRef = useRef<HTMLElement>(null);
+  const covers = useRef<{ observer?: ResizeObserver; job?: HTMLElement | null; set?: () => void }>({});
   useEffect(() => {
     const el = headerRef.current;
     if (!el) return;
-    const set = () => document.documentElement.style.setProperty('--panel-header-h', `${el.offsetHeight}px`);
+    const root = document.documentElement.style;
+    const set = () => {
+      root.setProperty('--panel-header-h', `${el.offsetHeight}px`);
+      root.setProperty('--panel-job-h', `${covers.current.job?.offsetHeight ?? 0}px`);
+    };
+    covers.current.set = set;
     set();
     if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(set);
     observer.observe(el);
+    if (covers.current.job) observer.observe(covers.current.job);
+    covers.current.observer = observer;
     return () => observer.disconnect();
   }, []);
+  // The job bar comes and goes with the job: watch the one shown now.
+  useEffect(() => {
+    const c = covers.current;
+    const job = document.querySelector<HTMLElement>('.panel > .job');
+    if (job === c.job) return;
+    if (c.job) c.observer?.unobserve(c.job);
+    c.job = job;
+    if (job) c.observer?.observe(job);
+    c.set?.();
+  });
   const onboarding = useOnboarding();
   // No route can run here yet and the guide was never finished: offer it (the page still reads as the original).
   const offerSetup = onboarding.read && onboarding.status === undefined && switcherState !== undefined && switcherState.currentUsable === false;

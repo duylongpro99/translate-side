@@ -528,86 +528,97 @@
   border-radius: var(--radius-s);
 }
 
-/* Per-block actions: a toolbar over the block's top end corner on hover or keyboard focus,
-   taking no space when hidden. While it shows, the block reserves its width so no text is covered. */
+/* Per-block actions: a popover toolbar just above the block's top end corner on hover or keyboard focus.
+   Shown, it is anchored to its block and fixed, so it takes no space in the text and no line moves (it
+   covers the end of the previous block's last line instead). It touches the block, so the pointer can
+   reach it without leaving the block, and it stays under the sticky header when the block's top is behind it.
+   Hidden, it waits in its block's corner and lets the pointer through, but its buttons keep the keyboard
+   focus. It shows for keyboard focus, not for a block a click left focused: that focus stays through a
+   jump of the scroll, and the toolbar would then float over another block. Only the block it shows for is
+   an anchor: a long page has thousands of blocks, and anchors and fixed boxes on all of them make every
+   layout slower. Under the sticky header and the job bar (z-index 3 and 2). */
 .seg__actions {
   position: absolute;
-  inset-block-start: -2px;
+  inset-block-start: 0;
   inset-inline-end: 0;
   z-index: 1;
   display: flex;
   gap: 2px;
   opacity: 0;
+  pointer-events: none;
   padding: 2px;
   border: 1px solid var(--line);
   border-radius: var(--radius-s);
   background: var(--raised);
+  box-shadow: var(--shadow-overlay);
   font-family: var(--font-ui);
   font-size: var(--text-s);
   font-style: normal;
   font-weight: 400;
   line-height: 1;
 }
-.seg:is(:hover, :focus-within) > .seg__actions {
+.seg:is(:hover, :focus-visible, :has(:focus-visible)) > .seg__actions {
   opacity: 1;
+  pointer-events: auto;
 }
-/* The space it needs: a float at the block's start as wide and tall as the toolbar, so only the lines
-   beside it make room (the rest of the block does not rewrap). The width follows its buttons. */
-.seg {
-  --seg-actions-w: 34px;
-  --seg-actions-text: 0px;
+/* Each show starts again from the place above the block: Chrome keeps the last fallback that fit for as
+   long as the anchor stays. Table cells and touch layouts keep the toolbar in the flow (below). */
+@media not (hover: none) {
+  .seg:not(.seg--table-cell):is(:hover, :focus-visible, :has(:focus-visible)) {
+    anchor-name: --seg;
+    anchor-scope: --seg;
+  }
+  .seg:not(.seg--table-cell):is(:hover, :focus-visible, :has(:focus-visible)) > .seg__actions {
+    --seg-actions-clear: calc(var(--panel-header-h, 41px) + var(--panel-job-h, 0px) + 2px);
+    /* Its buttons' 24px, padding and border: the corner fallback places it by this height. */
+    --seg-actions-h: 30px;
+    position: fixed;
+    block-size: var(--seg-actions-h);
+    position-anchor: --seg;
+    top: auto;
+    bottom: anchor(top);
+    inset-inline-end: anchor(inside);
+    /* Not drawn, only measured: the space under the sticky header and job bar counts as no room for the toolbar. */
+    margin-block-start: var(--seg-actions-clear);
+    position-try-fallbacks: --seg-actions-corner, --seg-actions-header;
+  }
 }
-.seg:has(> .seg__actions > :nth-child(2)) {
-  --seg-actions-w: 62px;
+/* No room above the block: over its top end corner (the end of the space from the panel's top to just
+   below the block's top, so the header's space is still measured). */
+@position-try --seg-actions-corner {
+  top: 0;
+  bottom: calc(anchor(top) - var(--seg-actions-h));
+  align-self: end;
 }
-.seg:has(> .seg__actions > :nth-child(3)) {
-  --seg-actions-w: 90px;
+/* The block's top is behind the header: just under the header, while enough of the block shows below it
+   (its bottom bounds the space), so a toolbar never stays over another block. */
+@position-try --seg-actions-header {
+  top: 0;
+  bottom: anchor(bottom);
+  align-self: start;
 }
-.seg:has(> .seg__actions > :nth-child(4)) {
-  --seg-actions-w: 118px;
-}
-.seg:has(> .seg__actions > :nth-child(5)) {
-  --seg-actions-w: 146px;
-}
-.seg:has(> .seg__actions > :nth-child(6)) {
-  --seg-actions-w: 174px;
-}
-.seg:has(> .seg__actions > .seg__action--text) {
-  --seg-actions-text: 64px;
-}
-.seg:has(> .seg__actions > .seg__action--text + .seg__action--text) {
-  --seg-actions-text: 128px;
-}
-/* A table cell keeps its toolbar in the flow at its end (a float would widen the column), and a code
-   block keeps its caption clear instead (a float would narrow the scrolling pre). */
+/* A table cell keeps its toolbar in the flow at its end (it is narrow, and a popover would cover the next row). */
 .seg--table-cell > .seg__actions {
   position: static;
   display: inline-flex;
+  margin: 0;
   margin-inline-start: var(--space-1);
   border: none;
   background: none;
-}
-.seg--code:is(:hover, :focus-within) > .seg__label {
-  padding-inline-end: var(--seg-actions-w);
-}
-.seg:not(.seg--table-cell, .seg--code):is(:hover, :focus-within):has(> .seg__actions)::before {
-  content: '';
-  float: inline-end;
-  width: calc(var(--seg-actions-w) + var(--seg-actions-text));
-  height: 30px;
+  box-shadow: none;
 }
 @media (hover: none) {
   /* Touch: in the flow at the end of the block, always there. */
   .seg__actions {
     position: static;
     display: inline-flex;
+    margin: 0;
     margin-inline-start: var(--space-2);
     border: none;
     background: none;
+    box-shadow: none;
     opacity: 1;
-  }
-  .seg:is(:hover, :focus-within):has(> .seg__actions)::before {
-    content: none;
+    pointer-events: auto;
   }
 }
 .seg__action {

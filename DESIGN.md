@@ -80,7 +80,9 @@ terms consistent, and rewrite idioms. That's the core of this design (§5).
   extraction fails or when you only need one passage.
 - **Per-block actions**: *show original inline*, *retranslate* (skips the cache and replaces the
   stored entry), *copy* (the shown text, as plain text), *explain this* (a short note on idioms or
-  cultural references; M5).
+  cultural references; M5). They sit in a small toolbar that floats just above the block's top end
+  corner on hover or keyboard focus, over the text rather than in it, so no line moves when it shows;
+  near the sticky header it stays below the header. Table cells and touch screens keep it in the flow.
 - **Header**: one control row. The language pair with a target-language switch; a Translation
   button whose popover holds the style mode, the quality, the quick switcher (§4.3.3 B) and a page
   line with the model, time and cost; then **Aa** (reading settings), the scroll-follow toggle,
