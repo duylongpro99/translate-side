@@ -7,10 +7,21 @@
 import { PRIVACY_NOTICE_VERSION } from '../src/entrypoints/sidepanel/privacy.ts';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { REVIEW_MODEL, blockStatuses, expect, jobSettled, test, type Extension } from './fixtures.ts';
 import type { MockCall } from './servers.ts';
 import { fakeBuiltinAI } from './builtin-ai.ts';
+
+/**
+ * A block's toolbar shows on hover or keyboard focus, as a popover over the text (it ignores the pointer
+ * while hidden). The panel is a background tab with no hover (fixtures.ts), so focus the block the way a
+ * keyboard user does (a key pressed on it makes it keyboard focus), then click.
+ */
+const clickAction = async (block: Locator, testId: string) => {
+  await block.focus();
+  await block.press('Shift');
+  await block.getByTestId(testId).click();
+};
 
 test('the privacy notice blocks sending until it is acknowledged', async ({ extension, mock }) => {
   await extension.seed({ privacy: false });
@@ -286,7 +297,7 @@ test.describe('Best', () => {
     const block = refined(panel).first();
     await expect(block).toContainText('rv:vi:');
     await expect(block.getByTestId('seg-refined')).toHaveAttribute('aria-label', 'Refined');
-    await block.getByTestId('seg-draft').click();
+    await clickAction(block, 'seg-draft');
     await expect(block.getByTestId('seg-draft-text')).toContainText('vi:');
     await expect(block.getByTestId('seg-draft-text')).not.toContainText('rv:');
   });
@@ -432,7 +443,7 @@ test.describe('Edits', () => {
     expect(await jobSettled(panel)).toBe('done');
     const block = panel.locator('.seg--p[data-status=final]').nth(1);
     const id = (await block.getAttribute('data-id')) as string;
-    await block.getByTestId('seg-edit').click();
+    await clickAction(block, 'seg-edit');
     const area = block.getByTestId('seg-edit-text');
     await expect(area).toBeFocused();
     // The editor holds the shown text, light markers included; the mock's text is "vi:" + the source.
@@ -489,7 +500,7 @@ test.describe('Edits', () => {
     expect(sentSince(mock.calls, sent)).not.toContain(source);
 
     sent = mock.calls.length;
-    await block.getByTestId('seg-retranslate').click();
+    await clickAction(block, 'seg-retranslate');
     const confirm = block.getByTestId('seg-replace-confirm');
     await expect(confirm).toContainText('Replace your edit?');
     await expect(block.getByTestId('seg-replace-no')).toBeFocused();
@@ -498,7 +509,7 @@ test.describe('Edits', () => {
     await expect(block).toHaveAttribute('data-edited', 'user');
     expect(mock.calls.length).toBe(sent);
 
-    await block.getByTestId('seg-retranslate').click();
+    await clickAction(block, 'seg-retranslate');
     await block.getByTestId('seg-replace-yes').click();
     await expect(block).not.toHaveAttribute('data-edited', /.*/);
     await expect(block).toContainText('vi:');
@@ -522,7 +533,7 @@ test.describe('Corrections as examples on later pages', () => {
     // Found by its text first: the editor replaces the text, so it is addressed by id afterwards.
     const id = (await panel.locator('.seg--p[data-status=final]', { hasText: TEXT.a }).getAttribute('data-id')) as string;
     const block = panel.locator(`.seg[data-id="${id}"]`);
-    await block.getByTestId('seg-edit').click();
+    await clickAction(block, 'seg-edit');
     const area = block.getByTestId('seg-edit-text');
     await area.fill(CORRECTION);
     await area.press('Control+Enter');

@@ -36,8 +36,11 @@ export function focusBlock(root: HTMLElement, block: HTMLElement, covered: numbe
   const rect = block.getBoundingClientRect();
   const view = block.ownerDocument.defaultView;
   if (!view) return;
-  if (rect.top < covered + 4) view.scrollBy({ top: rect.top - covered - 8, behavior: 'instant' });
-  else if (rect.bottom > view.innerHeight) view.scrollBy({ top: Math.min(rect.bottom - view.innerHeight + 8, rect.top - covered - 8), behavior: 'instant' });
+  // The block's toolbar floats above it while it has the focus: keep room for it under the header too.
+  const bar = block.querySelector<HTMLElement>(':scope > .seg__actions');
+  const clear = covered + (bar && view.getComputedStyle(bar).position === 'fixed' ? bar.offsetHeight : 0);
+  if (rect.top < clear + 4) view.scrollBy({ top: rect.top - clear - 8, behavior: 'instant' });
+  else if (rect.bottom > view.innerHeight) view.scrollBy({ top: Math.min(rect.bottom - view.innerHeight + 8, rect.top - clear - 8), behavior: 'instant' });
 }
 
 /** What the sticky header and job bar cover at the top of the panel. */
