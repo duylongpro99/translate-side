@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MAX_SELECTION_CHARS } from '@/shared/snippet';
-import { acquireSelectionButton, eligibleSelection, HOST_TAG, placeButton, watchSelection } from './selection-button.ts';
+import { acquireSelectionButton, eligibleSelection, HOST_TAG, placeButton, selectionLang, watchSelection } from './selection-button.ts';
 
 const rect = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom, width: right - left, height: bottom - top, x: left, y: top, toJSON: () => ({}) }) as DOMRect;
 
@@ -234,6 +234,19 @@ describe('watchSelection', () => {
     button.click();
     expect(onClick).not.toHaveBeenCalled();
     watch.stop();
+  });
+});
+
+describe('selectionLang', () => {
+  it("is the nearest lang around the selected text, the page's when nothing nearer says, '' when none does", () => {
+    document.documentElement.lang = 'en';
+    document.body.innerHTML = '<p id="a">English</p><blockquote lang="ja"><p id="b">日本語</p></blockquote>';
+    select(document.getElementById('b') as Element);
+    expect(selectionLang(window)).toBe('ja');
+    select(document.getElementById('a') as Element);
+    expect(selectionLang(window)).toBe('en');
+    document.documentElement.removeAttribute('lang');
+    expect(selectionLang(window)).toBe('');
   });
 });
 

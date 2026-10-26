@@ -10,6 +10,8 @@ export interface SnippetView {
   url: string;
   /** From a denylisted or never-translate site: nothing is shown or sent. */
   blocked?: 'denylisted' | 'never';
+  /** The language the page marks the text with, when the record names one. */
+  lang?: string;
   /** More text was selected than is sent. */
   truncated?: boolean;
   /** What is translated, as segments of one pseudo-page (empty when blocked). */
@@ -30,7 +32,7 @@ export function snippetView(record: SnippetRecord): SnippetView {
     domPath: `/selection/p[${i + 1}]`,
     translate: true,
   }));
-  return { ...base, ...(truncated ? { truncated } : {}), segments };
+  return { ...base, ...(record.lang ? { lang: record.lang } : {}), ...(truncated ? { truncated } : {}), segments };
 }
 
 type Listener = (tabId: number, view: SnippetView | undefined) => void;

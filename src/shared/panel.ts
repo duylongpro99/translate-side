@@ -124,7 +124,7 @@ export function listenForSelectionButton(api: Browser): void {
     const tab = { ...sender.tab, url: sender.tab.url ?? sender.url };
     void openPanelAndInject(api, tab, 'selection');
     // The content script caps the text; so does the worker, whatever sent it (the panel cuts it again).
-    void handOverSelection(api, tab, { selectionText: message.text.slice(0, 2 * MAX_SELECTION_CHARS), pageUrl: sender.url, frameUrl: sender.url });
+    void handOverSelection(api, tab, { selectionText: message.text.slice(0, 2 * MAX_SELECTION_CHARS), pageUrl: sender.url, frameUrl: sender.url, lang: message.lang });
   });
 }
 
@@ -133,9 +133,10 @@ export function listenForSelectionButton(api: Browser): void {
  * works on a page where extraction fails and even where nothing can be injected. A selection from a
  * denylisted site is not kept (M3-D13, DESIGN §8): the record only says it was blocked. Checks the
  * tab, the page and the frame the text sits in, since an iframe can be a denylisted site.
- * The worker translates nothing: the panel does, when it sees the record.
+ * The worker translates nothing: the panel does, when it sees the record. `lang` is the language the
+ * page marks the text with (the selection button sends it; a context-menu click has none).
  */
-export async function handOverSelection(api: Browser, tab: TabRef | undefined, info: { selectionText?: string | undefined; pageUrl?: string | undefined; frameUrl?: string | undefined }): Promise<void> {
+export async function handOverSelection(api: Browser, tab: TabRef | undefined, info: { selectionText?: string | undefined; pageUrl?: string | undefined; frameUrl?: string | undefined; lang?: string | undefined }): Promise<void> {
   const tabId = tab?.id;
   const text = info.selectionText?.trim();
   if (tabId === undefined || !text) return;
@@ -148,7 +149,8 @@ export async function handOverSelection(api: Browser, tab: TabRef | undefined, i
       () => [],
     );
     if ([tab?.url, info.pageUrl, info.frameUrl].some((u) => listedFor(never, u) !== undefined)) await writeSnippet(api, tabId, { url, blocked: 'never' });
-    else await writeSnippet(api, tabId, { url, text });
+    // The panel checks the tag before using it (src/shared/language.ts normalizeLang); the worker only bounds it.
+    else await writeSnippet(api, tabId, { url, text, ...(info.lang ? { lang: info.lang.slice(0, 35) } : {}) });
   } catch (err) {
     logError('handing over the selection')(err);
   }

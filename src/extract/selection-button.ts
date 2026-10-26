@@ -21,8 +21,8 @@ export interface SelectionButtonOptions {
   tip: string;
   /** Its icon (a data: URL, so the page needs no web-accessible resource). */
   icon: string;
-  /** Called with the selected text on a trusted click. */
-  onClick(text: string): void;
+  /** Called with the selected text and its language (selectionLang) on a trusted click. */
+  onClick(text: string, lang: string): void;
   /** How long a selection must stay unchanged before the button shows (ms). */
   settleMs?: number;
 }
@@ -48,6 +48,19 @@ const inEditable = (node: Node | null): boolean => {
   }
   return false;
 };
+
+/**
+ * The language the selected text is marked as: the nearest `lang` attribute around it, else ''.
+ * Read on the click and sent with the text, so a selection too short for Chrome's language
+ * detector still names its source language (the on-device route needs one).
+ */
+export function selectionLang(win: Window): string {
+  const sel = win.getSelection();
+  if (!sel || sel.rangeCount === 0) return '';
+  const node = sel.getRangeAt(0).commonAncestorContainer;
+  const el = node.nodeType === 1 ? (node as Element) : node.parentElement;
+  return el?.closest('[lang]')?.getAttribute('lang')?.trim() ?? '';
+}
 
 /**
  * The selection the button may offer, or undefined: none in a frame, an editable document, a form
@@ -133,8 +146,9 @@ export function watchSelection(win: Window, opts: SelectionButtonOptions): Selec
     button.addEventListener('click', (e) => {
       if (!e.isTrusted) return;
       const text = eligibleSelection(win);
+      const lang = text ? selectionLang(win) : '';
       hide();
-      if (text) opts.onClick(text);
+      if (text) opts.onClick(text, lang);
     });
     root.append(style, button);
     doc.documentElement.append(host);
