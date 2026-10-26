@@ -294,6 +294,17 @@ describe('selection button', () => {
     expect(f.store[accessKey(4)]).toMatchObject({ status: 'ready', trigger: 'selection', origin: 'https://example.com' });
   });
 
+  it('keeps the language the page marks the text with; the context menu has none', async () => {
+    const f = fakeApi();
+    listenForSelectionButton(f.api);
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: '猫', lang: 'ja' }, sender);
+    await flush();
+    expect(f.store['snippet:4']).toMatchObject({ text: '猫', lang: 'ja' });
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: '猫' }, sender);
+    await flush();
+    expect(f.store['snippet:4']).not.toHaveProperty('lang');
+  });
+
   it.each([
     ['another extension', { ...sender, id: 'other' }],
     ['an extension page (no tab)', { id: 'self', frameId: 0, url: 'chrome-extension://self/x.html' }],

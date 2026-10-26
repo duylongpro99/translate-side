@@ -6,7 +6,7 @@
 // is translated again from the cache, so only new or changed blocks are sent.
 import type { browser } from 'wxt/browser';
 import { i18n } from '#i18n';
-import { chromeLanguageDetector, detectionSample, detectSourceLanguage, MIXED_LANGUAGE_DETECTION, sameLanguage, segmentsInLanguage, type LanguageDetectorPort } from '@/shared/language';
+import { chromeLanguageDetector, detectionSample, detectSourceLanguage, MIXED_LANGUAGE_DETECTION, normalizeLang, sameLanguage, segmentsInLanguage, type LanguageDetectorPort } from '@/shared/language';
 import type { GlossaryEntry } from '@/engine/types';
 import { featureAvailable } from '@/shared/features';
 import { QUALITY_KEY, readQuality, requestedStrategy, type Quality } from '@/shared/quality';
@@ -305,12 +305,24 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     const translate = async (): Promise<void> => {
       const settings = await readSettings(api);
       // Detection only informs the prompt; a selection already in the target language is still translated (the user asked).
-      const { doc } = await docFor(settings, view.url, '', undefined, view.segments);
+      const { doc } = await docFor(settings, view.url, '', normalizeLang(view.lang) || pageLanguage(tabId, view.url), view.segments);
       if (snippetStore.get(tabId)?.docId !== view.docId) return;
       // A route that sends text off the device waits for the first-run privacy notice (jobs.ts).
       void snippetJobs.start(tabId, view.docId, doc);
     };
     await translate();
+  };
+  /**
+   * What the panel already knows of the language of the page a selection came from, for when the
+   * detector can't tell from the selection (too short) and the record names none (a context-menu
+   * click): the page job's detected language, else the last read's `<html lang>`. Undefined for
+   * another page or one not read yet.
+   */
+  const pageLanguage = (tabId: number, url: string): string | undefined => {
+    const doc = jobs.docFor(tabId)?.doc;
+    if (doc?.url === url && doc.sourceLang) return doc.sourceLang;
+    const read = latest.get(tabId)?.result;
+    return read?.url === url ? read.lang : undefined;
   };
   const closeSnippet = (tabId: number) => {
     snippetJobs.drop(tabId);

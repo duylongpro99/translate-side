@@ -291,6 +291,8 @@ export const SELECTION_BUTTON_MESSAGE = 'translate-side:translate-selection';
 export interface SelectionButtonRequest {
   type: typeof SELECTION_BUTTON_MESSAGE;
   text: string;
+  /** The `lang` the page marks the selected text with; absent when it marks none. */
+  lang?: string;
 }
 
 export const isSelectionButtonRequest = (m: unknown): m is SelectionButtonRequest =>

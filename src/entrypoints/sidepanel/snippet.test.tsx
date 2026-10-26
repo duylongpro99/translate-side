@@ -221,6 +221,67 @@ describe('selection mode in the panel (plan M3-E4, §3 #5)', () => {
   });
 });
 
+describe("a selection's source language", () => {
+  /** A client that records the source language each route was asked for (the on-device pair needs one). */
+  const routedFrom = (froms: (string | undefined)[]) => (target: { sourceLang?: string | undefined }) => {
+    froms.push(target.sourceLang);
+    return okClient()();
+  };
+  const readPage = (url: string, lang: string) =>
+    ({ ok: true, via: 'walk', url, title: 'Page', lang, segments: [{ id: 'p0', kind: 'p', text: 'Page text', inlineMarkup: 'Page text', domPath: '/p[1]', translate: true }] }) as never;
+
+  it('a word the detector cannot place takes the language the page marks it with', async () => {
+    const f = fakeApi();
+    const froms: (string | undefined)[] = [];
+    // No detector answer, as for a single word below its confidence floor.
+    const t = createTranslator(f.api, { translateClient: routedFrom(froms) }, { detector: undefined });
+    t.watch(() => 3);
+    (t.hooks as Required<typeof t.hooks>).active(3);
+    f.leave(3, { ...record('猫'), lang: 'ja' });
+    await until(() => t.snippets.jobs.get(3)?.status === 'done');
+    expect(froms).toEqual(['ja']);
+  });
+
+  it("a record with no language (a context-menu click) takes the language of the page the panel read", async () => {
+    const f = fakeApi();
+    const froms: (string | undefined)[] = [];
+    const t = createTranslator(f.api, { translateClient: routedFrom(froms) }, { detector: undefined });
+    t.watch(() => 3);
+    const hooks = t.hooks as Required<typeof t.hooks>;
+    hooks.active(3);
+    hooks.ready(3, 'd', readPage('https://example.com/a', 'ja'), { asked: false });
+    f.leave(3, record('猫'));
+    await until(() => t.snippets.jobs.get(3)?.status === 'done');
+    expect(froms.at(-1)).toBe('ja');
+  });
+
+  it("a tag that isn't a language falls back to the page the panel read", async () => {
+    const f = fakeApi();
+    const froms: (string | undefined)[] = [];
+    const t = createTranslator(f.api, { translateClient: routedFrom(froms) }, { detector: undefined });
+    t.watch(() => 3);
+    const hooks = t.hooks as Required<typeof t.hooks>;
+    hooks.active(3);
+    hooks.ready(3, 'd', readPage('https://example.com/a', 'ja'), { asked: false });
+    f.leave(3, { ...record('猫'), lang: '<b>' });
+    await until(() => t.snippets.jobs.get(3)?.status === 'done');
+    expect(froms.at(-1)).toBe('ja');
+  });
+
+  it("another page's language is not used", async () => {
+    const f = fakeApi();
+    const froms: (string | undefined)[] = [];
+    const t = createTranslator(f.api, { translateClient: routedFrom(froms) }, { detector: undefined });
+    t.watch(() => 3);
+    const hooks = t.hooks as Required<typeof t.hooks>;
+    hooks.active(3);
+    hooks.ready(3, 'd', readPage('https://example.com/other', 'ja'), { asked: false });
+    f.leave(3, record('猫'));
+    await until(() => t.snippets.jobs.get(3)?.status === 'done');
+    expect(froms.at(-1)).toBe('');
+  });
+});
+
 describe('a selection ends with its page, and costs one request (review E4)', () => {
   it('a navigation (the connection to the document ends) clears the selection view and the stored record', async () => {
     const f = fakeApi();

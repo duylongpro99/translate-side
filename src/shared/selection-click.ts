@@ -12,10 +12,10 @@ export function selectionButtonOptions(): SelectionButtonOptions {
     label: i18n.t('panel.selectionButton.label'),
     tip: i18n.t('panel.selectionButton.tip'),
     icon,
-    onClick(text) {
+    onClick(text, lang) {
       // A copy left by an updated extension throws here at once (its runtime is gone), before any promise.
       try {
-        browser.runtime.sendMessage({ type: SELECTION_BUTTON_MESSAGE, text } satisfies SelectionButtonRequest).catch(() => undefined);
+        browser.runtime.sendMessage({ type: SELECTION_BUTTON_MESSAGE, text, ...(lang ? { lang } : {}) } satisfies SelectionButtonRequest).catch(() => undefined);
       } catch {
         // Nothing to do: the click goes nowhere, and the page's next load has the new script.
       }

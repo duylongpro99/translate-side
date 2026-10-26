@@ -18,6 +18,8 @@ export interface SnippetRecord {
   url: string;
   /** The selected text. Absent when `blocked`. */
   text?: string;
+  /** The language the page marks the text with (BCP 47), when it marks one. */
+  lang?: string;
   /** The selection came from a denylisted or never-translate site: nothing was kept, nothing will be sent. */
   blocked?: 'denylisted' | 'never';
 }
