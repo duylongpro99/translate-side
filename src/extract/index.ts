@@ -10,6 +10,7 @@ import type { Segment } from '@/engine/types';
 import type { ExtractResult, ExtractVia } from '@/shared/protocol';
 import { detectGenerator, stripInContent, stripLandmarks } from './clean.ts';
 import { composeDocument, HIDDEN_ATTR, INDEX_ATTR, type Composed } from './compose.ts';
+import { deepActiveElement, isEditableDocument } from './editable.ts';
 
 /** Thresholds from S3: accept the walk, or Readability, at ≥ 500 chars of text. */
 export const WALK_MIN_CHARS = 500;
@@ -189,20 +190,6 @@ function liveElement(el: Element, composed: Composed): Element | undefined {
   return own === null || own === undefined ? undefined : composed.live[Number(own)];
 }
 
-function isEditableDocument(doc: Document): boolean {
-  const editable = (el: Element | null) => {
-    const ce = el?.getAttribute('contenteditable');
-    return ce !== null && ce !== undefined && ce.toLowerCase() !== 'false';
-  };
-  return doc.designMode === 'on' || editable(doc.documentElement) || editable(doc.body);
-}
-
-/** The focused element, through open shadow roots (a password field inside a web component counts). */
-function deepActiveElement(doc: Document): Element | null {
-  let el = doc.activeElement;
-  while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
-  return el;
-}
 
 /** Whether focus is in a password field at extraction time (plan M3 §5, decision M3-D5). */
 export function hasFocusedPassword(doc: Document): boolean {

@@ -40,6 +40,7 @@ function fakeApi({ grant = true, answer = Promise.resolve() } = {}) {
       onChanged: { addListener: (l: (c: Record<string, unknown>) => void) => listeners.add(l), removeListener: (l: (c: Record<string, unknown>) => void) => listeners.delete(l) },
     };
   };
+  const permListeners = new Set<() => void>();
   const api = {
     storage: { local: area(local, 'local'), sync: area(sync, 'sync') },
     permissions: {
@@ -52,12 +53,16 @@ function fakeApi({ grant = true, answer = Promise.resolve() } = {}) {
         });
       },
       remove: ({ origins }: { origins: string[] }) => (log.push(`revoke ${origins.join(',')}`), Promise.resolve(origins.every((o) => granted.delete(o)))),
+      onAdded: { addListener: (l: () => void) => permListeners.add(l), removeListener: (l: () => void) => permListeners.delete(l) },
+      onRemoved: { addListener: (l: () => void) => permListeners.add(l), removeListener: (l: () => void) => permListeners.delete(l) },
     },
     i18n: { getUILanguage: () => 'en-US' },
     runtime: { getURL: (p: string) => `chrome-extension://abc${p}` },
     tabs: { create: (o: { url: string }) => (log.push(`tab ${o.url}`), Promise.resolve({})) },
   } as unknown as Api;
-  return { api, local, sync, log, granted };
+  /** Chrome's permissions events, as when access changes in chrome://extensions. */
+  const permissionsChanged = () => permListeners.forEach((l) => l());
+  return { api, local, sync, log, granted, permissionsChanged };
 }
 
 let root: HTMLElement;
@@ -533,6 +538,70 @@ describe('options: site rules (plan M5-E6)', () => {
     act(() => void (root.querySelector('[aria-label="Grant access to wiki.intranet"]') as HTMLElement).click());
     await waitFor(() => root.querySelector('[data-testid=site-no-access]') === null);
     expect(f.granted.has('https://wiki.intranet/*')).toBe(true);
+  });
+});
+
+describe('options: the selection button on every site (decision S9)', () => {
+  const box = () => root.querySelector('[data-testid=selection-everywhere]') as HTMLInputElement;
+  const note = () => root.querySelector('[data-testid=sites-note]')?.textContent ?? '';
+
+  it('off by default; turning it on asks Chrome for all sites first, then saves it', async () => {
+    const f = fakeApi();
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => box() !== null);
+    expect(box().checked).toBe(false);
+    expect(root.querySelector('#sites')?.textContent).toContain('Nothing leaves the page until you click the button');
+    const before = f.log.length;
+    check('[data-testid=selection-everywhere]', true);
+    // The prompt is the first thing the click does (S5): nothing is saved before it.
+    expect(f.log[before]).toBe('request https://*/*,http://*/*');
+    await waitFor(() => f.local.get('selectionEverywhere') === true);
+    await waitFor(() => box().checked);
+    expect(note()).toContain('now shows on every site');
+  });
+
+  it('a refused prompt saves nothing and says the button stays where the panel is open', async () => {
+    const f = fakeApi({ grant: false });
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => box() !== null);
+    check('[data-testid=selection-everywhere]', true);
+    await waitFor(() => note().includes('was not granted'));
+    expect(f.local.has('selectionEverywhere')).toBe(false);
+    expect(box().checked).toBe(false);
+  });
+
+  it('turning it off keeps the access and says where to take it back', async () => {
+    const f = fakeApi();
+    f.local.set('selectionEverywhere', true);
+    f.granted.add('https://*/*');
+    f.granted.add('http://*/*');
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => box()?.checked === true);
+    check('[data-testid=selection-everywhere]', false);
+    await waitFor(() => note().includes('chrome://extensions'));
+    expect(f.local.get('selectionEverywhere')).toBe(false);
+    expect(f.log.some((l) => l.startsWith('revoke'))).toBe(false);
+  });
+
+  it('on without the access (removed in chrome://extensions, or imported) shows off and says so', async () => {
+    const f = fakeApi();
+    f.local.set('selectionEverywhere', true);
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => root.querySelector('[data-testid=selection-no-access]') !== null);
+    expect(box().checked).toBe(false);
+  });
+
+  it('follows the access being removed in chrome://extensions while the page is open', async () => {
+    const f = fakeApi();
+    f.local.set('selectionEverywhere', true);
+    f.granted.add('https://*/*');
+    f.granted.add('http://*/*');
+    act(() => render(<Options api={f.api} />, root));
+    await waitFor(() => box()?.checked === true);
+    f.granted.clear();
+    f.permissionsChanged();
+    await waitFor(() => root.querySelector('[data-testid=selection-no-access]') !== null);
+    expect(box().checked).toBe(false);
   });
 });
 

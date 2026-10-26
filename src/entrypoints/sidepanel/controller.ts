@@ -235,9 +235,11 @@ export class PanelController {
     }
     const changed = access.at !== s.accessAt;
     s.accessAt = access.at;
-    // A record without a trigger comes from an earlier version: read as a gesture.
-    if (changed || asked) s.asked = asked || access.trigger !== 'navigation';
-    this.apply(tabId, s, access, force || changed, changed && access.trigger !== 'navigation');
+    // A record without a trigger comes from an earlier version: read as a gesture. The selection
+    // button asks for its selection only, so the page it opens on is offered, not translated.
+    const byGesture = access.trigger === undefined || access.trigger === 'gesture';
+    if (changed || asked) s.asked = asked || byGesture;
+    this.apply(tabId, s, access, force || changed, changed && byGesture);
   }
 
   private apply(tabId: number, s: TabSession, access: TabAccess, changed: boolean, gesture = false): void {

@@ -9,12 +9,23 @@ const h = vi.hoisted(() => {
     installed: [] as Listener[],
     clicked: [] as Listener[],
     action: [] as Listener[],
+    messages: [] as Listener[],
+    permissionListeners: 0,
     tabListeners: 0,
     calls: [] as string[],
     setPanelBehavior: (() => Promise.resolve()) as () => Promise<void>,
   };
   const api = {
-    runtime: { onInstalled: { addListener: (fn: Listener) => state.installed.push(fn) }, sendMessage: () => Promise.reject(new Error('Receiving end does not exist.')) },
+    runtime: {
+      onInstalled: { addListener: (fn: Listener) => state.installed.push(fn) },
+      onMessage: { addListener: (fn: Listener) => state.messages.push(fn) },
+      sendMessage: () => Promise.reject(new Error('Receiving end does not exist.')),
+    },
+    permissions: {
+      contains: () => Promise.resolve(false),
+      onAdded: { addListener: () => state.permissionListeners++ },
+      onRemoved: { addListener: () => state.permissionListeners++ },
+    },
     sidePanel: {
       setPanelBehavior: () => state.setPanelBehavior(),
       open: (opts: { tabId: number }) => {
@@ -32,8 +43,13 @@ const h = vi.hoisted(() => {
         state.calls.push(`inject:${opts.target.tabId}`);
         return Promise.resolve([{ result: 'injected' }]);
       },
+      getRegisteredContentScripts: () => Promise.resolve([]),
     },
-    storage: { session: { set: () => Promise.resolve() } },
+    storage: {
+      session: { set: () => Promise.resolve() },
+      sync: { get: () => Promise.resolve({}), onChanged: { addListener: () => undefined } },
+      local: { get: () => Promise.resolve({}), onChanged: { addListener: () => undefined } },
+    },
     contextMenus: {
       removeAll: () => {
         state.calls.push('removeAll');
@@ -59,17 +75,21 @@ beforeEach(() => {
   h.state.installed.length = 0;
   h.state.clicked.length = 0;
   h.state.action.length = 0;
+  h.state.messages.length = 0;
+  h.state.permissionListeners = 0;
   h.state.tabListeners = 0;
   h.state.calls.length = 0;
   h.state.setPanelBehavior = () => Promise.resolve();
 });
 
 describe('background', () => {
-  it('registers action, context-menu and tab listeners at top level, without onInstalled', () => {
+  it('registers action, context-menu, tab, selection-button and permission listeners at top level, without onInstalled', () => {
     void background.main();
     expect(h.state.clicked).toHaveLength(1);
     expect(h.state.action).toHaveLength(1);
     expect(h.state.tabListeners).toBe(2);
+    expect(h.state.messages).toHaveLength(1);
+    expect(h.state.permissionListeners).toBe(2);
   });
 
   it('opens the panel and injects when the menu item is clicked after a worker restart', async () => {

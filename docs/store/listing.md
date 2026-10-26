@@ -29,7 +29,7 @@ WHAT IT DOES
 • Styles: Natural, Faithful, or Simplified.
 • Your glossary: say how a term is always rendered, or keep it as it is.
 • Keeps code, URLs, numbers and product names unchanged, and checks every block for lost code, links and numbers.
-• Hover a block in the panel to see where it is on the page, and the other way round. Select text and choose "Translate in side panel" to translate only that passage.
+• Hover a block in the panel to see where it is on the page, and the other way round. Select text and click the button next to it, or choose "Translate in side panel", to translate only that passage. An option in Settings shows that button on every site.
 • Shows what a page cost in tokens, with an optional monthly spend limit.
 • Works with the keyboard and screen readers. The interface is available in English and Vietnamese.
 

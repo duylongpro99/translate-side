@@ -284,3 +284,14 @@ export function serve<A extends ApiShape = ContentApi>(port: PortLike, handlers:
       );
   });
 }
+
+/** The selection button's click (src/extract/selection-button.ts), sent by this extension's content script. */
+export const SELECTION_BUTTON_MESSAGE = 'translate-side:translate-selection';
+
+export interface SelectionButtonRequest {
+  type: typeof SELECTION_BUTTON_MESSAGE;
+  text: string;
+}
+
+export const isSelectionButtonRequest = (m: unknown): m is SelectionButtonRequest =>
+  typeof m === 'object' && m !== null && (m as { type?: unknown }).type === SELECTION_BUTTON_MESSAGE && typeof (m as { text?: unknown }).text === 'string';

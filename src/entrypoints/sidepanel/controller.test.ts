@@ -548,6 +548,27 @@ describe('PanelController session hooks (plan M1-E8)', () => {
       expect(reads).toEqual(['d1 true', 'd2 false', 'd3 true', 'd4 true']);
     });
 
+    it('a page the selection button opened the panel on is read but not asked for, and a click on a live page asks nothing again', async () => {
+      const w = fakeWorld();
+      const reads: string[] = [];
+      const asked: string[] = [];
+      w.pages[10] = { docId: 'd1', result: ok(1) };
+      w.store[accessKey(10)] = { status: 'ready', trigger: 'selection', at: 0 };
+      await started(w, {
+        hooks: {
+          ready: (_t: number, docId: string, _r: unknown, read?: { asked: boolean }) => reads.push(`${docId} ${read?.asked}`),
+          asked: (_t: number, docId: string) => asked.push(docId),
+        },
+      });
+      await wait();
+      // Another click on the button while the page is shown: the worker re-injects as "already".
+      w.setAccess(10, { status: 'ready', trigger: 'selection', detail: 'already injected' });
+      await wait();
+      await wait();
+      expect(reads).toEqual(['d1 false']);
+      expect(asked).toEqual([]);
+    });
+
     it("shows the content script's own re-read at once, with no 'loading' in between, and says whether the URL changed", async () => {
       const w = fakeWorld();
       const reads: unknown[] = [];

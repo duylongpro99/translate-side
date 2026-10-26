@@ -76,8 +76,14 @@ terms consistent, and rewrite idioms. That's the core of this design (§5).
   reverse.
 - **Viewport first**: blocks visible on screen are translated first, then the rest of the page,
   reading on from the screen and then the part above it (decision M3-D9).
-- **Selection mode**: select text, then right-click **Translate in side panel**, for pages where
-  extraction fails or when you only need one passage.
+- **Selection mode**: select text, then right-click **Translate in side panel**, or click the
+  extension's button that shows at the end of the selection, for pages where extraction fails or
+  when you only need one passage. The button shows on a page that has the panel open; an option in
+  Settings › Site rules, off by default, shows it on every site, even with the panel closed
+  (decision S9). It never shows in form fields, editable regions or on denylisted and
+  never-translate sites, and only its click sends anything. Unlike the context menu, the click asks
+  for the selection only: the panel reads the page and offers it (*Translate this page*) instead of
+  translating it.
 - **Per-block actions**: *show original inline*, *retranslate* (skips the cache and replaces the
   stored entry), *copy* (the shown text, as plain text), *explain this* (a short note on idioms or
   cultural references; M5).
@@ -915,6 +921,18 @@ viewport comes first, you can start reading almost immediately.
   optional host permissions, requested per origin at runtime, only for the configured provider
   endpoints and for sites the user allowlists. The manifest declares `https://*/*` and
   `http://*/*` as optional (ROADMAP §8 item 19).
+- **Selection button on every site** (opt-in, off by default; decision S9): turning it on asks
+  Chrome for both broad patterns and registers a small script on every http(s) page except the
+  built-in denylist and the never-translate list (a page already open when its site is added keeps the
+  button until it reloads; the worker refuses its text). That script only draws the button: it reads the
+  selection to decide whether to show it, and nothing leaves the page until the reader clicks it;
+  then only the selected text is handed to the panel, under the same denylist and never-translate
+  checks as the context menu. The broad access does not widen what the panel reads: after a
+  navigation the content script is re-injected only on the origin a gesture granted or on an
+  allowlisted site, as under `activeTab` alone. Turning the option off unregisters the script but
+  keeps the access (removing the broad patterns could not be shown to leave a provider's or an
+  allowlisted site's own grant alone); the user can remove it in `chrome://extensions`. The
+  option lives in `storage.local`, per device like the access, and is not in the settings export.
 
 ---
 

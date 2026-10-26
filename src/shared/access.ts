@@ -25,9 +25,16 @@ export interface TabAccess {
    * What the injection followed: a user gesture (the toolbar, Alt+T, the context menu, the panel's
    * own Translate this page), or a navigation with no gesture (plan M5-E3). A page read after a
    * navigation is translated on its own only on an allowlisted site (DESIGN §8). Absent in records
-   * of earlier versions: read as a gesture.
+   * of earlier versions: read as a gesture. A click on the selection button (`selection`) asks for
+   * the selection only: the page is offered, as after a navigation.
    */
-  trigger?: 'gesture' | 'navigation';
+  trigger?: 'gesture' | 'navigation' | 'selection';
+  /**
+   * The origin the grant was for: the page a gesture injected into, carried along while it lasts. A
+   * navigation follows only that origin or an allowlisted site (decision S9), so a broad host
+   * permission never widens what activeTab gave. Absent in records of earlier versions.
+   */
+  origin?: string;
   /** Error text from Chrome, for the dev view and logs. */
   detail?: string;
   /** Milliseconds since epoch; every write changes it, so the panel sees repeat injections. */

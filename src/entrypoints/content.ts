@@ -7,6 +7,7 @@
 import { browser } from 'wxt/browser';
 import { extractPage } from '@/extract';
 import { createHighlighter, indexTargets, placeOf, scrollToSegment, watchHover, type HoverWatch, type LinkIndex } from '@/extract/link';
+import { acquireSelectionButton } from '@/extract/selection-button';
 import { watchViewport, type ViewportWatch } from '@/extract/viewport';
 import { watchChanges, type ChangeWatch } from '@/extract/watch';
 import { keepIds, readSignature } from '@/segment/stable';
@@ -14,6 +15,7 @@ import type { Segment } from '@/engine/types';
 import type { InjectOutcome } from '@/shared/inject';
 import { createGuard } from '@/shared/guard';
 import { CONTENT_PORT_NAME, CONTENT_PORT_PREFIX, PROTOCOL_VERSION, ProtocolError, emit, listen, serve, type ContentApi } from '@/shared/protocol';
+import { isRuntimeAlive, selectionButtonOptions } from '@/shared/selection-click';
 
 declare global {
   // Set by the first injection into this page's isolated world.
@@ -70,11 +72,14 @@ export default defineContentScript({
       let found: LinkIndex = indexTargets(new Map(), []);
       const highlighter = createHighlighter(window);
       const scrolled = createGuard();
+      // The selection button, while a panel is connected (it is the panel the click translates in).
+      const leaveSelection = acquireSelectionButton(window, selectionButtonOptions(), isRuntimeAlive);
       port.onDisconnect.addListener(() => {
         watch?.stop();
         changes?.stop();
         hover?.stop();
         highlighter.dispose();
+        leaveSelection();
       });
       const look = (targets: Map<string, Element | Range>, segments: readonly Segment[]) => {
         watch?.stop();
@@ -139,11 +144,3 @@ export default defineContentScript({
 });
 
 const withoutHash = (url: string) => url.replace(/#.*$/, '');
-
-function isRuntimeAlive(): boolean {
-  try {
-    return Boolean(browser.runtime.id);
-  } catch {
-    return false;
-  }
-}

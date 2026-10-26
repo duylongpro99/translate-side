@@ -7,10 +7,12 @@ import {
   createContextMenu,
   listenForActionClicks,
   listenForContextMenuClicks,
+  listenForSelectionButton,
   listenForTabLifecycle,
   openPanelAndInject,
   setupPanelBehavior,
 } from './panel.ts';
+import { SELECTION_BUTTON_MESSAGE } from './protocol.ts';
 
 type Api = Parameters<typeof setupPanelBehavior>[0];
 type Listener = (...args: never[]) => void;
@@ -43,6 +45,8 @@ function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, 
       local: { get: () => Promise.resolve({}) },
     },
     runtime: {
+      id: 'self',
+      onMessage: on('message'),
       sendMessage: (m: { type: string; windowId?: number; pressedAt?: number }) => {
         calls.push(`ask:${m.type}:${m.windowId}`);
         pressedAts.push(m.pressedAt);
@@ -274,6 +278,66 @@ describe('selection hand-over (plan M3-E4)', () => {
   });
 });
 
+describe('selection button', () => {
+  const sender = { id: 'self', frameId: 0, url: 'https://example.com/a', tab: { id: 4, url: 'https://example.com/a' } };
+
+  it('a click opens the panel first, then injects and leaves the text for it, like the context menu, but asks for the selection only', async () => {
+    const f = fakeApi();
+    listenForSelectionButton(f.api);
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: '  Hello there.  ' }, sender);
+    // No await before sidePanel.open: the click's gesture came with the message (S9).
+    expect(f.calls[0]).toBe('open:4');
+    await flush();
+    expect(f.calls).toEqual(['open:4', `inject:4:${CONTENT_SCRIPT_FILE}`]);
+    expect(f.store['snippet:4']).toMatchObject({ url: 'https://example.com/a', text: 'Hello there.' });
+    // It asks for the selection only: the panel offers the page instead of translating it.
+    expect(f.store[accessKey(4)]).toMatchObject({ status: 'ready', trigger: 'selection', origin: 'https://example.com' });
+  });
+
+  it.each([
+    ['another extension', { ...sender, id: 'other' }],
+    ['an extension page (no tab)', { id: 'self', frameId: 0, url: 'chrome-extension://self/x.html' }],
+    ['a frame', { ...sender, frameId: 3 }],
+  ])('ignores %s', async (_name, from) => {
+    const f = fakeApi();
+    listenForSelectionButton(f.api);
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: 'Hello' }, from);
+    await flush();
+    expect(f.calls).toEqual([]);
+    expect(Object.keys(f.store)).toEqual([]);
+  });
+
+  it('ignores other messages and one with no text', async () => {
+    const f = fakeApi();
+    listenForSelectionButton(f.api);
+    f.fire('message', { type: CLOSE_PANEL_MESSAGE }, sender);
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE }, sender);
+    await flush();
+    expect(f.calls).toEqual([]);
+  });
+
+  it("checks the sender's address, not one in the message: a denylisted page keeps no text", async () => {
+    const f = fakeApi();
+    listenForSelectionButton(f.api);
+    const mail = 'https://mail.google.com/mail/u/0/';
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: 'my secret mail', url: 'https://example.com/' }, { ...sender, url: mail, tab: { id: 4, url: mail } });
+    await flush();
+    expect(f.store['snippet:4']).toMatchObject({ blocked: 'denylisted' });
+    expect(JSON.stringify(f.store)).not.toContain('my secret mail');
+  });
+
+  it('a never-translate site keeps no text either, even when the tab URL is hidden', async () => {
+    const f = fakeApi({ sync: { siteNever: ['bank.example'] } });
+    listenForSelectionButton(f.api);
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: 'my balance' }, { ...sender, url: 'https://bank.example/a', tab: { id: 4 } });
+    await flush();
+    await flush();
+    expect(f.store['snippet:4']).toMatchObject({ blocked: 'never' });
+    expect(JSON.stringify(f.store)).not.toContain('my balance');
+    expect(f.calls.some((c) => c.startsWith('inject'))).toBe(false);
+  });
+});
+
 describe('tab lifecycle', () => {
   it('re-injects on load complete only into tabs it injected into before', async () => {
     const f = fakeApi();
@@ -282,7 +346,7 @@ describe('tab lifecycle', () => {
     await flush();
     expect(f.calls).toEqual([]);
 
-    f.store[accessKey(12)] = { status: 'ready', at: 0 };
+    f.store[accessKey(12)] = { status: 'ready', origin: 'https://example.com', at: 0 };
     f.fire('updated', 12, { status: 'loading' }, { url: 'https://example.com/a' });
     f.fire('updated', 12, { status: 'complete' }, { url: 'https://example.com/a' });
     await flush();
@@ -310,6 +374,68 @@ describe('tab lifecycle', () => {
     await flush();
     await flush();
     expect(f.store[accessKey(14)]).toMatchObject({ status: 'lost', reason: 'no-grant' });
+  });
+
+  it('a gesture records the origin it was granted for, and a same-origin navigation keeps it', async () => {
+    const f = fakeApi();
+    listenForTabLifecycle(f.api);
+    await openPanelAndInject(f.api, { id: 16, url: 'https://docs.example/a' });
+    expect(f.store[accessKey(16)]).toMatchObject({ status: 'ready', origin: 'https://docs.example' });
+    f.fire('updated', 16, { status: 'complete' }, { url: 'https://docs.example/b' });
+    await flush();
+    await flush();
+    expect(f.calls.filter((c) => c.startsWith('inject'))).toHaveLength(2);
+    expect(f.store[accessKey(16)]).toMatchObject({ status: 'ready', trigger: 'navigation', origin: 'https://docs.example' });
+  });
+
+  // With the selection button on every site, Chrome would let the worker inject anywhere (S9): the
+  // navigation still follows only what activeTab or the allowlist gave, as without it (S5).
+  it('a navigation to another origin is lost even when Chrome would allow the injection, and stays lost', async () => {
+    const f = fakeApi();
+    listenForTabLifecycle(f.api);
+    f.store[accessKey(17)] = { status: 'ready', origin: 'https://docs.example', at: 0 };
+    f.fire('updated', 17, { status: 'complete' }, { url: 'https://news.example/' });
+    await flush();
+    await flush();
+    await flush();
+    expect(f.calls).toEqual([]);
+    expect(f.store[accessKey(17)]).toMatchObject({ status: 'lost', reason: 'no-grant', origin: 'https://docs.example' });
+    // Back on the first origin: activeTab ended at the other origin, so it is not followed either.
+    f.fire('updated', 17, { status: 'complete' }, { url: 'https://docs.example/a' });
+    await flush();
+    await flush();
+    await flush();
+    expect(f.calls).toEqual([]);
+    expect(f.store[accessKey(17)]).toMatchObject({ status: 'lost' });
+  });
+
+  it.each([
+    ['a gesture on a page that could not be read (a denylisted one)', async (f: ReturnType<typeof fakeApi>) => void (await openPanelAndInject(f.api, { id: 19, url: 'https://mail.google.com/mail/' }))],
+    ['an injection the worker never finished', async (f: ReturnType<typeof fakeApi>) => void (f.store[accessKey(19)] = { status: 'injecting', trigger: 'gesture', origin: 'https://docs.example', at: 0 })],
+    ['a record with no origin', async (f: ReturnType<typeof fakeApi>) => void (f.store[accessKey(19)] = { status: 'blocked', reason: 'denylisted', at: 0 })],
+  ])('after %s, a navigation to another origin is not followed', async (_name, before) => {
+    const f = fakeApi();
+    listenForTabLifecycle(f.api);
+    await before(f);
+    f.calls.length = 0;
+    f.fire('updated', 19, { status: 'complete' }, { url: 'https://news.example/' });
+    await flush();
+    await flush();
+    await flush();
+    expect(f.calls).toEqual([]);
+    expect(f.store[accessKey(19)]).toMatchObject({ status: 'lost', reason: 'no-grant' });
+  });
+
+  it('a navigation to an allowlisted site is followed: the site has its own grant', async () => {
+    const f = fakeApi({ sync: { siteAllowlist: ['news.example'] } });
+    listenForTabLifecycle(f.api);
+    f.store[accessKey(18)] = { status: 'lost', origin: 'https://docs.example', at: 0 };
+    f.fire('updated', 18, { status: 'complete' }, { url: 'https://news.example/' });
+    await flush();
+    await flush();
+    await flush();
+    expect(f.calls).toEqual([`inject:18:${CONTENT_SCRIPT_FILE}`]);
+    expect(f.store[accessKey(18)]).toMatchObject({ status: 'ready', origin: 'https://news.example' });
   });
 
   it('drops the record when the tab closes', async () => {

@@ -22,16 +22,21 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const BUILD = path.join(ROOT, '.output-preview/chrome-mv3');
 const EXT = path.join(ROOT, '.output/e2e-ext');
 
-function copyExtension(): string {
+/**
+ * The copy the tests load. `broadAccess` also grants both broad patterns, standing in for the user
+ * allowing access to all sites when turning on the selection button on every site (decision S9).
+ */
+function copyExtension(broadAccess: boolean): string {
   if (!fs.existsSync(path.join(BUILD, 'manifest.json'))) throw new Error('no build in .output-preview/chrome-mv3: run `pnpm run e2e`, which makes it');
-  fs.rmSync(EXT, { recursive: true, force: true });
-  fs.cpSync(BUILD, EXT, { recursive: true });
-  const file = path.join(EXT, 'manifest.json');
+  const ext = broadAccess ? `${EXT}-broad` : EXT;
+  fs.rmSync(ext, { recursive: true, force: true });
+  fs.cpSync(BUILD, ext, { recursive: true });
+  const file = path.join(ext, 'manifest.json');
   const manifest = JSON.parse(fs.readFileSync(file, 'utf8')) as { host_permissions?: string[] };
   // `localhost` is the same server under a second host name: a flow that needs two origins (and a site rule for one of them) uses it.
-  manifest.host_permissions = [...(manifest.host_permissions ?? []), 'http://127.0.0.1/*', 'http://localhost/*'];
+  manifest.host_permissions = [...(manifest.host_permissions ?? []), 'http://127.0.0.1/*', 'http://localhost/*', ...(broadAccess ? ['https://*/*', 'http://*/*'] : [])];
   fs.writeFileSync(file, JSON.stringify(manifest));
-  return EXT;
+  return ext;
 }
 
 /** Settings for the mock provider, as the options page saves a custom OpenAI-compatible connection. */
@@ -113,11 +118,10 @@ interface Options {
   uiLang: string | undefined;
 }
 
-export const test = base.extend<Fixtures & Options, { servers: MockControl; extPath: string }>({
+export const test = base.extend<Fixtures & Options, { servers: MockControl; extPath: string; broadAccess: boolean }>({
   uiLang: [undefined, { option: true }],
-  // Playwright reads a fixture's dependencies from its first parameter, which must be a destructuring pattern.
-  // eslint-disable-next-line no-empty-pattern
-  extPath: [async ({}, use) => use(copyExtension()), { scope: 'worker' }],
+  broadAccess: [false, { scope: 'worker', option: true }],
+  extPath: [async ({ broadAccess }, use) => use(copyExtension(broadAccess)), { scope: 'worker' }],
   servers: [
     // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {
@@ -238,9 +242,11 @@ export const test = base.extend<Fixtures & Options, { servers: MockControl; extP
             target: { tabId: tab.id, frameIds: [0] },
             func: () => self.addEventListener('unhandledrejection', (e) => console.error(`content script unhandled rejection: ${String(e.reason)}`)),
           });
-          await chrome.storage.session.set({ [`access:${tab.id}`]: { status: 'injecting', at: Date.now() } });
+          // With the origin the gesture granted, as the worker records it (src/shared/inject.ts).
+          const origin = tab.url ? new URL(tab.url).origin : undefined;
+          await chrome.storage.session.set({ [`access:${tab.id}`]: { status: 'injecting', origin, at: Date.now() } });
           await chrome.scripting.executeScript({ target: { tabId: tab.id, frameIds: [0] }, files: ['content-scripts/content.js'] });
-          await chrome.storage.session.set({ [`access:${tab.id}`]: { status: 'ready', at: Date.now() } });
+          await chrome.storage.session.set({ [`access:${tab.id}`]: { status: 'ready', trigger: 'gesture', origin, at: Date.now() } });
         }, page.url().replace(/#.*/, ''));
       },
     });

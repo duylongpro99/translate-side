@@ -1,0 +1,29 @@
+{"t":"0.0","src":"server","ev":"listening","port":8909}
+{"t":"1.5","src":"driver","ev":"chrome","version":"Chrome/155.0.8059.85","mode":"activetab"}
+{"t":"1.7","src":"sw","ev":"sw-start"}
+{"t":"2.4","src":"sw","ev":"Q3 tabs.onUpdated complete","urlVisible":null,"probeInject":"FAIL: Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"3.9","src":"driver","ev":"STEP 1: toolbar click on A: activeTab grant, button injected, panel stays closed"}
+{"t":"3.9","src":"sw","ev":"action.onClicked","url":"http://127.0.0.1:8909/a.html"}
+{"t":"3.9","src":"driver","r":{"id":8,"result":{}}}
+{"t":"3.9","src":"sw","ev":"inject-OK","why":"action click"}
+{"t":"6.4","src":"driver","ev":"after step 1","panelOpen":false}
+{"t":"6.4","src":"driver","ev":"STEP 2: Q1 control: synthetic click from the page (no activation)"}
+{"t":"6.4","src":"sw","ev":"Q1 sidePanel.open OK","button":"s9-now","trusted":false,"pageActivation":true}
+{"t":"8.4","src":"driver","ev":"after step 2","panelOpen":true}
+{"t":"8.4","src":"driver","ev":"STEP 3: close the panel (if open)"}
+{"t":"8.4","src":"sw","ev":"sidePanel.close OK"}
+{"t":"9.9","src":"driver","ev":"after step 3","panelOpen":false}
+{"t":"9.9","src":"driver","ev":"STEP 4: Q1 real click on \"open now\" (panel closed)"}
+{"t":"9.9","src":"sw","ev":"Q1 sidePanel.open OK","button":"s9-now","trusted":true,"pageActivation":true}
+{"t":"11.9","src":"driver","ev":"after step 4","panelOpen":true}
+{"t":"11.9","src":"driver","ev":"STEP 5: close the panel"}
+{"t":"11.9","src":"sw","ev":"sidePanel.close OK"}
+{"t":"13.4","src":"driver","ev":"after step 5","panelOpen":false}
+{"t":"13.4","src":"driver","ev":"STEP 6: Q1 real click on \"open after 1.5 s\""}
+{"t":"14.9","src":"sw","ev":"Q1 sidePanel.open OK","button":"s9-late","trusted":true,"pageActivation":true}
+{"t":"16.9","src":"driver","ev":"after step 6","panelOpen":true}
+{"t":"16.9","src":"driver","ev":"STEP 7: close the panel"}
+{"t":"16.9","src":"sw","ev":"sidePanel.close OK"}
+{"t":"18.4","src":"driver","ev":"after step 7","panelOpen":false}
+{"t":"18.4","src":"driver","ev":"STEP 8: end"}
+{"t":"20.0","src":"driver","ev":"after step 8","panelOpen":false}

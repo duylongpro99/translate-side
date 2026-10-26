@@ -1,0 +1,30 @@
+{"t":"0.0","src":"server","ev":"listening","port":8909}
+{"t":"1.4","src":"driver","ev":"chrome","version":"Chrome/155.0.8059.85","mode":"granted"}
+{"t":"1.6","src":"sw","ev":"sw-start"}
+{"t":"2.3","src":"sw","ev":"Q3 tabs.onUpdated complete","urlVisible":"http://127.0.0.1:8909/a.html","probeInject":"OK"}
+{"t":"3.8","src":"driver","ev":"STEP 1: register the button script for the granted origin"}
+{"t":"3.8","src":"sw","ev":"registered","matches":["http://127.0.0.1/*"]}
+{"t":"5.3","src":"driver","ev":"after step 1","panelOpen":false}
+{"t":"5.3","src":"driver","ev":"STEP 2: reload A"}
+{"t":"5.3","src":"sw","ev":"Q3 tabs.onUpdated complete","urlVisible":"http://127.0.0.1:8909/a.html","probeInject":"OK"}
+{"t":"7.8","src":"driver","ev":"after step 2","panelOpen":false}
+{"t":"7.8","src":"driver","ev":"STEP 3: Q1 control: synthetic click from the page (no activation)"}
+{"t":"7.8","src":"sw","ev":"Q1 sidePanel.open FAIL","button":"s9-now","trusted":false,"pageActivation":false,"err":"`sidePanel.open()` may only be called in response to a user gesture."}
+{"t":"9.8","src":"driver","ev":"after step 3","panelOpen":false}
+{"t":"9.8","src":"driver","ev":"STEP 4: close the panel (if open)"}
+{"t":"9.8","src":"sw","ev":"sidePanel.close OK"}
+{"t":"11.3","src":"driver","ev":"after step 4","panelOpen":false}
+{"t":"11.3","src":"driver","ev":"STEP 5: Q1 real click on \"open now\" (panel closed)"}
+{"t":"11.4","src":"sw","ev":"Q1 sidePanel.open OK","button":"s9-now","trusted":true,"pageActivation":true}
+{"t":"13.3","src":"driver","ev":"after step 5","panelOpen":true}
+{"t":"13.3","src":"driver","ev":"STEP 6: close the panel"}
+{"t":"13.4","src":"sw","ev":"sidePanel.close OK"}
+{"t":"14.9","src":"driver","ev":"after step 6","panelOpen":false}
+{"t":"14.9","src":"driver","ev":"STEP 7: Q1 real click on \"open after 1.5 s\""}
+{"t":"16.4","src":"sw","ev":"Q1 sidePanel.open OK","button":"s9-late","trusted":true,"pageActivation":true}
+{"t":"18.4","src":"driver","ev":"after step 7","panelOpen":true}
+{"t":"18.4","src":"driver","ev":"STEP 8: close the panel"}
+{"t":"18.4","src":"sw","ev":"sidePanel.close OK"}
+{"t":"19.9","src":"driver","ev":"after step 8","panelOpen":false}
+{"t":"19.9","src":"driver","ev":"STEP 9: end"}
+{"t":"21.4","src":"driver","ev":"after step 9","panelOpen":false}

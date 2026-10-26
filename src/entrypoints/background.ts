@@ -3,10 +3,12 @@ import {
   createContextMenu,
   listenForActionClicks,
   listenForContextMenuClicks,
+  listenForSelectionButton,
   listenForTabLifecycle,
   setupPanelBehavior,
 } from '@/shared/panel';
 import { openOnboarding } from '@/shared/onboarding';
+import { listenForSelectionEverywhere } from '@/shared/selection-button';
 import { migrateProviders } from '@/shared/providers';
 
 // The worker is a coordinator only (decision S1): action, context menu, injection and tab
@@ -16,7 +18,10 @@ export default defineBackground(() => {
   // onInstalled does not fire again on restart.
   listenForActionClicks(browser);
   listenForContextMenuClicks(browser);
+  listenForSelectionButton(browser);
   listenForTabLifecycle(browser);
+  // The opt-in selection button on every site: registered while the option is on and the permission held.
+  listenForSelectionEverywhere(browser);
   browser.runtime.onInstalled.addListener((details) => {
     // First install: the 3-step guide opens once (plan M4-E13). An update or a reload does not.
     if (details.reason === 'install') {

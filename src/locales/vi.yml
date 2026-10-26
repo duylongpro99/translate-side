@@ -126,6 +126,9 @@ panel:
     emptyHint: Hãy chọn văn bản, rồi nhấp chuột phải → Dịch trong bảng bên.
     errorTitle: Đã xảy ra lỗi
     retry: Thử lại
+  selectionButton:
+    label: Dịch đoạn đã chọn
+    tip: Dịch đoạn văn bản đã chọn trong bảng bên
   selection:
     title: Đoạn đã chọn
     back: Quay lại trang
@@ -466,6 +469,13 @@ options:
     neverAria: "Trang web không bao giờ dịch"
     neverPlaceholder: "mail.example.com hoặc *.example.com"
     modelHint: "Mô hình riêng cho từng trang web và chế độ “chỉ dùng cục bộ” được đặt trong Nhà cung cấp › Định tuyến › Mô hình theo trang web."
+    selectionTitle: "Nút dịch trên đoạn đã chọn"
+    selectionEverywhere: "Hiện nút dịch khi tôi chọn văn bản trên mọi trang"
+    selectionHint: "Khi tắt, nút chỉ hiện trên trang đang mở bảng bên. Khi bật, nút hiện trên mọi trang, kể cả khi bảng bên đóng, trừ các trang không bao giờ dịch ở trên và các trang thư, đăng nhập. Chrome hỏi một lần để cho phép truy cập mọi trang. Không có gì rời khỏi trang cho tới khi bạn bấm nút; khi đó chỉ đoạn đã chọn được gửi tới nhà cung cấp dịch của bạn, còn trang chờ trong bảng bên cho tới khi bạn chọn Dịch trang này. Cài đặt này chỉ áp dụng cho thiết bị này."
+    selectionRefused: "Quyền truy cập mọi trang chưa được cấp, nên nút vẫn chỉ hiện ở nơi bảng bên đang mở."
+    selectionOn: "Nút dịch giờ hiện trên mọi trang. Các trang đang mở sẽ hiện nút sau khi tải lại."
+    selectionOff: "Đã tắt. Chrome vẫn cho Translate Side đọc mọi trang; để thu hồi, mở chrome://extensions, rồi Translate Side › Chi tiết › Quyền truy cập trang web."
+    selectionNoAccess: "Đang bật, nhưng quyền truy cập mọi trang của Chrome đã bị gỡ. Bật lại để cấp quyền."
   shortcuts:
     rowToggle: "Mở bảng, hoặc đóng bảng khi đang mở (đổi phím tại chrome://extensions/shortcuts)"
     keysNext: "↓ hoặc J"

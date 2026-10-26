@@ -7,6 +7,8 @@ build, so a permission cannot be added without this file being revisited.
 
 **The extension declares no `host_permissions` and no content scripts.** It has no access to any site until the
 user grants it. The content script is injected into one tab, on a user action, or on a site the user allowlisted while the panel is open.
+A second, smaller script, which only draws the selection button, is registered on every site only when the user turns
+on that option and grants access to all sites (reason 3 below).
 
 ## Single purpose
 
@@ -40,7 +42,8 @@ panel. Chrome grants access to that one tab for that gesture, so the extension n
 Injects the extension's own content script (bundled in the package, not downloaded) into the tab the user chose, to
 read the page's text and to mark the matching block when the user points at the translation. It runs only in a tab
 where the user acted (through `activeTab`) or on a site the user allowlisted (through the optional host permission
-below). It is never injected into browser pages or the Chrome Web Store.
+below). It is never injected into browser pages or the Chrome Web Store. With the opt-in selection button on every site
+(reason 3 below), it also registers a small script that draws only that button.
 
 ### `contextMenus`
 
@@ -59,8 +62,9 @@ rebound at `chrome://extensions/shortcuts`, and the setup guide and the README s
 
 These are declared as `optional_host_permissions`: Chrome does not grant any of them at install. The extension asks
 for **one provider origin or one site at a time**, with a Chrome prompt, in response to a click, and gives the access
-back when the setting that needed it is removed, unless another setting still uses the same host. There are two reasons to ask, and the patterns below are the only ones the extension can ask
-for.
+back when the setting that needed it is removed, unless another setting still uses the same host. The one exception is
+reason 3, an option that is off by default and asks for both broad patterns. There are three reasons to ask, and the
+patterns below are the only ones the extension can ask for.
 
 1. **A provider endpoint.** The extension calls the AI provider the user configured, from the browser, with the
    user's key. When the user presses Test connection on a connection in Settings › Providers, or "Grant access" in
@@ -71,13 +75,23 @@ for.
    without a click. Chrome is asked for both the `https://` and `http://` addresses of that site, and for its
    subdomains when the entry is `*.example.com`. Removing the site gives the access back, unless a provider connection
    still uses that host.
+3. **The selection button on every site (opt-in, off by default).** When the user turns on "Show the translate button
+   when I select text on any site" in Settings › Site rules, the extension asks for `https://*/*` and `http://*/*` and
+   registers a small script that only draws a button next to text the user selects, on every page except mail and
+   sign-in sites and the user's never-translate sites. The script reads the selection only to decide whether to show
+   the button; nothing is sent until the user clicks it, and then only the selected text goes to the user's provider
+   (the page itself is only offered in the panel, and sent only if the user then asks for it).
+   The access does not make the panel read more pages than without it. Turning the option off unregisters the script;
+   the access stays granted until the user removes it in `chrome://extensions`, because removing the broad patterns
+   could not be shown to leave the narrower grants of reasons 1 and 2 in place.
 
 ### `https://*/*`
 
 Provider endpoints and allowlisted sites served over HTTPS. Required because providers and gateways are chosen by the
 user: a hosted API, a corporate gateway, a regional endpoint. Requested only for the one origin or site in question, on a
-click. Nothing is read from a site that is not allowlisted, and a page is not sent anywhere until a translation
-starts.
+click, except for the opt-in selection button on every site (reason 3), which asks for the whole pattern on the click
+that turns it on. Nothing is read from a site that is not allowlisted, beyond the selection that decides whether that
+button shows, and a page is not sent anywhere until a translation starts.
 
 ### `http://localhost/*` and `http://127.0.0.1/*`
 
@@ -90,7 +104,8 @@ grants the Providers screen asks for in the local-model case.
 
 Two uses, both on a click and for one origin or site: a gateway on the user's local network that serves plain HTTP (for
 example a model server at `http://192.168.1.20:8000`, or a `*.local` name), and a site the user allowlists that is
-itself served over plain HTTP.
+itself served over plain HTTP. The opt-in selection button on every site (reason 3) asks for the whole pattern, so the
+button also shows on plain-HTTP pages.
 
 **How this is held to the store's HTTPS requirement for user data.** The code accepts a plain-HTTP *provider
 endpoint* only when its host is this computer (`localhost`, `127.0.0.0/8`, `[::1]`) or the local network
@@ -125,6 +140,10 @@ source, not a progress log).
 - activeTab / scripting on a gesture: src/shared/inject.ts:25 (injectInto, files: the bundled content script),
   src/shared/panel.ts:82-102. Never injected into restricted pages: src/shared/denylist.ts:31 (classifyUrl).
 - contextMenus: src/shared/panel.ts:89-97 (one item, contexts page and selection), :100+ (onClicked).
+- Selection button on every site: src/shared/selection-button.ts (BROAD_ORIGINS requested on the click,
+  reconcileSelectionScript registers only while the option is on and the access held, excludedMatches, no revoke on
+  turn-off), src/entrypoints/selection.content.ts (draws only the button), src/entrypoints/options/Options.tsx
+  (SelectionEverywhere); decision record: docs/decisions/S9-selection-button-gesture.md.
 - storage: src/shared/settings.ts:205-223 (keys, storage.local), src/shared/providers.ts:49-63 (sync records),
   src/shared/access.ts:52 and src/shared/snippet.ts:50 (storage.session), src/shared/diagnostics.ts:133 and
   src/shared/spend.ts:255 (storage.local).
