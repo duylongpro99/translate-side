@@ -29,7 +29,21 @@ panel asks you to read its notice again.
   that site (both its `https://` and `http://` addresses; an entry such as `*.example.com` covers the subdomains). From then on, while the panel is open, each page you open on that site is translated automatically, so
   its text goes to your provider without a click. Remove the site from the list to stop; the access is given back to
   Chrome, unless a provider connection still uses that host. Sites on your never-translate list are not read.
-- **A selection.** "Translate in side panel" on selected text sends that text, up to 20,000 characters.
+- **A selection.** "Translate in side panel" on selected text, or a click on the extension's button that shows at the
+  end of a selection, sends that text, up to 20,000 characters. The button shows on a page where the panel is open. It
+  never shows in text fields, password fields or other editable areas.
+- **The selection button on every site (off unless you turn it on).** Settings › Site rules › "Show the translate
+  button when I select text on any site" asks Chrome for access to all sites, so the button can show on any page,
+  even with the panel closed. On each page, a small script then checks your selection only to decide whether to show
+  the button. It reads nothing else on the page, and nothing leaves the page until you click the button; then only
+  the selected text is translated, as above. The panel that opens reads the page so it can offer it, but the page is
+  sent only if you then press "Translate this page" (or the site is on your allowlist). The setting applies to this
+  device only, like Chrome's access. Mail and sign-in sites and your never-translate sites get no button (a
+  page already open when you add its site to the never-translate list keeps it until it reloads, but its click then
+  sends nothing).
+  This access does not make the panel read more: after you follow a link, a page is read again only on the same site
+  you started on, or on a site you allowlisted, as without it. Turning the option off removes the button, but Chrome
+  keeps the access until you remove it at `chrome://extensions` › Translate Side › Details › Site access.
 - **Never read:** webmail and sign-in sites on a built-in list (for example Gmail, Outlook, Yahoo Mail, Proton Mail,
   iCloud, and the Google and Microsoft sign-in pages), the sites on your never-translate list, browser pages
   (`chrome://` and similar), the Chrome Web Store, and any page while a password field has keyboard focus. Text
@@ -82,7 +96,7 @@ other `http://` address is refused, so page text never crosses the internet unen
 
 | Where | What | Leaves the device? |
 |---|---|---|
-| Extension local storage (`storage.local`) | Your API keys, one per connection. The first-run notice acknowledgement and the setup guide's state. The diagnostics log. The usage and cost totals (token counts and estimated cost by month, day and model profile). The "Use corrections from other sites" setting. Settings too large to sync. | No. Keys are never synced. |
+| Extension local storage (`storage.local`) | Your API keys, one per connection. The first-run notice acknowledgement and the setup guide's state. The diagnostics log. The usage and cost totals (token counts and estimated cost by month, day and model profile). The "Use corrections from other sites" setting. Whether the selection button shows on every site (per device, like the access it needs, and not in the settings export file). Settings too large to sync. | No. Keys are never synced. |
 | Extension sync storage (`storage.sync`) | Connections (name, address, protocol), models, routing and site rules, preferences (languages, style, per-page token budget), the quality mode, the reading settings (theme, typeface, text size, line width), your glossary, and your allowlist and never-translate lists. No keys and no page text. | Only through Chrome Sync, if you have it turned on: it goes to your Google account, with your other Chrome devices. |
 | Browser database (IndexedDB `translate-side-memory`) | Your corrections: the original text of the block, your version, the languages, when you made it, and the site (its address up to the host) you made it on. Whether it was made on a site that is local-only is also kept. At most 5,000 entries. | No, never synced. Only through the export file you save yourself (see "Your corrections"). |
 | Browser database (IndexedDB `translate-side-cache`) | Translations already made (the translated text, found again by a hash of the source text and settings), and the short document briefs, each found by the page address it was made for. At most 50 MB of translations and 200 briefs, oldest unused first. | No. |
@@ -146,7 +160,8 @@ stack.
 - **Diagnostics log:** Settings › Diagnostics › Clear log.
 - **Usage and cost totals:** Settings › Usage and cost › Reset total.
 - **Site access:** remove a site from Settings › Site rules; Chrome also lists granted sites at
-  `chrome://extensions` › Translate Side › Details › Site access.
+  `chrome://extensions` › Translate Side › Details › Site access, where the access to all sites that the selection
+  button on every site asked for is removed too.
 - **Everything on this device:** uninstall the extension in `chrome://extensions`. Chrome then deletes its local
   storage, cache and session data. Settings in sync storage are kept by Chrome Sync for your other devices: remove
   your connections, glossary and site lists in Settings first if you want them gone there too, or manage Chrome's
@@ -169,6 +184,15 @@ Read only on an action, or on an allowlisted site
 - Site access is requested on a click and given back on removal: src/shared/sites.ts:167 (requestSitePermission),
   :187 (permissions.remove); src/shared/sites.ts:65 (the two origins per site).
 - Selection: 20,000 characters, never stored for a denylisted site: src/shared/snippet.ts:12, :4-6.
+- Selection button: shown only for a settled selection outside fields and editable regions, sends only on a trusted
+  click: src/extract/selection-button.ts (eligibleSelection, the click handler); the worker checks the sender's
+  address against the denylist and the never-translate list: src/shared/panel.ts (listenForSelectionButton,
+  handOverSelection). The click asks for the selection only: the page is offered, not translated (the `selection`
+  trigger): src/shared/inject.ts (InjectTrigger), src/entrypoints/sidepanel/controller.ts (refresh).
+- Selection button on every site: off by default, access requested on the click, script registered only while the
+  option is on and the access held, excluding denylisted and never-translate hosts, access kept on turn-off, the
+  option kept in `storage.local`: src/shared/selection-button.ts; the script draws only the button: src/entrypoints/selection.content.ts. A navigation
+  follows only the granted origin or an allowlisted site: src/shared/inject.ts (mayFollow).
 
 Never read
 - Built-in denylist and browser pages: src/shared/denylist.ts:12 (hosts), :31 (classifyUrl: non-http(s), Web Store).

@@ -1,0 +1,84 @@
+{"t":"0.0","src":"server","ev":"listening","port":8909}
+{"t":"1.4","src":"driver","ev":"chrome","version":"Chrome/155.0.8059.85","mode":"broad"}
+{"t":"1.5","src":"sw","ev":"sw-start"}
+{"t":"2.3","src":"sw","ev":"Q3 tabs.onUpdated complete","urlVisible":null,"probeInject":"FAIL: Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"3.8","src":"driver","ev":"STEP 1: permissions at start"}
+{"t":"3.8","src":"sw","ev":"permissions.getAll","tag":"start","origins":[]}
+{"t":"5.3","src":"driver","ev":"after step 1","panelOpen":false}
+{"t":"5.3","src":"driver","ev":"STEP 2: grant a provider origin and an allowlisted site (narrow)"}
+{"t":"5.4","src":"sw","ev":"Q3 tabs.onUpdated complete","urlVisible":null,"probeInject":"FAIL: Cannot access a chrome:// URL"}
+{"t":"6.8","src":"driver","ev":"developerPrivate","call":"addHostPermission('jpaoljjaljikgfkpphgnliebkeoalbke', 'https://api.example.com/*')","result":"ok"}
+{"t":"6.8","src":"driver","ev":"developerPrivate","call":"addHostPermission('jpaoljjaljikgfkpphgnliebkeoalbke', 'http://localhost/*')","result":"ok"}
+{"t":"8.8","src":"driver","ev":"after step 2","panelOpen":false}
+{"t":"8.8","src":"driver","ev":"STEP 3: permissions after the narrow grants"}
+{"t":"8.8","src":"sw","ev":"permissions.getAll","tag":"narrow","origins":[]}
+{"t":"10.4","src":"driver","ev":"after step 3","panelOpen":false}
+{"t":"10.4","src":"driver","ev":"STEP 4: grant the broad patterns (tier B on)"}
+{"t":"10.4","src":"sw","ev":"Q3 tabs.onUpdated complete","urlVisible":null,"probeInject":"FAIL: Cannot access a chrome:// URL"}
+{"t":"11.9","src":"driver","ev":"developerPrivate","call":"addHostPermission('jpaoljjaljikgfkpphgnliebkeoalbke', 'https://*/*')","result":"ok"}
+{"t":"11.9","src":"driver","ev":"developerPrivate","call":"addHostPermission('jpaoljjaljikgfkpphgnliebkeoalbke', 'http://*/*')","result":"ok"}
+{"t":"13.9","src":"driver","ev":"after step 4","panelOpen":false}
+{"t":"13.9","src":"driver","ev":"STEP 5: permissions after the broad grant"}
+{"t":"13.9","src":"sw","ev":"permissions.getAll","tag":"broad","origins":[]}
+{"t":"15.4","src":"driver","ev":"after step 5","panelOpen":false}
+{"t":"15.4","src":"driver","ev":"STEP 6: register the button script for the broad patterns"}
+{"t":"15.4","src":"sw","ev":"registered","matches":["https://*/*","http://*/*"]}
+{"t":"17.0","src":"driver","ev":"after step 6","panelOpen":false}
+{"t":"17.0","src":"driver","ev":"STEP 7: reload A"}
+{"t":"17.0","src":"sw","ev":"Q3 tabs.onUpdated complete","urlVisible":null,"probeInject":"FAIL: Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"19.5","src":"driver","ev":"after step 7","panelOpen":false}
+{"t":"19.5","src":"driver","ev":"STEP 8: Q1 control: synthetic click from the page (no activation)"}
+{"t":"21.5","src":"driver","ev":"after step 8","panelOpen":false}
+{"t":"21.5","src":"driver","ev":"STEP 9: close the panel (if open)"}
+{"t":"21.5","src":"sw","ev":"sidePanel.close OK"}
+{"t":"23.0","src":"driver","ev":"after step 9","panelOpen":false}
+{"t":"23.0","src":"driver","ev":"STEP 10: Q1 real click on \"open now\" (panel closed)"}
+{"t":"23.0","src":"driver","ev":"CLICK-TARGET-MISSING","selector":"#s9-now"}
+{"t":"25.0","src":"driver","ev":"after step 10","panelOpen":false}
+{"t":"25.0","src":"driver","ev":"STEP 11: close the panel"}
+{"t":"25.0","src":"sw","ev":"sidePanel.close OK"}
+{"t":"26.5","src":"driver","ev":"after step 11","panelOpen":false}
+{"t":"26.5","src":"driver","ev":"STEP 12: Q1 real click on \"open after 1.5 s\""}
+{"t":"26.5","src":"driver","ev":"CLICK-TARGET-MISSING","selector":"#s9-late"}
+{"t":"30.0","src":"driver","ev":"after step 12","panelOpen":false}
+{"t":"30.0","src":"driver","ev":"STEP 13: close the panel"}
+{"t":"30.0","src":"sw","ev":"sidePanel.close OK"}
+{"t":"31.5","src":"driver","ev":"after step 13","panelOpen":false}
+{"t":"31.5","src":"driver","ev":"STEP 14: Q3 probe on A"}
+{"t":"31.5","src":"sw","ev":"probe","tag":"A","urlVisible":null,"inject":"FAIL: Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"33.0","src":"driver","ev":"after step 14","panelOpen":false}
+{"t":"33.0","src":"driver","ev":"STEP 15: Q3 link click A -> C (cross origin)"}
+{"t":"33.1","src":"sw","ev":"Q3 tabs.onUpdated complete","urlVisible":null,"probeInject":"FAIL: Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"35.6","src":"driver","ev":"after step 15","panelOpen":false}
+{"t":"35.6","src":"driver","ev":"STEP 16: Q3 probe on C"}
+{"t":"35.6","src":"sw","ev":"probe","tag":"C","urlVisible":null,"inject":"FAIL: Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"37.1","src":"driver","ev":"after step 16","panelOpen":false}
+{"t":"37.1","src":"driver","ev":"STEP 17: Q3 omnibox-style navigation C -> B"}
+{"t":"37.1","src":"sw","ev":"Q3 tabs.onUpdated complete","urlVisible":null,"probeInject":"FAIL: Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"39.6","src":"driver","ev":"after step 17","panelOpen":false}
+{"t":"39.6","src":"driver","ev":"STEP 18: Q2 remove the broad patterns"}
+{"t":"39.6","src":"sw","ev":"permissions.remove","origins":["https://*/*","http://*/*"],"result":true}
+{"t":"41.1","src":"driver","ev":"after step 18","panelOpen":false}
+{"t":"41.1","src":"driver","ev":"STEP 19: permissions after removing the broad patterns"}
+{"t":"41.1","src":"sw","ev":"permissions.getAll","tag":"after-remove","origins":[]}
+{"t":"42.6","src":"driver","ev":"after step 19","panelOpen":false}
+{"t":"42.6","src":"driver","ev":"STEP 20: Q3 reload B after the removal"}
+{"t":"42.6","src":"sw","ev":"Q3 tabs.onUpdated complete","urlVisible":null,"probeInject":"FAIL: Cannot access contents of the page. Extension manifest must request permission to access the respective host."}
+{"t":"45.1","src":"driver","ev":"after step 20","panelOpen":false}
+{"t":"45.1","src":"driver","ev":"STEP 21: Q2 grant the broad patterns again, then remove only https"}
+{"t":"45.2","src":"sw","ev":"Q3 tabs.onUpdated complete","urlVisible":null,"probeInject":"FAIL: Cannot access a chrome:// URL"}
+{"t":"46.7","src":"driver","ev":"developerPrivate","call":"addHostPermission('jpaoljjaljikgfkpphgnliebkeoalbke', 'https://*/*')","result":"ok"}
+{"t":"46.7","src":"driver","ev":"developerPrivate","call":"addHostPermission('jpaoljjaljikgfkpphgnliebkeoalbke', 'http://*/*')","result":"ok"}
+{"t":"48.7","src":"driver","ev":"after step 21","panelOpen":false}
+{"t":"48.7","src":"driver","ev":"STEP 22: permissions after the second broad grant"}
+{"t":"48.7","src":"sw","ev":"permissions.getAll","tag":"broad-2","origins":[]}
+{"t":"50.2","src":"driver","ev":"after step 22","panelOpen":false}
+{"t":"50.2","src":"driver","ev":"STEP 23: Q2 remove the broad patterns with permissions.remove of each"}
+{"t":"50.2","src":"sw","ev":"permissions.remove","origins":["https://*/*"],"result":true}
+{"t":"50.2","src":"sw","ev":"permissions.remove","origins":["http://*/*"],"result":true}
+{"t":"51.7","src":"driver","ev":"after step 23","panelOpen":false}
+{"t":"51.7","src":"driver","ev":"STEP 24: permissions after the second removal"}
+{"t":"51.7","src":"sw","ev":"permissions.getAll","tag":"after-remove-2","origins":[]}
+{"t":"53.2","src":"driver","ev":"after step 24","panelOpen":false}
+{"t":"53.2","src":"driver","ev":"STEP 25: end"}
+{"t":"54.7","src":"driver","ev":"after step 25","panelOpen":false}

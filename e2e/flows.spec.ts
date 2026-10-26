@@ -1,7 +1,8 @@
 // User flows over the extension, the fixture pages and the mock provider: the first-run privacy
 // notice, an SPA route change, a rate-limited provider and a malformed stream, and Best (refined
 // blocks, rejected reviews, a budget the review does not fit in, a reload, the first draft's time),
-// and inline edits (kept across a reload and a cleared cache, Retranslate page, a block's Retranslate).
+// inline edits (kept across a reload and a cleared cache, Retranslate page, a block's Retranslate), and the
+// selection button.
 // Zero console errors apply here too, apart from what a flow provokes on purpose (fixtures.ts
 // `allowedConsole`).
 import { PRIVACY_NOTICE_VERSION } from '../src/entrypoints/sidepanel/privacy.ts';
@@ -656,5 +657,65 @@ test.describe('On the device, with no API key (Chrome built-in AI, faked: e2e/bu
     expect(await jobSettled(panel)).toBe('done');
     expect(mock.calls.length).toBeGreaterThan(0);
     await expect(panel.getByTestId('seg-basic-badge')).toHaveCount(0);
+  });
+});
+
+test.describe('Selection button', () => {
+  /** The button's box on the page (its host; the button itself is in a closed shadow root). */
+  const buttonBox = (page: Page) =>
+    page.evaluate(() => {
+      const host = document.querySelector<HTMLElement>('translate-side-selection');
+      if (!host || host.style.display !== 'block') return null;
+      const r = host.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+
+  test('with the panel open, selecting page text shows the button, and its click translates the selection in the panel', async ({ extension, mock }) => {
+    mock.answerWith((text) => `vi:${text}`);
+    await extension.seed();
+    const page = await extension.open('store/article.html');
+    const panel = await extension.panel();
+    await extension.translate(page);
+    expect(await jobSettled(panel)).toBe('done');
+    // A triple click selects the paragraph, as a reader would. A scroll hides the button, so the page is
+    // left still first (the panel's scroll sync can still be moving it).
+    const paragraph = page.locator('p').filter({ hasText: /.{40}/ }).first();
+    await paragraph.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(500);
+    await paragraph.click({ clickCount: 3 });
+    const sentence = (await page.evaluate(() => getSelection()?.toString() ?? '')).trim();
+    expect(sentence.length).toBeGreaterThanOrEqual(40);
+    await expect.poll(() => buttonBox(page)).not.toBeNull();
+    const box = (await buttonBox(page)) as { x: number; y: number };
+    await page.mouse.click(box.x, box.y);
+    // The button goes, and the selection it was about stays.
+    await expect.poll(() => buttonBox(page)).toBeNull();
+    expect((await page.evaluate(() => getSelection()?.toString() ?? '')).trim()).toBe(sentence);
+    await expect(panel.getByTestId('selection')).toContainText(`vi:${sentence.slice(0, 30)}`);
+  });
+
+  test('no button for a selection in a text field, and none once the panel is gone', async ({ extension }) => {
+    await extension.seed();
+    const page = await extension.open('store/article.html');
+    const panel = await extension.panel();
+    await extension.translate(page);
+    expect(await jobSettled(panel)).toBe('done');
+    await page.evaluate(() => {
+      const field = document.createElement('textarea');
+      field.value = 'A sentence typed into a form field.';
+      document.body.prepend(field);
+    });
+    await page.waitForTimeout(500);
+    await page.locator('textarea').click({ clickCount: 3 });
+    await page.waitForTimeout(500);
+    expect(await buttonBox(page)).toBeNull();
+    // The same page text shows it while the panel is there, and not after.
+    await page.locator('p').first().click({ clickCount: 3 });
+    await expect.poll(() => buttonBox(page)).not.toBeNull();
+    await panel.close();
+    await page.mouse.click(5, 5);
+    await page.locator('p').first().click({ clickCount: 3 });
+    await page.waitForTimeout(500);
+    expect(await buttonBox(page)).toBeNull();
   });
 });

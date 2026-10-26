@@ -50,6 +50,7 @@ import { pricingFor } from '@/shared/pricing';
 import { estimateSpend, monthKey, readSpend, readSpendLimit, resetSpend, saveSpendLimit, SPEND_KEY, SPEND_LIMIT_KEY, type SpendLimit, type SpendTotals } from '@/shared/spend';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
+import { holdsBroadAccess, readSelectionEverywhere, requestBroadAccess, SELECTION_EVERYWHERE_KEY, setSelectionEverywhere } from '@/shared/selection-button';
 import { addAllowlisted, addNever, MAX_SITES, readSiteLists, removeAllowlisted, removeNever, requestSitePermission, SITE_ALLOWLIST_KEY, SITE_NEVER_KEY, siteOrigins, sitePattern, type SiteLists } from '@/shared/sites';
 
 type Browser = typeof browser;
@@ -572,6 +573,7 @@ function SitesSection({ api }: { api: Browser }) {
           {i18n.t('options.sites.add')}
         </Button>
       </form>
+      <SelectionEverywhere api={api} say={setNote} />
       <p class="opt__hint">{i18n.t('options.sites.modelHint')}</p>
       {note ? (
         <p class={note.warn ? 'opt__status opt__status--warn' : 'opt__note'} role="status" data-testid="sites-note">
@@ -579,6 +581,65 @@ function SitesSection({ api }: { api: Browser }) {
         </p>
       ) : null}
     </section>
+  );
+}
+
+/**
+ * The selection button on every site (decision S9): off by default. On asks Chrome for access to all
+ * sites first (the prompt must be the click's first await, S5); the worker then registers the script.
+ * Off unregisters it but keeps the access, which only the user takes back in chrome://extensions. The
+ * switch shows on only while the access is held too: an option imported or left on after the access
+ * was removed says so.
+ */
+function SelectionEverywhere({ api, say }: { api: Browser; say: (note: { text: string; warn: boolean }) => void }) {
+  const [state, setState] = useState<{ on: boolean; held: boolean } | undefined>();
+  /** What the click asked for, shown while Chrome's prompt and the save are pending. */
+  const [asked, setAsked] = useState<boolean | undefined>();
+  const load = () => Promise.all([readSelectionEverywhere(api).catch(() => false), holdsBroadAccess(api)]).then(([on, held]) => setState({ on, held }));
+  useEffect(() => {
+    void load();
+    const changed = (changes: Record<string, unknown>) => {
+      if (SELECTION_EVERYWHERE_KEY in changes) void load();
+    };
+    // The access can also be removed (or granted) in chrome://extensions while this page is open.
+    const access = () => void load();
+    api.storage.local.onChanged.addListener(changed);
+    api.permissions.onAdded.addListener(access);
+    api.permissions.onRemoved.addListener(access);
+    return () => {
+      api.storage.local.onChanged.removeListener(changed);
+      api.permissions.onAdded.removeListener(access);
+      api.permissions.onRemoved.removeListener(access);
+    };
+  }, []);
+  if (!state) return null;
+  const toggle = async (on: boolean) => {
+    setAsked(on);
+    try {
+      if (on && !(await requestBroadAccess(api))) return say({ text: i18n.t('options.sites.selectionRefused'), warn: true });
+      await setSelectionEverywhere(api, on);
+      say({ text: i18n.t(on ? 'options.sites.selectionOn' : 'options.sites.selectionOff'), warn: false });
+    } catch (e) {
+      say({ text: e instanceof Error ? e.message : String(e), warn: true });
+    } finally {
+      await load();
+      setAsked(undefined);
+    }
+  };
+  return (
+    <>
+      <h3>{i18n.t('options.sites.selectionTitle')}</h3>
+      <div class="opt__row">
+        <input id="selection-everywhere" type="checkbox" data-testid="selection-everywhere" checked={asked ?? (state.on && state.held)} onChange={(e) => void toggle((e.target as HTMLInputElement).checked)} />
+        <label for="selection-everywhere">{i18n.t('options.sites.selectionEverywhere')}</label>
+      </div>
+      <p class="opt__hint">{i18n.t('options.sites.selectionHint')}</p>
+      {state.on && !state.held ? (
+        <p class="opt__status opt__status--warn" role="status" data-testid="selection-no-access">
+          {i18n.t('options.sites.selectionNoAccess')}
+        </p>
+      ) : null}
+    </>
   );
 }
 

@@ -129,6 +129,9 @@ panel:
     emptyHint: Select the text, then right-click → Translate in side panel.
     errorTitle: Something went wrong
     retry: Try again
+  selectionButton:
+    label: Translate selection
+    tip: Translate the selected text in the side panel
   selection:
     title: Selection
     back: Back to the page
@@ -471,6 +474,13 @@ options:
     neverAria: "Site to never translate"
     neverPlaceholder: "mail.example.com or *.example.com"
     modelHint: "A model for a site, and “local only”, are set in Providers › Routing › Model per site."
+    selectionTitle: "Translate button on selected text"
+    selectionEverywhere: "Show the translate button when I select text on any site"
+    selectionHint: "Off, the button shows only on a page where the panel is open. On, it shows on every site, even with the panel closed, except the sites above that you never translate and mail and sign-in pages. Chrome asks once for access to all sites. Nothing leaves the page until you click the button; then only the selected text goes to your translation provider, and the page waits in the panel until you choose Translate this page. This setting applies to this device only."
+    selectionRefused: "Access to all sites was not granted, so the button still shows only where the panel is open."
+    selectionOn: "The translate button now shows on every site. Pages already open show it after a reload."
+    selectionOff: "Turned off. Chrome still lets Translate Side read all sites; to take that back, open chrome://extensions, then Translate Side › Details › Site access."
+    selectionNoAccess: "On, but Chrome's access to all sites was removed. Turn it on again to grant it."
   shortcuts:
     rowToggle: "Open the panel, or close it when it is open (rebind it at chrome://extensions/shortcuts)"
     keysNext: "↓ or J"

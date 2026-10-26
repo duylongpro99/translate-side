@@ -1,0 +1,10 @@
+<!doctype html><meta charset="utf-8"><title>S9 permissions (manual Q2)</title>
+<h1>S9 Q2: does removing the broad patterns remove narrower grants?</h1>
+<p>Click each button in order and answer Chrome's prompt with "Allow". The log is below and goes to the spike server.</p>
+<button id="narrow">1. Grant https://api.example.com/* and http://localhost/*</button>
+<button id="broad">2. Grant https://*/* and http://*/*</button>
+<button id="remove">3. Remove https://*/* and http://*/*</button>
+<button id="show">Show permissions.getAll()</button>
+<pre id="out"></pre>
+<script src="config.js"></script>
+<script src="perm.js"></script>

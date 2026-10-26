@@ -3,9 +3,10 @@
 import type { browser } from 'wxt/browser';
 import { i18n } from '#i18n';
 import { clearAccess, readAccess } from './access.ts';
-import { injectInto, type TabRef } from './inject.ts';
+import { injectInto, type InjectTrigger, type TabRef } from './inject.ts';
+import { isSelectionButtonRequest } from './protocol.ts';
 import { clearTabOverride } from './providers.ts';
-import { anyDenylisted, clearSnippet, writeSnippet } from './snippet.ts';
+import { anyDenylisted, clearSnippet, MAX_SELECTION_CHARS, writeSnippet } from './snippet.ts';
 import { readSiteLists, listedFor } from './sites.ts';
 
 export const CONTEXT_MENU_ID = 'translate-side.open-panel';
@@ -34,11 +35,11 @@ export async function setupPanelBehavior(api: Browser): Promise<boolean> {
  * Open the panel for the tab, then inject. sidePanel.open needs the user gesture, so it is the
  * first call, with no await before it (S5). Open-only: a second click keeps the panel open (the context menu; the action toggles, togglePanelAndInject).
  */
-export function openPanelAndInject(api: Browser, tab: TabRef | undefined): Promise<void> {
+export function openPanelAndInject(api: Browser, tab: TabRef | undefined, trigger: InjectTrigger = 'gesture'): Promise<void> {
   const tabId = tab?.id;
   if (tabId === undefined) return Promise.resolve();
   const opened = api.sidePanel?.open({ tabId }).catch(logError('sidePanel.open'));
-  const injected = injectInto(api, tab ?? {}, 'gesture').then(() => undefined, logError('injection'));
+  const injected = injectInto(api, tab ?? {}, trigger).then(() => undefined, logError('injection'));
   return Promise.all([opened, injected]).then(() => undefined);
 }
 
@@ -109,6 +110,25 @@ export function listenForContextMenuClicks(api: Browser): void {
 }
 
 /**
+ * The selection button opens the panel, injects and hands the text over, like the context menu on a
+ * selection, but asks for the selection only: the page is read and offered, not translated. The click's gesture comes with the message (S9), so sidePanel.open is still the
+ * first call, with no await before it. Only this extension's content script in a tab's top frame is
+ * heard, and the denylist and never-translate checks use the sender's address, not one in the message.
+ * Call synchronously at the top level of the worker.
+ */
+export function listenForSelectionButton(api: Browser): void {
+  api.runtime.onMessage.addListener((message: unknown, sender: { id?: string | undefined; tab?: TabRef | undefined; frameId?: number | undefined; url?: string | undefined }) => {
+    if (!isSelectionButtonRequest(message)) return;
+    if (sender.id !== api.runtime.id || sender.tab?.id === undefined || sender.frameId !== 0) return;
+    // The page's address for the injection's own checks too, should the tab's be hidden.
+    const tab = { ...sender.tab, url: sender.tab.url ?? sender.url };
+    void openPanelAndInject(api, tab, 'selection');
+    // The content script caps the text; so does the worker, whatever sent it (the panel cuts it again).
+    void handOverSelection(api, tab, { selectionText: message.text.slice(0, 2 * MAX_SELECTION_CHARS), pageUrl: sender.url, frameUrl: sender.url });
+  });
+}
+
+/**
  * Leaves the selected text for the panel (plan M3-E4). Chrome hands it over with the click, so this
  * works on a page where extraction fails and even where nothing can be injected. A selection from a
  * denylisted site is not kept (M3-D13, DESIGN §8): the record only says it was blocked. Checks the
@@ -143,7 +163,7 @@ export function listenForTabLifecycle(api: Browser): void {
   api.tabs.onUpdated.addListener((tabId, change, tab) => {
     if (change.status !== 'complete') return;
     readAccess(api, tabId)
-      .then((access) => (access ? injectInto(api, { id: tabId, url: tab.url }, 'navigation') : undefined))
+      .then((access) => (access ? injectInto(api, { id: tabId, url: tab.url }, 'navigation', access) : undefined))
       .catch(logError('re-injection'));
   });
   api.tabs.onRemoved.addListener((tabId) => {
