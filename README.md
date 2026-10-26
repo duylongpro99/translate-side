@@ -141,6 +141,21 @@ language pair: Chrome translates on your computer. For better quality, add an AP
 To use another key, open `chrome://extensions/shortcuts`, find Translate Side and set one; the same key then opens
 and closes the panel.
 
+### What on-device translation downloads
+
+Pressing **Turn on** makes Chrome download a model, which Chrome keeps and manages itself (not Translate Side, and not
+in your Downloads folder). On macOS it lives in Chrome's profile folder:
+
+| Download | Folder (macOS) | Size |
+|---|---|---|
+| Chrome Translator language pack, one per pair (here English → Vietnamese) | `~/Library/Application Support/Google/Chrome/TranslateKit/models/en_vi/` | about 100 MB with the shared engine in `TranslateKit/lib/` |
+| Gemini Nano, used only when the target is English, Spanish, Japanese, German or French | `~/Library/Application Support/Google/Chrome/OptGuideOnDeviceModel/2025.8.8.1141/` | about 4 GB |
+
+The pair (`en_vi`) and the version folder (`2025.8.8.1141`) differ by language and Chrome update. To see or remove
+them, use Chrome rather than deleting the folders: `chrome://on-device-translation-internals` lists and uninstalls
+language packs, `chrome://on-device-internals` shows Nano's state, and `chrome://settings/ai` turns on-device AI off.
+Chrome removes Nano on its own when free disk space falls below 10 GB.
+
 ### Keyboard shortcuts
 
 <!-- Generated from src/shared/shortcuts.ts: keep the two in step (src/shared/shortcuts.test.ts checks it). -->
