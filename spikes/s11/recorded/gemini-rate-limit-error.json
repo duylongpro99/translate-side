@@ -1,0 +1,44 @@
+{
+  "recordedAt": "2026-10-26T14:55:53.323Z",
+  "request": {
+    "url": "https://generativelanguage.googleapis.com/v1beta/interactions",
+    "method": "POST",
+    "headerNames": [
+      "Content-Type",
+      "x-goog-api-key"
+    ],
+    "contentType": "application/json",
+    "body": {
+      "model": "gemini-3.8-flash-tts",
+      "input": "Hello.",
+      "response_format": {
+        "type": "audio"
+      },
+      "generation_config": {
+        "speech_config": [
+          {
+            "voice": "Kore"
+          }
+        ]
+      }
+    }
+  },
+  "response": {
+    "status": 429,
+    "contentType": "application/json; charset=UTF-8",
+    "headers": {
+      "content-type": "application/json; charset=UTF-8",
+      "transfer-encoding": "chunked",
+      "retry-after": "57846"
+    },
+    "ms": 605,
+    "body": {
+      "json": {
+        "error": {
+          "message": "Rate limit exceeded for model gemini-3.8-flash-tts (limit: 10 requests per day on Free Tier). Please retry in 16h4m6s or upgrade your tier at https://ai.dev/rate-limit.",
+          "code": "too_many_requests"
+        }
+      }
+    }
+  }
+}

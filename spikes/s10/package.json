@@ -1,0 +1,12 @@
+{
+  "name": "spike-s10-piper-vi-g2p",
+  "private": true,
+  "type": "module",
+  "description": "Spike S10: Piper vi/en in an extension page with our own MIT G2P. Never imported by src/.",
+  "dependencies": {
+    "@piper-plus/g2p": "0.4.2",
+    "esbuild": "0.28.2",
+    "onnxruntime-web": "1.30.0",
+    "phonemize": "2.0.1"
+  }
+}

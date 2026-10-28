@@ -10,6 +10,7 @@ export const SECTIONS = [
   ['glossary', 'options.glossary.title'],
   ['sites', 'options.sites.title'],
   ['shortcuts', 'options.shortcuts.title'],
+  ['voice', 'options.voice.title'],
   ['spend', 'options.spend.title'],
   ['cache', 'options.cache.title'],
   ['memory', 'options.memory.title'],

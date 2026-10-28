@@ -1,0 +1,886 @@
+{
+ "date": "2026-10-26T16:59:54.411Z",
+ "asrModel": "gemini-3-flash-preview",
+ "runsPerWav": 2,
+ "voices": {
+  "vi": "vi_VN-vais1000-medium",
+  "en": "en_US-ljspeech-medium"
+ },
+ "summary": {
+  "vi": {
+   "ours": {
+    "transcriptions": 30,
+    "wer": 0.004,
+    "cer": 0.0007,
+    "cerIgnoringTones": 0.0007,
+    "toneAccuracy": 1
+   },
+   "oracle": {
+    "transcriptions": 30,
+    "wer": 0,
+    "cer": 0,
+    "cerIgnoringTones": 0,
+    "toneAccuracy": 1
+   }
+  },
+  "en": {
+   "oracle": {
+    "transcriptions": 20,
+    "wer": 0,
+    "cer": 0
+   },
+   "ours": {
+    "transcriptions": 20,
+    "wer": 0,
+    "cer": 0
+   },
+   "piper-plus": {
+    "transcriptions": 20,
+    "wer": 0.1125,
+    "cer": 0.0437
+   }
+  }
+ },
+ "perItem": [
+  {
+   "file": "vi-01-A.wav",
+   "system": "ours",
+   "ref": "mỗi chiều chị bảy đều phải đi bán phở",
+   "hyp": "mỗi chiều chị bảy đều phải đi bán phở",
+   "wer": 0
+  },
+  {
+   "file": "vi-01-A.wav",
+   "system": "ours",
+   "ref": "mỗi chiều chị bảy đều phải đi bán phở",
+   "hyp": "mỗi chiều chị bảy đều phải đi bán phở",
+   "wer": 0
+  },
+  {
+   "file": "vi-01-B.wav",
+   "system": "oracle",
+   "ref": "mỗi chiều chị bảy đều phải đi bán phở",
+   "hyp": "mỗi chiều chị bảy đều phải đi bán phở",
+   "wer": 0
+  },
+  {
+   "file": "vi-01-B.wav",
+   "system": "oracle",
+   "ref": "mỗi chiều chị bảy đều phải đi bán phở",
+   "hyp": "mỗi chiều chị bảy đều phải đi bán phở",
+   "wer": 0
+  },
+  {
+   "file": "vi-02-A.wav",
+   "system": "oracle",
+   "ref": "em tôi đã hỏi chị về con ma ở bụi chuối",
+   "hyp": "em tôi đã hỏi chị về con ma ở bụi chuối",
+   "wer": 0
+  },
+  {
+   "file": "vi-02-A.wav",
+   "system": "oracle",
+   "ref": "em tôi đã hỏi chị về con ma ở bụi chuối",
+   "hyp": "em tôi đã hỏi chị về con ma ở bụi chuối",
+   "wer": 0
+  },
+  {
+   "file": "vi-02-B.wav",
+   "system": "ours",
+   "ref": "em tôi đã hỏi chị về con ma ở bụi chuối",
+   "hyp": "em tôi đã hỏi chị về con ma ở bụi chuối",
+   "wer": 0
+  },
+  {
+   "file": "vi-02-B.wav",
+   "system": "ours",
+   "ref": "em tôi đã hỏi chị về con ma ở bụi chuối",
+   "hyp": "em tôi đã hỏi chị về con ma ở bụi chuối",
+   "wer": 0
+  },
+  {
+   "file": "vi-03-A.wav",
+   "system": "ours",
+   "ref": "hôm nay trời nhiều mây và gió thổi rất mạnh qua từng kẽ lá",
+   "hyp": "hôm nay trời nhiều mây và gió thổi rất mạnh qua từng kẽ lá",
+   "wer": 0
+  },
+  {
+   "file": "vi-03-A.wav",
+   "system": "ours",
+   "ref": "hôm nay trời nhiều mây và gió thổi rất mạnh qua từng kẽ lá",
+   "hyp": "hôm nay trời nhiều mây và gió thổi rất mạnh qua từng kẽ lá",
+   "wer": 0
+  },
+  {
+   "file": "vi-03-B.wav",
+   "system": "oracle",
+   "ref": "hôm nay trời nhiều mây và gió thổi rất mạnh qua từng kẽ lá",
+   "hyp": "hôm nay trời nhiều mây và gió thổi rất mạnh qua từng kẽ lá",
+   "wer": 0
+  },
+  {
+   "file": "vi-03-B.wav",
+   "system": "oracle",
+   "ref": "hôm nay trời nhiều mây và gió thổi rất mạnh qua từng kẽ lá",
+   "hyp": "hôm nay trời nhiều mây và gió thổi rất mạnh qua từng kẽ lá",
+   "wer": 0
+  },
+  {
+   "file": "vi-04-A.wav",
+   "system": "oracle",
+   "ref": "chị tôi cẩn thận xếp từng chiếc áo len mới mua vào trong tủ gỗ",
+   "hyp": "chị tôi cẩn thận xếp từng chiếc áo len mới mua vào trong tủ gỗ",
+   "wer": 0
+  },
+  {
+   "file": "vi-04-A.wav",
+   "system": "oracle",
+   "ref": "chị tôi cẩn thận xếp từng chiếc áo len mới mua vào trong tủ gỗ",
+   "hyp": "chị tôi cẩn thận xếp từng chiếc áo len mới mua vào trong tủ gỗ",
+   "wer": 0
+  },
+  {
+   "file": "vi-04-B.wav",
+   "system": "ours",
+   "ref": "chị tôi cẩn thận xếp từng chiếc áo len mới mua vào trong tủ gỗ",
+   "hyp": "chị tôi cẩn thận xếp từng chiếc áo len mới mua vào trong tủ gỗ",
+   "wer": 0
+  },
+  {
+   "file": "vi-04-B.wav",
+   "system": "ours",
+   "ref": "chị tôi cẩn thận xếp từng chiếc áo len mới mua vào trong tủ gỗ",
+   "hyp": "chị tôi cẩn thận xếp từng chiếc áo len mới mua vào trong tủ gỗ",
+   "wer": 0
+  },
+  {
+   "file": "vi-05-A.wav",
+   "system": "ours",
+   "ref": "anh ấy đang ngồi đọc sách dưới gốc cây bàng lớn",
+   "hyp": "anh ấy đang ngồi đọc sách dưới gốc cây bàng lớn",
+   "wer": 0
+  },
+  {
+   "file": "vi-05-A.wav",
+   "system": "ours",
+   "ref": "anh ấy đang ngồi đọc sách dưới gốc cây bàng lớn",
+   "hyp": "anh ấy đang ngồi đọc sách dưới gốc cây bàng lớn",
+   "wer": 0
+  },
+  {
+   "file": "vi-05-B.wav",
+   "system": "oracle",
+   "ref": "anh ấy đang ngồi đọc sách dưới gốc cây bàng lớn",
+   "hyp": "anh ấy đang ngồi đọc sách dưới gốc cây bàng lớn",
+   "wer": 0
+  },
+  {
+   "file": "vi-05-B.wav",
+   "system": "oracle",
+   "ref": "anh ấy đang ngồi đọc sách dưới gốc cây bàng lớn",
+   "hyp": "anh ấy đang ngồi đọc sách dưới gốc cây bàng lớn",
+   "wer": 0
+  },
+  {
+   "file": "vi-06-A.wav",
+   "system": "ours",
+   "ref": "bà nội tôi thường hay đi chùa vào ngày rằm hàng tháng",
+   "hyp": "bà nội tôi thường hay đi chùa vào ngày rằm hàng tháng",
+   "wer": 0
+  },
+  {
+   "file": "vi-06-A.wav",
+   "system": "ours",
+   "ref": "bà nội tôi thường hay đi chùa vào ngày rằm hàng tháng",
+   "hyp": "bà nội tôi thường hay đi chùa vào ngày rằm hàng tháng",
+   "wer": 0
+  },
+  {
+   "file": "vi-06-B.wav",
+   "system": "oracle",
+   "ref": "bà nội tôi thường hay đi chùa vào ngày rằm hàng tháng",
+   "hyp": "bà nội tôi thường hay đi chùa vào ngày rằm hàng tháng",
+   "wer": 0
+  },
+  {
+   "file": "vi-06-B.wav",
+   "system": "oracle",
+   "ref": "bà nội tôi thường hay đi chùa vào ngày rằm hàng tháng",
+   "hyp": "bà nội tôi thường hay đi chùa vào ngày rằm hàng tháng",
+   "wer": 0
+  },
+  {
+   "file": "vi-07-A.wav",
+   "system": "oracle",
+   "ref": "thời tiết hà nội hôm nay tương đối mát mẻ nhờ có một đợt gió mùa đông bắc tràn về",
+   "hyp": "thời tiết hà nội hôm nay tương đối mát mẻ nhờ có một đợt gió mùa đông bắc tràn về",
+   "wer": 0
+  },
+  {
+   "file": "vi-07-A.wav",
+   "system": "oracle",
+   "ref": "thời tiết hà nội hôm nay tương đối mát mẻ nhờ có một đợt gió mùa đông bắc tràn về",
+   "hyp": "thời tiết hà nội hôm nay tương đối mát mẻ nhờ có một đợt gió mùa đông bắc tràn về",
+   "wer": 0
+  },
+  {
+   "file": "vi-07-B.wav",
+   "system": "ours",
+   "ref": "thời tiết hà nội hôm nay tương đối mát mẻ nhờ có một đợt gió mùa đông bắc tràn về",
+   "hyp": "thời tiết hà nội hôm nay tương đối mát mẻ nhờ có một đợt gió mùa đông bắc tràn về",
+   "wer": 0
+  },
+  {
+   "file": "vi-07-B.wav",
+   "system": "ours",
+   "ref": "thời tiết hà nội hôm nay tương đối mát mẻ nhờ có một đợt gió mùa đông bắc tràn về",
+   "hyp": "thời tiết hà nội hôm nay tương đối mát mẻ nhờ có một đợt gió mùa đông bắc tràn về",
+   "wer": 0
+  },
+  {
+   "file": "vi-08-A.wav",
+   "system": "ours",
+   "ref": "món phở bò gia truyền luôn mang lại hương vị đậm đà đặc trưng của ẩm thực xứ bắc",
+   "hyp": "món phở bò gia truyền luôn mang lại hương vị đậm đà đặc trưng của ẩm thực xứ bắc",
+   "wer": 0
+  },
+  {
+   "file": "vi-08-A.wav",
+   "system": "ours",
+   "ref": "món phở bò gia truyền luôn mang lại hương vị đậm đà đặc trưng của ẩm thực xứ bắc",
+   "hyp": "món phở bò gia truyền luôn mang lại hương vị đậm đà đặc trưng của ẩm thực xứ bắc",
+   "wer": 0
+  },
+  {
+   "file": "vi-08-B.wav",
+   "system": "oracle",
+   "ref": "món phở bò gia truyền luôn mang lại hương vị đậm đà đặc trưng của ẩm thực xứ bắc",
+   "hyp": "món phở bò gia truyền luôn mang lại hương vị đậm đà đặc trưng của ẩm thực xứ bắc",
+   "wer": 0
+  },
+  {
+   "file": "vi-08-B.wav",
+   "system": "oracle",
+   "ref": "món phở bò gia truyền luôn mang lại hương vị đậm đà đặc trưng của ẩm thực xứ bắc",
+   "hyp": "món phở bò gia truyền luôn mang lại hương vị đậm đà đặc trưng của ẩm thực xứ bắc",
+   "wer": 0
+  },
+  {
+   "file": "vi-09-A.wav",
+   "system": "oracle",
+   "ref": "năm một nghìn chín trăm bốn mươi lăm là một mốc lịch sử quan trọng của dân tộc việt nam",
+   "hyp": "năm một nghìn chín trăm bốn mươi lăm là một mốc lịch sử quan trọng của dân tộc việt nam",
+   "wer": 0
+  },
+  {
+   "file": "vi-09-A.wav",
+   "system": "oracle",
+   "ref": "năm một nghìn chín trăm bốn mươi lăm là một mốc lịch sử quan trọng của dân tộc việt nam",
+   "hyp": "năm một nghìn chín trăm bốn mươi lăm là một mốc lịch sử quan trọng của dân tộc việt nam",
+   "wer": 0
+  },
+  {
+   "file": "vi-09-B.wav",
+   "system": "ours",
+   "ref": "năm một nghìn chín trăm bốn mươi lăm là một mốc lịch sử quan trọng của dân tộc việt nam",
+   "hyp": "năm một nghìn chín trăm bốn mươi lăm là một mốc lịch sử quan trọng của dân tộc việt nam",
+   "wer": 0
+  },
+  {
+   "file": "vi-09-B.wav",
+   "system": "ours",
+   "ref": "năm một nghìn chín trăm bốn mươi lăm là một mốc lịch sử quan trọng của dân tộc việt nam",
+   "hyp": "năm một nghìn chín trăm bốn mươi lăm là một mốc lịch sử quan trọng của dân tộc việt nam",
+   "wer": 0
+  },
+  {
+   "file": "vi-10-A.wav",
+   "system": "ours",
+   "ref": "mẹ tôi đi chợ mua ba con cá tươi về nấu canh chua",
+   "hyp": "mẹ tôi đi chợ mua ba con cá tươi về nấu canh chua",
+   "wer": 0
+  },
+  {
+   "file": "vi-10-A.wav",
+   "system": "ours",
+   "ref": "mẹ tôi đi chợ mua ba con cá tươi về nấu canh chua",
+   "hyp": "mẹ tôi đi chợ mua ba con cá tươi về nấu canh chua",
+   "wer": 0
+  },
+  {
+   "file": "vi-10-B.wav",
+   "system": "oracle",
+   "ref": "mẹ tôi đi chợ mua ba con cá tươi về nấu canh chua",
+   "hyp": "mẹ tôi đi chợ mua ba con cá tươi về nấu canh chua",
+   "wer": 0
+  },
+  {
+   "file": "vi-10-B.wav",
+   "system": "oracle",
+   "ref": "mẹ tôi đi chợ mua ba con cá tươi về nấu canh chua",
+   "hyp": "mẹ tôi đi chợ mua ba con cá tươi về nấu canh chua",
+   "wer": 0
+  },
+  {
+   "file": "vi-11-A.wav",
+   "system": "oracle",
+   "ref": "thủ tướng chính phủ vừa ban hành quyết định phê duyệt đề án phát triển kinh tế vùng duyên hải miền trung",
+   "hyp": "thủ tướng chính phủ vừa ban hành quyết định phê duyệt đề án phát triển kinh tế vùng duyên hải miền trung",
+   "wer": 0
+  },
+  {
+   "file": "vi-11-A.wav",
+   "system": "oracle",
+   "ref": "thủ tướng chính phủ vừa ban hành quyết định phê duyệt đề án phát triển kinh tế vùng duyên hải miền trung",
+   "hyp": "thủ tướng chính phủ vừa ban hành quyết định phê duyệt đề án phát triển kinh tế vùng duyên hải miền trung",
+   "wer": 0
+  },
+  {
+   "file": "vi-11-B.wav",
+   "system": "ours",
+   "ref": "thủ tướng chính phủ vừa ban hành quyết định phê duyệt đề án phát triển kinh tế vùng duyên hải miền trung",
+   "hyp": "thủ tướng chính phủ vừa ban hành quyết định phê duyệt đề án phát triển kinh tế vùng duyên hải miền trung",
+   "wer": 0
+  },
+  {
+   "file": "vi-11-B.wav",
+   "system": "ours",
+   "ref": "thủ tướng chính phủ vừa ban hành quyết định phê duyệt đề án phát triển kinh tế vùng duyên hải miền trung",
+   "hyp": "thủ tướng chính phủ vừa ban hành quyết định phê duyệt đề án phát triển kinh tế vùng duyên hải miền trung",
+   "wer": 0
+  },
+  {
+   "file": "vi-12-A.wav",
+   "system": "oracle",
+   "ref": "chủ tịch ủy ban nhân dân thành phố hà nội đã đi kiểm tra tiến độ các công trình trọng điểm",
+   "hyp": "chủ tịch ủy ban nhân dân thành phố hà nội đã đi kiểm tra tiến độ các công trình trọng điểm",
+   "wer": 0
+  },
+  {
+   "file": "vi-12-A.wav",
+   "system": "oracle",
+   "ref": "chủ tịch ủy ban nhân dân thành phố hà nội đã đi kiểm tra tiến độ các công trình trọng điểm",
+   "hyp": "chủ tịch ủy ban nhân dân thành phố hà nội đã đi kiểm tra tiến độ các công trình trọng điểm",
+   "wer": 0
+  },
+  {
+   "file": "vi-12-B.wav",
+   "system": "ours",
+   "ref": "chủ tịch ủy ban nhân dân thành phố hà nội đã đi kiểm tra tiến độ các công trình trọng điểm",
+   "hyp": "chủ tịch ủy ban nhân dân thành phố hà nội đã đi kiểm tra tiến độ các công trình trọng điểm",
+   "wer": 0
+  },
+  {
+   "file": "vi-12-B.wav",
+   "system": "ours",
+   "ref": "chủ tịch ủy ban nhân dân thành phố hà nội đã đi kiểm tra tiến độ các công trình trọng điểm",
+   "hyp": "chủ tịch ủy ban nhân dân thành phố hà nội đã đi kiểm tra tiến độ các công trình trọng điểm",
+   "wer": 0
+  },
+  {
+   "file": "vi-13-A.wav",
+   "system": "ours",
+   "ref": "đoàn đại biểu quốc hội tỉnh quảng nam đã có buổi tiếp xúc cử tri trước kỳ họp mới",
+   "hyp": "đoàn đại biểu quốc hội tỉnh quảng nam đã có buổi tiếp xúc cử tri trước kỳ họp mới",
+   "wer": 0
+  },
+  {
+   "file": "vi-13-A.wav",
+   "system": "ours",
+   "ref": "đoàn đại biểu quốc hội tỉnh quảng nam đã có buổi tiếp xúc cử tri trước kỳ họp mới",
+   "hyp": "đoàn đại biểu quốc hội tỉnh quảng nam đã có buổi tiếp xúc cử tri trước kỳ họp mới",
+   "wer": 0
+  },
+  {
+   "file": "vi-13-B.wav",
+   "system": "oracle",
+   "ref": "đoàn đại biểu quốc hội tỉnh quảng nam đã có buổi tiếp xúc cử tri trước kỳ họp mới",
+   "hyp": "đoàn đại biểu quốc hội tỉnh quảng nam đã có buổi tiếp xúc cử tri trước kỳ họp mới",
+   "wer": 0
+  },
+  {
+   "file": "vi-13-B.wav",
+   "system": "oracle",
+   "ref": "đoàn đại biểu quốc hội tỉnh quảng nam đã có buổi tiếp xúc cử tri trước kỳ họp mới",
+   "hyp": "đoàn đại biểu quốc hội tỉnh quảng nam đã có buổi tiếp xúc cử tri trước kỳ họp mới",
+   "wer": 0
+  },
+  {
+   "file": "vi-14-A.wav",
+   "system": "oracle",
+   "ref": "hôm nay tôi sẽ hướng dẫn các bạn cách nấu món phở bò gia truyền thơm ngon ngay tại nhà",
+   "hyp": "hôm nay tôi sẽ hướng dẫn các bạn cách nấu món phở bò gia truyền thơm ngon ngay tại nhà",
+   "wer": 0
+  },
+  {
+   "file": "vi-14-A.wav",
+   "system": "oracle",
+   "ref": "hôm nay tôi sẽ hướng dẫn các bạn cách nấu món phở bò gia truyền thơm ngon ngay tại nhà",
+   "hyp": "hôm nay tôi sẽ hướng dẫn các bạn cách nấu món phở bò gia truyền thơm ngon ngay tại nhà",
+   "wer": 0
+  },
+  {
+   "file": "vi-14-B.wav",
+   "system": "ours",
+   "ref": "hôm nay tôi sẽ hướng dẫn các bạn cách nấu món phở bò gia truyền thơm ngon ngay tại nhà",
+   "hyp": "hôm nay tôi sẽ hướng dẫn các bạn cách nấu món phở bò gia truyền thơm ngon ngay tại nhà",
+   "wer": 0
+  },
+  {
+   "file": "vi-14-B.wav",
+   "system": "ours",
+   "ref": "hôm nay tôi sẽ hướng dẫn các bạn cách nấu món phở bò gia truyền thơm ngon ngay tại nhà",
+   "hyp": "hôm nay tôi sẽ hướng dẫn các bạn cách nấu món phở bò gia truyền thơm ngon ngay tại nhà",
+   "wer": 0
+  },
+  {
+   "file": "vi-15-A.wav",
+   "system": "ours",
+   "ref": "để làm món ăn này chúng ta cần chuẩn bị khoảng năm trăm gam thịt bò tươi và các loại gia vị đi kèm",
+   "hyp": "để làm món ăn này chúng ta cần chuẩn bị khoảng năm trăm gram thịt bò tươi và các loại gia vị đi kèm",
+   "wer": 0.042
+  },
+  {
+   "file": "vi-15-A.wav",
+   "system": "ours",
+   "ref": "để làm món ăn này chúng ta cần chuẩn bị khoảng năm trăm gam thịt bò tươi và các loại gia vị đi kèm",
+   "hyp": "để làm món ăn này chúng ta cần chuẩn bị khoảng năm trăm gram thịt bò tươi và các loại gia vị đi kèm",
+   "wer": 0.042
+  },
+  {
+   "file": "vi-15-B.wav",
+   "system": "oracle",
+   "ref": "để làm món ăn này chúng ta cần chuẩn bị khoảng năm trăm gam thịt bò tươi và các loại gia vị đi kèm",
+   "hyp": "để làm món ăn này chúng ta cần chuẩn bị khoảng năm trăm gam thịt bò tươi và các loại gia vị đi kèm",
+   "wer": 0
+  },
+  {
+   "file": "vi-15-B.wav",
+   "system": "oracle",
+   "ref": "để làm món ăn này chúng ta cần chuẩn bị khoảng năm trăm gam thịt bò tươi và các loại gia vị đi kèm",
+   "hyp": "để làm món ăn này chúng ta cần chuẩn bị khoảng năm trăm gam thịt bò tươi và các loại gia vị đi kèm",
+   "wer": 0
+  },
+  {
+   "file": "en-01-A.wav",
+   "system": "oracle",
+   "ref": "the birch canoe slid on the smooth planks",
+   "hyp": "the birch canoe slid on the smooth planks",
+   "wer": 0
+  },
+  {
+   "file": "en-01-A.wav",
+   "system": "oracle",
+   "ref": "the birch canoe slid on the smooth planks",
+   "hyp": "the birch canoe slid on the smooth planks",
+   "wer": 0
+  },
+  {
+   "file": "en-01-B.wav",
+   "system": "ours",
+   "ref": "the birch canoe slid on the smooth planks",
+   "hyp": "the birch canoe slid on the smooth planks",
+   "wer": 0
+  },
+  {
+   "file": "en-01-B.wav",
+   "system": "ours",
+   "ref": "the birch canoe slid on the smooth planks",
+   "hyp": "the birch canoe slid on the smooth planks",
+   "wer": 0
+  },
+  {
+   "file": "en-01-C.wav",
+   "system": "piper-plus",
+   "ref": "the birch canoe slid on the smooth planks",
+   "hyp": "the bercht canae slade and the smoof planks",
+   "wer": 0.625
+  },
+  {
+   "file": "en-01-C.wav",
+   "system": "piper-plus",
+   "ref": "the birch canoe slid on the smooth planks",
+   "hyp": "the bercht canae slade and the smoof planks",
+   "wer": 0.625
+  },
+  {
+   "file": "en-02-A.wav",
+   "system": "piper-plus",
+   "ref": "glue the sheet to the dark blue background",
+   "hyp": "glide the sheet to the dark blied the ground",
+   "wer": 0.5
+  },
+  {
+   "file": "en-02-A.wav",
+   "system": "piper-plus",
+   "ref": "glue the sheet to the dark blue background",
+   "hyp": "glide the sheet to the dark blied the ground",
+   "wer": 0.5
+  },
+  {
+   "file": "en-02-B.wav",
+   "system": "oracle",
+   "ref": "glue the sheet to the dark blue background",
+   "hyp": "glue the sheet to the dark blue background",
+   "wer": 0
+  },
+  {
+   "file": "en-02-B.wav",
+   "system": "oracle",
+   "ref": "glue the sheet to the dark blue background",
+   "hyp": "glue the sheet to the dark blue background",
+   "wer": 0
+  },
+  {
+   "file": "en-02-C.wav",
+   "system": "ours",
+   "ref": "glue the sheet to the dark blue background",
+   "hyp": "glue the sheet to the dark blue background",
+   "wer": 0
+  },
+  {
+   "file": "en-02-C.wav",
+   "system": "ours",
+   "ref": "glue the sheet to the dark blue background",
+   "hyp": "glue the sheet to the dark blue background",
+   "wer": 0
+  },
+  {
+   "file": "en-03-A.wav",
+   "system": "ours",
+   "ref": "it's easy to tell the depth of a well",
+   "hyp": "it's easy to tell the depth of a well",
+   "wer": 0
+  },
+  {
+   "file": "en-03-A.wav",
+   "system": "ours",
+   "ref": "it's easy to tell the depth of a well",
+   "hyp": "it's easy to tell the depth of a well",
+   "wer": 0
+  },
+  {
+   "file": "en-03-B.wav",
+   "system": "oracle",
+   "ref": "it's easy to tell the depth of a well",
+   "hyp": "it's easy to tell the depth of a well",
+   "wer": 0
+  },
+  {
+   "file": "en-03-B.wav",
+   "system": "oracle",
+   "ref": "it's easy to tell the depth of a well",
+   "hyp": "it's easy to tell the depth of a well",
+   "wer": 0
+  },
+  {
+   "file": "en-03-C.wav",
+   "system": "piper-plus",
+   "ref": "it's easy to tell the depth of a well",
+   "hyp": "it's easy to tell the depth of a well",
+   "wer": 0
+  },
+  {
+   "file": "en-03-C.wav",
+   "system": "piper-plus",
+   "ref": "it's easy to tell the depth of a well",
+   "hyp": "it's easy to tell the depth of a well",
+   "wer": 0
+  },
+  {
+   "file": "en-04-A.wav",
+   "system": "piper-plus",
+   "ref": "these days a chicken leg is a rare dish",
+   "hyp": "these days a chicken leg is a rare dish",
+   "wer": 0
+  },
+  {
+   "file": "en-04-A.wav",
+   "system": "piper-plus",
+   "ref": "these days a chicken leg is a rare dish",
+   "hyp": "these days a chicken leg is a rare dish",
+   "wer": 0
+  },
+  {
+   "file": "en-04-B.wav",
+   "system": "ours",
+   "ref": "these days a chicken leg is a rare dish",
+   "hyp": "these days a chicken leg is a rare dish",
+   "wer": 0
+  },
+  {
+   "file": "en-04-B.wav",
+   "system": "ours",
+   "ref": "these days a chicken leg is a rare dish",
+   "hyp": "these days a chicken leg is a rare dish",
+   "wer": 0
+  },
+  {
+   "file": "en-04-C.wav",
+   "system": "oracle",
+   "ref": "these days a chicken leg is a rare dish",
+   "hyp": "these days a chicken leg is a rare dish",
+   "wer": 0
+  },
+  {
+   "file": "en-04-C.wav",
+   "system": "oracle",
+   "ref": "these days a chicken leg is a rare dish",
+   "hyp": "these days a chicken leg is a rare dish",
+   "wer": 0
+  },
+  {
+   "file": "en-05-A.wav",
+   "system": "oracle",
+   "ref": "rice is often served in round bowls",
+   "hyp": "rice is often served in round bowls",
+   "wer": 0
+  },
+  {
+   "file": "en-05-A.wav",
+   "system": "oracle",
+   "ref": "rice is often served in round bowls",
+   "hyp": "rice is often served in round bowls",
+   "wer": 0
+  },
+  {
+   "file": "en-05-B.wav",
+   "system": "piper-plus",
+   "ref": "rice is often served in round bowls",
+   "hyp": "rice is often served in round bowls",
+   "wer": 0
+  },
+  {
+   "file": "en-05-B.wav",
+   "system": "piper-plus",
+   "ref": "rice is often served in round bowls",
+   "hyp": "rice is often served in round bowls",
+   "wer": 0
+  },
+  {
+   "file": "en-05-C.wav",
+   "system": "ours",
+   "ref": "rice is often served in round bowls",
+   "hyp": "rice is often served in round bowls",
+   "wer": 0
+  },
+  {
+   "file": "en-05-C.wav",
+   "system": "ours",
+   "ref": "rice is often served in round bowls",
+   "hyp": "rice is often served in round bowls",
+   "wer": 0
+  },
+  {
+   "file": "en-06-A.wav",
+   "system": "ours",
+   "ref": "the juice of lemons makes fine punch",
+   "hyp": "the juice of lemons makes fine punch",
+   "wer": 0
+  },
+  {
+   "file": "en-06-A.wav",
+   "system": "ours",
+   "ref": "the juice of lemons makes fine punch",
+   "hyp": "the juice of lemons makes fine punch",
+   "wer": 0
+  },
+  {
+   "file": "en-06-B.wav",
+   "system": "oracle",
+   "ref": "the juice of lemons makes fine punch",
+   "hyp": "the juice of lemons makes fine punch",
+   "wer": 0
+  },
+  {
+   "file": "en-06-B.wav",
+   "system": "oracle",
+   "ref": "the juice of lemons makes fine punch",
+   "hyp": "the juice of lemons makes fine punch",
+   "wer": 0
+  },
+  {
+   "file": "en-06-C.wav",
+   "system": "piper-plus",
+   "ref": "the juice of lemons makes fine punch",
+   "hyp": "the juice of lemons makes fine punch",
+   "wer": 0
+  },
+  {
+   "file": "en-06-C.wav",
+   "system": "piper-plus",
+   "ref": "the juice of lemons makes fine punch",
+   "hyp": "the juice of lemons makes fine punch",
+   "wer": 0
+  },
+  {
+   "file": "en-07-A.wav",
+   "system": "oracle",
+   "ref": "the box was thrown beside the parked truck",
+   "hyp": "the box was thrown beside the parked truck",
+   "wer": 0
+  },
+  {
+   "file": "en-07-A.wav",
+   "system": "oracle",
+   "ref": "the box was thrown beside the parked truck",
+   "hyp": "the box was thrown beside the parked truck",
+   "wer": 0
+  },
+  {
+   "file": "en-07-B.wav",
+   "system": "piper-plus",
+   "ref": "the box was thrown beside the parked truck",
+   "hyp": "the box was thrown beside the parked truck",
+   "wer": 0
+  },
+  {
+   "file": "en-07-B.wav",
+   "system": "piper-plus",
+   "ref": "the box was thrown beside the parked truck",
+   "hyp": "the box was thrown beside the parked truck",
+   "wer": 0
+  },
+  {
+   "file": "en-07-C.wav",
+   "system": "ours",
+   "ref": "the box was thrown beside the parked truck",
+   "hyp": "the box was thrown beside the parked truck",
+   "wer": 0
+  },
+  {
+   "file": "en-07-C.wav",
+   "system": "ours",
+   "ref": "the box was thrown beside the parked truck",
+   "hyp": "the box was thrown beside the parked truck",
+   "wer": 0
+  },
+  {
+   "file": "en-08-A.wav",
+   "system": "oracle",
+   "ref": "the hogs were fed chopped corn and garbage",
+   "hyp": "the hogs were fed chopped corn and garbage",
+   "wer": 0
+  },
+  {
+   "file": "en-08-A.wav",
+   "system": "oracle",
+   "ref": "the hogs were fed chopped corn and garbage",
+   "hyp": "the hogs were fed chopped corn and garbage",
+   "wer": 0
+  },
+  {
+   "file": "en-08-B.wav",
+   "system": "ours",
+   "ref": "the hogs were fed chopped corn and garbage",
+   "hyp": "the hogs were fed chopped corn and garbage",
+   "wer": 0
+  },
+  {
+   "file": "en-08-B.wav",
+   "system": "ours",
+   "ref": "the hogs were fed chopped corn and garbage",
+   "hyp": "the hogs were fed chopped corn and garbage",
+   "wer": 0
+  },
+  {
+   "file": "en-08-C.wav",
+   "system": "piper-plus",
+   "ref": "the hogs were fed chopped corn and garbage",
+   "hyp": "the hogs were fed chopped corn and garbage",
+   "wer": 0
+  },
+  {
+   "file": "en-08-C.wav",
+   "system": "piper-plus",
+   "ref": "the hogs were fed chopped corn and garbage",
+   "hyp": "the hogs were fed chopped corn and garbage",
+   "wer": 0
+  },
+  {
+   "file": "en-09-A.wav",
+   "system": "ours",
+   "ref": "four hours of steady work faced us",
+   "hyp": "four hours of steady work faced us",
+   "wer": 0
+  },
+  {
+   "file": "en-09-A.wav",
+   "system": "ours",
+   "ref": "four hours of steady work faced us",
+   "hyp": "four hours of steady work faced us",
+   "wer": 0
+  },
+  {
+   "file": "en-09-B.wav",
+   "system": "piper-plus",
+   "ref": "four hours of steady work faced us",
+   "hyp": "four hours of steady work faced us",
+   "wer": 0
+  },
+  {
+   "file": "en-09-B.wav",
+   "system": "piper-plus",
+   "ref": "four hours of steady work faced us",
+   "hyp": "four hours of steady work faced us",
+   "wer": 0
+  },
+  {
+   "file": "en-09-C.wav",
+   "system": "oracle",
+   "ref": "four hours of steady work faced us",
+   "hyp": "four hours of steady work faced us",
+   "wer": 0
+  },
+  {
+   "file": "en-09-C.wav",
+   "system": "oracle",
+   "ref": "four hours of steady work faced us",
+   "hyp": "four hours of steady work faced us",
+   "wer": 0
+  },
+  {
+   "file": "en-10-A.wav",
+   "system": "oracle",
+   "ref": "a large size in stockings is hard to sell",
+   "hyp": "a large size in stockings is hard to sell",
+   "wer": 0
+  },
+  {
+   "file": "en-10-A.wav",
+   "system": "oracle",
+   "ref": "a large size in stockings is hard to sell",
+   "hyp": "a large size in stockings is hard to sell",
+   "wer": 0
+  },
+  {
+   "file": "en-10-B.wav",
+   "system": "piper-plus",
+   "ref": "a large size in stockings is hard to sell",
+   "hyp": "a large size in stockings is hard to sell",
+   "wer": 0
+  },
+  {
+   "file": "en-10-B.wav",
+   "system": "piper-plus",
+   "ref": "a large size in stockings is hard to sell",
+   "hyp": "a large size in stockings is hard to sell",
+   "wer": 0
+  },
+  {
+   "file": "en-10-C.wav",
+   "system": "ours",
+   "ref": "a large size in stockings is hard to sell",
+   "hyp": "a large size in stockings is hard to sell",
+   "wer": 0
+  },
+  {
+   "file": "en-10-C.wav",
+   "system": "ours",
+   "ref": "a large size in stockings is hard to sell",
+   "hyp": "a large size in stockings is hard to sell",
+   "wer": 0
+  }
+ ]
+}

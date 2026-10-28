@@ -1,0 +1,37 @@
+{
+ "onnxruntimeWeb": "1.30.0",
+ "files": {
+  "bench.js": {
+   "raw": 3107798,
+   "gzip9": 1005513
+  },
+  "ort/ort-wasm-simd-threaded.mjs": {
+   "raw": 24381,
+   "gzip9": 9124
+  },
+  "ort/ort-wasm-simd-threaded.wasm": {
+   "raw": 14239897,
+   "gzip9": 3687160
+  },
+  "(part) g2p-vi": {
+   "raw": 4810,
+   "gzip9": 2311
+  },
+  "(part) g2p-en (phonemize + adapter)": {
+   "raw": 3049675,
+   "gzip9": 987121
+  },
+  "(part) piper-plus-en (rejected)": {
+   "raw": 8211,
+   "gzip9": 3391
+  },
+  "(part) ort-wasm-js": {
+   "raw": 49891,
+   "gzip9": 15992
+  }
+ },
+ "shippedTotal": {
+  "raw": 17372076,
+  "gzip9": 4701797
+ }
+}

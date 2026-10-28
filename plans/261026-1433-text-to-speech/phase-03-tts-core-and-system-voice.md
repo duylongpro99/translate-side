@@ -1,7 +1,7 @@
 ---
 phase: 3
 title: "TTS core and the system voice"
-status: pending
+status: done
 priority: P1
 effort: "2d"
 dependencies: []

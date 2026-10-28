@@ -1,0 +1,173 @@
+{
+  "realtime": {
+    "recordedAt": "2026-10-26T14:53:12.405Z",
+    "request": {
+      "url": "https://api.vbee.vn/v1/tts",
+      "method": "POST",
+      "headerNames": [
+        "Content-Type",
+        "Authorization",
+        "App-Id"
+      ],
+      "contentType": "application/json",
+      "body": {
+        "text": "Xin chào. Đây là đoạn thử giọng đọc tiếng Việt cho tiện ích dịch trang. Hôm nay trời đẹp, chúng ta cùng đọc sách nhé.",
+        "mode": "sync",
+        "voiceCode": "hn_female_ngochuyen_full_48k-fhg",
+        "outputFormat": "mp3"
+      }
+    },
+    "response": {
+      "status": 401,
+      "contentType": "text/html",
+      "headers": {
+        "content-type": "text/html",
+        "content-length": "172"
+      },
+      "ms": 255,
+      "body": {
+        "text": "<html>\r\n<head><title>401 Authorization Required</title></head>\r\n<body>\r\n<center><h1>401 Authorization Required</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+      }
+    }
+  },
+  "realtimeTooLong": {
+    "recordedAt": "2026-10-26T14:53:12.594Z",
+    "request": {
+      "url": "https://api.vbee.vn/v1/tts",
+      "method": "POST",
+      "headerNames": [
+        "Content-Type",
+        "Authorization",
+        "App-Id"
+      ],
+      "contentType": "application/json",
+      "body": {
+        "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "mode": "sync",
+        "voiceCode": "hn_female_ngochuyen_full_48k-fhg"
+      }
+    },
+    "response": {
+      "status": 401,
+      "contentType": "text/html",
+      "headers": {
+        "content-type": "text/html",
+        "content-length": "172"
+      },
+      "ms": 187,
+      "body": {
+        "text": "<html>\r\n<head><title>401 Authorization Required</title></head>\r\n<body>\r\n<center><h1>401 Authorization Required</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+      }
+    }
+  },
+  "batchNoWebhook": {
+    "recordedAt": "2026-10-26T14:53:12.673Z",
+    "request": {
+      "url": "https://api.vbee.vn/v1/tts",
+      "method": "POST",
+      "headerNames": [
+        "Content-Type",
+        "Authorization",
+        "App-Id"
+      ],
+      "contentType": "application/json",
+      "body": {
+        "text": "Hello. This is a short test of the English voice for the page translator. The weather is lovely today, so let's read a book.",
+        "mode": "async",
+        "voiceCode": "hn_female_ngochuyen_full_48k-fhg",
+        "outputFormat": "mp3"
+      }
+    },
+    "response": {
+      "status": 401,
+      "contentType": "text/html",
+      "headers": {
+        "content-type": "text/html",
+        "content-length": "172"
+      },
+      "ms": 78,
+      "body": {
+        "text": "<html>\r\n<head><title>401 Authorization Required</title></head>\r\n<body>\r\n<center><h1>401 Authorization Required</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+      }
+    }
+  },
+  "getRequest": {
+    "recordedAt": "2026-10-26T14:53:12.732Z",
+    "request": {
+      "url": "https://api.vbee.vn/v1/tts/requests/00000000-0000-0000-0000-000000000000",
+      "method": "GET",
+      "headerNames": [
+        "Content-Type",
+        "Authorization",
+        "App-Id"
+      ],
+      "contentType": "application/json"
+    },
+    "response": {
+      "status": 401,
+      "contentType": "text/html",
+      "headers": {
+        "content-type": "text/html",
+        "content-length": "172"
+      },
+      "ms": 59,
+      "body": {
+        "text": "<html>\r\n<head><title>401 Authorization Required</title></head>\r\n<body>\r\n<center><h1>401 Authorization Required</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+      }
+    }
+  },
+  "voices": {
+    "recordedAt": "2026-10-26T14:53:12.790Z",
+    "request": {
+      "url": "https://api.vbee.vn/v1/voices?language_code=vi-VN&limit=20",
+      "method": "GET",
+      "headerNames": [
+        "Content-Type",
+        "Authorization",
+        "App-Id"
+      ],
+      "contentType": "application/json"
+    },
+    "response": {
+      "status": 401,
+      "contentType": "text/html",
+      "headers": {
+        "content-type": "text/html",
+        "content-length": "172"
+      },
+      "ms": 57,
+      "body": {
+        "text": "<html>\r\n<head><title>401 Authorization Required</title></head>\r\n<body>\r\n<center><h1>401 Authorization Required</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+      }
+    }
+  },
+  "noAppId": {
+    "recordedAt": "2026-10-26T14:53:12.857Z",
+    "request": {
+      "url": "https://api.vbee.vn/v1/tts",
+      "method": "POST",
+      "headerNames": [
+        "Content-Type",
+        "Authorization"
+      ],
+      "contentType": "application/json",
+      "body": {
+        "text": "xin chào",
+        "mode": "sync",
+        "voiceCode": "hn_female_ngochuyen_full_48k-fhg"
+      }
+    },
+    "response": {
+      "status": 401,
+      "contentType": "text/html",
+      "headers": {
+        "content-type": "text/html",
+        "content-length": "172"
+      },
+      "ms": 66,
+      "body": {
+        "text": "<html>\r\n<head><title>401 Authorization Required</title></head>\r\n<body>\r\n<center><h1>401 Authorization Required</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+      }
+    }
+  }
+}

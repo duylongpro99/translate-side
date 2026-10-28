@@ -1,0 +1,366 @@
+{
+ "model": "gemini-3.5-flash",
+ "created": "2026-10-26T15:20:11.602Z",
+ "sentences": [
+  {
+   "text": "The ancient amphitheater in Plovdiv was unearthed during infrastructure renovations in the late 1970s."
+  },
+  {
+   "text": "Researchers observed a 14% increase in soil salinity across the coastal estuaries this autumn."
+  },
+  {
+   "text": "Ensure that the configuration file is saved with UTF-8 encoding before deploying the microservice."
+  },
+  {
+   "text": "Subscribers gain exclusive access to weekly market updates and detailed macroeconomic analysis."
+  },
+  {
+   "text": "The boutique hotel charges $250 per night, which includes a complimentary Scandinavian breakfast."
+  },
+  {
+   "text": "Mount Rainier stands at an elevation of 14,411 feet above sea level in Washington State."
+  },
+  {
+   "text": "The algorithm optimizes database queries by dynamically adjusting the indexing strategy under heavy load."
+  },
+  {
+   "text": "A sudden thunderstorm disrupted the outdoor festival, forcing organizers to evacuate thousands of attendees."
+  },
+  {
+   "text": "Quantum computing leverages the principles of superposition and entanglement to process complex data sets."
+  },
+  {
+   "text": "The historical museum in Kyoto displays preserved silk kimonos dating back to the 17th century."
+  },
+  {
+   "text": "Users must authenticate their credentials via two-factor verification before accessing administrative controls."
+  },
+  {
+   "text": "The new smartphone model features a high-resolution OLED screen and an improved triple-lens camera array."
+  },
+  {
+   "text": "According to the quarterly report, global revenue expanded by 8.5% despite severe supply chain bottlenecks."
+  },
+  {
+   "text": "The expedition team navigated treacherous icy terrain to reach the remote research station in Svalbard."
+  },
+  {
+   "text": "Gourmet chefs often recommend seasoning cast-iron cookware with flaxseed oil to maintain a durable patina."
+  },
+  {
+   "text": "The municipal council voted 7-2 to approve the construction of a public park near the riverbank."
+  },
+  {
+   "text": "Bioluminescent algae illuminated the dark shoreline, creating a vibrant turquoise glow in the ocean waves."
+  },
+  {
+   "text": "The software patch resolves a critical security vulnerability that previously exposed sensitive user tokens."
+  },
+  {
+   "text": "Visitors can purchase handcrafted leather goods and spices at the bustling outdoor bazaar in Marrakech."
+  },
+  {
+   "text": "The flagship store in Milan offers bespoke tailoring services tailored to international client specifications."
+  },
+  {
+   "text": "Archaeologists discovered ornate gold artifacts inside a Thraco-Roman burial mound near the Black Sea."
+  },
+  {
+   "text": "The utility company reported that renewable energy sources accounted for 42% of total generation last year."
+  },
+  {
+   "text": "The documentation provides comprehensive instructions for installing the command-line interface on Linux systems."
+  },
+  {
+   "text": "The novelist spent six months residing in a remote village in Cornwall to finish her historical fiction book."
+  },
+  {
+   "text": "The drone captured breathtaking aerial footage of the rugged cliffs along the Pacific Coast Highway."
+  },
+  {
+   "text": "The quarterly conference will feature keynote speeches from prominent venture capitalists and technology innovators."
+  },
+  {
+   "text": "The car manufacturer recalled approximately 15,000 electric vehicles due to a software defect in the braking system."
+  },
+  {
+   "text": "Astronomers detected a fast radio burst originating from a distant galaxy located billions of light-years away."
+  },
+  {
+   "text": "The online course covers basic principles of macroeconomics, focusing on inflation rates and monetary policy."
+  },
+  {
+   "text": "The artisanal bakery produces sourdough loaves using a hundred-year-old wild yeast culture."
+  },
+  {
+   "text": "The government introduced strict regulations to curtail single-use plastic waste across retail establishments."
+  },
+  {
+   "text": "The exhibition highlights the intricate relationship between industrial architecture and mid-century modern design."
+  },
+  {
+   "text": "The new transit line connects suburban communities directly to the central business district in under 30 minutes."
+  },
+  {
+   "text": "The medical study evaluated the efficacy of the novel compound across 1,200 clinical trial participants."
+  },
+  {
+   "text": "The software suite allows graphic designers to collaborate in real time on vector illustrations."
+  },
+  {
+   "text": "The historical treaty was signed in Vienna in 1815, reshaping European political boundaries for decades."
+  },
+  {
+   "text": "The coffee roastery sources organic Arabica beans from high-altitude farms in the Huila region of Colombia."
+  },
+  {
+   "text": "The cybersecurity agency issued an urgent bulletin regarding sophisticated phishing campaigns targeting financial institutions."
+  },
+  {
+   "text": "The hiking trail winds through dense pine forests before ascending to a panoramic alpine ridge."
+  },
+  {
+   "text": "The wireless earbuds feature active noise cancellation and offer up to 24 hours of total battery life."
+  },
+  {
+   "text": "The foundation donated $5 million to support marine conservation efforts in the Great Barrier Reef."
+  },
+  {
+   "text": "The author's latest essay critically examines the philosophical implications of artificial intelligence on human creativity."
+  },
+  {
+   "text": "The harbor master reported that cargo throughput increased by 12% following the dredging operations."
+  },
+  {
+   "text": "The server rack requires adequate ventilation to prevent hardware overheating during peak computational workloads."
+  },
+  {
+   "text": "The botanical garden boasts a collection of over 3,000 rare orchid species from tropical rainforests."
+  },
+  {
+   "text": "The flight from Singapore to London was delayed by three hours owing to unexpected atmospheric turbulence."
+  },
+  {
+   "text": "The modern art gallery in Berlin is currently displaying a series of large-scale abstract paintings."
+  },
+  {
+   "text": "The company plans to invest $50 million in constructing a state-of-the-art semiconductor manufacturing plant."
+  },
+  {
+   "text": "The smartphone app uses machine learning models to identify plant diseases from user-uploaded photos."
+  },
+  {
+   "text": "The vintage locomotive underwent extensive restoration before returning to service on the heritage railway line."
+  },
+  {
+   "text": "The city of Prague is renowned for its well-preserved Gothic cathedrals and cobblestone plazas."
+  },
+  {
+   "text": "The firewall rule blocks incoming connections from untrusted IP addresses outside the corporate network."
+  },
+  {
+   "text": "The documentary investigates the ecological consequences of overfishing in northern Atlantic waters."
+  },
+  {
+   "text": "The restaurant charges a 15% service fee for parties larger than six guests."
+  },
+  {
+   "text": "The geothermal power plant generates clean electricity by tapping into subterranean thermal reservoirs."
+  },
+  {
+   "text": "The package includes a pair of ergonomic running shoes and a lightweight water-resistant jacket."
+  },
+  {
+   "text": "The literary magazine accepts unsolicited submissions of short stories and poetry during open call periods."
+  },
+  {
+   "text": "The battery's internal resistance increases gradually over several hundred discharge cycles, reducing overall capacity."
+  },
+  {
+   "text": "The coastal resort of Sintra features romantic palaces surrounded by lush, mist-covered mountain gardens."
+  },
+  {
+   "text": "The database migration script will run automatically during the scheduled system maintenance window at midnight."
+  },
+  {
+   "text": "The research team published their groundbreaking findings in the current issue of an international scientific journal."
+  },
+  {
+   "text": "The vintage bookstore in Edinburgh specializes in rare first editions and antiquarian maps of Europe."
+  },
+  {
+   "text": "The electric bicycle has a top speed of 25 mph and a maximum range of 40 miles per charge."
+  },
+  {
+   "text": "The board of directors appointed a new chief executive officer following an extensive international candidate search."
+  },
+  {
+   "text": "The pharmaceutical company received regulatory clearance to begin Phase 3 trials for its oncology drug."
+  },
+  {
+   "text": "The castle walls were reinforced with thick granite blocks during the medieval period to withstand siege warfare."
+  },
+  {
+   "text": "The website's responsive layout automatically adjusts font size and image dimensions for mobile viewports."
+  },
+  {
+   "text": "The local community market operates every Saturday morning, offering fresh produce and handcrafted artisanal soaps."
+  },
+  {
+   "text": "The remote archipelago of Palau established a vast marine sanctuary to protect native reef biodiversity."
+  },
+  {
+   "text": "The telemetry module transmits real-time environmental data back to the central monitoring station every 15 minutes."
+  },
+  {
+   "text": "The vintage chronograph watch features a solid stainless steel case and a scratch-resistant sapphire crystal."
+  },
+  {
+   "text": "The government allocated $1.2 billion for upgrading rural broadband infrastructure over the next decade."
+  },
+  {
+   "text": "The museum curator delivered an insightful lecture on the symbolism embedded within Flemish Renaissance paintings."
+  },
+  {
+   "text": "The software developer refactored the legacy codebase to reduce latency and improve overall system maintainability."
+  },
+  {
+   "text": "The hotel rooftop terrace commands breathtaking panoramic views of the skyline and the adjacent harbor."
+  },
+  {
+   "text": "The regional transit authority announced a 5% increase in commuter rail fares starting next month."
+  },
+  {
+   "text": "The research satellite was launched successfully into low Earth orbit aboard a reusable commercial rocket."
+  },
+  {
+   "text": "The alpine village of Zermatt bans combustion-engine vehicles to maintain its pristine mountain air quality."
+  },
+  {
+   "text": "The web application utilizes client-side caching to decrease page load times for returning visitors."
+  },
+  {
+   "text": "The traditional ceramic pottery is fired in a wood-burning kiln at temperatures exceeding 1,200 degrees Celsius."
+  },
+  {
+   "text": "The financial analyst noted that consumer confidence indexes rose unexpectedly during the third quarter."
+  },
+  {
+   "text": "The park ranger warned visitors to keep a safe distance from grazing bison along the scenic loop road."
+  },
+  {
+   "text": "The new headphones come with a protective hardshell case, a charging cable, and three sizes of silicone ear tips."
+  },
+  {
+   "text": "The architectural firm designed a zero-emission office building featuring integrated photovoltaic solar panels."
+  },
+  {
+   "text": "The historic theater in Melbourne opened its doors in 1886 and continues to host major musical productions."
+  },
+  {
+   "text": "The open-source framework simplifies web development by providing pre-built modular components for common UI patterns."
+  },
+  {
+   "text": "The marine biologist tagged a 14-foot white shark near the Farallon Islands to study its migration patterns."
+  },
+  {
+   "text": "The luxury cruise ship carries up to 3,500 passengers and features twelve distinct dining venues."
+  },
+  {
+   "text": "The atmospheric pressure dropped significantly as the severe weather system approached the western coastline."
+  },
+  {
+   "text": "The artisan chocolatier uses ethically sourced cacao beans imported directly from smallholder cooperatives in Ghana."
+  },
+  {
+   "text": "The API endpoint returns JSON-formatted responses containing comprehensive user profile data and account settings."
+  },
+  {
+   "text": "The ancient monastery is perched precariously atop a steep sandstone cliff in central Greece."
+  },
+  {
+   "text": "The company reported a record net profit of $450 million for the fiscal year ending December 31."
+  },
+  {
+   "text": "The smart thermostat learns user temperature preferences and automatically adjusts settings to optimize energy usage."
+  },
+  {
+   "text": "The environmental organization organized a beach cleanup event that successfully removed over two tons of plastic litter."
+  },
+  {
+   "text": "The medieval fortress in Carcassonne features double defensive walls and over 50 watchtowers."
+  },
+  {
+   "text": "The graphics card supports hardware-accelerated ray tracing for hyper-realistic lighting effects in video games."
+  },
+  {
+   "text": "The small island nation relies heavily on ecotourism and sustainable agriculture to drive its local economy."
+  },
+  {
+   "text": "The subscription service offers unlimited access to a library of over 10,000 digital audiobooks and podcasts."
+  },
+  {
+   "text": "The team of glaciologists drilled core samples from the Antarctic ice sheet to analyze ancient climate conditions."
+  },
+  {
+   "text": "The car rental agency requires a valid driver's license and a major credit card upon vehicle pickup."
+  },
+  {
+   "text": "The high-speed rail network connects major metropolitan areas, reducing travel time between cities by half."
+  },
+  {
+   "text": "The boutique winery in the Napa Valley produces small-batch Cabernet Sauvignon aged in French oak barrels."
+  },
+  {
+   "text": "The cloud storage provider guarantees 99.99% uptime through redundant data center infrastructure across multiple regions."
+  },
+  {
+   "text": "The historical archives house thousands of fragile manuscripts documenting colonial trade routes in the Caribbean."
+  },
+  {
+   "text": "The company introduced a flexible work policy allowing employees to work remotely up to three days per week."
+  },
+  {
+   "text": "The wildlife sanctuary provides a safe haven for endangered primates rescued from illegal trade operations."
+  },
+  {
+   "text": "The smart watch monitors daily step counts, heart rate variability, and blood oxygen saturation levels."
+  },
+  {
+   "text": "The urban farm uses vertical hydroponic systems to grow organic greens with 90% less water than traditional agriculture."
+  },
+  {
+   "text": "The heavy snowstorm caused widespread power outages, affecting over 80,000 residential customers across the county."
+  },
+  {
+   "text": "The classical orchestra performed Beethoven's Ninth Symphony to a sold-out audience at the city concert hall."
+  },
+  {
+   "text": "The software update introduces customizable widgets for the home screen and improved privacy settings."
+  },
+  {
+   "text": "The coastal town of Banff attracts millions of tourists annually with its turquoise glacial lakes and snow-capped peaks."
+  },
+  {
+   "text": "The e-commerce platform processes millions of transaction requests daily using a distributed microservices architecture."
+  },
+  {
+   "text": "The local library offers free digital literacy workshops for senior citizens every Tuesday afternoon."
+  },
+  {
+   "text": "The archaeological team excavated a well-preserved Roman villa featuring intricate mosaic floor tiles."
+  },
+  {
+   "text": "The premium subscription plan costs $14.99 per month and includes ad-free streaming in high definition."
+  },
+  {
+   "text": "The solar farm generates enough electricity to power approximately 20,000 homes during peak daylight hours."
+  },
+  {
+   "text": "The mountain pass is closed during winter months due to heavy snowfall and high avalanche risks."
+  },
+  {
+   "text": "The company's customer support portal features a searchable knowledge base and live chat assistance."
+  }
+ ]
+}

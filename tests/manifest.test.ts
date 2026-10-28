@@ -8,7 +8,7 @@ const manifest = config.manifest as Record<string, unknown> & {
 
 describe('manifest', () => {
   it('requests exactly the minimal permissions', () => {
-    expect(manifest.permissions).toEqual(['sidePanel', 'storage', 'activeTab', 'scripting', 'contextMenus']);
+    expect(manifest.permissions).toEqual(['sidePanel', 'storage', 'activeTab', 'scripting', 'contextMenus', 'tts']);
   });
 
   it('has no install-time host permissions or blanket content scripts', () => {

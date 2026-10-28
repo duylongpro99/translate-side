@@ -16,6 +16,8 @@ what it reads, where that text goes, what it keeps on your device, and how to de
 - A local model (Ollama or LM Studio, see [local-models.md](local-models.md)) keeps the text on your computer.
 - With no provider set up, Chrome translates the page on your computer (its own Translator, or Gemini Nano). No text
   is sent anywhere, so the panel shows no notice for it.
+- Reading a block aloud uses your computer's own voice by default, and sends nothing. A voice provider you add yourself
+  (Settings › Voice) receives the text of each block it reads.
 
 Effective for version 1.3.0. If a later version changes what is described here, this page changes with it, and the
 panel asks you to read its notice again.
@@ -93,6 +95,28 @@ text. The first-run notice is asked only before text would leave your device: it
 translation actually takes, so adding a key later brings the notice before anything is sent. The
 provider's own terms and privacy policy govern what it does with the text. Use a local model for sensitive pages.
 
+**Reading aloud.** "Read aloud" on a block reads its translation or its original with the voice chosen in
+Settings › Voice, only when you press it (and, with "keep reading" on, the blocks after it).
+
+- **The system voice** (the default) is Chrome's speech on your computer and sends nothing. Chrome's own network voices
+  (named "Google …", marked "online" in the list) send the text to Google; they are used only if you pick one.
+- **A voice provider of your own** (Gemini, an OpenAI-compatible server, Azure Speech, ElevenLabs, Google Cloud
+  Text-to-Speech, Vbee or FPT.AI) receives the text of each block it reads, with the voice and language, and your key
+  for that provider. Gemini also receives a short note on how to read it (tone, stress), and an OpenAI model that
+  takes instructions receives it as `instructions`. The browser connects to the provider directly; Chrome asks you
+  for access to that provider's address when you save it. Settings › Voice says which provider receives the text.
+  On a site on your never-translate list, and on a site whose rule is local-only, a provider's voice is not used:
+  the system voice reads instead.
+- **Preparing the text for a provider's voice.** Once a page is being translated, before a provider's voice reads a
+  block, the extension asks the
+  translation model of the page (the same route as the translation, so a local-only site stays on your computer) to
+  write the block out as it should be spoken and to add that note. This sends the block and the blocks just before
+  and after it. It is skipped, and the block is read as it is, while the first-run notice is unanswered, past your
+  spend limit, or when only Chrome's Translator is set up. What it costs counts in Settings › Usage and cost as "Voice prep".
+- A voice provider's key can be your translation key for the same service (Gemini, or OpenAI at its own address):
+  the voice settings then only point to it; the key is not copied, and it is sent only to that same service.
+- Voice requests are not priced, so they do not count toward your spend limit; the provider bills them to your key.
+
 **Plain HTTP.** Provider addresses must use HTTPS, with one exception: `http://` is accepted only for this computer
 (`localhost`, `127.0.0.0/8`, `[::1]`) and for your local network (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
 and `*.local` names), and the Providers screen then says "Unencrypted: only use this on a network you trust." Any
@@ -102,8 +126,8 @@ other `http://` address is refused, so page text never crosses the internet unen
 
 | Where | What | Leaves the device? |
 |---|---|---|
-| Extension local storage (`storage.local`) | Your API keys, one per connection. The first-run notice acknowledgement and the setup guide's state. The diagnostics log. The usage and cost totals (token counts and estimated cost by month, day and model profile). The "Use corrections from other sites" setting. Whether the selection button shows on every site (per device, like the access it needs, and not in the settings export file). Settings too large to sync. | No. Keys are never synced. |
-| Extension sync storage (`storage.sync`) | Connections (name, address, protocol), models, routing and site rules, preferences (languages, style, per-page token budget), the quality mode, the reading settings (theme, typeface, text size, line width), your glossary, and your allowlist and never-translate lists. No keys and no page text. | Only through Chrome Sync, if you have it turned on: it goes to your Google account, with your other Chrome devices. |
+| Extension local storage (`storage.local`) | Your API keys, one per connection, and one per voice provider. The first-run notice acknowledgement and the setup guide's state. The diagnostics log. The usage and cost totals (token counts and estimated cost by month, day and model profile). The "Use corrections from other sites" setting. Whether the selection button shows on every site (per device, like the access it needs, and not in the settings export file). Settings too large to sync. | No. Keys are never synced. |
+| Extension sync storage (`storage.sync`) | Connections (name, address, protocol), models, routing and site rules, preferences (languages, style, per-page token budget), the quality mode, the reading settings (theme, typeface, text size, line width), the voice settings (which voice, the voice for each language, keep reading, and the voice providers' addresses, regions and models), your glossary, and your allowlist and never-translate lists. No keys and no page text. | Only through Chrome Sync, if you have it turned on: it goes to your Google account, with your other Chrome devices. |
 | Browser database (IndexedDB `translate-side-memory`) | Your corrections: the original text of the block, your version, the languages, when you made it, and the site (its address up to the host) you made it on. Whether it was made on a site that is local-only is also kept. At most 5,000 entries. | No, never synced. Only through the export file you save yourself (see "Your corrections"). |
 | Browser database (IndexedDB `translate-side-cache`) | Translations already made (the translated text, found again by a hash of the source text and settings), and the short document briefs, each found by the page address it was made for. At most 50 MB of translations and 200 briefs, oldest unused first. | No. |
 | Per-session storage (`storage.session`) | Per tab: whether the page could be read, the selected text and its page address for a context-menu translation, and a per-tab provider choice. | No. Chrome clears it when the browser closes. |
@@ -111,7 +135,7 @@ other `http://` address is refused, so page text never crosses the internet unen
 
 Keys are saved as Chrome stores any extension data: in your browser profile on disk, not encrypted by the extension.
 Anyone who can read your computer account can read them. Settings › Export and import settings writes the settings to a file you
-choose; API keys are left out unless you tick "include keys" and confirm.
+choose; API keys are left out unless you tick "include keys" and confirm. Voice providers' keys are never in the file.
 
 ## Your corrections
 
@@ -231,6 +255,26 @@ Stored on the device
   reading settings) and public/theme-boot.js (reads it before the first paint).
 - Reading settings in storage.sync: src/shared/reading.ts (READING_KEY).
 - Export leaves keys out by default: src/shared/portable.ts:1-10.
+
+Reading aloud
+- The system voice: chrome.tts on the device, a network ("remote") voice used only when picked by name:
+  src/tts/system.ts (rankVoices, pickVoice). Permission `tts`: wxt.config.ts.
+- A voice provider receives only the text it reads, the voice, the language and the key; the note only for providers
+  that take one: src/tts/cloud/cloud-engine.ts (notePart), src/tts/cloud/*.ts (one request each), src/tts/presets.ts
+  (`instructions`, the origin asked for). The permission is asked in the Save click, for that origin:
+  src/entrypoints/options/Voice.tsx (AddProvider onSubmit).
+- Keys: storage.local `ttsSecret:tts-<provider>` (apart from translation keys), or a reference to a translation
+  connection of the same service (`keyFrom`), only at the provider's own address: src/tts/settings.ts
+  (cleanTtsConnection, sameService, readTtsKey).
+- No cloud voice on a never-translate or local-only page (the system voice reads): src/entrypoints/sidepanel/App.tsx
+  (cloudAllowed), src/entrypoints/sidepanel/jobs.ts (localOnly), src/entrypoints/sidepanel/read-aloud.ts (effective). Settings export carries no
+  voice key, and an import that moves a voice provider drops its saved key: src/shared/portable.ts (buildExport,
+  importVoice, resolveImport).
+- Text preparation: only for a page with a translation job, on its translate route, skipped without the privacy acknowledgement, past the spend limit or
+  with only Chrome's Translator; the block and its neighbours; spend as `voice-prep`:
+  src/entrypoints/sidepanel/jobs.ts (speechClient), src/entrypoints/sidepanel/read-aloud.ts (voicePrepVia),
+  src/tts/prepare.ts, src/engine/prompts/tts-prepare.ts, src/shared/spend.ts (VOICE_PREP_SPEND_ID).
+- Read only on a press: src/entrypoints/sidepanel/SegmentList.tsx (ReadButtons), src/tts/controller.ts.
 
 Corrections and examples
 - The memory database, its fields and its export file (no origin; the local-only mark kept): src/shared/memory.ts

@@ -399,6 +399,7 @@ describe('usage per model, the estimate and the soft limit (plan M4-E10)', () =>
         [DEFAULT_PROFILE.id]: { model: DEFAULT_PROFILE.model, usd: 0.7, input: 20000, cachedInput: 0, output: 6000, unpricedTokens: 0 },
         gone: { model: 'old-model', usd: 0.2, input: 7000, cachedInput: 0, output: 2000, unpricedTokens: 0 },
         local: { model: 'qwen3:8b', usd: 0, input: 3000, cachedInput: 0, output: 1000, unpricedTokens: 4000 },
+        'voice-prep': { model: 'qwen3.8-flash', usd: 0.01, input: 900, cachedInput: 0, output: 300, unpricedTokens: 0 },
       },
     };
     f.local.set('spend', spend);
@@ -411,6 +412,7 @@ describe('usage per model, the estimate and the soft limit (plan M4-E10)', () =>
     expect(rows).toEqual([
       [`${DEFAULT_PROFILE.model} · ${DEFAULT_CONNECTION.label}`, formatUsd(0.7), '20,000 / 6,000'],
       ['old-model (removed)', formatUsd(0.2), '7,000 / 2,000'],
+      ['Voice prep (qwen3.8-flash)', formatUsd(0.01), '900 / 300'],
       ['qwen3:8b (removed)', 'no price', '3,000 / 1,000'],
     ]);
   });

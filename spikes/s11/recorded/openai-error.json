@@ -1,0 +1,40 @@
+{
+  "recordedAt": "2026-10-26T14:52:01.586Z",
+  "request": {
+    "url": "https://api.openai.com/v1/audio/speech",
+    "method": "POST",
+    "headerNames": [
+      "Content-Type",
+      "Authorization"
+    ],
+    "contentType": "application/json",
+    "body": {
+      "model": "gpt-4o-mini-tts",
+      "input": "Xin chào. Đây là đoạn thử giọng đọc tiếng Việt cho tiện ích dịch trang. Hôm nay trời đẹp, chúng ta cùng đọc sách nhé.",
+      "voice": "marin",
+      "instructions": "Read clearly and calmly, like a narrator reading an article aloud.",
+      "response_format": "mp3"
+    }
+  },
+  "response": {
+    "status": 401,
+    "contentType": "text/plain",
+    "headers": {
+      "content-type": "text/plain",
+      "content-length": "281",
+      "x-request-id": "req_d33ec86b39bb45f69a85ee4bc18904cd"
+    },
+    "ms": 446,
+    "body": {
+      "json": {
+        "error": {
+          "message": "Incorrect API key provided: sk-s11-i***********************0000. You can find your API key at https://platform.openai.com/account/api-keys.",
+          "type": "invalid_request_error",
+          "code": "invalid_api_key",
+          "param": null
+        },
+        "status": 401
+      }
+    }
+  }
+}

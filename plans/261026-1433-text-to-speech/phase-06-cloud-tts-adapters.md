@@ -1,7 +1,7 @@
 ---
 phase: 6
 title: "Cloud TTS adapters"
-status: pending
+status: done
 priority: P1
 effort: "2d"
 dependencies: [2, 5]

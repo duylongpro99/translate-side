@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "Read-aloud controls in the panel"
-status: pending
+status: done
 priority: P1
 effort: "1.5d"
 dependencies: [3]

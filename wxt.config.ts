@@ -17,7 +17,7 @@ export default defineConfig({
     description: '__MSG_extDescription__',
     // 138: built-in AI baseline. Newer features are gated by availability checks, not version.
     minimum_chrome_version: '138',
-    permissions: ['sidePanel', 'storage', 'activeTab', 'scripting', 'contextMenus'],
+    permissions: ['sidePanel', 'storage', 'activeTab', 'scripting', 'contextMenus', 'tts'],
     // Requested at runtime, per origin: provider endpoints, and sites the user allowlists.
     // http://*/* covers LAN gateways and plain-HTTP sites (decision S5, ROADMAP §8 item 19).
     optional_host_permissions: ['https://*/*', 'http://*/*', 'http://localhost/*', 'http://127.0.0.1/*'],

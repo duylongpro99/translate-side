@@ -3,7 +3,8 @@
 // The file holds what storage.sync holds for the user: connections, model profiles, routing with
 // its site rules, preferences, the personal glossary and the site lists. API keys (storage.local
 // `secret:<id>`, §4.3.4) are left out unless the user ticks "include keys" and confirms. Device-only
-// data (the spend log, the privacy acknowledgement, onboarding, the cache) never goes in.
+// data (the spend log, the privacy acknowledgement, onboarding, the cache) never goes in. The voice
+// settings (src/tts/settings.ts) travel too, never with a key: a voice provider's key stays here.
 //
 // A file is untrusted input (§8): it is parsed, bounded and cleaned field by field, and nothing it
 // says is applied until the user has seen what it would change. An import merges: records the file
@@ -51,6 +52,7 @@ import { cleanSiteList, readSiteLists, SITE_ALLOWLIST_KEY, SITE_NEVER_KEY, siteP
 import { cleanQuality, hasKnownQuality, QUALITY_KEY, readQuality, type Quality } from './quality.ts';
 import { cleanReading, hasKnownReading, READING_KEY, readReading, type Reading } from './reading.ts';
 import { assertFits, saveListWithOverflow } from './sync-quota.ts';
+import { cleanTtsConnection, cleanTtsSettings, readTtsConnections, readTtsSettings, TTS_KEY, ttsConnKey, ttsSecretKey, type TtsConnection, type TtsSettings } from '@/tts/settings';
 
 type Browser = typeof browser;
 
@@ -90,6 +92,8 @@ export interface ExportFile {
     quality?: Quality;
     /** The reading settings (their own sync item); a file from before they existed has none. */
     reading?: Reading;
+    /** The voice settings and the voice providers set up (never their keys); a file from before them has none. */
+    voice?: { settings: TtsSettings; connections: TtsConnection[] };
     glossary: GlossaryEntry[];
     siteAllowlist: string[];
     siteNever: string[];
@@ -164,7 +168,7 @@ function redactConnection(c: ProviderConnection, omitted: string[]): ProviderCon
  * A connection's test outcome is device state, so it is written as unverified.
  */
 export async function buildExport(api: Browser, { includeKeys = false, now = () => new Date() }: { includeKeys?: boolean; now?: () => Date } = {}): Promise<ExportResult> {
-  const [settings, prefs, quality, reading, glossary, lists] = await Promise.all([readProviderSettings(api), readPreferences(api), readQuality(api), readReading(api), readGlossary(api), readSiteLists(api)]);
+  const [settings, prefs, quality, reading, glossary, lists, voiceSettings, voiceConnections] = await Promise.all([readProviderSettings(api), readPreferences(api), readQuality(api), readReading(api), readGlossary(api), readSiteLists(api), readTtsSettings(api), readTtsConnections(api)]);
   const implicit = settings.implicit ?? { connections: [], profiles: [] };
   const omitted: string[] = [];
   const connections = settings.connections
@@ -199,6 +203,7 @@ export async function buildExport(api: Browser, { includeKeys = false, now = () 
       prefs,
       quality,
       reading,
+      voice: { settings: voiceSettings, connections: voiceConnections },
       glossary,
       siteAllowlist: lists.allow,
       siteNever: lists.never,
@@ -237,6 +242,7 @@ export interface ImportPlan {
   prefs?: Partial<Preferences>;
   quality?: Quality;
   reading?: Reading;
+  voice?: { settings: TtsSettings; connections: TtsConnection[] };
   glossary?: GlossaryEntry[];
   allow?: string[];
   never?: string[];
@@ -387,6 +393,24 @@ function capped<T>(list: readonly T[], max: number, what: Capped, notes: string[
   return list.slice(0, max);
 }
 
+const MAX_VOICE_CONNECTIONS = 20;
+
+/** The voice settings and providers in a file, cleaned; a provider this build does not know is skipped and noted. */
+function importVoice(raw: unknown, notes: string[]): ImportPlan['voice'] {
+  if (raw === undefined) return undefined;
+  if (!isRecord(raw)) {
+    notes.push(i18n.t('options.portable.skipVoice'));
+    return undefined;
+  }
+  const list = Array.isArray(raw.connections) ? raw.connections.slice(0, MAX_VOICE_CONNECTIONS) : [];
+  const connections = list.flatMap((c) => cleanTtsConnection(c) ?? []);
+  if (connections.length < list.length) notes.push(i18n.t('options.portable.skipVoice'));
+  // The picked voices are left out: a system voice's name is this computer's, and a name from another one could be a network voice that sends text to Google.
+  const settings = { ...cleanTtsSettings(raw.settings), voices: {} };
+  // A cloud voice whose provider is not in the file and not set up here reads with the system voice (cleaned on read).
+  return { settings, connections };
+}
+
 /** Reads `text` as a settings file. Nothing is written; the result is what the file would bring. */
 export function parseImport(text: string): ParseResult {
   if (text.length > MAX_IMPORT_BYTES) return { ok: false, error: i18n.t('options.portable.tooLarge') };
@@ -428,6 +452,7 @@ export function parseImport(text: string): ParseResult {
   if (s.quality !== undefined && quality === undefined) notes.push(i18n.t('options.portable.skipQuality'));
   const reading = isRecord(s.reading) && hasKnownReading(s.reading) ? cleanReading(s.reading) : undefined;
   if (s.reading !== undefined && reading === undefined) notes.push(i18n.t('options.portable.skipReading'));
+  const voice = importVoice(s.voice, notes);
 
   const keys: Record<string, string> = {};
   if (root.keys !== undefined) {
@@ -451,6 +476,7 @@ export function parseImport(text: string): ParseResult {
       ...(prefs && Object.keys(prefs).length > 0 ? { prefs } : {}),
       ...(quality ? { quality } : {}),
       ...(reading ? { reading } : {}),
+      ...(voice ? { voice } : {}),
       ...(glossary ? { glossary } : {}),
       ...(Array.isArray(s.siteAllowlist) ? { allow: cleanSiteList(s.siteAllowlist) } : {}),
       ...(Array.isArray(s.siteNever) ? { never: cleanSiteList(s.siteNever) } : {}),
@@ -470,6 +496,7 @@ export interface ImportReport {
   prefs: boolean;
   quality: boolean;
   reading: boolean;
+  voice: boolean;
   glossary: number | null;
   sites: { allow: number; never: number };
   /**
@@ -578,6 +605,10 @@ async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKey
   if (plan.prefs) items[PREFS_KEY] = { ...prefs, ...plan.prefs };
   if (plan.quality) items[QUALITY_KEY] = plan.quality;
   if (plan.reading) items[READING_KEY] = plan.reading;
+  if (plan.voice) {
+    items[TTS_KEY] = plan.voice.settings;
+    for (const c of plan.voice.connections) items[ttsConnKey(c.id)] = c;
+  }
 
   let glossaryCount: number | null = null;
   if (plan.glossary && plan.glossary.length > 0) {
@@ -627,6 +658,12 @@ async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKey
     }
     redirects.push({ id: c.id, label: current.label, from: redactAddress(current.baseUrl).url, to: redactAddress(c.baseUrl).url, changed, keyAction });
   }
+  // A voice provider pointed at another server, or now reusing a translation key, drops the key saved for it here.
+  const storedVoice = plan.voice ? await readTtsConnections(api) : [];
+  for (const c of plan.voice?.connections ?? []) {
+    const current = storedVoice.find((x) => x.id === c.id);
+    if (current && (current.baseUrl !== c.baseUrl || c.keyFrom !== undefined) && typeof local[ttsSecretKey(c.id)] === 'string') removeSecrets.push(ttsSecretKey(c.id));
+  }
   const endpoints = [...new Set(plan.connections.map((c) => redactAddress(c.baseUrl).url).filter((u) => u !== ''))];
   return {
     items,
@@ -640,6 +677,7 @@ async function resolveImport(api: Browser, plan: ImportPlan, { withKeys, keepKey
       prefs: plan.prefs !== undefined,
       quality: plan.quality !== undefined,
       reading: plan.reading !== undefined,
+      voice: plan.voice !== undefined,
       glossary: glossaryCount,
       sites: { allow: plan.allow?.length ?? 0, never: plan.never?.length ?? 0 },
       keys: { inFile, wouldWrite, wouldReplace, written: Object.keys(secrets).length, removed: removeSecrets.length },

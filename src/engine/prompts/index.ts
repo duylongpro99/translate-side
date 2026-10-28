@@ -6,8 +6,9 @@ import { explainV1 } from './explain.ts';
 import { createPromptRegistry } from './registry.ts';
 import { reviewV1, reviewV2 } from './review.ts';
 import { translateV1, translateV2 } from './translate.ts';
+import { ttsPrepareV1 } from './tts-prepare.ts';
 
-export const PROMPTS = [translateV1, translateV2, analyzeV1, explainV1, reviewV1, reviewV2] as const;
+export const PROMPTS = [translateV1, translateV2, analyzeV1, explainV1, reviewV1, reviewV2, ttsPrepareV1] as const;
 
 export function createDefaultPromptRegistry() {
   return createPromptRegistry(PROMPTS);

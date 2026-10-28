@@ -1,0 +1,74 @@
+{
+ "date": "2026-10-26T15:58:05.977Z",
+ "corpus": "corpus-vi.json",
+ "foreignWords": "g2p-en.ts (phonemize@2.0.1)",
+ "oraclePhonemizer": "piper_phonemize==1.1.0",
+ "sentences": 300,
+ "syllables": 4090,
+ "exactSyllableMatch": 0.9988,
+ "matchIgnoringStressMark": 0.9988,
+ "toneMatch": 0.9995,
+ "sentencesAllSyllablesExact": 0.9833,
+ "sentencesWholeStringExact": 0.9833,
+ "byGroup": {
+  "tones": {
+   "total": 610,
+   "exact": 610,
+   "rate": 1
+  },
+  "vowel clusters": {
+   "total": 819,
+   "exact": 819,
+   "rate": 1
+  },
+  "finals and onsets": {
+   "total": 721,
+   "exact": 720,
+   "rate": 0.9986
+  },
+  "everyday prose": {
+   "total": 1300,
+   "exact": 1297,
+   "rate": 0.9977
+  },
+  "numbers": {
+   "total": 640,
+   "exact": 639,
+   "rate": 0.9984
+  }
+ },
+ "vietnameseSyllables": 4080,
+ "vietnameseSyllableExactMatch": 0.9998,
+ "mismatches": [
+  {
+   "count": 1,
+   "word": "puly",
+   "ours": "pˈʌli",
+   "oracle": "pjˈuːli"
+  },
+  {
+   "count": 1,
+   "word": "internet",
+   "ours": "ˈɪntənˌɛt",
+   "oracle": "ˌintəːnˈɛɜt"
+  },
+  {
+   "count": 1,
+   "word": "vitamin",
+   "ours": "vˈaɪtəmən",
+   "oracle": "vˈɪtəmɪn"
+  },
+  {
+   "count": 1,
+   "word": "đoòng",
+   "ours": "ɗˈɔ2ŋ",
+   "oracle": "ɗwˈɔ2ŋ"
+  },
+  {
+   "count": 1,
+   "word": "kg",
+   "ours": "kɡ",
+   "oracle": "kˌaːðˈe7"
+  }
+ ]
+}

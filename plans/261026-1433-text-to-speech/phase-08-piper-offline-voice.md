@@ -1,7 +1,7 @@
 ---
 phase: 8
 title: "Piper offline voice"
-status: pending
+status: deferred
 priority: P2
 effort: "2.5d"
 dependencies: [1, 3, 5]
@@ -15,6 +15,10 @@ Ship the S10 result as an engine. Under Settings › Voice, a "Download offline 
 en voice weights, checks their SHA-256, and caches them. Piper then reads any block offline, with no key.
 
 This phase runs only if S10 was a go.
+
+**Deferred by the owner on 2026-10-27.** S10 passed its measured gates, but the only medium Vietnamese voice
+(`vais1000`) was fine-tuned from `lessac`, whose data is under a research-only licence. The S10 record keeps the
+pinned revision, hashes and the G2P for a later start.
 
 ## Files to create / modify
 

@@ -52,6 +52,13 @@ selection, so a user can translate a passage without translating the whole page;
 Choosing the item is the user action. The selected text is sent to the user's chosen provider, and nothing else is
 added to the menu.
 
+### `tts`
+
+Reads a block of the page aloud, its translation or its original, when the user presses "Read aloud" on it in the
+panel, with a voice of the user's computer (Chrome's text-to-speech). It is the zero-setup voice: nothing is
+downloaded and no key is needed. Chrome's network voices are used only if the user picks one in Settings › Voice.
+Chrome shows no install warning for this permission.
+
 ### Keyboard shortcut (`commands`)
 
 `_execute_action` with the suggested key `Alt+T` toggles the panel, as the toolbar icon does. It needs no permission
@@ -65,6 +72,10 @@ for **one provider origin or one site at a time**, with a Chrome prompt, in resp
 back when the setting that needed it is removed, unless another setting still uses the same host. The one exception is
 reason 3, an option that is off by default and asks for both broad patterns. There are three reasons to ask, and the
 patterns below are the only ones the extension can ask for.
+
+A voice provider the user adds in Settings › Voice (reason 1's twin: a text-to-speech endpoint such as
+`generativelanguage.googleapis.com`, `*.tts.speech.microsoft.com` or `api.elevenlabs.io`) is asked for the same way,
+for that provider's origin only, in the Save click.
 
 1. **A provider endpoint.** The extension calls the AI provider the user configured, from the browser, with the
    user's key. When the user presses Test connection on a connection in Settings › Providers, or "Grant access" in
@@ -125,6 +136,7 @@ the user's click, as Chrome components; they are not code of the extension and n
 ## Data
 
 Page text and the user's glossary go only to the provider the user chose (see the [privacy policy](../privacy.md)).
+A block read aloud goes to the voice provider the user added, if any; the default voice is the computer's own.
 With no provider set up, Chrome's on-device APIs translate the page and no page text leaves the device.
 There is no developer server, no telemetry and no account.
 

@@ -5,6 +5,7 @@ import { readApiKey, saveApiKey, savePreferences, saveGlossary, readPreferences,
 import { readSiteLists } from './sites.ts';
 import { QUALITY_KEY, readQuality, updateQuality } from './quality.ts';
 import { READING_KEY, readReading, updateReading } from './reading.ts';
+import { readTtsConnections, readTtsSettings, saveTtsConnection, updateTtsSettings } from '@/tts/settings';
 
 type Api = Parameters<typeof buildExport>[0];
 
@@ -448,5 +449,45 @@ describe('the reading settings travel with the file', () => {
       expect(skipped.reading).toBeUndefined();
       expect(skipped.notes.join(' ')).toContain('reading settings');
     }
+  });
+});
+
+describe('voice settings', () => {
+  it('travel without the voice provider’s key, even when keys are included', async () => {
+    const src = fakeApi();
+    await saveTtsConnection(src.api, { id: 'tts-azure', presetId: 'azure', baseUrl: '', region: 'eastus' }, 'azure-SECRET-key');
+    await updateTtsSettings(src.api, { engine: 'cloud', connectionId: 'tts-azure', voices: { vi: 'vi-VN-HoaiMyNeural' }, readOn: false });
+    const { json } = await buildExport(src.api, { includeKeys: true });
+    expect(json).not.toContain('azure-SECRET-key');
+    const parsed = parseImport(json);
+    if (!parsed.ok) throw new Error(parsed.error);
+    const fresh = fakeApi();
+    const report = await applyImport(fresh.api, parsed.plan, { withKeys: true });
+    expect(report.voice).toBe(true);
+    expect(await readTtsSettings(fresh.api)).toEqual({ engine: 'cloud', connectionId: 'tts-azure', voices: {}, readOn: false });
+    expect(await readTtsConnections(fresh.api)).toEqual([{ id: 'tts-azure', presetId: 'azure', baseUrl: 'https://{region}.tts.speech.microsoft.com', region: 'eastus' }]);
+    expect([...fresh.local.keys()].filter((k) => /secret/i.test(k))).toEqual([]);
+  });
+
+  it('drop the key saved here when the file points a voice provider at another server', async () => {
+    const t = fakeApi();
+    await saveTtsConnection(t.api, { id: 'tts-openai', presetId: 'openai', baseUrl: '' }, 'openai-key');
+    const file = { format: EXPORT_FORMAT, formatVersion: EXPORT_VERSION, settings: { voice: { settings: {}, connections: [{ presetId: 'openai', baseUrl: 'https://evil.example/v1' }] } } };
+    const parsed = parseImport(JSON.stringify(file));
+    if (!parsed.ok) throw new Error(parsed.error);
+    await applyImport(t.api, parsed.plan, { withKeys: false });
+    expect(await readTtsConnections(t.api)).toMatchObject([{ baseUrl: 'https://evil.example/v1' }]);
+    expect(t.local.has('ttsSecret:tts-openai')).toBe(false);
+  });
+
+  it('never let a file send a translation key to a server it names', () => {
+    const file = { format: EXPORT_FORMAT, formatVersion: EXPORT_VERSION, settings: { voice: { connections: [{ presetId: 'openai', baseUrl: 'https://evil.example/v1', keyFrom: 'openai' }, { presetId: 'gemini', keyFrom: 'gemini' }, { presetId: 'nope' }] } } };
+    const parsed = parseImport(JSON.stringify(file));
+    if (!parsed.ok) throw new Error(parsed.error);
+    expect(parsed.plan.voice?.connections.map((c) => [c.id, c.keyFrom])).toEqual([
+      ['tts-openai', undefined],
+      ['tts-gemini', 'gemini'],
+    ]);
+    expect(parsed.plan.notes.length).toBeGreaterThan(0);
   });
 });

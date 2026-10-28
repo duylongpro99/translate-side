@@ -1,0 +1,174 @@
+{
+ "date": "2026-10-26T15:55:22.094Z",
+ "machine": {
+  "cpu": "Apple M1 Pro",
+  "cores": 10,
+  "memGB": 16,
+  "os": "Darwin 25.6.0"
+ },
+ "browser": "156.0.8078.4",
+ "blocks": {
+  "vi": {
+   "chars": 178,
+   "text": "Hà Nội đang bước vào những ngày đẹp nhất của mùa thu, khi gió heo may tràn về trên các con phố cổ. Nhiều người dân tranh thủ buổi sáng sớm để đi dạo quanh hồ Gươm và thưởng thức."
+  },
+  "en": {
+   "chars": 195,
+   "text": "The city council approved the new budget on Tuesday after a long debate about public transport and housing. Officials said the plan would add more buses and repair several bridges by next spring."
+  }
+ },
+ "configs": {
+  "threads=1": {
+   "vi": {
+    "load": {
+     "bytes": 63201294,
+     "downloadMs": 0,
+     "cacheReadMs": 78.54000002145767,
+     "sessionCreateMs": 989.8700000047684,
+     "totalMs": 1075.6650000214577,
+     "crossOriginIsolated": true,
+     "threads": 1
+    },
+    "coldFirstAudioMsApprox": 2049,
+    "firstRun": {
+     "chars": 178,
+     "sentences": 2,
+     "firstSentenceChars": 134,
+     "g2pMs": 2.8299999833106995,
+     "firstInferenceMs": 802.2549999952316,
+     "firstAudioMs": 966.625,
+     "totalInferenceMs": 1441.3100000023842,
+     "audioSeconds": 8.649433106575964,
+     "rtf": 0.16663635434171858
+    },
+    "warmMedian": {
+     "g2pMs": 0.3199999928474426,
+     "firstAudioMs": 778.0799999833107,
+     "totalInferenceMs": 1401.3150000274181,
+     "audioSeconds": 8.521723356009069,
+     "rtf": 0.16399348118315094
+    },
+    "warmMedianClauseChunks": {
+     "firstAudioMs": 424.05000001192093,
+     "rtf": 0.16303059033662487,
+     "chunks": 3
+    },
+    "sentences": 2,
+    "firstSentenceChars": 134
+   },
+   "en": {
+    "load": {
+     "bytes": 63531379,
+     "downloadMs": 0,
+     "cacheReadMs": 45.08500000834465,
+     "sessionCreateMs": 1015.3849999904633,
+     "totalMs": 1064.0200000107288,
+     "crossOriginIsolated": true,
+     "threads": 1
+    },
+    "coldFirstAudioMsApprox": 1983,
+    "firstRun": {
+     "chars": 195,
+     "sentences": 2,
+     "firstSentenceChars": 117,
+     "g2pMs": 8.979999989271164,
+     "firstInferenceMs": 904.8550000190735,
+     "firstAudioMs": 916.375,
+     "totalInferenceMs": 1673.3700000047684,
+     "audioSeconds": 10.611519274376416,
+     "rtf": 0.15769372478505003
+    },
+    "warmMedian": {
+     "g2pMs": 1.4600000083446503,
+     "firstAudioMs": 899.2099999785423,
+     "totalInferenceMs": 1704.6399999856949,
+     "audioSeconds": 10.890158730158731,
+     "rtf": 0.15548226148430538
+    },
+    "warmMedianClauseChunks": {
+     "firstAudioMs": 894.7300000190735,
+     "rtf": 0.1561257593173095,
+     "chunks": 2
+    },
+    "sentences": 2,
+    "firstSentenceChars": 117
+   }
+  },
+  "threads=4": {
+   "vi": {
+    "load": {
+     "bytes": 63201294,
+     "downloadMs": 0,
+     "cacheReadMs": 38.189999997615814,
+     "sessionCreateMs": 921.8950000107288,
+     "totalMs": 963.1500000059605,
+     "crossOriginIsolated": true,
+     "threads": 4
+    },
+    "coldFirstAudioMsApprox": 1244,
+    "firstRun": {
+     "chars": 178,
+     "sentences": 2,
+     "firstSentenceChars": 134,
+     "g2pMs": 1.9300000071525574,
+     "firstInferenceMs": 273.97500002384186,
+     "firstAudioMs": 278.13499999046326,
+     "totalInferenceMs": 479.4800000488758,
+     "audioSeconds": 8.649433106575964,
+     "rtf": 0.0554348469016239
+    },
+    "warmMedian": {
+     "g2pMs": 0.24000000953674316,
+     "firstAudioMs": 258.7199999988079,
+     "totalInferenceMs": 465.5,
+     "audioSeconds": 8.672653061224489,
+     "rtf": 0.05323977519796594
+    },
+    "warmMedianClauseChunks": {
+     "firstAudioMs": 135.8149999976158,
+     "rtf": 0.05319520369959481,
+     "chunks": 3
+    },
+    "sentences": 2,
+    "firstSentenceChars": 134
+   },
+   "en": {
+    "load": {
+     "bytes": 63531379,
+     "downloadMs": 0,
+     "cacheReadMs": 40.03000000119209,
+     "sessionCreateMs": 1003.9800000190735,
+     "totalMs": 1047.5699999928474,
+     "crossOriginIsolated": true,
+     "threads": 4
+    },
+    "coldFirstAudioMsApprox": 1363,
+    "firstRun": {
+     "chars": 195,
+     "sentences": 2,
+     "firstSentenceChars": 117,
+     "g2pMs": 7.4000000059604645,
+     "firstInferenceMs": 302.59999999403954,
+     "firstAudioMs": 312.47499999403954,
+     "totalInferenceMs": 568.1349999904633,
+     "audioSeconds": 11.215238095238096,
+     "rtf": 0.050657417628225745
+    },
+    "warmMedian": {
+     "g2pMs": 1.5499999821186066,
+     "firstAudioMs": 290.2549999952316,
+     "totalInferenceMs": 554.1899999976158,
+     "audioSeconds": 11.250068027210883,
+     "rtf": 0.04926103545837941
+    },
+    "warmMedianClauseChunks": {
+     "firstAudioMs": 288.46499997377396,
+     "rtf": 0.04917704033185336,
+     "chunks": 2
+    },
+    "sentences": 2,
+    "firstSentenceChars": 117
+   }
+  }
+ }
+}

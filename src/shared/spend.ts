@@ -18,6 +18,8 @@ export const SPEND_MONTHS = 12;
 /** Days kept in the per-day list (the oldest go first): enough for this month and the last. */
 export const SPEND_DAYS = 62;
 export const SPEND_LIMIT_KEY = 'spendLimit';
+/** The per-profile entry for what text preparation for cloud voices cost (src/tts/prepare.ts); settings name it "Voice prep". */
+export const VOICE_PREP_SPEND_ID = 'voice-prep';
 
 /** One model profile's share (M4-E10 usage per profile). */
 export interface ProfileSpend {

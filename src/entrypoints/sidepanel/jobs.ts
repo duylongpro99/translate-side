@@ -47,7 +47,7 @@ import type { Detection } from '@/shared/language';
 import { entryId, MEMORY_IDS_LOGGED, type JobRecord } from '@/shared/diagnostics';
 import { i18n } from '#i18n';
 import { uiError } from './status.ts';
-import type { LimitReached, SpendDelta } from '@/shared/spend';
+import { VOICE_PREP_SPEND_ID, type LimitReached, type SpendDelta } from '@/shared/spend';
 import type { ModelProfile } from '@/shared/settings';
 
 export type SegStatus = 'pending' | 'streaming' | 'final' | 'failed';
@@ -1581,6 +1581,43 @@ export class Jobs {
       set(signal.aborted ? undefined : { status: 'failed', error: { kind: 'unknown', message: err instanceof Error ? err.message : String(err), raw: err } });
     } finally {
       if (job.retrying.get(id) === controller) job.retrying.delete(id);
+    }
+  }
+
+  /**
+   * Whether a local-only site rule covers the page: its text must not reach a cloud voice either.
+   * The rule is read on its own, so it counts even when the route can't be resolved (no key, no
+   * access); a rule or route that can't be read is taken as local-only, to be safe.
+   */
+  async localOnly(target: ClientTarget): Promise<boolean> {
+    try {
+      if (this.deps.siteLocalOnly && (await this.deps.siteLocalOnly(target.url).catch(() => true))) return true;
+      const resolved = await this.deps.translateClient(target);
+      return resolved.ok && resolved.localOnly !== undefined;
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * The client a cloud voice's text preparation (src/tts/prepare.ts) may use for a page: its
+   * translate route, so a local-only site stays on the device. Never waits and never asks: it is
+   * undefined while the privacy notice is unanswered for a route that leaves the device, past the
+   * spend limit, without a language model (Chrome's Translator) or on any failure, and the voice
+   * then reads the text as it is. What the call spends is counted under VOICE_PREP_SPEND_ID.
+   */
+  async speechClient(target: ClientTarget): Promise<{ client: LLMClient; spend(usage: UsageTotals): void } | undefined> {
+    try {
+      const resolved = await this.deps.translateClient(target);
+      if (!resolved.ok || resolved.onDevice === 'translator') return undefined;
+      const gate = this.deps.privacy;
+      const offDevice = resolved.onDevice === undefined || (resolved.fallback?.length ?? 0) > 0;
+      if (gate && offDevice && !gate.acknowledged()) return undefined;
+      if (await this.deps.spendLimit?.().catch(() => undefined)) return undefined;
+      const { client, profile } = resolved;
+      return { client, spend: (usage) => this.deps.onSpend?.({ usage, usd: costUsd(profile.pricing, usage), profileId: VOICE_PREP_SPEND_ID, model: client.model }) };
+    } catch {
+      return undefined;
     }
   }
 

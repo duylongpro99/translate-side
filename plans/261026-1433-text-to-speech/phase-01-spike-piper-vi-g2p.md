@@ -1,7 +1,7 @@
 ---
 phase: 1
 title: "Spike S10: Piper Vietnamese without espeak-ng"
-status: pending
+status: done
 priority: P1
 effort: "2d"
 dependencies: []

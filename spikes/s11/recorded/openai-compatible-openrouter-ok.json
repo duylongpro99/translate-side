@@ -1,0 +1,33 @@
+{
+  "recordedAt": "2026-10-26T14:51:55.322Z",
+  "request": {
+    "url": "https://openrouter.ai/api/v1/audio/speech",
+    "method": "POST",
+    "headerNames": [
+      "Content-Type",
+      "Authorization"
+    ],
+    "contentType": "application/json",
+    "body": {
+      "model": "fish-audio/s2.1-pro-free:free",
+      "input": "Xin chào. Đây là đoạn thử giọng đọc tiếng Việt cho tiện ích dịch trang. Hôm nay trời đẹp, chúng ta cùng đọc sách nhé.",
+      "response_format": "mp3",
+      "instructions": "Read clearly and calmly, like a narrator reading an article aloud."
+    }
+  },
+  "response": {
+    "status": 200,
+    "contentType": "audio/mpeg",
+    "headers": {
+      "content-type": "audio/mpeg",
+      "transfer-encoding": "chunked",
+      "access-control-allow-origin": "*"
+    },
+    "ms": 6999,
+    "body": {
+      "base64Head": "//uQxAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "totalBytes": 137925,
+      "note": "first 300 bytes of the real audio"
+    }
+  }
+}

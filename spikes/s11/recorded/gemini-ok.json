@@ -1,0 +1,94 @@
+{
+  "recordedAt": "2026-10-26T14:50:45.919Z",
+  "request": {
+    "url": "https://generativelanguage.googleapis.com/v1beta/interactions",
+    "method": "POST",
+    "headerNames": [
+      "Content-Type",
+      "x-goog-api-key"
+    ],
+    "contentType": "application/json",
+    "body": {
+      "model": "gemini-3.8-flash-tts",
+      "input": [
+        {
+          "type": "user_input",
+          "content": [
+            {
+              "type": "text",
+              "text": "Xin chào. Đây là đoạn thử giọng đọc tiếng Việt cho tiện ích dịch trang. Hôm nay trời đẹp, chúng ta cùng đọc sách nhé.",
+              "annotations": [
+                {
+                  "type": "speech_metadata",
+                  "style": "Read clearly and calmly, like a narrator reading an article aloud."
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "response_format": {
+        "type": "audio"
+      },
+      "generation_config": {
+        "speech_config": [
+          {
+            "voice": "Kore"
+          }
+        ]
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "contentType": "application/json",
+    "headers": {
+      "content-type": "application/json",
+      "transfer-encoding": "chunked"
+    },
+    "ms": 7501,
+    "body": {
+      "json": {
+        "id": "v1_Chd2bWpmYXF2WU9jSDgxZThQN3JuRG1BRRIXdm1qZmFxdllPY0g4MWU4UDdybkRtQUU",
+        "status": "completed",
+        "usage": {
+          "total_tokens": 224,
+          "total_input_tokens": 30,
+          "input_tokens_by_modality": [
+            {
+              "modality": "text",
+              "tokens": 30
+            }
+          ],
+          "total_cached_tokens": 0,
+          "total_output_tokens": 194,
+          "output_tokens_by_modality": [
+            {
+              "modality": "audio",
+              "tokens": 194
+            }
+          ],
+          "total_tool_use_tokens": 0,
+          "total_thought_tokens": 0
+        },
+        "created": "2026-10-26T14:50:42Z",
+        "updated": "2026-10-26T14:50:42Z",
+        "service_tier": "standard",
+        "steps": [
+          {
+            "content": [
+              {
+                "data": "UklGRtzGBQBXQVZFZm10IBAAAAABAAEAwF0AAIC7AAACABAAZGF0YQCvBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//AAAAAAAA",
+                "mime_type": "audio/wav",
+                "type": "audio"
+              }
+            ],
+            "type": "model_output"
+          }
+        ],
+        "object": "interaction",
+        "model": "gemini-3.8-flash-tts"
+      }
+    }
+  }
+}

@@ -1,0 +1,112 @@
+{
+ "date": "2026-10-26T15:28:10.497Z",
+ "sentences": 130,
+ "targets": {
+  "en": {
+   "oracle": "piper_phonemize==1.1.0 voice en",
+   "piper-plus@0.4.2 (raw)": {
+    "per": 0.4562,
+    "perWithStress": 0.5512,
+    "sentencesExact": 0,
+    "worst": [
+     {
+      "text": "The electric bicycle has a top speed of 25 mph and a maximum range of 40 miles per charge.",
+      "ours": "ðə ˈɛlˈɛktɹˈɪk bˈɪkjklˈɛ hæz ə tˈɑp spˈiːd ʌv mf ænd ə mˈæksˈɪmˈʌm ɹˈæŋˈɛ ʌv mˈɪlˈɛs pˈɛɹ tʃˈæɹɡˈɛ.",
+      "oracle": "ðɪ ɪlˈɛktɹɪk bˈaɪsɪkəl hɐz ɐ tˈɒp spˈiːd ɒv twˈɛnti fˈaɪv ˌɛmpˌiːˈeɪtʃ and ɐ mˈaksɪməm ɹˈeɪndʒ ɒv fˈɔːti mˈaɪlz pɜː tʃˈɑːdʒ.",
+      "per": 0.589
+     },
+     {
+      "text": "The utility company reported that renewable energy sources accounted for 42% of total generation last year.",
+      "ours": "ðə ˈʌtˈɪlˈɪtj kˈɑmpˈænj ɹˈɛpˈɑːɹtˈɛd ðæt ɹˈɛnˈɛwˈæblˈɛ ˈɛnˈɛɹɡj sˈaʊɹkˈɛs ˈækkˈaʊntˈɛd fɔːɹ ʌv tˈɑtˈæl ɡˈɛnˈɛɹˈætˈɪˈɑn lˈæst jˈiːɹ.",
+      "oracle": "ðə juːtˈɪlɪti kˈʌmpəni ɹɪpˈɔːtɪd ðat ɹɪnjˈuːəbəl ˈɛnədʒi sˈɔːsɪz ɐkˈaʊntɪd fɔː fˈɔːti tˈuː pəsˈɛnt ɒv tˈəʊtəl dʒˌɛnəɹˈeɪʃən lˈast jˈiə.",
+      "per": 0.588
+     },
+     {
+      "text": "The historic theater in Melbourne opened its doors in 1886 and continues to host major musical productions.",
+      "ours": "ðə hˈɪstˈɑːɹˈɪk θˈiːtˈɛɹ ɪn mˈɛlbˈaʊɹnˈɛ ˈɑpˈɛnˈɛd ɪts dˈuːɹs ɪn ænd kˈɑntˈɪnˈʌˈɛs tuː hˈɑst mˈædʒˈɑːɹ mˈʌsˈɪkˈæl pɹˈɑdˈʌktˈɪˈɑns.",
+      "oracle": "ðə hɪstˈɒɹɪk θˈiətəɹ ɪn mˈɛlbən ˈəʊpənd ɪts dˈɔːz ɪn wˈɒn θˈaʊzənd ˈeɪthˈʌndɹɪdən ˈeɪti sˈɪks and kəntˈɪnjuːz tə hˈəʊst mˈeɪdʒə mjˈuːzɪkəl pɹədˈʌkʃənz.",
+      "per": 0.579
+     }
+    ]
+   },
+   "phonemize@2.0.1 + espeak adapter (g2p-en.ts)": {
+    "per": 0.1307,
+    "perWithStress": 0.1569,
+    "sentencesExact": 3,
+    "worst": [
+     {
+      "text": "The ancient amphitheater in Plovdiv was unearthed during infrastructure renovations in the late 1970s.",
+      "ours": "ðɪ ˈeɪnʃənt əmfɪðˈiːtə ɪn plˈɒvdɪv wɒz ˈənɜːθt dˈɜːɪŋ ˌɪnfɹəstɹˈʌktʃə ɹˈɛnəvˌeɪʃənz ɪn ðə lˈeɪt s.",
+      "oracle": "ðɪ ˈeɪnʃənt ˈamfɪθˌiːeɪtəɹ ɪn plˈəʊvdɪv wɒz ʌnˈɜːθt djˈʊəɹɪŋ ˈɪnfɹəstɹˌʌktʃə ɹˌɛnəvˈeɪʃənz ɪnðə lˈeɪt nˈaɪntiːnhˈʌndɹɪdən sˈɛvənti z.",
+      "per": 0.346
+     },
+     {
+      "text": "The historical treaty was signed in Vienna in 1815, reshaping European political boundaries for decades.",
+      "ours": "ðˈə hɪstˈɔːɹɪkəl tɹˈiːti wˈɒz sˈaɪnd ˈɪn viːˈɛnə ˈɪn ˈeɪtiːn fˈɪftiːn, ɹiːʃˈeɪpɪŋ jˌʊɹəpˈiːən pəlˈɪtəkəl bˈaʊndəiːz fˈəː dˈɛkeɪdz.",
+      "oracle": "ðə hɪstˈɒɹɪkəl tɹˈiːti wɒz sˈaɪnd ɪn vɪˈɛnəɹ ɪn wˈɒn θˈaʊzənd ˈeɪthˈʌndɹɪdən fˈɪftiːn, ɹɪʃˈeɪpɪŋ jˌʊəɹəpˈiən pəlˈɪtɪkəl bˈaʊndəɹiz fɔː dˈɛkeɪdz.",
+      "per": 0.282
+     },
+     {
+      "text": "The premium subscription plan costs $14.99 per month and includes ad-free streaming in high definition.",
+      "ours": "ðˈə pɹˈiːmiːəm səbskɹˈɪpʃən plˈan kˈɒsts fˈuːtiːn dˈɒlɑːz ˈənd nˈaɪnti nˈaɪn sˈɛnts pˈɜː mˈʌnθ ˈənd ˌɪŋklˈuːdz ˈad- fɹˈi stɹˈiːmɪŋ ˈɪn hˈaɪ dˌɛfənˈɪʃən.",
+      "oracle": "ðə pɹˈiːmiəm sʌbskɹˈɪpʃən plˈan kˈɒsts dˈɒlə fˈɔːtiːn pɔɪnt nˈaɪn nˈaɪn pɜː mˈʌnθ and ɪŋklˈuːdz ˈadfɹˈiː stɹˈiːmɪŋ ɪn hˈaɪ dˌɛfɪnˈɪʃən.",
+      "per": 0.26
+     }
+    ]
+   }
+  },
+  "en-us": {
+   "oracle": "piper_phonemize==1.1.0 voice en-us",
+   "piper-plus@0.4.2 (raw)": {
+    "per": 0.424,
+    "perWithStress": 0.5192,
+    "sentencesExact": 0,
+    "worst": [
+     {
+      "text": "The utility company reported that renewable energy sources accounted for 42% of total generation last year.",
+      "ours": "ðə ˈʌtˈɪlˈɪtj kˈɑmpˈænj ɹˈɛpˈɑːɹtˈɛd ðæt ɹˈɛnˈɛwˈæblˈɛ ˈɛnˈɛɹɡj sˈaʊɹkˈɛs ˈækkˈaʊntˈɛd fɔːɹ ʌv tˈɑtˈæl ɡˈɛnˈɛɹˈætˈɪˈɑn lˈæst jˈiːɹ.",
+      "oracle": "ðə juːtˈɪlᵻɾi kˈʌmpəni ɹᵻpˈoːɹɾᵻd ðæt ɹᵻnˈuːəbəl ˈɛnɚdʒi sˈoːɹsᵻz ɐkˈaʊntᵻd fɔːɹ fˈoːɹɾi tˈuː pɚsˈɛnt ʌv tˈoʊɾəl dʒˌɛnɚɹˈeɪʃən lˈæst jˈɪɹ.",
+      "per": 0.562
+     },
+     {
+      "text": "The historic theater in Melbourne opened its doors in 1886 and continues to host major musical productions.",
+      "ours": "ðə hˈɪstˈɑːɹˈɪk θˈiːtˈɛɹ ɪn mˈɛlbˈaʊɹnˈɛ ˈɑpˈɛnˈɛd ɪts dˈuːɹs ɪn ænd kˈɑntˈɪnˈʌˈɛs tuː hˈɑst mˈædʒˈɑːɹ mˈʌsˈɪkˈæl pɹˈɑdˈʌktˈɪˈɑns.",
+      "oracle": "ðə hɪstˈɔːɹɪk θˈiəɾɚɹ ɪn mˈɛlbɚn ˈoʊpənd ɪts dˈoːɹz ɪn wˈʌn θˈaʊzənd ˈeɪthˈʌndɹɪd ˈeɪɾi sˈɪks ænd kəntˈɪnjuːz tə hˈoʊst mˈeɪdʒɚ mjˈuːzɪkəl pɹədˈʌkʃənz.",
+      "per": 0.561
+     },
+     {
+      "text": "The solar farm generates enough electricity to power approximately 20,000 homes during peak daylight hours.",
+      "ours": "ðə sˈɑlˈæɹ fˈæɹm ɡˈɛnˈɛɹˈætˈɛs ˈɛnˈaʊɡh ˈɛlˈɛktɹˈɪkˈɪtj tuː pˈoʊˈɛɹ ˈæppɹˈɑksˈɪmˈætˈɛlj hˈɑmˈɛs dˈʌɹˈɪŋ pˈiːk dˈeɪlˈaɪt hˈaʊɹs.",
+      "oracle": "ðə sˈoʊlɚ fˈɑːɹm dʒˈɛnɚɹˌeɪts ɪnˈʌf ᵻlɛktɹˈɪsᵻɾi tə pˈaʊɚɹ ɐpɹˈɑːksɪmətli twˈɛnti θˈaʊzənd hˈoʊmz dˈʊɹɹɪŋ pˈiːk dˈeɪlaɪt ˈaʊɚz.",
+      "per": 0.552
+     }
+    ]
+   },
+   "phonemize@2.0.1 + espeak adapter (g2p-en.ts)": {
+    "per": 0.1693,
+    "perWithStress": 0.1877,
+    "sentencesExact": 2,
+    "worst": [
+     {
+      "text": "The ancient amphitheater in Plovdiv was unearthed during infrastructure renovations in the late 1970s.",
+      "ours": "ðɪ ˈeɪnʃənt əmfɪðˈiːtɜː ɪn plˈɑːvdɪv wɑːz ənˈɜːθt dˈɜːɪŋ ˌɪnfɹəstɹˈʌktʃɜː ɹˈɛnəvˌeɪʃənz ɪn ðə lˈeɪt s.",
+      "oracle": "ðɪ ˈeɪntʃənt ˈæmfɪθˌiːeɪɾɚɹ ɪn plˈoʊvdɪv wʌz ʌnˈɜːθt dˈʊɹɹɪŋ ˈɪnfɹəstɹˌʌktʃɚ ɹˌɛnəvˈeɪʃənz ɪnðə lˈeɪt nˈaɪntiːnhˈʌndɹɪd sˈɛvənti z.",
+      "per": 0.392
+     },
+     {
+      "text": "The company reported a record net profit of $450 million for the fiscal year ending December 31.",
+      "ours": "ðˈə kˈʌmpəni ɹɪpˈɔːɹtɪd ˈə ɹˈɛkɜːd nˈɛt pɹˈɑːfət ˈəv fˈɔːɹ hˈʌndɜːd fˈɪfti dˈɑːlɑːɹz mˈɪljən fˈəɹ ðˈə fˈɪskəl jˈɪɹ ˈɛndɪŋ dɪsˈɛmbɜː θˈɜːdi wˈʌn.",
+      "oracle": "ðə kˈʌmpəni ɹᵻpˈoːɹɾᵻd ɐ ɹˈɛkɚd nˈɛt pɹˈɑːfɪt ʌv dˈɑːlɚ fˈoːɹhˈʌndɹɪd fˈɪfti mˈɪliən fɚðə fˈɪskəl jˈɪɹ ˈɛndɪŋ dᵻsˈɛmbɚ θˈɜːɾi wˈʌn.",
+      "per": 0.333
+     },
+     {
+      "text": "The subscription service offers unlimited access to a library of over 10,000 digital audiobooks and podcasts.",
+      "ours": "ðə səbskɹˈɪpʃən sˈɜːvəs ˈɑːfɜːz ənlˈɪmətɪd ˈæksˌɛs tə ə lˈaɪbɹɛɹi əv ˈoʊvɜː tˈɛn, zˈiːɹoʊ dˈɪdʒətəl ˈɔːdiːəbʊks ənd pˈɔːdkˌæsts.",
+      "oracle": "ðə sʌbskɹˈɪpʃən sˈɜːvɪs ˈɔfɚz ʌnlˈɪmɪɾᵻd ˈæksɛs tʊ ɐ lˈaɪbɹɛɹi ʌv ˌoʊvɚ tˈɛn θˈaʊzənd dˈɪdʒɪɾəl ˈɔːdɪˌoʊbʊks ænd pˈɑːdkæsts.",
+      "per": 0.309
+     }
+    ]
+   }
+  }
+ }
+}

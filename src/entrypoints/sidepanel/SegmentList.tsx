@@ -12,6 +12,7 @@ import { failureText } from './status.ts';
 import { blocksIn, handleBlockKey, rove } from './blocks-nav.ts';
 import { isRtl } from '@/shared/language';
 import type { Reading } from '@/shared/reading';
+import type { ReadSide, Speech } from './read-aloud.ts';
 
 /** Per-segment actions (M3-E8, M3-E5); absent for a list with nothing to act on. */
 export interface SegmentActions {
@@ -89,7 +90,12 @@ type Props = {
   editing?: boolean;
   /** This edited block's Retranslate asks "Replace your edit?". */
   confirming?: boolean;
+  /** The side of this block being read aloud. */
+  speaking?: ReadSide | undefined;
 };
+
+/** Read aloud's two actions; absent when the panel has no voice to offer. */
+const SpeechActions = createContext<Pick<Speech, 'read' | 'stop'> | undefined>(undefined);
 
 /** The list's one open editor and one open confirmation, and the way to open and close them. */
 interface ListUi {
@@ -141,14 +147,45 @@ export function blockName(seg: Segment): string {
   return words.slice(0, 6).join(' ') + (words.length > 6 ? '…' : '');
 }
 
-function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraft, editing }: Props) {
+/**
+ * Read aloud: the translation of a translated block, else its original; "Read original" too while
+ * the block shows its original. While a side is read, its button is Stop (Esc also stops).
+ */
+function ReadButtons({ seg, done, original, speaking }: { seg: Segment; done: boolean; original: boolean | undefined; speaking: ReadSide | undefined }) {
+  const speech = useContext(SpeechActions);
+  if (!speech || seg.kind === 'code' || !seg.text.trim()) return null;
+  const name = blockName(seg);
+  const button = (side: ReadSide, key: 'read' | 'readOriginal') =>
+    speaking === side ? (
+      <button type="button" key={key} class="seg__action seg__action--icon seg__action--stop-reading" data-testid="seg-read-stop" aria-pressed="true" aria-keyshortcuts="Escape" aria-label={i18n.t('panel.segment.stopReadingFor', [name])} {...tip(i18n.t('panel.segment.stopReadingTitle'), i18n.t('panel.segment.stopReading'))} onClick={speech.stop} />
+    ) : (
+      <button type="button" key={key} class={`seg__action seg__action--icon seg__action--${key === 'read' ? 'read' : 'read-original'}`} data-testid={key === 'read' ? 'seg-read' : 'seg-read-original'} aria-pressed="false" aria-label={i18n.t(key === 'read' ? 'panel.segment.readFor' : 'panel.segment.readOriginalFor', [name])} {...tip(i18n.t(key === 'read' ? (done ? 'panel.segment.readTitle' : 'panel.segment.readSourceTitle') : 'panel.segment.readOriginalTitle'), i18n.t(key === 'read' ? 'panel.segment.read' : 'panel.segment.readOriginal'))} onClick={() => speech.read(seg.id, side)} />
+    );
+  return (
+    <>
+      {button(done ? 'translation' : 'original', 'read')}
+      {done && original ? button('original', 'readOriginal') : null}
+    </>
+  );
+}
+
+function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraft, editing, speaking }: Props) {
   const ui = useContext(Ui);
+  const speech = useContext(SpeechActions);
   const [copied, setCopied] = useState<'ok' | 'failed' | undefined>();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
   const done = translated(state);
-  if ((!done && seg.kind !== 'code') || editing) return null;
+  if (editing) return null;
   const name = blockName(seg);
+  // A block with no translation yet (or none asked for) can still be read aloud in its own language.
+  if (!done && seg.kind !== 'code') {
+    return speech && seg.text.trim() ? (
+      <span class="seg__actions" role="group" aria-label={i18n.t('panel.segment.actionsFor', [name])}>
+        <ReadButtons seg={seg} done={false} original={false} speaking={speaking} />
+      </span>
+    ) : null;
+  }
   const copy = () => {
     writeClipboard(copyText(seg, state)).then(
       () => setCopied('ok'),
@@ -213,6 +250,7 @@ function BlockActions({ seg, state, actions, original, onOriginal, draft, onDraf
           {state?.explain ? <span class="sr-only">{explainText}</span> : null}
         </button>
       ) : null}
+      <ReadButtons seg={seg} done={done} original={original} speaking={speaking} />
       <button type="button" class={`seg__action seg__action--icon seg__action--${copied === 'ok' ? 'copied' : 'copy'}`} data-testid="seg-copy" aria-keyshortcuts="C" aria-label={i18n.t('panel.segment.copyFor', [name])} {...tip(i18n.t('panel.segment.copyTitle'), copyWord)} onClick={copy}>
         {copied ? <span class="sr-only">{copyWord}</span> : null}
       </button>
@@ -386,7 +424,7 @@ function langAttrs(seg: Segment, state: SegState | undefined, langs: { target?: 
   return langs.rtl ? { dir: langs.source ? 'ltr' : 'auto' } : {};
 }
 
-function statusAttrs(seg: Segment, state: SegState | undefined, extra = '') {
+function statusAttrs(seg: Segment, state: SegState | undefined, speaking?: ReadSide) {
   const status = seg.translate ? (state?.status ?? 'original') : 'kept';
   const refined = status === 'final' && state?.refined === true;
   const edited = status === 'final' ? state?.edited : undefined;
@@ -396,10 +434,11 @@ function statusAttrs(seg: Segment, state: SegState | undefined, extra = '') {
     'data-status': status,
     ...(refined ? { 'data-refined': 'true' } : {}),
     ...(edited ? { 'data-edited': edited } : {}),
+    ...(speaking ? { 'data-reading': speaking } : {}),
     // Focusable for the keyboard (src/entrypoints/sidepanel/blocks-nav.ts roves the one Tab stop); a block still arriving says so.
     tabIndex: -1,
     ...(status === 'streaming' || status === 'pending' ? { 'aria-busy': true } : {}),
-    class: `seg seg--${seg.kind} seg--${status}${refined ? ' seg--refined' : ''}${seg.hidden ? ' seg--hidden' : ''}${extra}`,
+    class: `seg seg--${seg.kind} seg--${status}${refined ? ' seg--refined' : ''}${seg.hidden ? ' seg--hidden' : ''}${speaking ? ' seg--reading' : ''}`,
   };
 }
 
@@ -492,7 +531,7 @@ function ExplainNote({ state }: Props) {
   );
 }
 
-const changed = (a: Props, b: Props) => a.seg !== b.seg || a.state !== b.state || a.original !== b.original || a.draft !== b.draft || a.model !== b.model || a.editing !== b.editing || a.confirming !== b.confirming;
+const changed = (a: Props, b: Props) => a.seg !== b.seg || a.state !== b.state || a.original !== b.original || a.draft !== b.draft || a.model !== b.model || a.editing !== b.editing || a.confirming !== b.confirming || a.speaking !== b.speaking;
 
 /** The block's text, or its editor while that is open. */
 function Shown(props: Props) {
@@ -516,7 +555,7 @@ class Block extends Component<Props> {
 
   override render(props: Props) {
     const { seg, state } = props;
-    const common = { ...statusAttrs(seg, state), ...langAttrs(seg, state, this.context as Langs) };
+    const common = { ...statusAttrs(seg, state, props.speaking), ...langAttrs(seg, state, this.context as Langs) };
     switch (seg.kind) {
       case 'heading':
         return (
@@ -574,7 +613,7 @@ class Cell extends Component<Props> {
 
   override render(props: Props) {
     const { seg, state } = props;
-    const { class: cls, ...attrs } = { ...statusAttrs(seg, state), ...langAttrs(seg, state, this.context as Langs) };
+    const { class: cls, ...attrs } = { ...statusAttrs(seg, state, props.speaking), ...langAttrs(seg, state, this.context as Langs) };
     return (
       <div {...attrs} class={cls.replace(`seg--${seg.kind}`, 'seg--table-cell')} role="cell">
         <Shown {...props} />
@@ -598,7 +637,7 @@ function tableOf(seg: Segment): string | undefined {
 type States = JobView['segs'] | undefined;
 
 /** Consecutive segments of one table, grouped into rows by groupId. */
-function Table({ cells, states, actions, originals, onOriginal, drafts, onDraft, model, editing, confirming }: { cells: Segment[]; states: States; actions?: SegmentActions | undefined; originals: ReadonlySet<string>; onOriginal?: ((id: string) => void) | undefined; drafts: ReadonlySet<string>; onDraft?: ((id: string) => void) | undefined; model?: string | undefined; editing: string | undefined; confirming: string | undefined }) {
+function Table({ cells, states, actions, originals, onOriginal, drafts, onDraft, model, editing, confirming, speaking }: { cells: Segment[]; states: States; actions?: SegmentActions | undefined; originals: ReadonlySet<string>; onOriginal?: ((id: string) => void) | undefined; drafts: ReadonlySet<string>; onDraft?: ((id: string) => void) | undefined; model?: string | undefined; editing: string | undefined; confirming: string | undefined; speaking: Speech['speaking'] }) {
   const rows: Segment[][] = [];
   for (const c of cells) {
     const row = rows[rows.length - 1];
@@ -610,7 +649,7 @@ function Table({ cells, states, actions, originals, onOriginal, drafts, onDraft,
       {rows.map((row) => (
         <div class="seg-row" role="row" key={row[0]?.id} data-group={row[0]?.groupId}>
           {row.map((c) => (
-            <Cell key={c.id} seg={c} state={states?.get(c.id)} actions={actions} original={originals.has(c.id)} onOriginal={onOriginal} draft={drafts.has(c.id)} onDraft={onDraft} model={model} editing={editing === c.id} confirming={confirming === c.id} />
+            <Cell key={c.id} seg={c} state={states?.get(c.id)} actions={actions} original={originals.has(c.id)} onOriginal={onOriginal} draft={drafts.has(c.id)} onDraft={onDraft} model={model} editing={editing === c.id} confirming={confirming === c.id} speaking={speaking?.id === c.id ? speaking.side : undefined} />
           ))}
         </div>
       ))}
@@ -620,7 +659,7 @@ function Table({ cells, states, actions, originals, onOriginal, drafts, onDraft,
 
 const MEASURE: Record<Reading['width'], string> = { narrow: '34em', medium: '40em', full: 'none' };
 
-export function SegmentList({ segments, states, actions, model, targetLang, sourceLang, busy, reading }: { segments: readonly Segment[]; states?: States; actions?: SegmentActions; model?: string; targetLang?: string; sourceLang?: string; busy?: boolean; reading?: Reading | undefined }) {
+export function SegmentList({ segments, states, actions, model, targetLang, sourceLang, busy, reading, speech }: { segments: readonly Segment[]; states?: States; actions?: SegmentActions; model?: string; targetLang?: string; sourceLang?: string; busy?: boolean; reading?: Reading | undefined; speech?: Speech | undefined }) {
   const root = useRef<HTMLDivElement>(null);
   // One Tab stop for the list, whatever re-rendered (a block that arrived, a button that appeared).
   useEffect(() => {
@@ -686,6 +725,12 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
   // Only a translated list has originals (and drafts) to show.
   const toggle = states ? onOriginal : undefined;
   const toggleDraft = states ? onDraft : undefined;
+  const speaking = speech?.speaking;
+  const speakingOf = (id: string) => (speaking?.id === id ? speaking.side : undefined);
+  // Stable while the list lives, so the toolbars do not re-render as reading moves.
+  const read = useRef(speech);
+  read.current = speech;
+  const speechActions = useMemo<Pick<Speech, 'read' | 'stop'>>(() => ({ read: (id, side) => read.current?.read(id, side), stop: () => read.current?.stop() }), []);
   const out: ComponentChildren[] = [];
   for (let i = 0; i < segments.length; ) {
     const seg = segments[i] as Segment;
@@ -693,7 +738,7 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
     if (table !== undefined) {
       let j = i;
       while (j < segments.length && tableOf(segments[j] as Segment) === table) j++;
-      out.push(<Table key={seg.id} cells={segments.slice(i, j)} states={states} actions={actions} originals={originals} onOriginal={toggle} drafts={drafts} onDraft={toggleDraft} model={model} editing={editing} confirming={confirming} />);
+      out.push(<Table key={seg.id} cells={segments.slice(i, j)} states={states} actions={actions} originals={originals} onOriginal={toggle} drafts={drafts} onDraft={toggleDraft} model={model} editing={editing} confirming={confirming} speaking={speaking} />);
       i = j;
     } else if (seg.kind === 'li') {
       // List items sit in a list, so a screen reader announces "list, 3 items".
@@ -702,18 +747,19 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
       out.push(
         <div class="seg-list" role="list" key={seg.id}>
           {segments.slice(i, j).map((li) => (
-            <Block key={li.id} seg={li} state={states?.get(li.id)} actions={actions} original={originals.has(li.id)} onOriginal={toggle} draft={drafts.has(li.id)} onDraft={toggleDraft} model={model} editing={editing === li.id} confirming={confirming === li.id} />
+            <Block key={li.id} seg={li} state={states?.get(li.id)} actions={actions} original={originals.has(li.id)} onOriginal={toggle} draft={drafts.has(li.id)} onDraft={toggleDraft} model={model} editing={editing === li.id} confirming={confirming === li.id} speaking={speakingOf(li.id)} />
           ))}
         </div>,
       );
       i = j;
     } else {
-      out.push(<Block key={seg.id} seg={seg} state={states?.get(seg.id)} actions={actions} original={originals.has(seg.id)} onOriginal={toggle} draft={drafts.has(seg.id)} onDraft={toggleDraft} model={model} editing={editing === seg.id} confirming={confirming === seg.id} />);
+      out.push(<Block key={seg.id} seg={seg} state={states?.get(seg.id)} actions={actions} original={originals.has(seg.id)} onOriginal={toggle} draft={drafts.has(seg.id)} onDraft={toggleDraft} model={model} editing={editing === seg.id} confirming={confirming === seg.id} speaking={speakingOf(seg.id)} />);
       i++;
     }
   }
   return (
     <Langs.Provider value={langs}>
+      <SpeechActions.Provider value={speech ? speechActions : undefined}>
       <Ui.Provider value={ui}>
       <div
         class="segments"
@@ -728,6 +774,7 @@ export function SegmentList({ segments, states, actions, model, targetLang, sour
           {out}
         </div>
       </Ui.Provider>
+      </SpeechActions.Provider>
     </Langs.Provider>
   );
 }

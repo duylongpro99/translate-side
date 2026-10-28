@@ -1,0 +1,169 @@
+{
+  "invalidKey": {
+    "recordedAt": "2026-10-26T14:53:09.829Z",
+    "request": {
+      "url": "https://api.elevenlabs.io/v1/text-to-speech/JBFqnCBsd6RMkjVDRZzb?output_format=mp3_44100_128",
+      "method": "POST",
+      "headerNames": [
+        "Content-Type",
+        "xi-api-key"
+      ],
+      "contentType": "application/json",
+      "body": {
+        "text": "Xin chào. Đây là đoạn thử giọng đọc tiếng Việt cho tiện ích dịch trang. Hôm nay trời đẹp, chúng ta cùng đọc sách nhé.",
+        "model_id": "eleven_flash_v2_5",
+        "language_code": "vi"
+      }
+    },
+    "response": {
+      "status": 401,
+      "contentType": "application/json",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "167",
+        "access-control-allow-origin": "*"
+      },
+      "ms": 353,
+      "body": {
+        "json": {
+          "detail": {
+            "type": "authentication_error",
+            "code": "unauthorized",
+            "message": "Invalid API key",
+            "status": "invalid_api_key",
+            "request_id": "bcae78619cc1b9b8ee5a10bba6bf6423"
+          }
+        }
+      }
+    }
+  },
+  "noKeyHeader": {
+    "recordedAt": "2026-10-26T14:53:10.216Z",
+    "request": {
+      "url": "https://api.elevenlabs.io/v1/text-to-speech/JBFqnCBsd6RMkjVDRZzb",
+      "method": "POST",
+      "headerNames": [
+        "Content-Type"
+      ],
+      "contentType": "application/json",
+      "body": {
+        "text": "hi",
+        "model_id": "eleven_flash_v2_5"
+      }
+    },
+    "response": {
+      "status": 401,
+      "contentType": "application/json",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "229",
+        "access-control-allow-origin": "*"
+      },
+      "ms": 121,
+      "body": {
+        "json": {
+          "detail": {
+            "type": "authentication_error",
+            "code": "unauthorized",
+            "message": "Neither authorization header nor xi-api-key received, please provide one.",
+            "status": "needs_authorization",
+            "request_id": "3be8f8bf4d78ba00ee5a10bba6bf6c97"
+          }
+        }
+      }
+    }
+  },
+  "models": {
+    "recordedAt": "2026-10-26T14:53:10.484Z",
+    "request": {
+      "url": "https://api.elevenlabs.io/v1/models",
+      "method": "GET",
+      "headerNames": [
+        "xi-api-key"
+      ]
+    },
+    "response": {
+      "status": 401,
+      "contentType": "application/json",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "167",
+        "access-control-allow-origin": "*"
+      },
+      "ms": 268,
+      "body": {
+        "json": {
+          "detail": {
+            "type": "authentication_error",
+            "code": "unauthorized",
+            "message": "Invalid API key",
+            "status": "invalid_api_key",
+            "request_id": "06e7c33b80d1af2a444a9c3752bbc1f8"
+          }
+        }
+      }
+    }
+  },
+  "voices": {
+    "recordedAt": "2026-10-26T14:53:10.760Z",
+    "request": {
+      "url": "https://api.elevenlabs.io/v2/voices?page_size=10",
+      "method": "GET",
+      "headerNames": [
+        "xi-api-key"
+      ]
+    },
+    "response": {
+      "status": 401,
+      "contentType": "application/json",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "167",
+        "access-control-allow-origin": "*"
+      },
+      "ms": 276,
+      "body": {
+        "json": {
+          "detail": {
+            "type": "authentication_error",
+            "code": "unauthorized",
+            "message": "Invalid API key",
+            "status": "invalid_api_key",
+            "request_id": "7e19a85bf56670c5ee5a10bba6bf655a"
+          }
+        }
+      }
+    }
+  },
+  "sharedVoicesVi": {
+    "recordedAt": "2026-10-26T14:53:11.018Z",
+    "request": {
+      "url": "https://api.elevenlabs.io/v1/shared-voices?language=vi&page_size=5",
+      "method": "GET",
+      "headerNames": [
+        "xi-api-key"
+      ]
+    },
+    "response": {
+      "status": 401,
+      "contentType": "application/json",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "167",
+        "access-control-allow-origin": "*"
+      },
+      "ms": 258,
+      "body": {
+        "json": {
+          "detail": {
+            "type": "authentication_error",
+            "code": "unauthorized",
+            "message": "Invalid API key",
+            "status": "invalid_api_key",
+            "request_id": "f7368e2eecb8b81b444a9c3752bbc26f"
+          }
+        }
+      }
+    }
+  }
+}
