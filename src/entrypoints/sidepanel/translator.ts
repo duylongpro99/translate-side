@@ -42,7 +42,14 @@ type Browser = typeof browser;
 export interface Translator {
   jobs: Jobs;
   /** The selection, translated on its own (plan M3-E4): its jobs (one per tab, same Jobs class) and the records behind them. */
-  snippets: { jobs: Jobs; store: SnippetStore; actions(tabId: number): JobActions; close(tabId: number): void };
+  snippets: {
+    jobs: Jobs;
+    store: SnippetStore;
+    actions(tabId: number): JobActions;
+    close(tabId: number): void;
+    /** Translates a selection handed over some other way than the panel's storage.session record (the selection popup's). */
+    take(tabId: number, record: SnippetRecord): Promise<void>;
+  };
   /** What is on screen per tab (scroll follow, plan M3-E7). */
   viewports: ViewportStore;
   /** Which block the pointer is over on each tab's page (hover link, plan M5-E1). */
@@ -71,8 +78,11 @@ export interface Translator {
     choose(tabId: number, profileId: string | undefined): Promise<void>;
     makeDefault(tabId: number, profileId: string): Promise<void>;
   };
-  /** Settings listeners and the panel-close cancel. Returns the cleanup. */
-  watch(activeTab: () => number | undefined): () => void;
+  /**
+   * Settings listeners and the panel-close cancel. Returns the cleanup. `selections: false` (the
+   * selection popup): no selection records are taken from storage.session, and none is cleared on close.
+   */
+  watch(activeTab: () => number | undefined, options?: { selections?: boolean }): () => void;
 }
 
 /** The job stopped because on-device translation can't run yet: Chrome may have changed that meanwhile. */
@@ -633,7 +643,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     },
   });
 
-  const watch = (activeTab: () => number | undefined) => {
+  const watch = (activeTab: () => number | undefined, { selections = true }: { selections?: boolean } = {}) => {
     /** A job that stopped for want of a key or access starts again once that is fixed. */
     const retryStopped = () => {
       const tabId = activeTab();
@@ -681,7 +691,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       jobs.cancelAll();
       snippetJobs.cancelAll();
       // A selection belongs to this panel's session: a reopened panel starts clean.
-      for (const tabId of snippetStore.tabs()) clearSnippet(api, tabId).catch(() => {});
+      if (selections) for (const tabId of snippetStore.tabs()) clearSnippet(api, tabId).catch(() => {});
     };
     api.storage.local.onChanged.addListener(onLocal);
     api.storage.sync.onChanged.addListener(onSync);
@@ -700,7 +710,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       if (stopped(snippetJobs)) void snippetJobs.resume(tabId);
     };
     api.permissions.onAdded.addListener(retryStopped);
-    api.storage.session.onChanged.addListener(onSession);
+    if (selections) api.storage.session.onChanged.addListener(onSession);
     addEventListener('pagehide', onPagehide);
     addEventListener('focus', onFocus);
     return () => {
@@ -715,5 +725,5 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     };
   };
 
-  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet }, viewports, hovers, privacy, prefs, offers, translatePage, allowSite, hooks, actions: pageActions, switcher, routed: (target) => routedSummary(api, target, scope), watch };
+  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet, take: takeSnippet }, viewports, hovers, privacy, prefs, offers, translatePage, allowSite, hooks, actions: pageActions, switcher, routed: (target) => routedSummary(api, target, scope), watch };
 }

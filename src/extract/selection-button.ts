@@ -1,7 +1,7 @@
 // The selection button (DESIGN.md §3): when the reader selects text on the page, the extension's
-// button shows at the end of the selection, and a click on it translates the selection in the side
-// panel, the same handover as the context menu. Nothing is read or sent before the click: the
-// selection is read when it settles only to decide whether to show the button.
+// button shows at the end of the selection, and a click on it translates the selection in a popup
+// next to it (an extension page in an iframe, src/entrypoints/selection-popup). Nothing is read or
+// sent before the click: the selection is read when it settles only to decide whether to show the button.
 //
 // The button lives in a closed shadow root on a fixed host with `all: initial`, so the page's CSS
 // can't restyle it, its own CSS can't leak out, and page scripts can't reach it. The host is added to
@@ -13,6 +13,7 @@
 // count-tracked button serves both (`acquireSelectionButton`).
 import { deepActiveElement, isEditable, isEditableDocument } from './editable.ts';
 import { MAX_SELECTION_CHARS } from '@/shared/snippet';
+import { POPUP_MESSAGE } from '@/shared/protocol';
 
 export interface SelectionButtonOptions {
   /** The button's accessible name. */
@@ -21,8 +22,15 @@ export interface SelectionButtonOptions {
   tip: string;
   /** Its icon (a data: URL, so the page needs no web-accessible resource). */
   icon: string;
-  /** Called with the selected text and its language (selectionLang) on a trusted click. */
-  onClick(text: string, lang: string): void;
+  /**
+   * Called with the selected text and its language (selectionLang) on a trusted click, and the id of
+   * the popup the click opens (when `popupUrl` is set).
+   */
+  onClick(text: string, lang: string, popup?: string): void;
+  /** The popup page; the click opens it at `${popupUrl}#${id}`. Absent: no popup, the click only calls onClick. */
+  popupUrl?: string;
+  /** The popup's accessible name (its frame's title). */
+  popupLabel?: string;
   /** How long a selection must stay unchanged before the button shows (ms). */
   settleMs?: number;
 }
@@ -33,8 +41,13 @@ export interface SelectionWatch {
 
 /** The host element's tag: a custom name no page styles. */
 export const HOST_TAG = 'translate-side-selection';
+/** The popup's host: its own element, so the button's keeps its one fixed box. */
+export const POPUP_TAG = 'translate-side-popup';
 const SIZE = 28;
 const GAP = 4;
+export const POPUP_WIDTH = 360;
+export const POPUP_MIN_HEIGHT = 96;
+export const POPUP_MAX_HEIGHT = 420;
 
 /**
  * Form fields and editable regions, whose text is never read (decision D24), wherever the selection or
@@ -96,6 +109,140 @@ export function placeButton(
   return { left, top };
 }
 
+/**
+ * Where the popup goes: under the selection's last line, from its start (its end in right-to-left
+ * text), else above it, kept inside the window.
+ */
+export function placePopup(
+  rect: { top: number; bottom: number; left: number; right: number },
+  size: { width: number; height: number },
+  view: { width: number; height: number },
+  rtl = false,
+): { left: number; top: number; width: number } {
+  const width = Math.min(size.width, view.width - 2 * GAP);
+  const start = rtl ? rect.right - width : rect.left;
+  const left = Math.min(Math.max(GAP, start), view.width - width - GAP);
+  const below = rect.bottom + GAP;
+  const above = rect.top - GAP - size.height;
+  const top = below + size.height + GAP <= view.height || above < GAP ? Math.max(GAP, Math.min(below, view.height - size.height - GAP)) : above;
+  return { left, top, width };
+}
+
+const POPUP_STYLE = `
+iframe {
+  all: initial;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgb(0 0 0 / 0.14);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.22);
+  color-scheme: normal;
+}
+`;
+
+/** `scheme://host` of a URL: URL.origin is "null" for a scheme it doesn't know, such as chrome-extension: outside Chrome. */
+const originOf = (url: string) => url.slice(0, url.indexOf('/', url.indexOf('//') + 2));
+
+export interface SelectionPopup {
+  /** Opens the popup page (`url`, with `#id`) next to `range`, replacing a popup already open. */
+  open(url: string, id: string, range: Range, rtl: boolean): void;
+  /** Closes it: its frame is dropped, which ends its page and any translation still running in it. */
+  close(): void;
+  /** Places it again by its selection (the page scrolled or the window changed). */
+  place(): void;
+  /** Whether the event happened on the popup. */
+  contains(e: Event): boolean;
+  stop(): void;
+}
+
+/**
+ * The selection button's popup: an extension page in an iframe, in a closed shadow root on its own
+ * fixed host, built on first use and then only restyled. Once the frame has loaded, the content
+ * script hands the page a private MessageChannel port, posted only to the extension's origin with the
+ * popup's id, which the page around it never sees; the popup's height and close requests come back on
+ * that port alone. The popup stays hidden until it answers there. The popup page never navigates
+ * itself, so a second load means some other page is in the frame now: the popup closes.
+ */
+export function createSelectionPopup(win: Window, label: string): SelectionPopup {
+  const doc = win.document;
+  let host: HTMLElement | undefined;
+  let root: ShadowRoot | undefined;
+  let open: { frame: HTMLIFrameElement; range: Range; rtl: boolean; height: number; port?: MessagePort } | undefined;
+
+  const place = () => {
+    if (!open || !host) return;
+    const rects = open.range.getClientRects();
+    const last = rects[rects.length - 1] ?? open.range.getBoundingClientRect();
+    const { left, top, width } = placePopup(last, { width: POPUP_WIDTH, height: open.height }, { width: win.innerWidth, height: win.innerHeight }, open.rtl);
+    Object.assign(host.style, { left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${open.height}px` });
+  };
+
+  const close = () => {
+    if (!open) return;
+    open.port?.close();
+    open.frame.remove();
+    open = undefined;
+    if (host) host.style.display = 'none';
+  };
+
+  const onPopupMessage = (data: { type?: unknown; height?: unknown; close?: unknown } | null) => {
+    if (!open || data?.type !== POPUP_MESSAGE) return;
+    if (data.close === true) return close();
+    if (typeof data.height === 'number' && Number.isFinite(data.height)) {
+      open.height = Math.min(POPUP_MAX_HEIGHT, Math.max(POPUP_MIN_HEIGHT, Math.ceil(data.height)));
+      place();
+      if (host) host.style.display = 'block';
+    }
+  };
+
+  return {
+    open(url, id, range, rtl) {
+      close();
+      if (!host?.isConnected) {
+        host = doc.createElement(POPUP_TAG);
+        host.style.cssText = 'all: initial; position: fixed; z-index: 2147483647; display: none;';
+        root = host.attachShadow({ mode: 'closed' });
+        const style = doc.createElement('style');
+        style.textContent = POPUP_STYLE;
+        root.append(style);
+        doc.documentElement.append(host);
+      }
+      const frame = doc.createElement('iframe');
+      // Chrome's on-device translator, language detector and model, delegated to the frame
+      // (Permissions Policy): a cross-origin frame has none of them otherwise.
+      frame.setAttribute('allow', 'translator; language-detector; language-model');
+      frame.title = label;
+      const current: NonNullable<typeof open> = { frame, range, rtl, height: POPUP_MIN_HEIGHT };
+      let loads = 0;
+      frame.addEventListener('load', () => {
+        if (open !== current) return;
+        if (++loads > 1) return close();
+        const channel = new MessageChannel();
+        channel.port1.onmessage = (e) => {
+          if (open === current) onPopupMessage(e.data as Parameters<typeof onPopupMessage>[0]);
+        };
+        current.port = channel.port1;
+        frame.contentWindow?.postMessage({ type: POPUP_MESSAGE, id }, originOf(url), [channel.port2]);
+      });
+      frame.src = `${url}#${id}`;
+      open = current;
+      root?.append(frame);
+      place();
+    },
+    close,
+    place,
+    contains: (e) => host !== undefined && e.composedPath().includes(host),
+    stop() {
+      close();
+      host?.remove();
+      host = undefined;
+    },
+  };
+}
+
 const STYLE = `
 button {
   all: initial;
@@ -123,6 +270,7 @@ export function watchSelection(win: Window, opts: SelectionButtonOptions): Selec
   let host: HTMLElement | undefined;
   let button: HTMLButtonElement | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const popup = createSelectionPopup(win, opts.popupLabel ?? opts.label);
   // Esc or a context menu put the button away until the reader selects again: the key or mouse
   // release that follows would otherwise bring it straight back.
   let dismissed = false;
@@ -147,8 +295,15 @@ export function watchSelection(win: Window, opts: SelectionButtonOptions): Selec
       if (!e.isTrusted) return;
       const text = eligibleSelection(win);
       const lang = text ? selectionLang(win) : '';
+      const sel = win.getSelection();
+      const range = text && sel && sel.rangeCount > 0 ? sel.getRangeAt(sel.rangeCount - 1).cloneRange() : undefined;
+      const rtl = isRtl();
       hide();
-      if (text) opts.onClick(text, lang);
+      if (!text) return;
+      if (opts.popupUrl === undefined || range === undefined) return opts.onClick(text, lang);
+      const id = crypto.randomUUID();
+      opts.onClick(text, lang, id);
+      popup.open(opts.popupUrl, id, range, rtl);
     });
     root.append(style, button);
     doc.documentElement.append(host);
@@ -159,6 +314,12 @@ export function watchSelection(win: Window, opts: SelectionButtonOptions): Selec
     if (host) host.style.display = 'none';
   };
 
+  const isRtl = () => {
+    const node = win.getSelection()?.focusNode;
+    const end = node?.nodeType === 1 ? (node as Element) : node?.parentElement;
+    return end ? win.getComputedStyle(end).direction === 'rtl' : false;
+  };
+
   const update = () => {
     const sel = win.getSelection();
     const text = eligibleSelection(win);
@@ -166,9 +327,7 @@ export function watchSelection(win: Window, opts: SelectionButtonOptions): Selec
     const last = rects?.[rects.length - 1];
     if (!last || dismissed) return hide();
     if (!host?.isConnected) build();
-    const end = sel?.focusNode?.nodeType === 1 ? (sel.focusNode as Element) : sel?.focusNode?.parentElement;
-    const rtl = end ? win.getComputedStyle(end).direction === 'rtl' : false;
-    const { left, top } = placeButton(last, { width: win.innerWidth, height: win.innerHeight }, rtl);
+    const { left, top } = placeButton(last, { width: win.innerWidth, height: win.innerHeight }, isRtl());
     const style = (host as HTMLElement).style;
     style.left = `${left}px`;
     style.top = `${top}px`;
@@ -179,7 +338,7 @@ export function watchSelection(win: Window, opts: SelectionButtonOptions): Selec
     clearTimeout(timer);
     timer = setTimeout(update, ms);
   };
-  const ours = (e: Event) => host !== undefined && e.composedPath().includes(host);
+  const ours = (e: Event) => (host !== undefined && e.composedPath().includes(host)) || popup.contains(e);
   const onSelectionChange = () => {
     const sel = win.getSelection();
     if (!sel || sel.isCollapsed) hide();
@@ -197,10 +356,18 @@ export function watchSelection(win: Window, opts: SelectionButtonOptions): Selec
     // Only a plain primary press can start a new selection; the others open a context menu.
     dismissed = e.button !== 0 || e.ctrlKey;
     hide();
+    popup.close();
   };
   const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') dismiss();
-    else if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) dismissed = false;
+    if (e.key === 'Escape') {
+      dismiss();
+      popup.close();
+    } else if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) dismissed = false;
+  };
+  // The button goes; the popup follows its selection.
+  const onScroll = () => {
+    hide();
+    popup.place();
   };
 
   const listeners: [EventTarget, string, EventListener, AddEventListenerOptions][] = [
@@ -210,8 +377,8 @@ export function watchSelection(win: Window, opts: SelectionButtonOptions): Selec
     [doc, 'mousedown', onPress as EventListener, { capture: true }],
     [doc, 'contextmenu', dismiss, { capture: true }],
     [doc, 'keydown', onKey as EventListener, { capture: true }],
-    [win, 'scroll', hide, { capture: true, passive: true }],
-    [win, 'resize', hide, { passive: true }],
+    [win, 'scroll', onScroll, { capture: true, passive: true }],
+    [win, 'resize', onScroll, { passive: true }],
   ];
   for (const [target, type, fn, o] of listeners) target.addEventListener(type, fn, o);
 
@@ -221,6 +388,7 @@ export function watchSelection(win: Window, opts: SelectionButtonOptions): Selec
       for (const [target, type, fn, o] of listeners) target.removeEventListener(type, fn, o);
       host?.remove();
       host = undefined;
+      popup.stop();
     },
   };
 }

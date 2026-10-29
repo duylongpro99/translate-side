@@ -31,13 +31,19 @@ panel asks you to read its notice again.
   Chrome, unless a provider connection still uses that host. Sites on your never-translate list are not read.
 - **A selection.** "Translate in side panel" on selected text, or a click on the extension's button that shows at the
   end of a selection, sends that text, up to 20,000 characters. The button shows on a page where the panel is open. It
-  never shows in text fields, password fields or other editable areas.
+  never shows in text fields, password fields or other editable areas. The button's translation shows in a small popup
+  next to the text (only on http and https pages; on a local file the click opens the side panel). The popup is a page
+  of the extension, so the website can't read it. Closing the popup ends its translation and drops the text; a tab
+  keeps at most one popup's text in the extension's memory, which is dropped when the tab closes or the browser
+  quits. The first-run privacy notice and the spend limit's "Continue anyway" are only in the side panel, which a
+  website can't cover with something else.
 - **The selection button on every site (off unless you turn it on).** Settings › Site rules › "Show the translate
   button when I select text on any site" asks Chrome for access to all sites, so the button can show on any page,
   even with the panel closed. On each page, a small script then checks your selection only to decide whether to show
   the button. It reads nothing else on the page, and nothing leaves the page until you click the button; then only
-  the selected text is translated, as above. The panel that opens reads the page so it can offer it, but the page is
-  sent only if you then press "Translate this page" (or the site is on your allowlist). The setting applies to this
+  the selected text is translated, as above, in the popup. Nothing else on the page is read. If you choose "Open in
+  side panel" in the popup, the panel reads the page so it can offer it, but the page is sent only if you then press
+  "Translate this page" (or the site is on your allowlist). The setting applies to this
   device only, like Chrome's access. Mail and sign-in sites and your never-translate sites get no button (a
   page already open when you add its site to the never-translate list keeps it until it reloads, but its click then
   sends nothing).
@@ -187,7 +193,8 @@ Read only on an action, or on an allowlisted site
 - Selection button: shown only for a settled selection outside fields and editable regions, sends only on a trusted
   click: src/extract/selection-button.ts (eligibleSelection, the click handler); the worker checks the sender's
   address against the denylist and the never-translate list: src/shared/panel.ts (listenForSelectionButton,
-  handOverSelection). The click asks for the selection only: the page is offered, not translated (the `selection`
+  selectionRecord). The popup hears only its own frame, and the worker hears Open in side panel only from the popup page
+  in the selection's tab: src/extract/selection-button.ts (createSelectionPopup), src/shared/panel.ts (popupToPanel). The click asks for the selection only: the page is offered, not translated (the `selection`
   trigger): src/shared/inject.ts (InjectTrigger), src/entrypoints/sidepanel/controller.ts (refresh).
 - Selection button on every site: off by default, access requested on the click, script registered only while the
   option is on and the access held, excluding denylisted and never-translate hosts, access kept on turn-off, the
