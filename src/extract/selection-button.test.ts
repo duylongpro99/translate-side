@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MAX_SELECTION_CHARS } from '@/shared/snippet';
-import { acquireSelectionButton, eligibleSelection, HOST_TAG, placeButton, selectionLang, watchSelection } from './selection-button.ts';
+import { POPUP_MESSAGE } from '@/shared/protocol';
+import { acquireSelectionButton, createSelectionPopup, eligibleSelection, HOST_TAG, placeButton, placePopup, POPUP_MAX_HEIGHT, POPUP_MIN_HEIGHT, POPUP_TAG, selectionLang, watchSelection } from './selection-button.ts';
 
 const rect = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom, width: right - left, height: bottom - top, x: left, y: top, toJSON: () => ({}) }) as DOMRect;
 
@@ -39,7 +40,7 @@ afterEach(() => {
   window.getSelection()?.removeAllRanges();
   document.designMode = 'off';
   document.body.replaceChildren();
-  for (const el of document.querySelectorAll(HOST_TAG)) el.remove();
+  for (const el of document.querySelectorAll(`${HOST_TAG}, ${POPUP_TAG}`)) el.remove();
   globalThis.__translateSideSelection = undefined;
 });
 
@@ -282,5 +283,115 @@ describe('acquireSelectionButton', () => {
     expect(document.querySelectorAll(HOST_TAG)).toHaveLength(1);
     leave();
     expect(host()).toBeNull();
+  });
+});
+
+describe('placePopup', () => {
+  const view = { width: 1000, height: 800 };
+  it('goes under the last line, from its start', () => {
+    expect(placePopup(rect(100, 50, 300, 70), { width: 360, height: 200 }, view)).toEqual({ left: 100, top: 74, width: 360 });
+  });
+
+  it('from its end in right-to-left text, kept inside the window', () => {
+    expect(placePopup(rect(500, 50, 700, 70), { width: 360, height: 200 }, view, true)).toEqual({ left: 340, top: 74, width: 360 });
+    expect(placePopup(rect(900, 50, 990, 70), { width: 360, height: 200 }, view)).toEqual({ left: 636, top: 74, width: 360 });
+  });
+
+  it('above the line when there is no room under it, and never off the window', () => {
+    expect(placePopup(rect(100, 700, 300, 720), { width: 360, height: 200 }, view)).toEqual({ left: 100, top: 496, width: 360 });
+    // No room either way: as low as fits.
+    expect(placePopup(rect(100, 100, 300, 720), { width: 360, height: 200 }, { width: 1000, height: 760 })).toEqual({ left: 100, top: 556, width: 360 });
+    // A window narrower than the popup: the popup narrows.
+    expect(placePopup(rect(10, 50, 100, 70), { width: 360, height: 200 }, { width: 300, height: 800 })).toEqual({ left: 4, top: 74, width: 292 });
+  });
+});
+
+describe('createSelectionPopup', () => {
+  const URL_ = 'chrome-extension://self/selection-popup.html';
+  const ID = 'abc';
+  const range = () => {
+    document.body.innerHTML = '<p id="p">Hello world.</p>';
+    const r = document.createRange();
+    r.selectNodeContents(document.getElementById('p') as Element);
+    return r;
+  };
+  const popupHost = () => document.querySelector<HTMLElement>(POPUP_TAG);
+  const frame = () => roots.at(-1)?.querySelector('iframe') ?? undefined;
+  /** The frame loads: the content script hands the popup page its port. Returns what it posted, and the page's end of the channel. */
+  const load = () => {
+    const win = frame()?.contentWindow as Window;
+    const posted = vi.spyOn(win, 'postMessage').mockImplementation(() => undefined);
+    frame()?.dispatchEvent(new Event('load'));
+    const [message, origin, transfer] = (posted.mock.calls[0] ?? []) as unknown as [unknown, string, MessagePort[]];
+    return { message, origin, port: transfer?.[0] };
+  };
+  /** The popup page says something on its port; MessagePort delivery is asynchronous. */
+  const say = async (port: MessagePort | undefined, data: unknown) => {
+    port?.postMessage(data);
+    await new Promise((r) => setTimeout(r, 20));
+  };
+
+  beforeEach(() => vi.useRealTimers());
+
+  it('frames the popup page with the on-device APIs delegated, and shows it only once the page answers on its port', async () => {
+    const popup = createSelectionPopup(window, 'Translation');
+    popup.open(URL_, ID, range(), false);
+    expect(frame()?.getAttribute('src')).toBe(`${URL_}#${ID}`);
+    expect(frame()?.getAttribute('allow')).toBe('translator; language-detector; language-model');
+    expect(frame()?.title).toBe('Translation');
+    expect(popupHost()?.style.display).toBe('none');
+    const { message, origin, port } = load();
+    // The port goes to the extension's origin only, with the popup's id, which the page never sees.
+    expect(message).toEqual({ type: POPUP_MESSAGE, id: ID });
+    expect(origin).toBe('chrome-extension://self');
+    await say(port, { type: POPUP_MESSAGE, height: 250.2 });
+    expect(popupHost()?.style.display).toBe('block');
+    // Under the last line (20, 30)–(200, 40).
+    expect([popupHost()?.style.left, popupHost()?.style.top, popupHost()?.style.height]).toEqual(['20px', '44px', '251px']);
+    await say(port, { type: POPUP_MESSAGE, height: 5000 });
+    expect(popupHost()?.style.height).toBe(`${POPUP_MAX_HEIGHT}px`);
+    await say(port, { type: POPUP_MESSAGE, height: 1 });
+    expect(popupHost()?.style.height).toBe(`${POPUP_MIN_HEIGHT}px`);
+    await say(port, { type: POPUP_MESSAGE, close: true });
+    expect(popupHost()?.style.display).toBe('none');
+    expect(frame()).toBeUndefined();
+    popup.stop();
+    expect(popupHost()).toBeNull();
+  });
+
+  it('does not hear the page: window messages, even from the frame, change nothing', async () => {
+    const popup = createSelectionPopup(window, 'Translation');
+    popup.open(URL_, ID, range(), false);
+    const { port } = load();
+    await say(port, { type: POPUP_MESSAGE, height: 200 });
+    window.dispatchEvent(new MessageEvent('message', { source: frame()?.contentWindow ?? null, data: { type: POPUP_MESSAGE, close: true } }));
+    window.dispatchEvent(new MessageEvent('message', { source: window, data: { type: POPUP_MESSAGE, height: 400 } }));
+    expect(popupHost()?.style.display).toBe('block');
+    expect(popupHost()?.style.height).toBe('200px');
+    popup.stop();
+  });
+
+  it('closes when its frame loads a second time: the popup page never navigates itself', async () => {
+    const popup = createSelectionPopup(window, 'Translation');
+    popup.open(URL_, ID, range(), false);
+    const { port } = load();
+    await say(port, { type: POPUP_MESSAGE, height: 200 });
+    frame()?.dispatchEvent(new Event('load'));
+    expect(popupHost()?.style.display).toBe('none');
+    expect(frame()).toBeUndefined();
+    popup.stop();
+  });
+
+  it('a second open replaces the first frame, and the first one is no longer heard', async () => {
+    const popup = createSelectionPopup(window, 'Translation');
+    popup.open(URL_, 'a', range(), false);
+    const first = load().port;
+    popup.open(URL_, 'b', range(), false);
+    expect(document.querySelectorAll(POPUP_TAG)).toHaveLength(1);
+    expect(roots.at(-1)?.querySelectorAll('iframe')).toHaveLength(1);
+    expect(frame()?.getAttribute('src')).toMatch(/#b$/);
+    await say(first, { type: POPUP_MESSAGE, height: 300 });
+    expect(popupHost()?.style.display).toBe('none');
+    popup.stop();
   });
 });

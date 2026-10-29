@@ -1,0 +1,17 @@
+@import '../sidepanel/style.css';
+
+/* The selection popup: the panel's selection mode in a small frame next to the text. */
+.popup {
+  padding-bottom: var(--space-3);
+}
+.popup .selection__head {
+  margin-top: var(--space-2);
+}
+.popup .privacy {
+  margin-top: var(--space-2);
+}
+.popup__foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}

@@ -24,6 +24,9 @@ export default defineConfig({
     action: {
       default_title: '__MSG_actionTitle__',
     },
+    // The selection popup (src/entrypoints/selection-popup): the selection button frames it next to the
+    // selected text, so http and https pages may load it. Nothing else of the extension is web accessible.
+    web_accessible_resources: [{ resources: ['selection-popup.html'], matches: ['http://*/*', 'https://*/*'] }],
     commands: {
       // Fires action.onClicked: it opens the side panel and injects (decision S5), or closes the panel
       // when it is open in that window (M5-E10, replacing D11's open-only; src/shared/panel.ts).

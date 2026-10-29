@@ -17,6 +17,8 @@ expectEqual('permissions', m.permissions, ['sidePanel', 'storage', 'activeTab', 
 expectEqual('optional_host_permissions', m.optional_host_permissions, ['https://*/*', 'http://*/*', 'http://localhost/*', 'http://127.0.0.1/*']);
 expectEqual('host_permissions', m.host_permissions, undefined);
 expectEqual('content_scripts', m.content_scripts, undefined);
+// Only the selection popup's page may be framed by a web page (the selection button).
+expectEqual('web_accessible_resources', m.web_accessible_resources, [{ resources: ['selection-popup.html'], matches: ['http://*/*', 'https://*/*'] }]);
 expectEqual('minimum_chrome_version', m.minimum_chrome_version, '138');
 expectEqual('commands._execute_action.suggested_key', m.commands?._execute_action?.suggested_key, { default: 'Alt+T' });
 expectEqual('side_panel.default_path', m.side_panel?.default_path, 'sidepanel.html');

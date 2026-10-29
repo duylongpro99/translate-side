@@ -128,7 +128,7 @@ panel:
     retry: Thử lại
   selectionButton:
     label: Dịch đoạn đã chọn
-    tip: Dịch đoạn văn bản đã chọn trong bảng bên
+    tip: Dịch đoạn văn bản đã chọn
   selection:
     title: Đoạn đã chọn
     back: Quay lại trang
@@ -331,6 +331,14 @@ panel:
       continuing: $1 $2; đang tiếp tục với $3. Các đoạn do nó dịch được đánh dấu.
       continued: $1 $2; đã tiếp tục với $3. Các đoạn do nó dịch được đánh dấu.
 
+popup:
+  title: Bản dịch
+  openPanel: Mở trong bảng bên
+  close: Đóng
+  missing: Đoạn đã chọn không còn nữa. Hãy chọn lại văn bản và thử lại.
+  privacy: Trước bản dịch đầu tiên gửi ra khỏi thiết bị này, Translate Side hiện một thông báo ngắn về quyền riêng tư trong bảng bên. Hãy mở bảng bên để đọc; bản dịch bắt đầu ngay sau đó.
+  panelFailed: Chrome không mở được bảng bên. Hãy bấm biểu tượng Translate Side trên thanh công cụ để mở.
+
 errors:
   syncItem: "Cài đặt này sẽ chiếm $1 byte, vượt giới hạn đồng bộ $2 byte của Chrome cho một cài đặt. Hãy rút gọn (bớt header phụ hoặc đặt tên ngắn hơn)."
   syncItems: "Các cài đặt đồng bộ sẽ vượt giới hạn $1 mục của Chrome. Hãy bớt một số kết nối, mô hình hoặc quy tắc theo trang web."
@@ -471,7 +479,7 @@ options:
     modelHint: "Mô hình riêng cho từng trang web và chế độ “chỉ dùng cục bộ” được đặt trong Nhà cung cấp › Định tuyến › Mô hình theo trang web."
     selectionTitle: "Nút dịch trên đoạn đã chọn"
     selectionEverywhere: "Hiện nút dịch khi tôi chọn văn bản trên mọi trang"
-    selectionHint: "Khi tắt, nút chỉ hiện trên trang đang mở bảng bên. Khi bật, nút hiện trên mọi trang, kể cả khi bảng bên đóng, trừ các trang không bao giờ dịch ở trên và các trang thư, đăng nhập. Chrome hỏi một lần để cho phép truy cập mọi trang. Không có gì rời khỏi trang cho tới khi bạn bấm nút; khi đó chỉ đoạn đã chọn được gửi tới nhà cung cấp dịch của bạn, còn trang chờ trong bảng bên cho tới khi bạn chọn Dịch trang này. Cài đặt này chỉ áp dụng cho thiết bị này."
+    selectionHint: "Khi tắt, nút chỉ hiện trên trang đang mở bảng bên. Khi bật, nút hiện trên mọi trang, kể cả khi bảng bên đóng, trừ các trang không bao giờ dịch ở trên và các trang thư, đăng nhập. Chrome hỏi một lần để cho phép truy cập mọi trang. Không có gì rời khỏi trang cho tới khi bạn bấm nút; khi đó chỉ đoạn đã chọn được gửi tới nhà cung cấp dịch của bạn, và bản dịch hiện ngay cạnh đoạn đó. Phần còn lại của trang không được đọc trừ khi bạn mở bảng bên. Cài đặt này chỉ áp dụng cho thiết bị này."
     selectionRefused: "Quyền truy cập mọi trang chưa được cấp, nên nút vẫn chỉ hiện ở nơi bảng bên đang mở."
     selectionOn: "Nút dịch giờ hiện trên mọi trang. Các trang đang mở sẽ hiện nút sau khi tải lại."
     selectionOff: "Đã tắt. Chrome vẫn cho Translate Side đọc mọi trang; để thu hồi, mở chrome://extensions, rồi Translate Side › Chi tiết › Quyền truy cập trang web."

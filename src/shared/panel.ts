@@ -4,9 +4,9 @@ import type { browser } from 'wxt/browser';
 import { i18n } from '#i18n';
 import { clearAccess, readAccess } from './access.ts';
 import { injectInto, type InjectTrigger, type TabRef } from './inject.ts';
-import { isSelectionButtonRequest } from './protocol.ts';
+import { isSelectionButtonRequest, isSelectionPopupPanelRequest, SELECTION_POPUP_PATH } from './protocol.ts';
 import { clearTabOverride } from './providers.ts';
-import { anyDenylisted, clearSnippet, MAX_SELECTION_CHARS, writeSnippet } from './snippet.ts';
+import { anyDenylisted, clearPopupRecords, clearSnippet, isPopupId, MAX_SELECTION_CHARS, readPopupRecord, writePopupRecord, writeSnippet, type SnippetRecord } from './snippet.ts';
 import { readSiteLists, listedFor } from './sites.ts';
 
 export const CONTEXT_MENU_ID = 'translate-side.open-panel';
@@ -112,48 +112,102 @@ export function listenForContextMenuClicks(api: Browser): void {
 /**
  * The selection button opens the panel, injects and hands the text over, like the context menu on a
  * selection, but asks for the selection only: the page is read and offered, not translated. The click's gesture comes with the message (S9), so sidePanel.open is still the
- * first call, with no await before it. Only this extension's content script in a tab's top frame is
- * heard, and the denylist and never-translate checks use the sender's address, not one in the message.
- * Call synchronously at the top level of the worker.
+ * first call, with no await before it. A click that opened the button's popup (`popup`, its id) leaves
+ * the panel closed: the text is kept for the popup, which translates it itself. Only this extension's
+ * content script in a tab's top frame is heard, and the denylist and never-translate checks use the
+ * sender's address, not one in the message. Call synchronously at the top level of the worker.
  */
 export function listenForSelectionButton(api: Browser): void {
-  api.runtime.onMessage.addListener((message: unknown, sender: { id?: string | undefined; tab?: TabRef | undefined; frameId?: number | undefined; url?: string | undefined }) => {
+  api.runtime.onMessage.addListener((message: unknown, sender: Sender) => {
+    if (isSelectionPopupPanelRequest(message)) return void popupToPanel(api, message.id, sender);
     if (!isSelectionButtonRequest(message)) return;
-    if (sender.id !== api.runtime.id || sender.tab?.id === undefined || sender.frameId !== 0) return;
+    const tabId = sender.tab?.id;
+    if (sender.id !== api.runtime.id || tabId === undefined || sender.frameId !== 0) return;
     // The page's address for the injection's own checks too, should the tab's be hidden.
-    const tab = { ...sender.tab, url: sender.tab.url ?? sender.url };
-    void openPanelAndInject(api, tab, 'selection');
+    const tab = { ...sender.tab, url: sender.tab?.url ?? sender.url };
     // The content script caps the text; so does the worker, whatever sent it (the panel cuts it again).
-    void handOverSelection(api, tab, { selectionText: message.text.slice(0, 2 * MAX_SELECTION_CHARS), pageUrl: sender.url, frameUrl: sender.url, lang: message.lang });
+    const info = { selectionText: message.text.slice(0, 2 * MAX_SELECTION_CHARS), pageUrl: sender.url, frameUrl: sender.url, lang: message.lang };
+    const popup = message.popup;
+    if (isPopupId(popup)) {
+      selectionRecord(api, tab, info)
+        .then((record) => (record ? writePopupRecord(api, popup, { ...record, tabId }) : undefined))
+        .catch(logError('keeping the selection for the popup'));
+      return;
+    }
+    void openPanelAndInject(api, tab, 'selection');
+    void handOverSelection(api, tab, info);
   });
+}
+
+interface Sender {
+  id?: string | undefined;
+  tab?: TabRef | undefined;
+  frameId?: number | undefined;
+  url?: string | undefined;
+}
+
+/**
+ * The popup's Open in side panel: the popup opened the panel itself, in its own click, so this
+ * injects and hands over the selection the worker kept for it. Heard only from the popup page, and
+ * only for a selection made in the tab the popup is in.
+ */
+async function popupToPanel(api: Browser, id: string, sender: Sender): Promise<void> {
+  const tabId = sender.tab?.id;
+  if (sender.id !== api.runtime.id || tabId === undefined || !sender.url?.startsWith(api.runtime.getURL(SELECTION_POPUP_PATH))) return;
+  try {
+    const record = isPopupId(id) ? await readPopupRecord(api, id) : undefined;
+    if (record?.tabId !== tabId) return;
+    const { url, text, lang, blocked } = record;
+    await injectInto(api, { ...sender.tab, url: sender.tab?.url ?? url }, 'selection').catch(logError('injection'));
+    await writeSnippet(api, tabId, { url, ...(text === undefined ? {} : { text }), ...(lang === undefined ? {} : { lang }), ...(blocked === undefined ? {} : { blocked }) });
+  } catch (err) {
+    logError('handing over the popup selection')(err);
+  }
 }
 
 /**
  * Leaves the selected text for the panel (plan M3-E4). Chrome hands it over with the click, so this
- * works on a page where extraction fails and even where nothing can be injected. A selection from a
- * denylisted site is not kept (M3-D13, DESIGN §8): the record only says it was blocked. Checks the
- * tab, the page and the frame the text sits in, since an iframe can be a denylisted site.
- * The worker translates nothing: the panel does, when it sees the record. `lang` is the language the
- * page marks the text with (the selection button sends it; a context-menu click has none).
+ * works on a page where extraction fails and even where nothing can be injected.
+ * The worker translates nothing: the panel does, when it sees the record.
  */
-export async function handOverSelection(api: Browser, tab: TabRef | undefined, info: { selectionText?: string | undefined; pageUrl?: string | undefined; frameUrl?: string | undefined; lang?: string | undefined }): Promise<void> {
+export async function handOverSelection(api: Browser, tab: TabRef | undefined, info: SelectionInfo): Promise<void> {
   const tabId = tab?.id;
-  const text = info.selectionText?.trim();
-  if (tabId === undefined || !text) return;
-  const url = info.pageUrl ?? tab?.url ?? '';
+  if (tabId === undefined) return;
   try {
-    if (anyDenylisted(tab?.url, info.pageUrl, info.frameUrl)) return await writeSnippet(api, tabId, { url, blocked: 'denylisted' });
-    // The user's never-translate list (plan M5-E6); unreadable counts as empty, like the injection's check.
-    const never = await readSiteLists(api).then(
-      (l) => l.never,
-      () => [],
-    );
-    if ([tab?.url, info.pageUrl, info.frameUrl].some((u) => listedFor(never, u) !== undefined)) await writeSnippet(api, tabId, { url, blocked: 'never' });
-    // The panel checks the tag before using it (src/shared/language.ts normalizeLang); the worker only bounds it.
-    else await writeSnippet(api, tabId, { url, text, ...(info.lang ? { lang: info.lang.slice(0, 35) } : {}) });
+    const record = await selectionRecord(api, tab, info);
+    if (record) await writeSnippet(api, tabId, record);
   } catch (err) {
     logError('handing over the selection')(err);
   }
+}
+
+interface SelectionInfo {
+  selectionText?: string | undefined;
+  pageUrl?: string | undefined;
+  frameUrl?: string | undefined;
+  lang?: string | undefined;
+}
+
+/**
+ * What is kept of a selection, for the panel or the popup; undefined when there is no text. A
+ * selection from a denylisted site is not kept (M3-D13, DESIGN §8): the record only says it was
+ * blocked. Checks the tab, the page and the frame the text sits in, since an iframe can be a
+ * denylisted site. `lang` is the language the page marks the text with (the selection button sends
+ * it; a context-menu click has none).
+ */
+async function selectionRecord(api: Browser, tab: TabRef | undefined, info: SelectionInfo): Promise<Omit<SnippetRecord, 'at'> | undefined> {
+  const text = info.selectionText?.trim();
+  if (!text) return undefined;
+  const url = info.pageUrl ?? tab?.url ?? '';
+  if (anyDenylisted(tab?.url, info.pageUrl, info.frameUrl)) return { url, blocked: 'denylisted' };
+  // The user's never-translate list (plan M5-E6); unreadable counts as empty, like the injection's check.
+  const never = await readSiteLists(api).then(
+    (l) => l.never,
+    () => [],
+  );
+  if ([tab?.url, info.pageUrl, info.frameUrl].some((u) => listedFor(never, u) !== undefined)) return { url, blocked: 'never' };
+  // The panel checks the tag before using it (src/shared/language.ts normalizeLang); the worker only bounds it.
+  return { url, text, ...(info.lang ? { lang: info.lang.slice(0, 35) } : {}) };
 }
 
 /**
@@ -171,6 +225,7 @@ export function listenForTabLifecycle(api: Browser): void {
   api.tabs.onRemoved.addListener((tabId) => {
     clearAccess(api, tabId).catch(logError('clearing tab access'));
     clearSnippet(api, tabId).catch(logError('clearing the selection'));
+    clearPopupRecords(api, tabId).catch(logError("clearing the popup's selection"));
     clearTabOverride(api, tabId).catch(logError("clearing the tab's model"));
   });
 }

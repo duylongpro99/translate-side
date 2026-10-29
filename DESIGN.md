@@ -81,9 +81,17 @@ terms consistent, and rewrite idioms. That's the core of this design (§5).
   when you only need one passage. The button shows on a page that has the panel open; an option in
   Settings › Site rules, off by default, shows it on every site, even with the panel closed
   (decision S9). It never shows in form fields, editable regions or on denylisted and
-  never-translate sites, and only its click sends anything. Unlike the context menu, the click asks
-  for the selection only: the panel reads the page and offers it (*Translate this page*) instead of
-  translating it.
+  never-translate sites, and only its click sends anything. Unlike the context menu, the click
+  shows the translation in a popup next to the selection, not in the panel: an extension page in an
+  iframe inside the button's closed shadow root (`src/entrypoints/selection-popup`), translating with
+  the panel's selection jobs, route and privacy notice. Chrome's on-device translator, language
+  detector and model are delegated to the frame (`allow`). The content script talks to it only over
+  a MessageChannel port it hands the frame with the popup's id, keeps it hidden until it answers
+  there, and closes it if the frame ever loads another page. A page can still restyle or cover the
+  host, so the first-run privacy notice and the spend limit's *Continue anyway* stay in the panel.
+  Esc, a press outside it or *Close* closes it; *Open in side panel* hands the selection to the
+  panel, which then reads the page and offers it (*Translate this page*) instead of translating it.
+  On a page that can't frame it (a local file) the click opens the panel as before.
 - **Per-block actions**: *show original inline*, *retranslate* (skips the cache and replaces the
   stored entry), *copy* (the shown text, as plain text), *explain this* (a short note on idioms or
   cultural references; M5). They sit in a small toolbar that floats just above the block's top end
@@ -928,8 +936,9 @@ viewport comes first, you can start reading almost immediately.
   built-in denylist and the never-translate list (a page already open when its site is added keeps the
   button until it reloads; the worker refuses its text). That script only draws the button: it reads the
   selection to decide whether to show it, and nothing leaves the page until the reader clicks it;
-  then only the selected text is handed to the panel, under the same denylist and never-translate
-  checks as the context menu. The broad access does not widen what the panel reads: after a
+  then only the selected text is handed to the selection popup, under the same denylist and
+  never-translate checks as the context menu. The popup's page (`selection-popup.html`) is the one web
+  accessible resource, on http and https pages only. The broad access does not widen what the panel reads: after a
   navigation the content script is re-injected only on the origin a gesture granted or on an
   allowlisted site, as under `activeTab` alone. Turning the option off unregisters the script but
   keeps the access (removing the broad patterns could not be shown to leave a provider's or an

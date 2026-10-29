@@ -72,7 +72,8 @@ export default defineContentScript({
       let found: LinkIndex = indexTargets(new Map(), []);
       const highlighter = createHighlighter(window);
       const scrolled = createGuard();
-      // The selection button, while a panel is connected (it is the panel the click translates in).
+      // The selection button, while a panel is connected (its click translates in a popup next to the
+      // text, or in the panel on a page that can't frame the popup, such as a local file).
       const leaveSelection = acquireSelectionButton(window, selectionButtonOptions(), isRuntimeAlive);
       port.onDisconnect.addListener(() => {
         watch?.stop();

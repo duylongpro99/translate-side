@@ -33,8 +33,12 @@ export interface JobActions {
   retranslatePage(): void;
   /** Asks for the provider's host permission. Must run inside the click (a user gesture, §4.3.3). */
   grantAccess(): void;
-  /** Past the monthly soft limit (M4-E10): no more warnings this month, and the translation goes on. */
-  continuePastLimit(): void;
+  /**
+   * Past the monthly soft limit (M4-E10): no more warnings this month, and the translation goes on.
+   * Absent: the bar offers only Settings (the selection popup, which a page could cover with decoys,
+   * leaves it to the panel).
+   */
+  continuePastLimit?(): void;
   /**
    * Turns on on-device translation for a pair: creates the engine (downloading it when needed),
    * then translates again. Must run inside the click: Chrome's Translator needs the gesture.
@@ -256,9 +260,11 @@ export function JobBar({ job, actions, inHeader = false }: { job: JobView; actio
             </>
           ) : null}
         </span>
-        <button type="button" class="ui-button" data-testid="limit-continue" onClick={actions.continuePastLimit}>
-          {i18n.t('panel.job.continueAnyway')}
-        </button>
+        {actions.continuePastLimit ? (
+          <button type="button" class="ui-button" data-testid="limit-continue" onClick={actions.continuePastLimit}>
+            {i18n.t('panel.job.continueAnyway')}
+          </button>
+        ) : null}
         <button type="button" class="ui-button" onClick={actions.openOptions}>
           {i18n.t('panel.job.settings')}
         </button>

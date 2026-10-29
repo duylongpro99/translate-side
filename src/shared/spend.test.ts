@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { addSpend, checkSpendLimit, cleanSpend, cleanSpendLimit, continuePastLimit, dayKey, estimateSpend, limitReached, monthKey, readSpend, readSpendLimit, resetSpend, saveSpendLimit, SPEND_DAYS, SPEND_KEY, SPEND_LIMIT_KEY, SPEND_MONTHS, SpendLedger } from './spend.ts';
 
 type Api = ConstructorParameters<typeof SpendLedger>[0];
@@ -51,6 +51,44 @@ describe('running total of spend (plan M3-E9)', () => {
     expect(await readSpend(api)).toMatchObject({ usd: 0.75 });
     await resetSpend(api);
     expect(await readSpend(api)).toBeUndefined();
+  });
+});
+
+describe('the ledger across pages', () => {
+  it('two pages adding at once (the panel and a selection popup) both count, under the shared lock', async () => {
+    // Web Locks as the browser has them: one holder per name, across every page of the extension.
+    const held = new Map<string, Promise<unknown>>();
+    const locks = {
+      request: (name: string, fn: () => Promise<unknown>) => {
+        const run = (held.get(name) ?? Promise.resolve()).then(fn);
+        held.set(name, run.catch(() => {}));
+        return run;
+      },
+    };
+    vi.stubGlobal('navigator', { locks });
+    try {
+      // Each page reads what storage holds when it asks, and gets it a little later.
+      const local = new Map<string, unknown>();
+      const api = {
+        storage: {
+          local: {
+            get: (k: string) => {
+              const now = local.has(k) ? { [k]: structuredClone(local.get(k)) } : {};
+              return new Promise((r) => setTimeout(() => r(now), 5));
+            },
+            set: (o: Record<string, unknown>) => (Object.entries(o).forEach(([k, v]) => local.set(k, v)), Promise.resolve()),
+          },
+        },
+      } as unknown as Api;
+      const panel = new SpendLedger(api, () => at);
+      const popup = new SpendLedger(api, () => at);
+      void panel.add({ usage: use(10, 5), usd: 0.5 });
+      void popup.add({ usage: use(20, 5), usd: 0.25 });
+      await Promise.all([panel.idle(), popup.idle()]);
+      expect(local.get(SPEND_KEY)).toMatchObject({ usd: 0.75, input: 30, output: 10 });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

@@ -293,7 +293,30 @@ export interface SelectionButtonRequest {
   text: string;
   /** The `lang` the page marks the selected text with; absent when it marks none. */
   lang?: string;
+  /** The popup the click opened (its id): the worker keeps the text for it and leaves the side panel closed. */
+  popup?: string;
 }
 
 export const isSelectionButtonRequest = (m: unknown): m is SelectionButtonRequest =>
   typeof m === 'object' && m !== null && (m as { type?: unknown }).type === SELECTION_BUTTON_MESSAGE && typeof (m as { text?: unknown }).text === 'string';
+
+/** The selection popup's page (src/entrypoints/selection-popup), web accessible on http and https pages. */
+export const SELECTION_POPUP_PATH = '/selection-popup.html';
+
+/**
+ * What the popup page posts to the content script that framed it (window.postMessage): its content's
+ * height, or that it wants to close. The content script hears only its own frame (event.source).
+ */
+export const POPUP_MESSAGE = 'translate-side:popup';
+
+/** The popup's Open in side panel (src/entrypoints/selection-popup), sent by that extension page. */
+export const SELECTION_POPUP_PANEL_MESSAGE = 'translate-side:popup-to-panel';
+
+export interface SelectionPopupPanelRequest {
+  type: typeof SELECTION_POPUP_PANEL_MESSAGE;
+  /** The popup's id: the worker hands over the selection it kept for it. */
+  id: string;
+}
+
+export const isSelectionPopupPanelRequest = (m: unknown): m is SelectionPopupPanelRequest =>
+  typeof m === 'object' && m !== null && (m as { type?: unknown }).type === SELECTION_POPUP_PANEL_MESSAGE && typeof (m as { id?: unknown }).id === 'string';

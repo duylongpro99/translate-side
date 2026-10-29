@@ -12,7 +12,7 @@ import {
   openPanelAndInject,
   setupPanelBehavior,
 } from './panel.ts';
-import { SELECTION_BUTTON_MESSAGE } from './protocol.ts';
+import { SELECTION_BUTTON_MESSAGE, SELECTION_POPUP_PANEL_MESSAGE } from './protocol.ts';
 
 type Api = Parameters<typeof setupPanelBehavior>[0];
 type Listener = (...args: never[]) => void;
@@ -37,15 +37,16 @@ function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, 
     },
     storage: {
       session: {
-        get: (k: string) => Promise.resolve(k in store ? { [k]: store[k] } : {}),
+        get: (k: string | null) => Promise.resolve(k === null ? { ...store } : k in store ? { [k]: store[k] } : {}),
         set: (o: Record<string, unknown>) => (Object.assign(store, o), Promise.resolve()),
-        remove: (k: string) => ((store[k] = undefined), Promise.resolve()),
+        remove: (k: string | string[]) => (Array.isArray(k) ? k : [k]).forEach((key) => (store[key] = undefined)) ?? Promise.resolve(),
       },
       sync: { get: (keys: string | string[]) => Promise.resolve(Object.fromEntries((Array.isArray(keys) ? keys : [keys]).filter((k) => k in sync).map((k) => [k, sync[k]]))) },
       local: { get: () => Promise.resolve({}) },
     },
     runtime: {
       id: 'self',
+      getURL: (path: string) => `chrome-extension://self${path}`,
       onMessage: on('message'),
       sendMessage: (m: { type: string; windowId?: number; pressedAt?: number }) => {
         calls.push(`ask:${m.type}:${m.windowId}`);
@@ -346,6 +347,93 @@ describe('selection button', () => {
     expect(f.store['snippet:4']).toMatchObject({ blocked: 'never' });
     expect(JSON.stringify(f.store)).not.toContain('my balance');
     expect(f.calls.some((c) => c.startsWith('inject'))).toBe(false);
+  });
+});
+
+describe('the selection popup', () => {
+  const sender = { id: 'self', frameId: 0, url: 'https://example.com/a', tab: { id: 4, url: 'https://example.com/a' } };
+  const id = '0f8fad5b-d9cb-469f-a165-70867728950e';
+  const popupSender = { id: 'self', frameId: 7, url: `chrome-extension://self/selection-popup.html#${id}`, tab: sender.tab };
+
+  it('a click that opened the popup keeps the text for it, under its id, and leaves the panel closed', async () => {
+    const f = fakeApi();
+    listenForSelectionButton(f.api);
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: ' 猫 ', lang: 'ja', popup: id }, sender);
+    await flush();
+    expect(f.calls).toEqual([]);
+    expect(f.store[`selectionPopup:${id}`]).toMatchObject({ url: 'https://example.com/a', text: '猫', lang: 'ja', tabId: 4 });
+    expect(f.store['snippet:4']).toBeUndefined();
+  });
+
+  it("checks the sender's address for the popup too: a denylisted page keeps no text", async () => {
+    const f = fakeApi();
+    listenForSelectionButton(f.api);
+    const mail = 'https://mail.google.com/mail/u/0/';
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: 'my secret mail', popup: id }, { ...sender, url: mail, tab: { id: 4, url: mail } });
+    await flush();
+    expect(f.store[`selectionPopup:${id}`]).toMatchObject({ blocked: 'denylisted', tabId: 4 });
+    expect(JSON.stringify(f.store)).not.toContain('my secret mail');
+  });
+
+  it('a popup id that is not one the button makes is not stored under', async () => {
+    const f = fakeApi();
+    listenForSelectionButton(f.api);
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: 'Hello', popup: 'snippet:9' }, sender);
+    await flush();
+    expect(Object.keys(f.store).some((k) => k.startsWith('selectionPopup:'))).toBe(false);
+  });
+
+  it("Open in side panel injects and hands the popup's selection over to the panel", async () => {
+    const f = fakeApi();
+    listenForSelectionButton(f.api);
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: '猫', lang: 'ja', popup: id }, sender);
+    await flush();
+    f.fire('message', { type: SELECTION_POPUP_PANEL_MESSAGE, id }, popupSender);
+    await flush();
+    await flush();
+    // The popup opened the panel itself, in its click.
+    expect(f.calls).toEqual([`inject:4:${CONTENT_SCRIPT_FILE}`]);
+    expect(f.store['snippet:4']).toMatchObject({ url: 'https://example.com/a', text: '猫', lang: 'ja' });
+    expect(f.store['snippet:4']).not.toHaveProperty('tabId');
+  });
+
+  it("a tab keeps one popup's selection: a new click replaces it, and closing the tab drops it", async () => {
+    const f = fakeApi();
+    listenForSelectionButton(f.api);
+    listenForTabLifecycle(f.api);
+    const other = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: 'First', popup: id }, sender);
+    await flush();
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: 'Elsewhere', popup: other }, { ...sender, tab: { id: 5, url: 'https://example.com/a' } });
+    await flush();
+    const next = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: 'Second', popup: next }, sender);
+    await flush();
+    await flush();
+    expect(f.store[`selectionPopup:${id}`]).toBeUndefined();
+    expect(f.store[`selectionPopup:${next}`]).toMatchObject({ text: 'Second' });
+    f.fire('removed', 4);
+    await flush();
+    expect(f.store[`selectionPopup:${next}`]).toBeUndefined();
+    // Another tab's popup is its own.
+    expect(f.store[`selectionPopup:${other}`]).toMatchObject({ text: 'Elsewhere', tabId: 5 });
+  });
+
+  it.each([
+    ['a page', { ...popupSender, url: 'https://example.com/a' }],
+    ['another tab', { ...popupSender, tab: { id: 5, url: 'https://example.com/a' } }],
+    ['another extension', { ...popupSender, id: 'other' }],
+  ])('Open in side panel is not heard from %s', async (_name, from) => {
+    const f = fakeApi();
+    listenForSelectionButton(f.api);
+    f.fire('message', { type: SELECTION_BUTTON_MESSAGE, text: 'Hello', popup: id }, sender);
+    await flush();
+    f.fire('message', { type: SELECTION_POPUP_PANEL_MESSAGE, id }, from);
+    await flush();
+    await flush();
+    expect(f.calls).toEqual([]);
+    expect(f.store['snippet:4']).toBeUndefined();
+    expect(f.store['snippet:5']).toBeUndefined();
   });
 });
 

@@ -131,7 +131,7 @@ panel:
     retry: Try again
   selectionButton:
     label: Translate selection
-    tip: Translate the selected text in the side panel
+    tip: Translate the selected text
   selection:
     title: Selection
     back: Back to the page
@@ -336,6 +336,14 @@ panel:
       continuing: $1 $2; continuing with $3. Blocks it translated are marked.
       continued: $1 $2; continued with $3. Blocks it translated are marked.
 
+popup:
+  title: Translation
+  openPanel: Open in side panel
+  close: Close
+  missing: This selection is no longer here. Select the text and try again.
+  privacy: Before the first translation that leaves this device, Translate Side shows a short privacy notice in the side panel. Open the side panel to read it; the translation starts once you have.
+  panelFailed: Chrome didn't open the side panel. Click the Translate Side icon in the toolbar to open it.
+
 errors:
   syncItem: "This setting would take $1 bytes, over Chrome's sync limit of $2 bytes for one setting. Shorten it (fewer extra headers or a shorter label)."
   syncItems: "Synced settings would exceed Chrome's limit of $1 items. Remove some connections, models or site rules."
@@ -476,7 +484,7 @@ options:
     modelHint: "A model for a site, and “local only”, are set in Providers › Routing › Model per site."
     selectionTitle: "Translate button on selected text"
     selectionEverywhere: "Show the translate button when I select text on any site"
-    selectionHint: "Off, the button shows only on a page where the panel is open. On, it shows on every site, even with the panel closed, except the sites above that you never translate and mail and sign-in pages. Chrome asks once for access to all sites. Nothing leaves the page until you click the button; then only the selected text goes to your translation provider, and the page waits in the panel until you choose Translate this page. This setting applies to this device only."
+    selectionHint: "Off, the button shows only on a page where the panel is open. On, it shows on every site, even with the panel closed, except the sites above that you never translate and mail and sign-in pages. Chrome asks once for access to all sites. Nothing leaves the page until you click the button; then only the selected text goes to your translation provider, and its translation shows next to it. The rest of the page isn't read unless you open the side panel. This setting applies to this device only."
     selectionRefused: "Access to all sites was not granted, so the button still shows only where the panel is open."
     selectionOn: "The translate button now shows on every site. Pages already open show it after a reload."
     selectionOff: "Turned off. Chrome still lets Translate Side read all sites; to take that back, open chrome://extensions, then Translate Side › Details › Site access."

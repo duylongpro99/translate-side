@@ -117,7 +117,7 @@ describe('the panel: Continue anyway (M4-E10, review 3 #3)', () => {
     await until(() => t.jobs.get(1)?.status === 'stopped');
     expect(t.jobs.get(1)?.limit).toEqual({ limitUsd: 5, monthUsd: 5.25 });
     expect(client.requests).toHaveLength(0);
-    t.actions(1).continuePastLimit();
+    t.actions(1).continuePastLimit?.();
     await until(() => t.jobs.get(1)?.status === 'done');
     expect(client.requests.length).toBeGreaterThan(0);
     expect(a.local.get(SPEND_LIMIT_KEY)).toEqual({ monthlyUsd: 5, continuedFor: monthKey(Date.now()) });
@@ -127,7 +127,7 @@ describe('the panel: Continue anyway (M4-E10, review 3 #3)', () => {
     const a = api({ failSet: true });
     const { t, client } = open(a);
     await until(() => t.jobs.get(1)?.status === 'stopped');
-    t.actions(1).continuePastLimit();
+    t.actions(1).continuePastLimit?.();
     await until(() => t.jobs.get(1)?.limit?.failed !== undefined);
     expect(t.jobs.get(1)?.status).toBe('stopped');
     expect(t.jobs.get(1)?.limit?.failed).toContain('Could not save “Continue anyway” (QUOTA_BYTES quota exceeded)');
@@ -171,7 +171,7 @@ describe('Continue anyway carries out what the limit stopped (M4-D tester)', () 
     expect(jobs.get(1)?.limit).toEqual(reached);
     const root = document.createElement('div');
     document.body.replaceChildren(root);
-    act(() => render(<JobBar job={jobs.get(1) as JobView} actions={{} as JobActions} />, root));
+    act(() => render(<JobBar job={jobs.get(1) as JobView} actions={{ continuePastLimit: () => undefined } as JobActions} />, root));
     expect(root.querySelector('[data-testid=limit-continue]')).not.toBeNull();
     delete gate.limit;
     await jobs.takeAfterLimit(1)?.();
@@ -206,7 +206,7 @@ describe('Continue anyway carries out what the limit stopped (M4-D tester)', () 
     t.actions(1).retranslatePage();
     await until(() => t.jobs.get(1)?.limit !== undefined);
     expect(client.requests).toHaveLength(firstRun);
-    t.actions(1).continuePastLimit();
+    t.actions(1).continuePastLimit?.();
     await until(() => t.jobs.get(1)?.status === 'done' && client.requests.length === 2 * firstRun);
     expect(t.jobs.get(1)?.cached).toBe(0);
   });

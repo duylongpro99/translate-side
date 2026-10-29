@@ -237,8 +237,10 @@ export async function checkSpendLimit(api: Browser, now: number = Date.now()): P
 
 /**
  * Adds usage to the stored total. Writes run one after another (each on what the last wrote), so
- * two streams reporting usage together both count. A failed write loses that one event's count,
- * never the translation.
+ * two streams reporting usage together both count, and so do two pages (the side panel and a
+ * selection popup, or two panel windows): each read and write holds the extension-wide lock
+ * `SPEND_KEY` where the browser has Web Locks. A failed write loses that one event's count, never
+ * the translation.
  */
 export class SpendLedger {
   private chain: Promise<unknown> = Promise.resolve();
@@ -250,10 +252,12 @@ export class SpendLedger {
 
   add(delta: SpendDelta): Promise<void> {
     if (delta.usage.input === 0 && delta.usage.output === 0 && !delta.usd) return this.idle();
-    const run = this.chain.then(async () => {
+    const write = async () => {
       const next = addSpend(await readSpend(this.api), delta, this.now());
       await this.api.storage.local.set({ [SPEND_KEY]: next });
-    });
+    };
+    const locks = typeof navigator === 'undefined' ? undefined : navigator.locks;
+    const run = this.chain.then(() => (locks ? locks.request(SPEND_KEY, write) : write()));
     this.chain = run.catch(() => {});
     return this.idle();
   }
