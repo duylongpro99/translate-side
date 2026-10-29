@@ -1,0 +1,82 @@
+{
+  "recordedAt": "2026-10-26T14:51:27.069Z",
+  "request": {
+    "url": "https://generativelanguage.googleapis.com/v1beta/interactions",
+    "method": "POST",
+    "headerNames": [
+      "Content-Type",
+      "x-goog-api-key"
+    ],
+    "contentType": "application/json",
+    "body": {
+      "model": "gemini-3.8-flash-lite-tts",
+      "input": "Hello. This is a short test of the English voice for the page translator. The weather is lovely today, so let's read a book.",
+      "response_format": {
+        "type": "audio",
+        "mime_type": "audio/l16",
+        "sample_rate": 24000
+      },
+      "generation_config": {
+        "speech_config": [
+          {
+            "voice": "Puck"
+          }
+        ]
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "contentType": "application/json",
+    "headers": {
+      "content-type": "application/json",
+      "transfer-encoding": "chunked"
+    },
+    "ms": 7165,
+    "body": {
+      "json": {
+        "id": "v1_Chc2R2pmYXMtVkV2U3p2cjBQMThMcW1BTRIXNkdqZmFzLVZFdlN6dnIwUDE4THFtQU0",
+        "status": "completed",
+        "usage": {
+          "total_tokens": 229,
+          "total_input_tokens": 31,
+          "input_tokens_by_modality": [
+            {
+              "modality": "text",
+              "tokens": 31
+            }
+          ],
+          "total_cached_tokens": 0,
+          "total_output_tokens": 198,
+          "output_tokens_by_modality": [
+            {
+              "modality": "audio",
+              "tokens": 198
+            }
+          ],
+          "total_tool_use_tokens": 0,
+          "total_thought_tokens": 0
+        },
+        "created": "2026-10-26T14:51:23Z",
+        "updated": "2026-10-26T14:51:23Z",
+        "service_tier": "standard",
+        "steps": [
+          {
+            "content": [
+              {
+                "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "channels": 1,
+                "sample_rate": 24000,
+                "mime_type": "audio/l16; rate=24000; channels=1",
+                "type": "audio"
+              }
+            ],
+            "type": "model_output"
+          }
+        ],
+        "object": "interaction",
+        "model": "gemini-3.8-flash-lite-tts"
+      }
+    }
+  }
+}

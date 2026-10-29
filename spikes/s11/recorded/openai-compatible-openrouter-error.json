@@ -1,0 +1,109 @@
+{
+  "noCredits": {
+    "recordedAt": "2026-10-26T14:52:00.687Z",
+    "request": {
+      "url": "https://openrouter.ai/api/v1/audio/speech",
+      "method": "POST",
+      "headerNames": [
+        "Content-Type",
+        "Authorization"
+      ],
+      "contentType": "application/json",
+      "body": {
+        "model": "google/gemini-3.8-flash-tts",
+        "input": "Hello. This is a short test of the English voice for the page translator. The weather is lovely today, so let's read a book.",
+        "voice": "Kore"
+      }
+    },
+    "response": {
+      "status": 402,
+      "contentType": "application/json",
+      "headers": {
+        "content-type": "application/json",
+        "transfer-encoding": "chunked",
+        "access-control-allow-origin": "*"
+      },
+      "ms": 379,
+      "body": {
+        "json": {
+          "error": {
+            "message": "Insufficient credits. This account never purchased credits. Make sure your key is on the correct account or org, and if so, purchase more at https://openrouter.ai/settings/credits",
+            "code": 402,
+            "metadata": {
+              "limit_source": "openrouter_credits",
+              "remedy_hint": "Add credits at https://openrouter.ai/settings/credits, or lower max_tokens / prompt size to fit your remaining balance."
+            }
+          }
+        }
+      }
+    }
+  },
+  "unknownModel": {
+    "recordedAt": "2026-10-26T14:52:00.909Z",
+    "request": {
+      "url": "https://openrouter.ai/api/v1/audio/speech",
+      "method": "POST",
+      "headerNames": [
+        "Content-Type",
+        "Authorization"
+      ],
+      "contentType": "application/json",
+      "body": {
+        "model": "openai/gpt-4o-mini-tts",
+        "input": "Hello. This is a short test of the English voice for the page translator. The weather is lovely today, so let's read a book.",
+        "voice": "alloy"
+      }
+    },
+    "response": {
+      "status": 400,
+      "contentType": "application/json",
+      "headers": {
+        "content-type": "application/json",
+        "transfer-encoding": "chunked",
+        "access-control-allow-origin": "*"
+      },
+      "ms": 222,
+      "body": {
+        "json": {
+          "error": {
+            "message": "Model openai/gpt-4o-mini-tts does not exist",
+            "code": 400
+          }
+        }
+      }
+    }
+  },
+  "invalidKey": {
+    "recordedAt": "2026-10-26T14:52:01.020Z",
+    "request": {
+      "url": "https://openrouter.ai/api/v1/audio/speech",
+      "method": "POST",
+      "headerNames": [
+        "Content-Type",
+        "Authorization"
+      ],
+      "contentType": "application/json",
+      "body": {
+        "model": "fish-audio/s2.1-pro-free:free",
+        "input": "Hello. This is a short test of the English voice for the page translator. The weather is lovely today, so let's read a book."
+      }
+    },
+    "response": {
+      "status": 401,
+      "contentType": "application/json",
+      "headers": {
+        "content-type": "application/json",
+        "transfer-encoding": "chunked"
+      },
+      "ms": 111,
+      "body": {
+        "json": {
+          "error": {
+            "message": "Missing Authentication header",
+            "code": 401
+          }
+        }
+      }
+    }
+  }
+}

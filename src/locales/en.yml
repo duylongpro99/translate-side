@@ -178,6 +178,14 @@ panel:
     copy: Copy details
     copied: (copied)
     details: "{app}: {kind} in {name}"
+  read:
+    now: "Reading aloud: $1"
+    stop: Stop
+    started: Reading aloud
+    stopped: Stopped reading
+    noVoice: No voice on this computer reads this language. Add a voice for it in your system's speech settings, or a voice provider in Settings › Voice.
+    failed: "Couldn't read aloud: $1"
+    settings: Voice settings
   segment:
     waiting: Waiting
     region: Translation
@@ -205,6 +213,16 @@ panel:
     copyFailed: Couldn't copy
     copyFor: "Copy: \"$1\""
     copyTitle: Copy this block as plain text
+    read: Read aloud
+    readFor: "Read aloud: \"$1\""
+    readTitle: Read this block's translation aloud
+    readSourceTitle: Read this block aloud in its own language
+    readOriginal: Read original
+    readOriginalFor: "Read the original aloud: \"$1\""
+    readOriginalTitle: Read this block's original aloud
+    stopReading: Stop reading
+    stopReadingFor: "Stop reading: \"$1\""
+    stopReadingTitle: Stop reading aloud (Esc)
     basic: basic translation
     basicTitle: Translated on this device by $1, because no model could be reached. It is literal; Retranslate when the model is back.
     basicOnDeviceTitle: Translated on this device by Chrome's Translator. It is literal; set up a provider for better quality.
@@ -547,6 +565,47 @@ options:
     noVersion: "This translation memory file has no valid version."
     newerVersion: "This translation memory file was made by a newer version of Translate Side. Update the extension, then import it."
   reading: "Reading…"
+  voice:
+    title: Voice
+    hint: Read any block aloud from the panel, original or translation. The system voice needs no setup; a voice provider of your own sounds more natural. Free, and separate from the translation provider.
+    engine: Voice
+    engineSystem: System voice (on this computer)
+    voiceFor: "$1 voice"
+    langVi: Vietnamese
+    langEn: English
+    automatic: Automatic
+    online: "$1 (online: sends the text to Google)"
+    readOn: When a block ends, keep reading the next ones
+    test: Test
+    testing: Testing…
+    testOk: "$1: played"
+    testFailed: "$1: $2"
+    sendsText: "$1 receives the text of each block it reads."
+    geminiFreeTier: Gemini's free tier allows 10 voice requests a day per model, one per block.
+    addProvider: Add a voice provider
+    provider: Provider
+    viOnly: "$1 (Vietnamese only)"
+    key: API key
+    keyHelp: Get a key
+    region: Region
+    appId: App ID
+    baseUrl: Server address
+    model: Model
+    reuseKey: "Use the key of my $1 translation provider"
+    save: Save
+    cancel: Cancel
+    remove: Remove
+    missingField: "Fill in: $1"
+    badUrl: The server address is not a valid URL.
+    permissionDenied: "Chrome did not allow access to $1, so this voice can't be used."
+    errors:
+      noVoice: No voice for this language
+      auth: The key was refused. Check it, or make a new one.
+      quota: "The provider's allowance is used up: $1"
+      rateLimit: Too many requests. Wait a moment and try again.
+      network: The provider could not be reached.
+      overloaded: The provider is unavailable right now.
+      other: "It failed: $1"
   spend:
     title: "Usage and cost"
     price: "$1: $2 input, $3 cached input, $4 output per million tokens."
@@ -563,6 +622,7 @@ options:
     tokensInOut: "Tokens in / out"
     noPriceShort: "no price"
     removed: "$1 (removed)"
+    voicePrep: "Voice prep ($1)"
     hint: "An estimate from the tokens each response reports and the price above; your provider's bill is the real figure. Cache writes are priced as plain input, so a provider that charges more for them is slightly undercounted. Requests cancelled before they finished are not counted. Kept on this device."
     reset: "Reset total"
     limitRemoved: "Limit removed."
@@ -607,6 +667,7 @@ options:
     prefs: "Preferences: the ones in the file replace yours."
     quality: "Quality: the mode and options in the file replace yours."
     reading: "Reading settings: the theme, typeface, size and line width in the file replace yours."
+    voice: Voice settings and voice providers (no keys)
     glossary:
       1: "Glossary: 1 entry added or replaced; yours stay."
       n: "Glossary: $1 entries added or replaced; yours stay."
@@ -846,6 +907,7 @@ options:
     skipRouting: "Skipped the routing: it names no valid model to translate with."
     skipQuality: "Skipped the quality setting: it could not be read."
     skipReading: "Skipped the reading settings: they could not be read."
+    skipVoice: Some voice settings in the file were not understood and were skipped.
     dropRoutingIds: "Dropped model ids in the routing that are not valid."
     cappedConnections: "The file lists {count} connections; only the first {max} were read."
     cappedProfiles: "The file lists {count} model profiles; only the first {max} were read."

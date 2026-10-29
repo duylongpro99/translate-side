@@ -1,0 +1,144 @@
+{
+  "recordedAt": "2026-10-26T14:56:30.084Z",
+  "browser": "156.0.8078.4 (Playwright Chromium, headless)",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+  "results": [
+    {
+      "name": "gemini interactions vi",
+      "status": 200,
+      "contentType": "application/json",
+      "bytes": 536143,
+      "ms": 8326,
+      "audioMime": "audio/wav",
+      "audioBytes": 401636,
+      "decoded": true,
+      "duration": 8.24,
+      "sampleRate": 48000,
+      "channels": 1,
+      "audioElement": {
+        "loaded": true,
+        "duration": 8.24
+      }
+    },
+    {
+      "name": "openrouter audio/speech vi",
+      "status": 200,
+      "contentType": "audio/mpeg",
+      "bytes": 134581,
+      "ms": 4738,
+      "decoded": true,
+      "duration": 8.41,
+      "sampleRate": 48000,
+      "channels": 1,
+      "audioElement": {
+        "loaded": true,
+        "duration": 8.41
+      }
+    },
+    {
+      "name": "gemini interactions en",
+      "status": 200,
+      "contentType": "application/json",
+      "bytes": 628303,
+      "ms": 6671,
+      "audioMime": "audio/wav",
+      "audioBytes": 470756,
+      "decoded": true,
+      "duration": 9.68,
+      "sampleRate": 48000,
+      "channels": 1,
+      "audioElement": {
+        "loaded": true,
+        "duration": 9.68
+      }
+    },
+    {
+      "name": "openrouter audio/speech en",
+      "status": 200,
+      "contentType": "audio/mpeg",
+      "bytes": 148792,
+      "ms": 4136,
+      "decoded": true,
+      "duration": 9.3,
+      "sampleRate": 48000,
+      "channels": 1,
+      "audioElement": {
+        "loaded": true,
+        "duration": 9.3
+      }
+    },
+    {
+      "name": "gemini generateContent vi",
+      "status": 200,
+      "contentType": "application/json; charset=UTF-8",
+      "bytes": 449224,
+      "ms": 3271,
+      "audioMime": "audio/wav",
+      "audioBytes": 336356,
+      "decoded": true,
+      "duration": 6.88,
+      "sampleRate": 48000,
+      "channels": 1,
+      "audioElement": {
+        "loaded": true,
+        "duration": 6.88
+      }
+    },
+    {
+      "name": "openai (invalid key)",
+      "status": 401,
+      "contentType": "text/plain",
+      "bytes": 281,
+      "ms": 456,
+      "body": "{\"error\":{\"message\":\"Incorrect API key provided: sk-s11-i***********************0000. You can find your API key at https://platform.openai.com/account/api-keys.\",\"type\":\"invalid_request_error\",\"code\":\"invalid_api_key\",\"param\":null},\"status\":401}"
+    },
+    {
+      "name": "azure key header (invalid key)",
+      "status": 401,
+      "contentType": "",
+      "bytes": 0,
+      "ms": 1019,
+      "body": ""
+    },
+    {
+      "name": "azure issueToken (invalid key)",
+      "status": 401,
+      "contentType": "application/json",
+      "bytes": 224,
+      "ms": 1005,
+      "body": "{\"error\":{\"code\":\"401\",\"message\":\"Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.\"}}"
+    },
+    {
+      "name": "elevenlabs (invalid key)",
+      "status": 401,
+      "contentType": "application/json",
+      "bytes": 167,
+      "ms": 322,
+      "body": "{\"detail\":{\"type\":\"authentication_error\",\"code\":\"unauthorized\",\"message\":\"Invalid API key\",\"status\":\"invalid_api_key\",\"request_id\":\"0f3c1608b48c9ba0896690064efa8f12\"}}"
+    },
+    {
+      "name": "google cloud tts (invalid key)",
+      "status": 400,
+      "contentType": "application/json; charset=UTF-8",
+      "bytes": 575,
+      "ms": 118,
+      "body": "{\"error\":{\"code\":400,\"message\":\"API key not valid. Please pass a valid API key.\",\"status\":\"INVALID_ARGUMENT\",\"details\":[{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"texttospeech.googleapis.com\"}},{\"@type\":\"type.google"
+    },
+    {
+      "name": "vbee realtime (invalid token)",
+      "status": 401,
+      "contentType": "text/html",
+      "bytes": 574,
+      "ms": 159,
+      "body": "<html>\r\n<head><title>401 Authorization Required</title></head>\r\n<body>\r\n<center><h1>401 Authorization Required</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n<!-- a padding to disable MSIE and Chrome friendly error page"
+    },
+    {
+      "name": "fpt.ai v5 (invalid key)",
+      "status": 401,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 48,
+      "ms": 112,
+      "body": "{\"message\":\"Invalid authentication credentials\"}"
+    }
+  ]
+}

@@ -516,6 +516,39 @@ model"). The choice applies to this tab only. The default routing stays the same
 
 ---
 
+### 4.4 Read aloud (text-to-speech)
+
+A block's toolbar has **Read aloud**: the translation of a translated block, else its original, in that side's
+language; while the block shows its original, **Read original** too. The block being read is marked, a strip under
+the header names it with **Stop**, and <kbd>Esc</kbd> stops. With "keep reading" on (the default, Settings › Voice) the
+following blocks are read on the same side, including ones translated after reading started. Free for everyone: never
+behind `featureAvailable`, and independent of the translation provider.
+
+- **Engines** (`src/tts/`): one `TtsEngine` interface (`types.ts`). The **system voice** (`system.ts`, `chrome.tts`,
+  permission `tts`) is the zero-setup default; it picks a local voice per language and never borrows another
+  language's, and Chrome's network voices are used only when picked by name. A **voice provider of the user's own**
+  (`cloud/`, one adapter per provider, loaded only when chosen): Gemini, OpenAI-compatible, Azure Speech, ElevenLabs,
+  Google Cloud TTS, Vbee and FPT.AI (the last two Vietnamese only), called straight from the extension page with the
+  user's key and that provider's optional host permission
+  ([S11](docs/decisions/S11-cloud-tts-direct.md)). An offline Piper voice was proven feasible
+  ([S10](docs/decisions/S10-piper-vi-g2p.md)) and deferred by the owner on 2026-10-27: the only Vietnamese voice's
+  licence lineage is unclear.
+- **Speakable text** (`speakable.ts`): rule-based, for every voice: Vietnamese and English numbers, dates, money,
+  percentages and common abbreviations written out, URLs dropped, text split into sentences and clauses.
+  For a provider's voice, **voice prep** (`prepare.ts`, prompt `tts-prepare@1`) asks the page's translation route to
+  write the block out as spoken and add a short delivery note (Gemini's `style`, OpenAI's `instructions`); it never
+  waits on the privacy notice, stops at the spend limit, runs only once the page is being translated, and falls back
+  to the rule-based text on any failure (1.5 s for the block the reader waits on, 8 s for one prepared ahead).
+- **Playback** (`controller.ts`): one playback at a time; the next block is prepared and, for a provider, fetched
+  while the current one plays; a page change stops it. Provider audio plays through an `<audio>` element and is kept
+  in a small LRU for replays.
+- **Settings** (`settings.ts`, Settings › Voice): `storage.sync` `tts` (engine, voice per language, keep reading)
+  and `ttsConn:<id>` per provider; keys in `storage.local` under `ttsSecret:<id>`, apart from translation keys, or a
+  reference (`keyFrom`) to the translation connection of the same service at its own address. Export carries no voice
+  key; picked voices are not imported (they are per computer).
+- **Privacy**: on a never-translate or local-only page a provider's voice is not used; the system voice reads. What
+  each voice sends is in [privacy.md](docs/privacy.md#what-is-sent-and-to-whom).
+
 ## 5. Translation engine (isolated, extensible)
 
 v1 translation is simple: a brief plus one translation pass per chunk. But **how** we translate is
@@ -927,7 +960,7 @@ viewport comes first, you can start reading almost immediately.
   prompt says it's data, and the output is only ever **rendered as text** (sanitized, no HTML
   injection). The model has no tools, so the worst a hostile page can do is cause a bad
   translation.
-- Minimal permissions: `sidePanel`, `storage`, `activeTab`, `scripting`, `contextMenus`, plus
+- Minimal permissions: `sidePanel`, `storage`, `activeTab`, `scripting`, `contextMenus`, `tts` (§4.4), plus
   optional host permissions, requested per origin at runtime, only for the configured provider
   endpoints and for sites the user allowlists. The manifest declares `https://*/*` and
   `http://*/*` as optional (ROADMAP §8 item 19).

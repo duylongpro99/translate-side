@@ -1,7 +1,7 @@
 ---
 phase: 7
 title: "Context note and speakable text"
-status: pending
+status: done
 priority: P2
 effort: "1d"
 dependencies: [6]

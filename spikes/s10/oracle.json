@@ -1,0 +1,2412 @@
+{
+ "note": "Dev-time oracle only. Phonemes are espeak-ng output (GPL tool, used as a black box); never shipped.",
+ "voice": "vi",
+ "phonemizer": "piper_phonemize==1.1.0",
+ "crossCheck": {
+  "phonemizer": "piper-tts==1.8.0",
+  "identicalSentences": 300,
+  "total": 300
+ },
+ "entries": [
+  {
+   "group": "tones",
+   "text": "Mỗi chiều chị Bảy đều phải đi bán phở.",
+   "expanded": "Mỗi chiều chị Bảy đều phải đi bán phở.",
+   "phonemes": [
+    "mˌo5j tʃˈiɛ2w tʃˈi6 bˈa4j ɗˈe2w fˌaː4j ɗˈi bˈaːɜn fˈəː4."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Em tôi đã hỏi chị về con ma ở bụi chuối.",
+   "expanded": "Em tôi đã hỏi chị về con ma ở bụi chuối.",
+   "phonemes": [
+    "ˈɛm t̪ˈoj ɗˌaː5 hˈɔ4j tʃˈi6 vˈe2 kˌɔn mˈaː ˈəː4 bˈu6j tʃˈuəɜj."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chú Bảy sẽ chỉ cho tôi về chỗ bán mạ.",
+   "expanded": "Chú Bảy sẽ chỉ cho tôi về chỗ bán mạ.",
+   "phonemes": [
+    "tʃˈuɜ bˈa4j sˌɛ5 tʃˈi4 tʃˌɔ t̪ˈoj vˈe2 tʃˈo5 bˈaːɜn mˈaː6."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã bảo anh phải đi cắt cỏ ở bãi.",
+   "expanded": "Mẹ đã bảo anh phải đi cắt cỏ ở bãi.",
+   "phonemes": [
+    "mˈɛ6 ɗˌaː5 bˈaː4w ˈe-ɲ fˌaː4j ɗˈi kˈaɜt̪ kˈɔ4 ˈəː4 bˈaː5j."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Con chó cũ của chị Bảy đã chết sáng nay.",
+   "expanded": "Con chó cũ của chị Bảy đã chết sáng nay.",
+   "phonemes": [
+    "kˌɔn tʃˈɔɜ kˈu5 kˌuə4 tʃˈi6 bˈa4j ɗˌaː5 tʃˈeɜt̪ sˈaːɜŋ nˈaj."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chị đã mở cửa phòng để tìm chiếc ví cũ.",
+   "expanded": "Chị đã mở cửa phòng để tìm chiếc ví cũ.",
+   "phonemes": [
+    "tʃˈi6 ɗˌaː5 mˈəː4 kˈyə4 fˈɔ2ŋ ɗˌe4 t̪ˈi2m tʃˈiɛɜc vˈiɜ kˈu5."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bà ngoại đã chỉ cho em cách giặt áo may.",
+   "expanded": "Bà ngoại đã chỉ cho em cách giặt áo may.",
+   "phonemes": [
+    "bˈaː2 ŋwˈaː6j ɗˌaː5 tʃˈi4 tʃˌɔ ˈɛm kˈe-ɜc zˈa6t̪ ˈaːɜw mˈaj."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bố tôi đã phải đi mua chiếc quạt máy mới.",
+   "expanded": "Bố tôi đã phải đi mua chiếc quạt máy mới.",
+   "phonemes": [
+    "bˈoɜ t̪ˈoj ɗˌaː5 fˌaː4j ɗˈi mˈuə tʃˈiɛɜc kwˈaː6t̪ mˈaɜj mˈəːɜj."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Anh Bảy sẽ đến nhà chị để ăn phở bò.",
+   "expanded": "Anh Bảy sẽ đến nhà chị để ăn phở bò.",
+   "phonemes": [
+    "ˈe-ɲ bˈa4j sˌɛ5 ɗˌeɜn ɲˈaː2 tʃˈi6 ɗˌe4 ˈan fˈəː4 bˈɔ2."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Dù đã muộn nhưng chị vẫn phải đi gặt lúa.",
+   "expanded": "Dù đã muộn nhưng chị vẫn phải đi gặt lúa.",
+   "phonemes": [
+    "zˌu2 ɗˌaː5 mˈuə6n ɲˌyŋ tʃˈi6 vˌə5n fˌaː4j ɗˈi ɣˈa6t̪ lˈuəɜ."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bãi cỏ rậm này có rất nhiều muỗi độc.",
+   "expanded": "Bãi cỏ rậm này có rất nhiều muỗi độc.",
+   "phonemes": [
+    "bˈaː5j kˈɔ4 zˈə6m nˈa2j kˈɔɜ zˈəɜt̪ ɲˈiɛ2w mˈuə5j ɗˈo6k."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Cụ già đã chỉ cho em con đường về làng.",
+   "expanded": "Cụ già đã chỉ cho em con đường về làng.",
+   "phonemes": [
+    "kˈu6 zˈaː2 ɗˌaː5 tʃˈi4 tʃˌɔ ˈɛm kˌɔn ɗˈyə2ŋ vˈe2 lˈaː2ŋ."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chị tôi sẽ đi chợ mua củ xả và ớt.",
+   "expanded": "Chị tôi sẽ đi chợ mua củ xả và ớt.",
+   "phonemes": [
+    "tʃˈi6 t̪ˈoj sˌɛ5 ɗˈi tʃˈəː6 mˈuə kˈu4 sˈaː4 vˌaː2 ˈəːɜt̪."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã dặn em phải rửa sạch quả táo đỏ.",
+   "expanded": "Mẹ đã dặn em phải rửa sạch quả táo đỏ.",
+   "phonemes": [
+    "mˈɛ6 ɗˌaː5 zˈa6n ˈɛm fˌaː4j zˈyə4 sˈe-6c kwˈaː4 t̪ˈaːɜw ɗˈɔ4."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chú Bảy đã mua một chiếc bàn gỗ rất đẹp.",
+   "expanded": "Chú Bảy đã mua một chiếc bàn gỗ rất đẹp.",
+   "phonemes": [
+    "tʃˈuɜ bˈa4j ɗˌaː5 mˈuə mˈo6t̪ tʃˈiɛɜc bˈaː2n ɣˈo5 zˈəɜt̪ ɗˈɛ6p."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bác sĩ đã bảo anh ấy phải nghỉ ngơi.",
+   "expanded": "Bác sĩ đã bảo anh ấy phải nghỉ ngơi.",
+   "phonemes": [
+    "bˈaːɜc sˈi5 ɗˌaː5 bˈaː4w ˈe-ɲ ˈəɪɜ fˌaː4j ŋˈi4 ŋˈəːj."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Con mèo trắng đã nhảy qua giàn hoa hồng.",
+   "expanded": "Con mèo trắng đã nhảy qua giàn hoa hồng.",
+   "phonemes": [
+    "kˌɔn mˈɛ2w tʃˈaɜŋ ɗˌaː5 ɲˈa4j kwˈaː zˈaː2n hwˈaː hˈo2ŋ."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Mỗi ngày em đều chăm chỉ đọc sách ở nhà.",
+   "expanded": "Mỗi ngày em đều chăm chỉ đọc sách ở nhà.",
+   "phonemes": [
+    "mˌo5j ŋˈa2j ˈɛm ɗˈe2w tʃˈam tʃˈi4 ɗˈɔ6k sˈe-ɜc ˈəː4 ɲˈaː2."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chị Bảy đã phải nghỉ việc ở công ty cũ.",
+   "expanded": "Chị Bảy đã phải nghỉ việc ở công ty cũ.",
+   "phonemes": [
+    "tʃˈi6 bˈa4j ɗˌaː5 fˌaː4j ŋˈi4 vˈiɛ6c ˈəː4 kˈoŋ t̪ˈi kˈu5."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Cô giáo đã chỉ cho em chỗ sai trong bài.",
+   "expanded": "Cô giáo đã chỉ cho em chỗ sai trong bài.",
+   "phonemes": [
+    "kˈo zˈaːɜw ɗˌaː5 tʃˈi4 tʃˌɔ ˈɛm tʃˈo5 sˈaːj tʃˈɔŋ bˈaː2j."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Thầy giáo đã khen em vì có bài viết đẹp.",
+   "expanded": "Thầy giáo đã khen em vì có bài viết đẹp.",
+   "phonemes": [
+    "tˈəɪ2 zˈaːɜw ɗˌaː5 xˈɛn ˈɛm vˌi2 kˈɔɜ bˈaː2j vˈiɛɜt̪ ɗˈɛ6p."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chú đã gửi cho tôi một gói kẹo lạc rất ngon.",
+   "expanded": "Chú đã gửi cho tôi một gói kẹo lạc rất ngon.",
+   "phonemes": [
+    "tʃˈuɜ ɗˌaː5 ɣˈy4j tʃˌɔ t̪ˈoj mˈo6t̪ ɣˈɔɜj kˈɛ6w lˈaː6c zˈəɜt̪ ŋˈɔn."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bà đã xỏ chỉ vào kim để may áo cho em.",
+   "expanded": "Bà đã xỏ chỉ vào kim để may áo cho em.",
+   "phonemes": [
+    "bˈaː2 ɗˌaː5 sˈɔ4 tʃˈi4 vˈaː2w kˈim ɗˌe4 mˈaj ˈaːɜw tʃˌɔ ˈɛm."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Con quạ đen đã đậu trên cạ cây tre già.",
+   "expanded": "Con quạ đen đã đậu trên cạ cây tre già.",
+   "phonemes": [
+    "kˌɔn kwˈaː6 ɗˈɛn ɗˌaː5 ɗˈə6w tʃˈen kˈaː6 kˈəɪ tʃˈɛ zˈaː2."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Mỗi buổi sáng chị đều phải đi bộ ra bãi.",
+   "expanded": "Mỗi buổi sáng chị đều phải đi bộ ra bãi.",
+   "phonemes": [
+    "mˌo5j bˈuə4j sˈaːɜŋ tʃˈi6 ɗˈe2w fˌaː4j ɗˈi bˈo6 zˈaː bˈaː5j."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bố đã dặn anh phải giữ gìn chiếc xe cũ.",
+   "expanded": "Bố đã dặn anh phải giữ gìn chiếc xe cũ.",
+   "phonemes": [
+    "bˈoɜ ɗˌaː5 zˈa6n ˈe-ɲ fˌaː4j zˈy5 zˈi2n tʃˈiɛɜc sˈɛ kˈu5."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chị Bảy đã chỉ cho em cách nấu phở bò.",
+   "expanded": "Chị Bảy đã chỉ cho em cách nấu phở bò.",
+   "phonemes": [
+    "tʃˈi6 bˈa4j ɗˌaː5 tʃˈi4 tʃˌɔ ˈɛm kˈe-ɜc nˈəɜw fˈəː4 bˈɔ2."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Con chó nhỏ của chị đã nhảy qua bãi cỏ.",
+   "expanded": "Con chó nhỏ của chị đã nhảy qua bãi cỏ.",
+   "phonemes": [
+    "kˌɔn tʃˈɔɜ ɲˈɔ4 kˌuə4 tʃˈi6 ɗˌaː5 ɲˈa4j kwˈaː bˈaː5j kˈɔ4."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Em đã phải ở lại lớp để học bài cũ.",
+   "expanded": "Em đã phải ở lại lớp để học bài cũ.",
+   "phonemes": [
+    "ˈɛm ɗˌaː5 fˌaː4j ˈəː4 lˈaː6j lˈəːɜp ɗˌe4 hˈɔ6k bˈaː2j kˈu5."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bà nội sẽ kể cho em nghe chuyện ma ngày xưa.",
+   "expanded": "Bà nội sẽ kể cho em nghe chuyện ma ngày xưa.",
+   "phonemes": [
+    "bˈaː2 nˈo6j sˌɛ5 kˈe4 tʃˌɔ ˈɛm ŋˈɛ tʃwˈiɛ6n mˈaː ŋˈa2j sˈyə."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chị Bảy đã mua được một củ cải trắng rất to.",
+   "expanded": "Chị Bảy đã mua được một củ cải trắng rất to.",
+   "phonemes": [
+    "tʃˈi6 bˈa4j ɗˌaː5 mˈuə ɗˌyə6c mˈo6t̪ kˈu4 kˈaː4j tʃˈaɜŋ zˈəɜt̪ t̪ˈɔ."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã bảo em phải đi tắm rửa sạch sẽ.",
+   "expanded": "Mẹ đã bảo em phải đi tắm rửa sạch sẽ.",
+   "phonemes": [
+    "mˈɛ6 ɗˌaː5 bˈaː4w ˈɛm fˌaː4j ɗˈi t̪ˈaɜm zˈyə4 sˈe-6c sˌɛ5."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bố tôi đã dặn anh phải chăm chỉ làm ăn.",
+   "expanded": "Bố tôi đã dặn anh phải chăm chỉ làm ăn.",
+   "phonemes": [
+    "bˈoɜ t̪ˈoj ɗˌaː5 zˈa6n ˈe-ɲ fˌaː4j tʃˈam tʃˈi4 lˈaː2m ˈan."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Mỗi tháng chị đều gửi tiền về nhà cho bố.",
+   "expanded": "Mỗi tháng chị đều gửi tiền về nhà cho bố.",
+   "phonemes": [
+    "mˌo5j tˈaːɜŋ tʃˈi6 ɗˈe2w ɣˈy4j t̪ˈiɛ2n vˈe2 ɲˈaː2 tʃˌɔ bˈoɜ."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chú Bảy đã chỉ cho tôi về chỗ trồng mạ xuân.",
+   "expanded": "Chú Bảy đã chỉ cho tôi về chỗ trồng mạ xuân.",
+   "phonemes": [
+    "tʃˈuɜ bˈa4j ɗˌaː5 tʃˈi4 tʃˌɔ t̪ˈoj vˈe2 tʃˈo5 tʃˈo2ŋ mˈaː6 swˈən."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bãi biển này rất đẹp nhưng lại có nhiều muỗi.",
+   "expanded": "Bãi biển này rất đẹp nhưng lại có nhiều muỗi.",
+   "phonemes": [
+    "bˈaː5j bˈiɛ4n nˈa2j zˈəɜt̪ ɗˈɛ6p ɲˌyŋ lˈaː6j kˈɔɜ ɲˈiɛ2w mˈuə5j."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chị đã mua một chiếc nón lá ở chợ cũ.",
+   "expanded": "Chị đã mua một chiếc nón lá ở chợ cũ.",
+   "phonemes": [
+    "tʃˈi6 ɗˌaː5 mˈuə mˈo6t̪ tʃˈiɛɜc nˈɔɜn lˈaːɜ ˈəː4 tʃˈəː6 kˈu5."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Em đã phải đi tìm chiếc chìa khóa bị mất.",
+   "expanded": "Em đã phải đi tìm chiếc chìa khóa bị mất.",
+   "phonemes": [
+    "ˈɛm ɗˌaː5 fˌaː4j ɗˈi t̪ˈi2m tʃˈiɛɜc tʃˈiə2 xwˈaːɜ bˌi6 mˈəɜt̪."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Cô Bảy sẽ chỉ cho em cách làm bánh bò.",
+   "expanded": "Cô Bảy sẽ chỉ cho em cách làm bánh bò.",
+   "phonemes": [
+    "kˈo bˈa4j sˌɛ5 tʃˈi4 tʃˌɔ ˈɛm kˈe-ɜc lˈaː2m bˈe-ɜɲ bˈɔ2."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bố đã phải cắt bỏ cành cây già ở ngoài bãi.",
+   "expanded": "Bố đã phải cắt bỏ cành cây già ở ngoài bãi.",
+   "phonemes": [
+    "bˈoɜ ɗˌaː5 fˌaː4j kˈaɜt̪ bˈɔ4 kˈe-2ɲ kˈəɪ zˈaː2 ˈəː4 ŋwˈaː2j bˈaː5j."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã mua cho em một chiếc áo mới rất đẹp.",
+   "expanded": "Mẹ đã mua cho em một chiếc áo mới rất đẹp.",
+   "phonemes": [
+    "mˈɛ6 ɗˌaː5 mˈuə tʃˌɔ ˈɛm mˈo6t̪ tʃˈiɛɜc ˈaːɜw mˈəːɜj zˈəɜt̪ ɗˈɛ6p."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Con mèo đã leo lên bàn gỗ để ăn cá.",
+   "expanded": "Con mèo đã leo lên bàn gỗ để ăn cá.",
+   "phonemes": [
+    "kˌɔn mˈɛ2w ɗˌaː5 lˈɛw lˈen bˈaː2n ɣˈo5 ɗˌe4 ˈan kˈaːɜ."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chị Bảy đã phải dậy sớm để đi bán rau.",
+   "expanded": "Chị Bảy đã phải dậy sớm để đi bán rau.",
+   "phonemes": [
+    "tʃˈi6 bˈa4j ɗˌaː5 fˌaː4j zˈəɪ6 sˈəːɜm ɗˌe4 ɗˈi bˈaːɜn zˈaw."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Em đã chỉ cho anh chỗ mua quạt điện cũ.",
+   "expanded": "Em đã chỉ cho anh chỗ mua quạt điện cũ.",
+   "phonemes": [
+    "ˈɛm ɗˌaː5 tʃˈi4 tʃˌɔ ˈe-ɲ tʃˈo5 mˈuə kwˈaː6t̪ ɗˈiɛ6n kˈu5."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bác đã dặn em phải cẩn thận khi qua đường.",
+   "expanded": "Bác đã dặn em phải cẩn thận khi qua đường.",
+   "phonemes": [
+    "bˈaːɜc ɗˌaː5 zˈa6n ˈɛm fˌaː4j kˈə4n tˈə6n xˌi kwˈaː ɗˈyə2ŋ."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Con chó nhà chị Bảy rất ngoan và biết nghe lời.",
+   "expanded": "Con chó nhà chị Bảy rất ngoan và biết nghe lời.",
+   "phonemes": [
+    "kˌɔn tʃˈɔɜ ɲˈaː2 tʃˈi6 bˈa4j zˈəɜt̪ ŋwˈaːn vˌaː2 bˈiɛɜt̪ ŋˈɛ lˈəː2j."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã chỉ cho em cách xỏ chỉ may vạt áo.",
+   "expanded": "Mẹ đã chỉ cho em cách xỏ chỉ may vạt áo.",
+   "phonemes": [
+    "mˈɛ6 ɗˌaː5 tʃˈi4 tʃˌɔ ˈɛm kˈe-ɜc sˈɔ4 tʃˈi4 mˈaj vˈaː6t̪ ˈaːɜw."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chú tôi đã mua một bầy cừu trắng ở bãi.",
+   "expanded": "Chú tôi đã mua một bầy cừu trắng ở bãi.",
+   "phonemes": [
+    "tʃˈuɜ t̪ˈoj ɗˌaː5 mˈuə mˈo6t̪ bˈəɪ2 kˈi2w tʃˈaɜŋ ˈəː4 bˈaː5j."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chị Bảy đã phải ngủ lại ở nhà bà nội.",
+   "expanded": "Chị Bảy đã phải ngủ lại ở nhà bà nội.",
+   "phonemes": [
+    "tʃˈi6 bˈa4j ɗˌaː5 fˌaː4j ŋˈu4 lˈaː6j ˈəː4 ɲˈaː2 bˈaː2 nˈo6j."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Em đã dặn anh phải mở cửa cho chó vào.",
+   "expanded": "Em đã dặn anh phải mở cửa cho chó vào.",
+   "phonemes": [
+    "ˈɛm ɗˌaː5 zˈa6n ˈe-ɲ fˌaː4j mˈəː4 kˈyə4 tʃˌɔ tʃˈɔɜ vˈaː2w."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bố sẽ chỉ cho em cách làm giàn hoa hồng.",
+   "expanded": "Bố sẽ chỉ cho em cách làm giàn hoa hồng.",
+   "phonemes": [
+    "bˈoɜ sˌɛ5 tʃˈi4 tʃˌɔ ˈɛm kˈe-ɜc lˈaː2m zˈaː2n hwˈaː hˈo2ŋ."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Mỗi tuần chị Bảy đều đi chợ mua phở khô.",
+   "expanded": "Mỗi tuần chị Bảy đều đi chợ mua phở khô.",
+   "phonemes": [
+    "mˌo5j t̪wˈə2n tʃˈi6 bˈa4j ɗˈe2w ɗˈi tʃˈəː6 mˈuə fˈəː4 xˈo."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bác đã mua một con mã tấu cũ ở bãi rác.",
+   "expanded": "Bác đã mua một con mã tấu cũ ở bãi rác.",
+   "phonemes": [
+    "bˈaːɜc ɗˌaː5 mˈuə mˈo6t̪ kˌɔn mˈaː5 t̪ˈəɜw kˈu5 ˈəː4 bˈaː5j zˈaːɜc."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chị tôi đã chỉ cho em chỗ bán củ xả.",
+   "expanded": "Chị tôi đã chỉ cho em chỗ bán củ xả.",
+   "phonemes": [
+    "tʃˈi6 t̪ˈoj ɗˌaː5 tʃˈi4 tʃˌɔ ˈɛm tʃˈo5 bˈaːɜn kˈu4 sˈaː4."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã dặn anh phải đi gặt lúa ở bãi ngoài.",
+   "expanded": "Mẹ đã dặn anh phải đi gặt lúa ở bãi ngoài.",
+   "phonemes": [
+    "mˈɛ6 ɗˌaː5 zˈa6n ˈe-ɲ fˌaː4j ɗˈi ɣˈa6t̪ lˈuəɜ ˈəː4 bˈaː5j ŋwˈaː2j."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Con muỗi đã cắn vào má của em bé nhỏ.",
+   "expanded": "Con muỗi đã cắn vào má của em bé nhỏ.",
+   "phonemes": [
+    "kˌɔn mˈuə5j ɗˌaː5 kˈaɜn vˈaː2w mˈaːɜ kˌuə4 ˈɛm bˈɛɜ ɲˈɔ4."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Chị Bảy đã hỏi bố về chiếc quạt máy cũ.",
+   "expanded": "Chị Bảy đã hỏi bố về chiếc quạt máy cũ.",
+   "phonemes": [
+    "tʃˈi6 bˈa4j ɗˌaː5 hˈɔ4j bˈoɜ vˈe2 tʃˈiɛɜc kwˈaː6t̪ mˈaɜj kˈu5."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Em đã phải đến trường từ rất sớm để trực nhật.",
+   "expanded": "Em đã phải đến trường từ rất sớm để trực nhật.",
+   "phonemes": [
+    "ˈɛm ɗˌaː5 fˌaː4j ɗˌeɜn tʃˈyə2ŋ t̪ˌy2 zˈəɜt̪ sˈəːɜm ɗˌe4 tʃˈy6c ɲˈə6t̪."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Bố đã chỉ cho chú Bảy chỗ mua mạ xuân.",
+   "expanded": "Bố đã chỉ cho chú Bảy chỗ mua mạ xuân.",
+   "phonemes": [
+    "bˈoɜ ɗˌaː5 tʃˈi4 tʃˌɔ tʃˈuɜ bˈa4j tʃˈo5 mˈuə mˈaː6 swˈən."
+   ]
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã mua một quả bưởi rất ngọt ở chợ bãi.",
+   "expanded": "Mẹ đã mua một quả bưởi rất ngọt ở chợ bãi.",
+   "phonemes": [
+    "mˈɛ6 ɗˌaː5 mˈuə mˈo6t̪ kwˈaː4 bˈyə4j zˈəɜt̪ ŋˈɔ6t̪ ˈəː4 tʃˈəː6 bˈaː5j."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Hôm nay trời nhiều mây và gió thổi rất mạnh qua từng kẽ lá.",
+   "expanded": "Hôm nay trời nhiều mây và gió thổi rất mạnh qua từng kẽ lá.",
+   "phonemes": [
+    "hˈom nˈaj tʃˈəː2j ɲˈiɛ2w mˈəɪ vˌaː2 zˈɔɜ tˈo4j zˈəɜt̪ mˈe-6ɲ kwˈaː t̪ˈy2ŋ kˈɛ5 lˈaːɜ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chị tôi cẩn thận xếp từng chiếc áo len mới mua vào trong tủ gỗ.",
+   "expanded": "Chị tôi cẩn thận xếp từng chiếc áo len mới mua vào trong tủ gỗ.",
+   "phonemes": [
+    "tʃˈi6 t̪ˈoj kˈə4n tˈə6n sˈeɜp t̪ˈy2ŋ tʃˈiɛɜc ˈaːɜw lˈɛn mˈəːɜj mˈuə vˈaː2w tʃˈɔŋ t̪ˈu4 ɣˈo5."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Đoàn khách du lịch thích thú ngắm nhìn dòng sông muôn màu sắc.",
+   "expanded": "Đoàn khách du lịch thích thú ngắm nhìn dòng sông muôn màu sắc.",
+   "phonemes": [
+    "ɗwˈaː2n xˈe-ɜc zˈu lˈi6c tˈiɜc tˈuɜ ŋˈaɜm ɲˈi2n zˈɔ2ŋ sˈoŋ mˈuən mˈa2w sˈaɜc."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chú mèo nhỏ đang nằm ngủ ngon lành bên xô nước ngoài sân sau.",
+   "expanded": "Chú mèo nhỏ đang nằm ngủ ngon lành bên xô nước ngoài sân sau.",
+   "phonemes": [
+    "tʃˈuɜ mˈɛ2w ɲˈɔ4 ɗˌaːŋ nˈa2m ŋˈu4 ŋˈɔn lˈe-2ɲ bˈen sˈo nˈyəɜc ŋwˈaː2j sˈən sˈaw."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mẹ dặn em phải chăm chỉ học hành để đạt kết quả thật cao.",
+   "expanded": "Mẹ dặn em phải chăm chỉ học hành để đạt kết quả thật cao.",
+   "phonemes": [
+    "mˈɛ6 zˈa6n ˈɛm fˌaː4j tʃˈam tʃˈi4 hˈɔ6k hˈe-2ɲ ɗˌe4 ɗˈaː6t̪ kˈeɜt̪ kwˈaː4 tˈə6t̪ kˈaːw."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Cả nhà cùng nhau ăn bữa cơm tối ấm áp sau tuần làm việc vất vả.",
+   "expanded": "Cả nhà cùng nhau ăn bữa cơm tối ấm áp sau tuần làm việc vất vả.",
+   "phonemes": [
+    "kˈaː4 ɲˈaː2 kˈu2ŋ ɲˈaw ˈan bˈyə5 kˈəːm t̪ˈoɜj ˈəɜm ˈaːɜp sˈaw t̪wˈə2n lˈaː2m vˈiɛ6c vˈəɜt̪ vˈaː4."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Tiếng chim hót líu lo trên cành cây cao làm bừng sáng buổi sáng.",
+   "expanded": "Tiếng chim hót líu lo trên cành cây cao làm bừng sáng buổi sáng.",
+   "phonemes": [
+    "t̪ˈiɛɜŋ tʃˈim hˈɔɜt̪ lˈiɜw lˈɔ tʃˈen kˈe-2ɲ kˈəɪ kˈaːw lˈaː2m bˈy2ŋ sˈaːɜŋ bˈuə4j sˈaːɜŋ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Anh ấy luôn cố gắng vượt qua mọi khó khăn trong cuộc sống thường ngày.",
+   "expanded": "Anh ấy luôn cố gắng vượt qua mọi khó khăn trong cuộc sống thường ngày.",
+   "phonemes": [
+    "ˈe-ɲ ˈəɪɜ lˈuən kˈoɜ ɣˈaɜŋ vˈyə6t̪ kwˈaː mˌɔ6j xˈɔɜ xˈan tʃˈɔŋ kˈuə6c sˈoɜŋ tˈyə2ŋ ŋˈa2j."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Con đường làng ngoằn ngoèo dẫn chúng tôi về thăm ngôi nhà cũ.",
+   "expanded": "Con đường làng ngoằn ngoèo dẫn chúng tôi về thăm ngôi nhà cũ.",
+   "phonemes": [
+    "kˌɔn ɗˈyə2ŋ lˈaː2ŋ ŋwˈa2n ŋwˈɛ2w zˈə5n tʃˈuɜŋ t̪ˈoj vˈe2 tˈam ŋˈoj ɲˈaː2 kˈu5."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Bà ngoại hay kể cho em nghe những câu chuyện cổ tích ngày xưa.",
+   "expanded": "Bà ngoại hay kể cho em nghe những câu chuyện cổ tích ngày xưa.",
+   "phonemes": [
+    "bˈaː2 ŋwˈaː6j hˈaj kˈe4 tʃˌɔ ˈɛm ŋˈɛ ɲˌy5ŋ kˈə1w tʃwˈiɛ6n kˈo4 t̪ˈiɜc ŋˈa2j sˈyə."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Màu xanh ngọc bích của nước hồ khiến ai nhìn cũng thấy dễ chịu.",
+   "expanded": "Màu xanh ngọc bích của nước hồ khiến ai nhìn cũng thấy dễ chịu.",
+   "phonemes": [
+    "mˈa2w sˈe-ɲ ŋˈɔ6k bˈiɜc kˌuə4 nˈyəɜc hˈo2 xˈiɛɜn ˈaːj ɲˈi2n kˈu5ŋ tˈəɪɜ zˈe5 tʃˈi6w."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chúng tôi ngồi nói chuyện vui vẻ dưới ánh đèn lung linh huyền ảo.",
+   "expanded": "Chúng tôi ngồi nói chuyện vui vẻ dưới ánh đèn lung linh huyền ảo.",
+   "phonemes": [
+    "tʃˈuɜŋ t̪ˈoj ŋˈo2j nˈɔɜj tʃwˈiɛ6n vˈuj vˈɛ4 zˈyəɜj ˈe-ɜɲ ɗˈɛ2n lˈuŋ lˈiɲ hwˈiɛ2n ˈaː4w."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chiếc lá vàng nhẹ nhàng rơi xuống mặt đường mùa thu vắng vẻ.",
+   "expanded": "Chiếc lá vàng nhẹ nhàng rơi xuống mặt đường mùa thu vắng vẻ.",
+   "phonemes": [
+    "tʃˈiɛɜc lˈaːɜ vˈaː2ŋ ɲˈɛ6 ɲˈaː2ŋ zˈəːj sˈuəɜŋ mˈa6t̪ ɗˈyə2ŋ mˈuə2 tˈu vˈaɜŋ vˈɛ4."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Em thích thưởng thức hương thơm tươi mát của hoa lay ơn trắng.",
+   "expanded": "Em thích thưởng thức hương thơm tươi mát của hoa lay ơn trắng.",
+   "phonemes": [
+    "ˈɛm tˈiɜc tˈyə4ŋ tˈyɜc hˈyəŋ tˈəːm t̪ˈyəj mˈaːɜt̪ kˌuə4 hwˈaː lˈaj ˈəːn tʃˈaɜŋ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Thầy giáo nhiệt tình giảng bài làm cho giờ học trở nên thú vị.",
+   "expanded": "Thầy giáo nhiệt tình giảng bài làm cho giờ học trở nên thú vị.",
+   "phonemes": [
+    "tˈəɪ2 zˈaːɜw ɲˈiɛ6t̪ t̪ˈi2ɲ zˈaː4ŋ bˈaː2j lˈaː2m tʃˌɔ zˈəː2 hˈɔ6k tʃˈəː4 nˌen tˈuɜ vˈi6."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Những bông hoa huệ nở rộ lan tỏa mùi hương ngào ngạt khắp phòng.",
+   "expanded": "Những bông hoa huệ nở rộ lan tỏa mùi hương ngào ngạt khắp phòng.",
+   "phonemes": [
+    "ɲˌy5ŋ bˈoŋ hwˈaː hwˈe6 nˈəː4 zˈo6 lˈaːn t̪wˈaː4 mˈu2j hˈyəŋ ŋˈaː2w ŋˈaː6t̪ xˈaɜp fˈɔ2ŋ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Người nông dân gánh những chấu lúa nặng trĩu về nhà lúc chiều tà.",
+   "expanded": "Người nông dân gánh những chấu lúa nặng trĩu về nhà lúc chiều tà.",
+   "phonemes": [
+    "ŋˈyə2j nˈoŋ zˈən ɣˈe-ɜɲ ɲˌy5ŋ tʃˈəɜw lˈuəɜ nˈa6ŋ tʃˈi5w vˈe2 ɲˈaː2 lˌuɜc tʃˈiɛ2w t̪ˈaː2."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Trẻ con trong xóm tụ tập chơi nhảy dây ngoài khoảng sân rộng.",
+   "expanded": "Trẻ con trong xóm tụ tập chơi nhảy dây ngoài khoảng sân rộng.",
+   "phonemes": [
+    "tʃˈɛ4 kˌɔn tʃˈɔŋ sˈɔɜm t̪ˈu6 t̪ˈə6p tʃˈəːj ɲˈa4j zˈəɪ ŋwˈaː2j xwˌaː4ŋ sˈən zˈo6ŋ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Gió biển thổi rì rào mang theo hơi muối mặn mòi của đại dương.",
+   "expanded": "Gió biển thổi rì rào mang theo hơi muối mặn mòi của đại dương.",
+   "phonemes": [
+    "zˈɔɜ bˈiɛ4n tˈo4j zˈi2 zˈaː2w mˈaːŋ tˈɛw hˈəːj mˈuəɜj mˈa6n mˈɔ2j kˌuə4 ɗˈaː6j zˈyəŋ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Cô ấy khéo léo thêu từng đường kim mũi chỉ trên tấm vải lụa.",
+   "expanded": "Cô ấy khéo léo thêu từng đường kim mũi chỉ trên tấm vải lụa.",
+   "phonemes": [
+    "kˈo ˈəɪɜ xˈɛɜw lˈɛɜw tˈe1w t̪ˈy2ŋ ɗˈyə2ŋ kˈim mˈu5j tʃˈi4 tʃˈen t̪ˈəɜm vˈaː4j lˈuə6."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Quả bưởi trên cành đã chín vàng tròn mọng và rất ngọt ngào.",
+   "expanded": "Quả bưởi trên cành đã chín vàng tròn mọng và rất ngọt ngào.",
+   "phonemes": [
+    "kwˈaː4 bˈyə4j tʃˈen kˈe-2ɲ ɗˌaː5 tʃˈiɜn vˈaː2ŋ tʃˈɔ2n mˈɔ6ŋ vˌaː2 zˈəɜt̪ ŋˈɔ6t̪ ŋˈaː2w."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mọi người cùng hăng hái tham gia phong trào dọn dẹp vệ sinh.",
+   "expanded": "Mọi người cùng hăng hái tham gia phong trào dọn dẹp vệ sinh.",
+   "phonemes": [
+    "mˌɔ6j ŋˈyə2j kˈu2ŋ hˈaŋ hˈaːɜj tˈaːm zˈaː fˈɔŋ tʃˈaː2w zˈɔ6n zˈɛ6p vˈe6 sˈiɲ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Ánh mặt trời buổi sáng chiếu qua màn sương mỏng thật đẹp mắt.",
+   "expanded": "Ánh mặt trời buổi sáng chiếu qua màn sương mỏng thật đẹp mắt.",
+   "phonemes": [
+    "ˈe-ɜɲ mˈa6t̪ tʃˈəː2j bˈuə4j sˈaːɜŋ tʃˈiɛɜw kwˈaː mˈaː2n sˈyəŋ mˈɔ4ŋ tˈə6t̪ ɗˈɛ6p mˈaɜt̪."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chú chó nhỏ liên tục vẫy đuôi mừng rỡ khi thấy chủ về nhà.",
+   "expanded": "Chú chó nhỏ liên tục vẫy đuôi mừng rỡ khi thấy chủ về nhà.",
+   "phonemes": [
+    "tʃˈuɜ tʃˈɔɜ ɲˈɔ4 lˈiɛn t̪ˈu6c vˈəɪ5 ɗˈuəj mˈy2ŋ zˈəː5 xˌi tˈəɪɜ tʃˈu4 vˈe2 ɲˈaː2."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Hương vị đậm đà của bát phở nóng làm ấm lòng người đi xa.",
+   "expanded": "Hương vị đậm đà của bát phở nóng làm ấm lòng người đi xa.",
+   "phonemes": [
+    "hˈyəŋ vˈi6 ɗˈə6m ɗˈaː2 kˌuə4 bˈaːɜt̪ fˈəː4 nˈɔɜŋ lˈaː2m ˈəɜm lˈɔ2ŋ ŋˈyə2j ɗˈi sˈaː."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chúng ta nên giữ gìn sức khỏe bằng cách tập thể dục hàng ngày.",
+   "expanded": "Chúng ta nên giữ gìn sức khỏe bằng cách tập thể dục hàng ngày.",
+   "phonemes": [
+    "tʃˈuɜŋ t̪ˈaː nˌen zˈy5 zˈi2n sˈyɜc xwˈɛ4 bˈa2ŋ kˈe-ɜc t̪ˈə6p tˈe4 zˈu6c hˈaː2ŋ ŋˈa2j."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Đoàn tàu hỏa chầm chậm tiến vào ga trong tiếng còi vang vọng.",
+   "expanded": "Đoàn tàu hỏa chầm chậm tiến vào ga trong tiếng còi vang vọng.",
+   "phonemes": [
+    "ɗwˈaː2n t̪ˈa2w hwˈaː4 tʃˈə2m tʃˈə6m t̪ˈiɛɜn vˈaː2w ɣˈaː tʃˈɔŋ t̪ˈiɛɜŋ kˈɔ2j vˈaːŋ vˈɔ6ŋ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mấy đứa trẻ tung tăng chạy nhảy trên đồng cỏ xanh mướt mát.",
+   "expanded": "Mấy đứa trẻ tung tăng chạy nhảy trên đồng cỏ xanh mướt mát.",
+   "phonemes": [
+    "mˈəɪɜ ɗˈyəɜ tʃˈɛ4 t̪ˈuŋ t̪ˈaŋ tʃˈa6j ɲˈa4j tʃˈen ɗˈo2ŋ kˈɔ4 sˈe-ɲ mˈyəɜt̪ mˈaːɜt̪."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chuyến đi thực tế đã mang lại cho học sinh nhiều bài học hay.",
+   "expanded": "Chuyến đi thực tế đã mang lại cho học sinh nhiều bài học hay.",
+   "phonemes": [
+    "tʃwˈiɛɜn ɗˈi tˈy6c t̪ˈeɜ ɗˌaː5 mˈaːŋ lˈaː6j tʃˌɔ hˈɔ6k sˈiɲ ɲˈiɛ2w bˈaː2j hˈɔ6k hˈaj."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Ngôi nhà nhỏ nằm yên bình giữa vườn cây ăn quả sai xum xê.",
+   "expanded": "Ngôi nhà nhỏ nằm yên bình giữa vườn cây ăn quả sai xum xê.",
+   "phonemes": [
+    "ŋˈoj ɲˈaː2 ɲˈɔ4 nˈa2m ˈiɛn bˈi2ɲ zˈyə5 vˈyə2n kˈəɪ ˈan kwˈaː4 sˈaːj sˈum sˈe."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Bác thợ mộc cặm cụi gọt đẽo chiếc ghế gỗ sao cho thật phẳng.",
+   "expanded": "Bác thợ mộc cặm cụi gọt đẽo chiếc ghế gỗ sao cho thật phẳng.",
+   "phonemes": [
+    "bˈaːɜc tˈəː6 mˈo6k kˈa6m kˈu6j ɣˈɔ6t̪ ɗˈɛ5w tʃˈiɛɜc ɣˈeɜ ɣˈo5 sˈaːw tʃˌɔ tˈə6t̪ fˈa4ŋ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Trời mưa rào bất ngờ khiến người đi đường phải vội tìm chỗ trú.",
+   "expanded": "Trời mưa rào bất ngờ khiến người đi đường phải vội tìm chỗ trú.",
+   "phonemes": [
+    "tʃˈəː2j mˈyə zˈaː2w bˈəɜt̪ ŋˈəː2 xˈiɛɜn ŋˈyə2j ɗˈi ɗˈyə2ŋ fˌaː4j vˈo6j t̪ˈi2m tʃˈo5 tʃˈuɜ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Cây ổi sau nhà năm nay ra rất nhiều quả to và ngọt lịm.",
+   "expanded": "Cây ổi sau nhà năm nay ra rất nhiều quả to và ngọt lịm.",
+   "phonemes": [
+    "kˈəɪ ˈo4j sˈaw ɲˈaː2 nˈam nˈaj zˈaː zˈəɜt̪ ɲˈiɛ2w kwˈaː4 t̪ˈɔ vˌaː2 ŋˈɔ6t̪ lˈi6m."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Bạn bè lâu ngày gặp lại cùng nhau ôn lại kỷ niệm tuổi thơ.",
+   "expanded": "Bạn bè lâu ngày gặp lại cùng nhau ôn lại kỷ niệm tuổi thơ.",
+   "phonemes": [
+    "bˈaː6n bˈɛ2 lˈə1w ŋˈa2j ɣˈa6p lˈaː6j kˈu2ŋ ɲˈaw ˈon lˈaː6j kˈi4 nˈiɛ6m t̪ˈuə4j tˈəː."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Nước suối trong róc rách chảy qua từng khe đá mịn màng.",
+   "expanded": "Nước suối trong róc rách chảy qua từng khe đá mịn màng.",
+   "phonemes": [
+    "nˈyəɜc sˈuəɜj tʃˈɔŋ zˈɔɜk zˈe-ɜc tʃˈa4j kwˈaː t̪ˈy2ŋ xˈɛ ɗˈaːɜ mˈi6n mˈaː2ŋ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Em luôn tự hào về vẻ đẹp truyền thống của quê hương mình.",
+   "expanded": "Em luôn tự hào về vẻ đẹp truyền thống của quê hương mình.",
+   "phonemes": [
+    "ˈɛm lˈuən t̪ˈy6 hˈaː2w vˈe2 vˈɛ4 ɗˈɛ6p tʃwˈiɛ2n tˈoɜŋ kˌuə4 kwˈe hˈyəŋ mˈi2ɲ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chiếc thuyền thuyền buồm lướt nhẹ trên mặt sóng biển lăn tăn.",
+   "expanded": "Chiếc thuyền thuyền buồm lướt nhẹ trên mặt sóng biển lăn tăn.",
+   "phonemes": [
+    "tʃˈiɛɜc twˈiɛ2n twˈiɛ2n bˈuə2m lˈyəɜt̪ ɲˈɛ6 tʃˈen mˈa6t̪ sˈɔɜŋ bˈiɛ4n lˈan t̪ˈan."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mái tóc dài của chị dịu dàng bay trong gió chiều thu mát mẻ.",
+   "expanded": "Mái tóc dài của chị dịu dàng bay trong gió chiều thu mát mẻ.",
+   "phonemes": [
+    "mˈaːɜj t̪ˈɔɜk zˈaː2j kˌuə4 tʃˈi6 zˈi6w zˈaː2ŋ bˈaj tʃˈɔŋ zˈɔɜ tʃˈiɛ2w tˈu mˈaːɜt̪ mˈɛ4."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mọi khó khăn rồi sẽ qua đi khi chúng ta luôn giữ niềm tin.",
+   "expanded": "Mọi khó khăn rồi sẽ qua đi khi chúng ta luôn giữ niềm tin.",
+   "phonemes": [
+    "mˌɔ6j xˈɔɜ xˈan zˈo2j sˌɛ5 kwˈaː ɗˈi xˌi tʃˈuɜŋ t̪ˈaː lˈuən zˈy5 nˈiɛ2m t̪ˈin."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Bữa tiệc sinh nhật tràn ngập tiếng cười và những lời chúc tốt đẹp.",
+   "expanded": "Bữa tiệc sinh nhật tràn ngập tiếng cười và những lời chúc tốt đẹp.",
+   "phonemes": [
+    "bˈyə5 t̪ˈiɛ6c sˈiɲ ɲˈə6t̪ tʃˈaː2n ŋˈə6p t̪ˈiɛɜŋ kˈyə2j vˌaː2 ɲˌy5ŋ lˈəː2j tʃˈuɜc t̪ˈoɜt̪ ɗˈɛ6p."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Tiếng ve kêu râm ráo báo hiệu một mùa hè nữa lại về rồi.",
+   "expanded": "Tiếng ve kêu râm ráo báo hiệu một mùa hè nữa lại về rồi.",
+   "phonemes": [
+    "t̪ˈiɛɜŋ vˈɛ kˈe1w zˈəm zˈaːɜw bˈaːɜw hˈiɛ6w mˈo6t̪ mˈuə2 hˈɛ2 nˈyə5 lˈaː6j vˈe2 zˈo2j."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Bà cẩn thận nhặt từng hạt gạo trắng nõn chuẩn bị nấu xôi.",
+   "expanded": "Bà cẩn thận nhặt từng hạt gạo trắng nõn chuẩn bị nấu xôi.",
+   "phonemes": [
+    "bˈaː2 kˈə4n tˈə6n ɲˈa6t̪ t̪ˈy2ŋ hˈaː6t̪ ɣˈaː6w tʃˈaɜŋ nˈɔ5n tʃwˈə4n bˌi6 nˈəɜw sˈoj."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Đôi mắt em bé tròn xoe nhìn mọi vật xung quanh đầy tò mò.",
+   "expanded": "Đôi mắt em bé tròn xoe nhìn mọi vật xung quanh đầy tò mò.",
+   "phonemes": [
+    "ɗˈoj mˈaɜt̪ ˈɛm bˈɛɜ tʃˈɔ2n swˈɛ ɲˈi2n mˌɔ6j vˈə6t̪ sˈuŋ kwˈe-ɲ ɗˈəɪ2 t̪ˈɔ2 mˈɔ2."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mỗi buổi chiều em thường cùng bạn ra bờ sông thả diều bay cao.",
+   "expanded": "Mỗi buổi chiều em thường cùng bạn ra bờ sông thả diều bay cao.",
+   "phonemes": [
+    "mˌo5j bˈuə4j tʃˈiɛ2w ˈɛm tˈyə2ŋ kˈu2ŋ bˈaː6n zˈaː bˈəː2 sˈoŋ tˈaː4 zˈiɛ2w bˈaj kˈaːw."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Người bán hàng xởi lởi tươi cười chào đón khách vào xem đồ.",
+   "expanded": "Người bán hàng xởi lởi tươi cười chào đón khách vào xem đồ.",
+   "phonemes": [
+    "ŋˈyə2j bˈaːɜn hˈaː2ŋ sˈəː4j lˈəː4j t̪ˈyəj kˈyə2j tʃˈaː2w ɗˈɔɜn xˈe-ɜc vˈaː2w sˈɛm ɗˈo2."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chú chim sâu nhỏ nhắn nhanh nhẹn chuyền từ cành này sang cành khác.",
+   "expanded": "Chú chim sâu nhỏ nhắn nhanh nhẹn chuyền từ cành này sang cành khác.",
+   "phonemes": [
+    "tʃˈuɜ tʃˈim sˈə1w ɲˈɔ4 ɲˈaɜn ɲˈe-ɲ ɲˈɛ6n tʃwˈiɛ2n t̪ˌy2 kˈe-2ɲ nˈa2j sˈaːŋ kˈe-2ɲ xˈaːɜc."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mùa thu Hà Nội nổi tiếng với hương hoa sữa thơm nồng nàn.",
+   "expanded": "Mùa thu Hà Nội nổi tiếng với hương hoa sữa thơm nồng nàn.",
+   "phonemes": [
+    "mˈuə2 tˈu hˈaː2 nˈo6j nˈo4j t̪ˈiɛɜŋ vˌəːɜj hˈyəŋ hwˈaː sˈyə5 tˈəːm nˈo2ŋ nˈaː2n."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Những ngôi sao lấp lánh trên bầu trời đêm thật huyền bí.",
+   "expanded": "Những ngôi sao lấp lánh trên bầu trời đêm thật huyền bí.",
+   "phonemes": [
+    "ɲˌy5ŋ ŋˈoj sˈaːw lˈəɜp lˈe-ɜɲ tʃˈen bˈə2w tʃˈəː2j ɗˈem tˈə6t̪ hwˈiɛ2n bˈiɜ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Anh ấy suy nghĩ rất kỹ trước khi đưa ra quyết định cuối cùng.",
+   "expanded": "Anh ấy suy nghĩ rất kỹ trước khi đưa ra quyết định cuối cùng.",
+   "phonemes": [
+    "ˈe-ɲ ˈəɪɜ swˈi ŋˈi5 zˈəɜt̪ kˈi5 tʃˈyəɜc xˌi ɗˈyə zˈaː kwˈiɛɜt̪ ɗˈi6ɲ kˈuəɜj kˈu2ŋ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Căn phòng nhỏ luôn gọn gàng nhờ sự ngăn nắp của chị gái.",
+   "expanded": "Căn phòng nhỏ luôn gọn gàng nhờ sự ngăn nắp của chị gái.",
+   "phonemes": [
+    "kˈan fˈɔ2ŋ ɲˈɔ4 lˈuən ɣˈɔ6n ɣˈaː2ŋ ɲˈəː2 sˈy6 ŋˈan nˈaɜp kˌuə4 tʃˈi6 ɣˈaːɜj."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Đường phố rực rỡ cờ hoa mừng ngày lễ lớn của đất nước.",
+   "expanded": "Đường phố rực rỡ cờ hoa mừng ngày lễ lớn của đất nước.",
+   "phonemes": [
+    "ɗˈyə2ŋ fˈoɜ zˈy6c zˈəː5 kˈəː2 hwˈaː mˈy2ŋ ŋˈa2j lˈe5 lˈəːɜn kˌuə4 ɗˈəɜt̪ nˈyəɜc."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Quả chuối chín cây ngọt lịm là món ăn yêu thích của em.",
+   "expanded": "Quả chuối chín cây ngọt lịm là món ăn yêu thích của em.",
+   "phonemes": [
+    "kwˈaː4 tʃˈuəɜj tʃˈiɜn kˈəɪ ŋˈɔ6t̪ lˈi6m lˌaː2 mˈɔɜn ˈan ˈiɛw tˈiɜc kˌuə4 ˈɛm."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Sương mù giăng kín lối đi khiến việc di chuyển gặp chút khó khăn.",
+   "expanded": "Sương mù giăng kín lối đi khiến việc di chuyển gặp chút khó khăn.",
+   "phonemes": [
+    "sˈyəŋ mˈu2 zˈaŋ kˈiɜn lˈoɜj ɗˈi xˈiɛɜn vˈiɛ6c zˈi tʃwˈiɛ4n ɣˈa6p tʃˈuɜt̪ xˈɔɜ xˈan."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mọi người cùng vỗ tay khen ngợi tiết mục văn nghệ xuất sắc.",
+   "expanded": "Mọi người cùng vỗ tay khen ngợi tiết mục văn nghệ xuất sắc.",
+   "phonemes": [
+    "mˌɔ6j ŋˈyə2j kˈu2ŋ vˈo5 t̪ˈaj xˈɛn ŋˈəː6j t̪ˈiɛɜt̪ mˈu6c vˈan ŋˈe6 swˈəɜt̪ sˈaɜc."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mẹ cẩn thận may lại chiếc cúc áo bị rớt cho con trai.",
+   "expanded": "Mẹ cẩn thận may lại chiếc cúc áo bị rớt cho con trai.",
+   "phonemes": [
+    "mˈɛ6 kˈə4n tˈə6n mˈaj lˈaː6j tʃˈiɛɜc kˈuɜc ˈaːɜw bˌi6 zˈəːɜt̪ tʃˌɔ kˌɔn tʃˈaːj."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Tiếng suối reo như bản nhạc tự nhiên trầm bổng giữa núi rừng.",
+   "expanded": "Tiếng suối reo như bản nhạc tự nhiên trầm bổng giữa núi rừng.",
+   "phonemes": [
+    "t̪ˈiɛɜŋ sˈuəɜj zˈɛw ɲˌy bˈaː4n ɲˈaː6c t̪ˈy6 ɲˈiɛn tʃˈə2m bˈo4ŋ zˈyə5 nˈuɜj zˈy2ŋ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chú gà trống cất tiếng gáy vang gọi mọi người thức dậy đón bình minh.",
+   "expanded": "Chú gà trống cất tiếng gáy vang gọi mọi người thức dậy đón bình minh.",
+   "phonemes": [
+    "tʃˈuɜ ɣˈaː2 tʃˈoɜŋ kˈəɜt̪ t̪ˈiɛɜŋ ɣˈaɜj vˈaːŋ ɣˈɔ6j mˌɔ6j ŋˈyə2j tˈyɜc zˈəɪ6 ɗˈɔɜn bˈi2ɲ mˈiɲ."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Dòng nước chảy xiết cuốn theo những cành lá khô rơi trên mặt hồ.",
+   "expanded": "Dòng nước chảy xiết cuốn theo những cành lá khô rơi trên mặt hồ.",
+   "phonemes": [
+    "zˈɔ2ŋ nˈyəɜc tʃˈa4j sˈiɛɜt̪ kˈuəɜn tˈɛw ɲˌy5ŋ kˈe-2ɲ lˈaːɜ xˈo zˈəːj tʃˈen mˈa6t̪ hˈo2."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chúng tôi hẹn nhau ở quán cà phê quen thuộc vào ngày cuối tuần.",
+   "expanded": "Chúng tôi hẹn nhau ở quán cà phê quen thuộc vào ngày cuối tuần.",
+   "phonemes": [
+    "tʃˈuɜŋ t̪ˈoj hˈɛ6n ɲˈaw ˈəː4 kwˈaːɜn kˈaː2 fˈe kwˈɛn tˈuə6c vˈaː2w ŋˈa2j kˈuəɜj t̪wˈə2n."
+   ]
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Sự kiên trì sẽ giúp em vượt qua những thử thách trong tương lai.",
+   "expanded": "Sự kiên trì sẽ giúp em vượt qua những thử thách trong tương lai.",
+   "phonemes": [
+    "sˈy6 kˈiɛn tʃˈi2 sˌɛ5 zˈuɜp ˈɛm vˈyə6t̪ kwˈaː ɲˌy5ŋ tˈy4 tˈe-ɜc tʃˈɔŋ t̪ˈyəŋ lˈaːj."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Anh ấy đang ngồi đọc sách dưới gốc cây bàng lớn.",
+   "expanded": "Anh ấy đang ngồi đọc sách dưới gốc cây bàng lớn.",
+   "phonemes": [
+    "ˈe-ɲ ˈəɪɜ ɗˌaːŋ ŋˈo2j ɗˈɔ6k sˈe-ɜc zˈyəɜj ɣˈoɜk kˈəɪ bˈaː2ŋ lˈəːɜn."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Bà nội tôi thường hay đi chùa vào ngày rằm hàng tháng.",
+   "expanded": "Bà nội tôi thường hay đi chùa vào ngày rằm hàng tháng.",
+   "phonemes": [
+    "bˈaː2 nˈo6j t̪ˈoj tˈyə2ŋ hˈaj ɗˈi tʃˈuə2 vˈaː2w ŋˈa2j zˈa2m hˈaː2ŋ tˈaːɜŋ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Bé Hà thích ăn kem dâu tây và bánh ngọt vào mùa hè.",
+   "expanded": "Bé Hà thích ăn kem dâu tây và bánh ngọt vào mùa hè.",
+   "phonemes": [
+    "bˈɛɜ hˈaː2 tˈiɜc ˈan kˈɛm zˈə1w t̪ˈəɪ vˌaː2 bˈe-ɜɲ ŋˈɔ6t̪ vˈaː2w mˈuə2 hˈɛ2."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Các bạn học sinh đang hăng hái tập thể dục giữa sân trường.",
+   "expanded": "Các bạn học sinh đang hăng hái tập thể dục giữa sân trường.",
+   "phonemes": [
+    "kˌaːɜc bˈaː6n hˈɔ6k sˈiɲ ɗˌaːŋ hˈaŋ hˈaːɜj t̪ˈə6p tˈe4 zˈu6c zˈyə5 sˈən tʃˈyə2ŋ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Chiếc giường gỗ hương này rất rộng rãi và êm ái.",
+   "expanded": "Chiếc giường gỗ hương này rất rộng rãi và êm ái.",
+   "phonemes": [
+    "tʃˈiɛɜc zˈyə2ŋ ɣˈo5 hˈyəŋ nˈa2j zˈəɜt̪ zˈo6ŋ zˈaː5j vˌaː2 ˈem ˈaːɜj."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Chủ nhật tuần này cả gia đình chúng tôi sẽ đi picnic.",
+   "expanded": "Chủ nhật tuần này cả gia đình chúng tôi sẽ đi picnic.",
+   "phonemes": [
+    "tʃˈu4 ɲˈə6t̪ t̪wˈə2n nˈa2j kˈaː4 zˈaː ɗˈi2ɲ tʃˈuɜŋ t̪ˈoj sˌɛ5 ɗˈi pˈɪknɪk."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Con mèo nhỏ đang nằm ngủ ngon lành trên chiếc ghế bành.",
+   "expanded": "Con mèo nhỏ đang nằm ngủ ngon lành trên chiếc ghế bành.",
+   "phonemes": [
+    "kˌɔn mˈɛ2w ɲˈɔ4 ɗˌaːŋ nˈa2m ŋˈu4 ŋˈɔn lˈe-2ɲ tʃˈen tʃˈiɛɜc ɣˈeɜ bˈe-2ɲ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Cống rãnh cần được nạo vét thường xuyên để tránh ngập lụt.",
+   "expanded": "Cống rãnh cần được nạo vét thường xuyên để tránh ngập lụt.",
+   "phonemes": [
+    "kˈoɜŋ zˈe-5ɲ kˈə2n ɗˌyə6c nˈaː6w vˈɛɜt̪ tˈyə2ŋ swˈiɛn ɗˌe4 tʃˈe-ɜɲ ŋˈə6p lˈu6t̪."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Cụ già thong thả đi dạo quanh hồ Hoàn Kiếm lúc sáng sớm.",
+   "expanded": "Cụ già thong thả đi dạo quanh hồ Hoàn Kiếm lúc sáng sớm.",
+   "phonemes": [
+    "kˈu6 zˈaː2 tˈɔŋ tˈaː4 ɗˈi zˈaː6w kwˈe-ɲ hˈo2 hwˈaː2n kˈiɛɜm lˌuɜc sˈaːɜŋ sˈəːɜm."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Cửa hàng bán đồ gốm sứ nằm ngay ở đầu khu phố cổ.",
+   "expanded": "Cửa hàng bán đồ gốm sứ nằm ngay ở đầu khu phố cổ.",
+   "phonemes": [
+    "kˈyə4 hˈaː2ŋ bˈaːɜn ɗˈo2 ɣˈoɜm sˈyɜ nˈa2m ŋˈaj ˈəː4 ɗˈə2w xˈu fˈoɜ kˈo4."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Dòng sông Hồng cuồn cuộn chảy qua lòng thành phố Hà Nội.",
+   "expanded": "Dòng sông Hồng cuồn cuộn chảy qua lòng thành phố Hà Nội.",
+   "phonemes": [
+    "zˈɔ2ŋ sˈoŋ hˈo2ŋ kˈuə2n kˈuə6n tʃˈa4j kwˈaː lˈɔ2ŋ tˈe-2ɲ fˈoɜ hˈaː2 nˈo6j."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Đàn chim én chao liệng trên bầu trời xanh bao la mát mẻ.",
+   "expanded": "Đàn chim én chao liệng trên bầu trời xanh bao la mát mẻ.",
+   "phonemes": [
+    "ɗˈaː2n tʃˈim ˈɛɜn tʃˈaːw lˈiɛ6ŋ tʃˈen bˈə2w tʃˈəː2j sˈe-ɲ bˈaːw lˈaː mˈaːɜt̪ mˈɛ4."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Đêm qua trời mưa to làm gãy một cành cây ngoài vườn.",
+   "expanded": "Đêm qua trời mưa to làm gãy một cành cây ngoài vườn.",
+   "phonemes": [
+    "ɗˈem kwˈaː tʃˈəː2j mˈyə t̪ˈɔ lˈaː2m ɣˈa5j mˈo6t̪ kˈe-2ɲ kˈəɪ ŋwˈaː2j vˈyə2n."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Đường phố Hà Nội luôn rực rỡ cờ hoa vào ngày quốc khánh.",
+   "expanded": "Đường phố Hà Nội luôn rực rỡ cờ hoa vào ngày quốc khánh.",
+   "phonemes": [
+    "ɗˈyə2ŋ fˈoɜ hˈaː2 nˈo6j lˈuən zˈy6c zˈəː5 kˈəː2 hwˈaː vˈaː2w ŋˈa2j kˈuəɜc xˈe-ɜɲ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Em gái tôi có một quyển sổ tay ghi chép rất đẹp.",
+   "expanded": "Em gái tôi có một quyển sổ tay ghi chép rất đẹp.",
+   "phonemes": [
+    "ˈɛm ɣˈaːɜj t̪ˈoj kˈɔɜ mˈo6t̪ kwˈiɛ4n sˈo4 t̪ˈaj ɣˈi tʃˈɛɜp zˈəɜt̪ ɗˈɛ6p."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Gió mùa đông bắc tràn về mang theo không khí lạnh giá.",
+   "expanded": "Gió mùa đông bắc tràn về mang theo không khí lạnh giá.",
+   "phonemes": [
+    "zˈɔɜ mˈuə2 ɗˈoŋ bˈaɜc tʃˈaː2n vˈe2 mˈaːŋ tˈɛw xˌoŋ xˈiɜ lˈe-6ɲ zˈaːɜ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Hà Nội nổi tiếng với món phở bò truyền thống thơm ngon.",
+   "expanded": "Hà Nội nổi tiếng với món phở bò truyền thống thơm ngon.",
+   "phonemes": [
+    "hˈaː2 nˈo6j nˈo4j t̪ˈiɛɜŋ vˌəːɜj mˈɔɜn fˈəː4 bˈɔ2 tʃwˈiɛ2n tˈoɜŋ tˈəːm ŋˈɔn."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Họ đang cùng nhau bàn bạc về kế hoạch phát triển du lịch.",
+   "expanded": "Họ đang cùng nhau bàn bạc về kế hoạch phát triển du lịch.",
+   "phonemes": [
+    "hˈɔ6 ɗˌaːŋ kˈu2ŋ ɲˈaw bˈaː2n bˈaː6c vˈe2 kˈeɜ hwˈe-6c fˈaːɜt̪ tʃˈiɛ4n zˈu lˈi6c."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Hôm nay trời nắng đẹp nên chúng tôi quyết định đi chơi.",
+   "expanded": "Hôm nay trời nắng đẹp nên chúng tôi quyết định đi chơi.",
+   "phonemes": [
+    "hˈom nˈaj tʃˈəː2j nˈaɜŋ ɗˈɛ6p nˌen tʃˈuɜŋ t̪ˈoj kwˈiɛɜt̪ ɗˈi6ɲ ɗˈi tʃˈəːj."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Khu vườn nhà em trồng rất nhiều loài hoa tỏa hương thơm.",
+   "expanded": "Khu vườn nhà em trồng rất nhiều loài hoa tỏa hương thơm.",
+   "phonemes": [
+    "xˈu vˈyə2n ɲˈaː2 ˈɛm tʃˈo2ŋ zˈəɜt̪ ɲˈiɛ2w lwˈaː2j hwˈaː t̪wˈaː4 hˈyəŋ tˈəːm."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Khuỷu tay của cậu ấy bị trầy xước nhẹ do ngã xe.",
+   "expanded": "Khuỷu tay của cậu ấy bị trầy xước nhẹ do ngã xe.",
+   "phonemes": [
+    "xwˈi4w t̪ˈaj kˌuə4 kˈə6w ˈəɪɜ bˌi6 tʃˈəɪ2 sˈyəɜc ɲˈɛ6 zˈɔ ŋˈaː5 sˈɛ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Lá vàng rơi đầy trên các con phố nhỏ vào mùa thu.",
+   "expanded": "Lá vàng rơi đầy trên các con phố nhỏ vào mùa thu.",
+   "phonemes": [
+    "lˈaːɜ vˈaː2ŋ zˈəːj ɗˈəɪ2 tʃˈen kˌaːɜc kˌɔn fˈoɜ ɲˈɔ4 vˈaː2w mˈuə2 tˈu."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Mẹ tôi chuẩn bị một bữa tối vô cùng ấm cúng cho cả nhà.",
+   "expanded": "Mẹ tôi chuẩn bị một bữa tối vô cùng ấm cúng cho cả nhà.",
+   "phonemes": [
+    "mˈɛ6 t̪ˈoj tʃwˈə4n bˌi6 mˈo6t̪ bˈyə5 t̪ˈoɜj vˈo kˈu2ŋ ˈəɜm kˈuɜŋ tʃˌɔ kˈaː4 ɲˈaː2."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Mùi hoa sữa nồng nàn lan tỏa khắp các ngõ ngách mùa thu.",
+   "expanded": "Mùi hoa sữa nồng nàn lan tỏa khắp các ngõ ngách mùa thu.",
+   "phonemes": [
+    "mˈu2j hwˈaː sˈyə5 nˈo2ŋ nˈaː2n lˈaːn t̪wˈaː4 xˈaɜp kˌaːɜc ŋˈɔ5 ŋˈe-ɜc mˈuə2 tˈu."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Nét chữ ngoằn ngoèo của đứa trẻ làm ai cũng phải cười.",
+   "expanded": "Nét chữ ngoằn ngoèo của đứa trẻ làm ai cũng phải cười.",
+   "phonemes": [
+    "nˈɛɜt̪ tʃˈy5 ŋwˈa2n ŋwˈɛ2w kˌuə4 ɗˈyəɜ tʃˈɛ4 lˈaː2m ˈaːj kˈu5ŋ fˌaː4j kˈyə2j."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Người bán hàng rong rao rao những tiếng nghe rất quen thuộc.",
+   "expanded": "Người bán hàng rong rao rao những tiếng nghe rất quen thuộc.",
+   "phonemes": [
+    "ŋˈyə2j bˈaːɜn hˈaː2ŋ zˈɔŋ zˈaːw zˈaːw ɲˌy5ŋ t̪ˈiɛɜŋ ŋˈɛ zˈəɜt̪ kwˈɛn tˈuə6c."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Nhà thơ đang thả hồn theo những giai điệu êm đềm.",
+   "expanded": "Nhà thơ đang thả hồn theo những giai điệu êm đềm.",
+   "phonemes": [
+    "ɲˈaː2 tˈəː ɗˌaːŋ tˈaː4 hˈo2n tˈɛw ɲˌy5ŋ zˈaːj ɗˈiɛ6w ˈem ɗˈe2m."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Những chiếc thuyền buồm bơi nhẹ nhàng trên mặt nước xanh.",
+   "expanded": "Những chiếc thuyền buồm bơi nhẹ nhàng trên mặt nước xanh.",
+   "phonemes": [
+    "ɲˌy5ŋ tʃˈiɛɜc twˈiɛ2n bˈuə2m bˈəːj ɲˈɛ6 ɲˈaː2ŋ tʃˈen mˈa6t̪ nˈyəɜc sˈe-ɲ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Những đám mây trắng bồng bềnh puly trôi nhẹ trên tầng cao.",
+   "expanded": "Những đám mây trắng bồng bềnh puly trôi nhẹ trên tầng cao.",
+   "phonemes": [
+    "ɲˌy5ŋ ɗˈaːɜm mˈəɪ tʃˈaɜŋ bˈo2ŋ bˈe2ɲ pjˈuːli tʃˈoj ɲˈɛ6 tʃˈen t̪ˈə2ŋ kˈaːw."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Nước hồ Tây trong xanh và luôn lộng gió vào buổi chiều.",
+   "expanded": "Nước hồ Tây trong xanh và luôn lộng gió vào buổi chiều.",
+   "phonemes": [
+    "nˈyəɜc hˈo2 t̪ˈəɪ tʃˈɔŋ sˈe-ɲ vˌaː2 lˈuən lˈo6ŋ zˈɔɜ vˈaː2w bˈuə4j tʃˈiɛ2w."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Ông ngoại thích ngồi uống trà nóng và nghe đài đĩa.",
+   "expanded": "Ông ngoại thích ngồi uống trà nóng và nghe đài đĩa.",
+   "phonemes": [
+    "ˈoŋ ŋwˈaː6j tˈiɜc ŋˈo2j ˈuəɜŋ tʃˈaː2 nˈɔɜŋ vˌaː2 ŋˈɛ ɗˈaː2j ɗˈiə5."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Phố phường Hà Nội về đêm tràn ngập ánh đèn lung linh.",
+   "expanded": "Phố phường Hà Nội về đêm tràn ngập ánh đèn lung linh.",
+   "phonemes": [
+    "fˈoɜ fˈyə2ŋ hˈaː2 nˈo6j vˈe2 ɗˈem tʃˈaː2n ŋˈə6p ˈe-ɜɲ ɗˈɛ2n lˈuŋ lˈiɲ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Quả hồng chín đỏ mọng trông thật hấp dẫn trên cành cây.",
+   "expanded": "Quả hồng chín đỏ mọng trông thật hấp dẫn trên cành cây.",
+   "phonemes": [
+    "kwˈaː4 hˈo2ŋ tʃˈiɜn ɗˈɔ4 mˈɔ6ŋ tʃˈoŋ tˈə6t̪ hˈəɜp zˈə5n tʃˈen kˈe-2ɲ kˈəɪ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Quốc ca vang lên đầy tự hào trong buổi lễ chào cờ.",
+   "expanded": "Quốc ca vang lên đầy tự hào trong buổi lễ chào cờ.",
+   "phonemes": [
+    "kˈuəɜc kˈaː vˈaːŋ lˈen ɗˈəɪ2 t̪ˈy6 hˈaː2w tʃˈɔŋ bˈuə4j lˈe5 tʃˈaː2w kˈəː2."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Rất nhiều khách du lịch đến tham quan di tích lịch sử.",
+   "expanded": "Rất nhiều khách du lịch đến tham quan di tích lịch sử.",
+   "phonemes": [
+    "zˈəɜt̪ ɲˈiɛ2w xˈe-ɜc zˈu lˈi6c ɗˌeɜn tˈaːm kwˈaːn zˈi t̪ˈiɜc lˈi6c sˈy4."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Sáng nay không khí rất trong lành và dịu mát vô cùng.",
+   "expanded": "Sáng nay không khí rất trong lành và dịu mát vô cùng.",
+   "phonemes": [
+    "sˈaːɜŋ nˈaj xˌoŋ xˈiɜ zˈəɜt̪ tʃˈɔŋ lˈe-2ɲ vˌaː2 zˈi6w mˈaːɜt̪ vˈo kˈu2ŋ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Sương mù giăng kín mặt hồ vào những ngày đầu mùa đông.",
+   "expanded": "Sương mù giăng kín mặt hồ vào những ngày đầu mùa đông.",
+   "phonemes": [
+    "sˈyəŋ mˈu2 zˈaŋ kˈiɜn mˈa6t̪ hˈo2 vˈaː2w ɲˌy5ŋ ŋˈa2j ɗˈə2w mˈuə2 ɗˈoŋ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Tàn thuốc rơi xuống làm cháy một khoảng nhỏ trên bàn.",
+   "expanded": "Tàn thuốc rơi xuống làm cháy một khoảng nhỏ trên bàn.",
+   "phonemes": [
+    "t̪ˈaː2n tˈuəɜc zˈəːj sˈuəɜŋ lˈaː2m tʃˈaɜj mˈo6t̪ xwˌaː4ŋ ɲˈɔ4 tʃˈen bˈaː2n."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Tập thể thể thao trường ta vừa giành được giải nhất.",
+   "expanded": "Tập thể thể thao trường ta vừa giành được giải nhất.",
+   "phonemes": [
+    "t̪ˈə6p tˈe4 tˈe4 tˈaːw tʃˈyə2ŋ t̪ˈaː vˈyə2 zˈe-2ɲ ɗˌyə6c zˈaː4j ɲˈəɜt̪."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Thầy giáo giảng bài rất hay và dễ hiểu cho học sinh.",
+   "expanded": "Thầy giáo giảng bài rất hay và dễ hiểu cho học sinh.",
+   "phonemes": [
+    "tˈəɪ2 zˈaːɜw zˈaː4ŋ bˈaː2j zˈəɜt̪ hˈaj vˌaː2 zˈe5 hˈiɛ4w tʃˌɔ hˈɔ6k sˈiɲ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Thương xá cũ đã được cải tạo thành trung tâm mua sắm.",
+   "expanded": "Thương xá cũ đã được cải tạo thành trung tâm mua sắm.",
+   "phonemes": [
+    "tˈyəŋ sˈaːɜ kˈu5 ɗˌaː5 ɗˌyə6c kˈaː4j t̪ˈaː6w tˈe-2ɲ tʃˈuŋ t̪ˈəm mˈuə sˈaɜm."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Tiếng chim hót lảnh lót trên cành cao chào đón ngày mới.",
+   "expanded": "Tiếng chim hót lảnh lót trên cành cao chào đón ngày mới.",
+   "phonemes": [
+    "t̪ˈiɛɜŋ tʃˈim hˈɔɜt̪ lˈe-4ɲ lˈɔɜt̪ tʃˈen kˈe-2ɲ kˈaːw tʃˈaː2w ɗˈɔɜn ŋˈa2j mˈəːɜj."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Tiếng cười nói vui vẻ vang lên từ gian bếp nhỏ xinh.",
+   "expanded": "Tiếng cười nói vui vẻ vang lên từ gian bếp nhỏ xinh.",
+   "phonemes": [
+    "t̪ˈiɛɜŋ kˈyə2j nˈɔɜj vˈuj vˈɛ4 vˈaːŋ lˈen t̪ˌy2 zˈaːn bˈeɜp ɲˈɔ4 sˈiɲ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Tiếng sóng vỗ rì rào vào bờ cát trắng thật êm tai.",
+   "expanded": "Tiếng sóng vỗ rì rào vào bờ cát trắng thật êm tai.",
+   "phonemes": [
+    "t̪ˈiɛɜŋ sˈɔɜŋ vˈo5 zˈi2 zˈaː2w vˈaː2w bˈəː2 kˈaːɜt̪ tʃˈaɜŋ tˈə6t̪ ˈem t̪ˈaːj."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Tôi rất thích ngắm nhìn bầu trời buổi chiều tà rực rỡ.",
+   "expanded": "Tôi rất thích ngắm nhìn bầu trời buổi chiều tà rực rỡ.",
+   "phonemes": [
+    "t̪ˈoj zˈəɜt̪ tˈiɜc ŋˈaɜm ɲˈi2n bˈə2w tʃˈəː2j bˈuə4j tʃˈiɛ2w t̪ˈaː2 zˈy6c zˈəː5."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Trẻ em trong làng thích thả diều trên cánh đồng bao la.",
+   "expanded": "Trẻ em trong làng thích thả diều trên cánh đồng bao la.",
+   "phonemes": [
+    "tʃˈɛ4 ˈɛm tʃˈɔŋ lˈaː2ŋ tˈiɜc tˈaː4 zˈiɛ2w tʃˈen kˈe-ɜɲ ɗˈo2ŋ bˈaːw lˈaː."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Trời mưa rào bất chợt làm mọi người phải trú vội vã.",
+   "expanded": "Trời mưa rào bất chợt làm mọi người phải trú vội vã.",
+   "phonemes": [
+    "tʃˈəː2j mˈyə zˈaː2w bˈəɜt̪ tʃˈəː6t̪ lˈaː2m mˌɔ6j ŋˈyə2j fˌaː4j tʃˈuɜ vˈo6j vˈaː5."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Trung thu đến các em nhỏ lại cùng nhau rước đèn ông sao.",
+   "expanded": "Trung thu đến các em nhỏ lại cùng nhau rước đèn ông sao.",
+   "phonemes": [
+    "tʃˈuŋ tˈu ɗˌeɜn kˌaːɜc ˈɛm ɲˈɔ4 lˈaː6j kˈu2ŋ ɲˈaw zˈyəɜc ɗˈɛ2n ˈoŋ sˈaːw."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Trường học của em nằm ở ngay trung tâm phường Hàng Bông.",
+   "expanded": "Trường học của em nằm ở ngay trung tâm phường Hàng Bông.",
+   "phonemes": [
+    "tʃˈyə2ŋ hˈɔ6k kˌuə4 ˈɛm nˈa2m ˈəː4 ŋˈaj tʃˈuŋ t̪ˈəm fˈyə2ŋ hˈaː2ŋ bˈoŋ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Từ trên cao nhìn xuống thành phố trông thật lung linh.",
+   "expanded": "Từ trên cao nhìn xuống thành phố trông thật lung linh.",
+   "phonemes": [
+    "t̪ˌy2 tʃˈen kˈaːw ɲˈi2n sˈuəɜŋ tˈe-2ɲ fˈoɜ tʃˈoŋ tˈə6t̪ lˈuŋ lˈiɲ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Vào mùa thu lá cây chuyển sang màu vàng vô cùng lãng mạn.",
+   "expanded": "Vào mùa thu lá cây chuyển sang màu vàng vô cùng lãng mạn.",
+   "phonemes": [
+    "vˈaː2w mˈuə2 tˈu lˈaːɜ kˈəɪ tʃwˈiɛ4n sˈaːŋ mˈa2w vˈaː2ŋ vˈo kˈu2ŋ lˈaː5ŋ mˈaː6n."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Vạn vật như bừng tỉnh sau một trận mưa rào mùa hè.",
+   "expanded": "Vạn vật như bừng tỉnh sau một trận mưa rào mùa hè.",
+   "phonemes": [
+    "vˈaː6n vˈə6t̪ ɲˌy bˈy2ŋ t̪ˈi4ɲ sˈaw mˈo6t̪ tʃˈə6n mˈyə zˈaː2w mˈuə2 hˈɛ2."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Xe đạp là phương tiện giao thông rất thân thiện môi trường.",
+   "expanded": "Xe đạp là phương tiện giao thông rất thân thiện môi trường.",
+   "phonemes": [
+    "sˈɛ ɗˈaː6p lˌaː2 fˈyəŋ t̪ˈiɛ6n zˈaːw tˈoŋ zˈəɜt̪ tˈən tˈiɛ6n mˈoj tʃˈyə2ŋ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Yêu thương và chia sẻ là những điều vô cùng quý giá.",
+   "expanded": "Yêu thương và chia sẻ là những điều vô cùng quý giá.",
+   "phonemes": [
+    "ˈiɛw tˈyəŋ vˌaː2 tʃˈiə sˈɛ4 lˌaː2 ɲˌy5ŋ ɗˈiɛ2w vˈo kˈu2ŋ kwˈiɜ zˈaːɜ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Ý thức bảo vệ môi trường của người dân ngày càng cao.",
+   "expanded": "Ý thức bảo vệ môi trường của người dân ngày càng cao.",
+   "phonemes": [
+    "ˈiɜ tˈyɜc bˈaː4w vˈe6 mˈoj tʃˈyə2ŋ kˌuə4 ŋˈyə2j zˈən ŋˈa2j kˈaː2ŋ kˈaːw."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Bé ngoan ngoãn khoanh tay chào ông bà khi đi học về.",
+   "expanded": "Bé ngoan ngoãn khoanh tay chào ông bà khi đi học về.",
+   "phonemes": [
+    "bˈɛɜ ŋwˈaːn ŋwˈaː5n xwˈe-ɲ t̪ˈaj tʃˈaː2w ˈoŋ bˈaː2 xˌi ɗˈi hˈɔ6k vˈe2."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Đường đi ngoằn ngoèo ngoằn ngoèo qua các sườn núi cao.",
+   "expanded": "Đường đi ngoằn ngoèo ngoằn ngoèo qua các sườn núi cao.",
+   "phonemes": [
+    "ɗˈyə2ŋ ɗˈi ŋwˈa2n ŋwˈɛ2w ŋwˈa2n ŋwˈɛ2w kwˈaː kˌaːɜc sˈyə2n nˈuɜj kˈaːw."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Nghiêng nghiêng dòng sông trôi nhẹ qua vùng quê thanh bình.",
+   "expanded": "Nghiêng nghiêng dòng sông trôi nhẹ qua vùng quê thanh bình.",
+   "phonemes": [
+    "ŋˈiɛŋ ŋˈiɛŋ zˈɔ2ŋ sˈoŋ tʃˈoj ɲˈɛ6 kwˈaː vˈu2ŋ kwˈe tˈe-ɲ bˈi2ɲ."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Nhìn con đường ngoằn ngoèo ngoằn ngoèo chạy lên đỉnh núi.",
+   "expanded": "Nhìn con đường ngoằn ngoèo ngoằn ngoèo chạy lên đỉnh núi.",
+   "phonemes": [
+    "ɲˈi2n kˌɔn ɗˈyə2ŋ ŋwˈa2n ŋwˈɛ2w ŋwˈa2n ŋwˈɛ2w tʃˈa6j lˈen ɗˈi4ɲ nˈuɜj."
+   ]
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Quốc gia chúng ta luôn gìn giữ truyền thống văn hóa tốt.",
+   "expanded": "Quốc gia chúng ta luôn gìn giữ truyền thống văn hóa tốt.",
+   "phonemes": [
+    "kˈuəɜc zˈaː tʃˈuɜŋ t̪ˈaː lˈuən zˈi2n zˈy5 tʃwˈiɛ2n tˈoɜŋ vˈan hwˈaːɜ t̪ˈoɜt̪."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Thời tiết Hà Nội hôm nay tương đối mát mẻ nhờ có một đợt gió mùa đông bắc tràn về.",
+   "expanded": "Thời tiết Hà Nội hôm nay tương đối mát mẻ nhờ có một đợt gió mùa đông bắc tràn về.",
+   "phonemes": [
+    "tˈəː2j t̪ˈiɛɜt̪ hˈaː2 nˈo6j hˈom nˈaj t̪ˈyəŋ ɗˈoɜj mˈaːɜt̪ mˈɛ4 ɲˈəː2 kˈɔɜ mˈo6t̪ ɗˈəː6t̪ zˈɔɜ mˈuə2 ɗˈoŋ bˈaɜc tʃˈaː2n vˈe2."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Món phở bò gia truyền luôn mang lại hương vị đậm đà đặc trưng của ẩm thực xứ Bắc.",
+   "expanded": "Món phở bò gia truyền luôn mang lại hương vị đậm đà đặc trưng của ẩm thực xứ Bắc.",
+   "phonemes": [
+    "mˈɔɜn fˈəː4 bˈɔ2 zˈaː tʃwˈiɛ2n lˈuən mˈaːŋ lˈaː6j hˈyəŋ vˈi6 ɗˈə6m ɗˈaː2 ɗˈa6c tʃˈyŋ kˌuə4 ˈə4m tˈy6c sˈyɜ bˈaɜc."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Các bạn học sinh đang tích cực ôn tập để chuẩn bị cho kỳ thi tốt nghiệp trung học phổ thông.",
+   "expanded": "Các bạn học sinh đang tích cực ôn tập để chuẩn bị cho kỳ thi tốt nghiệp trung học phổ thông.",
+   "phonemes": [
+    "kˌaːɜc bˈaː6n hˈɔ6k sˈiɲ ɗˌaːŋ t̪ˈiɜc kˈy6c ˈon t̪ˈə6p ɗˌe4 tʃwˈə4n bˌi6 tʃˌɔ kˈi2 tˈi t̪ˈoɜt̪ ŋˈiɛ6p tʃˈuŋ hˈɔ6k fˈo4 tˈoŋ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Anh ấy làm việc chăm chỉ tại văn phòng từ sáng sớm cho đến tận muộn mới về nhà.",
+   "expanded": "Anh ấy làm việc chăm chỉ tại văn phòng từ sáng sớm cho đến tận muộn mới về nhà.",
+   "phonemes": [
+    "ˈe-ɲ ˈəɪɜ lˈaː2m vˈiɛ6c tʃˈam tʃˈi4 t̪ˈaː6j vˈan fˈɔ2ŋ t̪ˌy2 sˈaːɜŋ sˈəːɜm tʃˌɔ ɗˌeɜn t̪ˈə6n mˈuə6n mˈəːɜj vˈe2 ɲˈaː2."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Chuyến du lịch đến Sa Pa tuần trước đã mang lại cho chúng tôi nhiều trải nghiệm vô cùng thú vị.",
+   "expanded": "Chuyến du lịch đến Sa Pa tuần trước đã mang lại cho chúng tôi nhiều trải nghiệm vô cùng thú vị.",
+   "phonemes": [
+    "tʃwˈiɛɜn zˈu lˈi6c ɗˌeɜn sˈaː pˈaː t̪wˈə2n tʃˈyəɜc ɗˌaː5 mˈaːŋ lˈaː6j tʃˌɔ tʃˈuɜŋ t̪ˈoj ɲˈiɛ2w tʃˈaː4j ŋˈiɛ6m vˈo kˈu2ŋ tˈuɜ vˈi6."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Việc tập thể dục đều đặn mỗi ngày giúp nâng cao sức đề kháng và duy trì vóc dáng cân đối.",
+   "expanded": "Việc tập thể dục đều đặn mỗi ngày giúp nâng cao sức đề kháng và duy trì vóc dáng cân đối.",
+   "phonemes": [
+    "vˈiɛ6c t̪ˈə6p tˈe4 zˈu6c ɗˈe2w ɗˈa6n mˌo5j ŋˈa2j zˈuɜp nˈəŋ kˈaːw sˈyɜc ɗˈe2 xˈaːɜŋ vˌaː2 zwˈi tʃˈi2 vˈɔɜk zˈaːɜŋ kˈən ɗˈoɜj."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Công nghệ thông tin ngày càng phát triển và đóng vai trò quan trọng trong đời sống hiện đại.",
+   "expanded": "Công nghệ thông tin ngày càng phát triển và đóng vai trò quan trọng trong đời sống hiện đại.",
+   "phonemes": [
+    "kˈoŋ ŋˈe6 tˈoŋ t̪ˈin ŋˈa2j kˈaː2ŋ fˈaːɜt̪ tʃˈiɛ4n vˌaː2 ɗˈɔɜŋ vˈaːj tʃˈɔ2 kwˈaːn tʃˈɔ6ŋ tʃˈɔŋ ɗˈəː2j sˈoɜŋ hˈiɛ6n ɗˈaː6j."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Mùa thu đến mang theo không khí dịu nhẹ cùng hương hoa sữa nồng nàn trên khắp các con phố.",
+   "expanded": "Mùa thu đến mang theo không khí dịu nhẹ cùng hương hoa sữa nồng nàn trên khắp các con phố.",
+   "phonemes": [
+    "mˈuə2 tˈu ɗˌeɜn mˈaːŋ tˈɛw xˌoŋ xˈiɜ zˈi6w ɲˈɛ6 kˈu2ŋ hˈyəŋ hwˈaː sˈyə5 nˈo2ŋ nˈaː2n tʃˈen xˈaɜp kˌaːɜc kˌɔn fˈoɜ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Mẹ tôi thường đi chợ sớm để mua được những loại thực phẩm tươi ngon nhất cho gia đình.",
+   "expanded": "Mẹ tôi thường đi chợ sớm để mua được những loại thực phẩm tươi ngon nhất cho gia đình.",
+   "phonemes": [
+    "mˈɛ6 t̪ˈoj tˈyə2ŋ ɗˈi tʃˈəː6 sˈəːɜm ɗˌe4 mˈuə ɗˌyə6c ɲˌy5ŋ lwˈaː6j tˈy6c fˈə4m t̪ˈyəj ŋˈɔn ɲˈəɜt̪ tʃˌɔ zˈaː ɗˈi2ɲ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Nhà trường vừa tổ chức một buổi lễ khen thưởng cho những học sinh có thành tích xuất sắc.",
+   "expanded": "Nhà trường vừa tổ chức một buổi lễ khen thưởng cho những học sinh có thành tích xuất sắc.",
+   "phonemes": [
+    "ɲˈaː2 tʃˈyə2ŋ vˈyə2 t̪ˈo4 tʃˈyɜc mˈo6t̪ bˈuə4j lˈe5 xˈɛn tˈyə4ŋ tʃˌɔ ɲˌy5ŋ hˈɔ6k sˈiɲ kˈɔɜ tˈe-2ɲ t̪ˈiɜc swˈəɜt̪ sˈaɜc."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Công ty chúng tôi vừa hoàn thiện kế hoạch phát triển kinh doanh cho năm tài chính tiếp theo.",
+   "expanded": "Công ty chúng tôi vừa hoàn thiện kế hoạch phát triển kinh doanh cho năm tài chính tiếp theo.",
+   "phonemes": [
+    "kˈoŋ t̪ˈi tʃˈuɜŋ t̪ˈoj vˈyə2 hwˈaː2n tˈiɛ6n kˈeɜ hwˈe-6c fˈaːɜt̪ tʃˈiɛ4n kˈiɲ zwˈe-ɲ tʃˌɔ nˈam t̪ˈaː2j tʃˈiɜɲ t̪ˈiɛɜp tˈɛw."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Vùng núi phía bắc có rất nhiều danh lam thắng cảnh hùng vĩ thu hút khách du lịch trong nước.",
+   "expanded": "Vùng núi phía bắc có rất nhiều danh lam thắng cảnh hùng vĩ thu hút khách du lịch trong nước.",
+   "phonemes": [
+    "vˈu2ŋ nˈuɜj fˈiəɜ bˈaɜc kˈɔɜ zˈəɜt̪ ɲˈiɛ2w zˈe-ɲ lˈaːm tˈaɜŋ kˈe-4ɲ hˈu2ŋ vˈi5 tˈu hˈuɜt̪ xˈe-ɜc zˈu lˈi6c tʃˈɔŋ nˈyəɜc."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Uống đủ nước và ăn nhiều rau xanh là phương pháp đơn giản nhất để bảo vệ sức khỏe.",
+   "expanded": "Uống đủ nước và ăn nhiều rau xanh là phương pháp đơn giản nhất để bảo vệ sức khỏe.",
+   "phonemes": [
+    "ˈuəɜŋ ɗˈu4 nˈyəɜc vˌaː2 ˈan ɲˈiɛ2w zˈaw sˈe-ɲ lˌaː2 fˈyəŋ fˈaːɜp ɗˈəːn zˈaː4n ɲˈəɜt̪ ɗˌe4 bˈaː4w vˈe6 sˈyɜc xwˈɛ4."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Các ứng dụng di động thông minh giúp con người xử lý công việc một cách nhanh chóng hơn.",
+   "expanded": "Các ứng dụng di động thông minh giúp con người xử lý công việc một cách nhanh chóng hơn.",
+   "phonemes": [
+    "kˌaːɜc ˈyɜŋ zˈu6ŋ zˈi ɗˈo6ŋ tˈoŋ mˈiɲ zˈuɜp kˌɔn ŋˈyə2j sˈy4 lˈiɜ kˈoŋ vˈiɛ6c mˈo6t̪ kˈe-ɜc ɲˈe-ɲ tʃˈɔɜŋ hˈəːn."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Trận mưa rào đột ngột vào buổi chiều khiến nhiều tuyến đường trong thành phố bị ngập cục bộ.",
+   "expanded": "Trận mưa rào đột ngột vào buổi chiều khiến nhiều tuyến đường trong thành phố bị ngập cục bộ.",
+   "phonemes": [
+    "tʃˈə6n mˈyə zˈaː2w ɗˈo6t̪ ŋˈo6t̪ vˈaː2w bˈuə4j tʃˈiɛ2w xˈiɛɜn ɲˈiɛ2w t̪wˈiɛɜn ɗˈyə2ŋ tʃˈɔŋ tˈe-2ɲ fˈoɜ bˌi6 ŋˈə6p kˈu6c bˈo6."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Thưởng thức một tách trà nóng vào buổi sáng là thói quen quen thuộc của nhiều người lớn tuổi.",
+   "expanded": "Thưởng thức một tách trà nóng vào buổi sáng là thói quen quen thuộc của nhiều người lớn tuổi.",
+   "phonemes": [
+    "tˈyə4ŋ tˈyɜc mˈo6t̪ t̪ˈe-ɜc tʃˈaː2 nˈɔɜŋ vˈaː2w bˈuə4j sˈaːɜŋ lˌaː2 tˈɔɜj kwˈɛn kwˈɛn tˈuə6c kˌuə4 ɲˈiɛ2w ŋˈyə2j lˈəːɜn t̪ˈuə4j."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Các em nhỏ vô cùng thích thú khi được tham gia những hoạt động ngoại khóa ngoài trời.",
+   "expanded": "Các em nhỏ vô cùng thích thú khi được tham gia những hoạt động ngoại khóa ngoài trời.",
+   "phonemes": [
+    "kˌaːɜc ˈɛm ɲˈɔ4 vˈo kˈu2ŋ tˈiɜc tˈuɜ xˌi ɗˌyə6c tˈaːm zˈaː ɲˌy5ŋ hwˈaː6t̪ ɗˈo6ŋ ŋwˈaː6j xwˈaːɜ ŋwˈaː2j tʃˈəː2j."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Ban giám đốc vừa thông qua dự án đầu tư xây dựng nhà máy sản xuất linh kiện mới.",
+   "expanded": "Ban giám đốc vừa thông qua dự án đầu tư xây dựng nhà máy sản xuất linh kiện mới.",
+   "phonemes": [
+    "bˈaːn zˈaːɜm ɗˈoɜk vˈyə2 tˈoŋ kwˈaː zˈy6 ˈaːɜn ɗˈə2w t̪ˈy sˈəɪ zˈy6ŋ ɲˈaː2 mˈaɜj sˈaː4n swˈəɜt̪ lˈiɲ kˈiɛ6n mˈəːɜj."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Chúng tôi dự định sẽ đi nghỉ mát ở biển Nha Trang vào đợt nghỉ lễ sắp tới.",
+   "expanded": "Chúng tôi dự định sẽ đi nghỉ mát ở biển Nha Trang vào đợt nghỉ lễ sắp tới.",
+   "phonemes": [
+    "tʃˈuɜŋ t̪ˈoj zˈy6 ɗˈi6ɲ sˌɛ5 ɗˈi ŋˈi4 mˈaːɜt̪ ˈəː4 bˈiɛ4n ɲˈaː tʃˈaːŋ vˈaː2w ɗˈəː6t̪ ŋˈi4 lˈe5 sˈaɜp t̪ˌəːɜj."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Ngủ đủ giấc mỗi đêm giúp cơ thể phục hồi năng lượng sau một ngày làm việc mệt mỏi.",
+   "expanded": "Ngủ đủ giấc mỗi đêm giúp cơ thể phục hồi năng lượng sau một ngày làm việc mệt mỏi.",
+   "phonemes": [
+    "ŋˈu4 ɗˈu4 zˈəɜc mˌo5j ɗˈem zˈuɜp kˈəː tˈe4 fˈu6c hˈo2j nˈaŋ lˈyə6ŋ sˈaw mˈo6t̪ ŋˈa2j lˈaː2m vˈiɛ6c mˈe6t̪ mˈɔ4j."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Trí tuệ nhân tạo đang tạo ra những bước đột phá mạnh mẽ trong nhiều ngành công nghiệp.",
+   "expanded": "Trí tuệ nhân tạo đang tạo ra những bước đột phá mạnh mẽ trong nhiều ngành công nghiệp.",
+   "phonemes": [
+    "tʃˈiɜ t̪wˈe6 ɲˈən t̪ˈaː6w ɗˌaːŋ t̪ˈaː6w zˈaː ɲˌy5ŋ bˈyəɜc ɗˈo6t̪ fˈaːɜ mˈe-6ɲ mˈɛ5 tʃˈɔŋ ɲˈiɛ2w ŋˈe-2ɲ kˈoŋ ŋˈiɛ6p."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Dự báo thời tiết cho biết khu vực đồng bằng sông Hồng sẽ có mưa lớn trong vài ngày tới.",
+   "expanded": "Dự báo thời tiết cho biết khu vực đồng bằng sông Hồng sẽ có mưa lớn trong vài ngày tới.",
+   "phonemes": [
+    "zˈy6 bˈaːɜw tˈəː2j t̪ˈiɛɜt̪ tʃˌɔ bˈiɛɜt̪ xˈu vˈy6c ɗˈo2ŋ bˈa2ŋ sˈoŋ hˈo2ŋ sˌɛ5 kˈɔɜ mˈyə lˈəːɜn tʃˈɔŋ vˈaː2j ŋˈa2j t̪ˌəːɜj."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Bữa cơm gia đình là thời điểm mọi người quây quần bên nhau sau giờ làm việc vội vã.",
+   "expanded": "Bữa cơm gia đình là thời điểm mọi người quây quần bên nhau sau giờ làm việc vội vã.",
+   "phonemes": [
+    "bˈyə5 kˈəːm zˈaː ɗˈi2ɲ lˌaː2 tˈəː2j ɗˈiɛ4m mˌɔ6j ŋˈyə2j kwˈəɪ kwˈə2n bˈen ɲˈaw sˈaw zˈəː2 lˈaː2m vˈiɛ6c vˈo6j vˈaː5."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Thư viện thành phố mới trang bị thêm hàng nghìn đầu sách mới phục vụ độc giả trẻ.",
+   "expanded": "Thư viện thành phố mới trang bị thêm hàng nghìn đầu sách mới phục vụ độc giả trẻ.",
+   "phonemes": [
+    "tˈy vˈiɛ6n tˈe-2ɲ fˈoɜ mˈəːɜj tʃˈaːŋ bˌi6 tˈem hˈaː2ŋ ŋˈi2n ɗˈə2w sˈe-ɜc mˈəːɜj fˈu6c vˈu6 ɗˈo6k zˈaː4 tʃˈɛ4."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Nhân viên mới cần nhanh chóng thích nghi với môi trường làm việc chuyên nghiệp của tập đoàn.",
+   "expanded": "Nhân viên mới cần nhanh chóng thích nghi với môi trường làm việc chuyên nghiệp của tập đoàn.",
+   "phonemes": [
+    "ɲˈən vˈiɛn mˈəːɜj kˈə2n ɲˈe-ɲ tʃˈɔɜŋ tˈiɜc ŋˈi vˌəːɜj mˈoj tʃˈyə2ŋ lˈaː2m vˈiɛ6c tʃwˈiɛn ŋˈiɛ6p kˌuə4 t̪ˈə6p ɗwˈaː2n."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Khám phá di sản văn hóa thế giới tại cố đô Huế luôn là ước mơ của nhiều du khách.",
+   "expanded": "Khám phá di sản văn hóa thế giới tại cố đô Huế luôn là ước mơ của nhiều du khách.",
+   "phonemes": [
+    "xˈaːɜm fˈaːɜ zˈi sˈaː4n vˈan hwˈaːɜ tˈeɜ zˈəːɜj t̪ˈaː6j kˈoɜ ɗˈo hwˈeɜ lˈuən lˌaː2 ˈyəɜc mˈəː kˌuə4 ɲˈiɛ2w zˈu xˈe-ɜc."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Hạn chế sử dụng thực phẩm chế biến sẵn sẽ giúp giảm thiểu nguy cơ mắc bệnh tim mạch.",
+   "expanded": "Hạn chế sử dụng thực phẩm chế biến sẵn sẽ giúp giảm thiểu nguy cơ mắc bệnh tim mạch.",
+   "phonemes": [
+    "hˈaː6n tʃˈeɜ sˈy4 zˈu6ŋ tˈy6c fˈə4m tʃˈeɜ bˈiɛɜn sˈa5n sˌɛ5 zˈuɜp zˈaː4m tˈiɛ4w ŋwˈi kˈəː mˈaɜc bˈe6ɲ t̪ˈim mˈe-6c."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Mạng internet băng thông rộng giúp việc truyền tải dữ liệu trở nên vô cùng thuận tiện.",
+   "expanded": "Mạng internet băng thông rộng giúp việc truyền tải dữ liệu trở nên vô cùng thuận tiện.",
+   "phonemes": [
+    "mˈaː6ŋ ˌintəːnˈɛɜt bˈaŋ tˈoŋ zˈo6ŋ zˈuɜp vˈiɛ6c tʃwˈiɛ2n t̪ˈaː4j zˈy5 lˈiɛ6w tʃˈəː4 nˌen vˈo kˈu2ŋ twˈə6n t̪ˈiɛ6n."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Nắng nóng gay gắt kéo dài suốt tuần qua đã làm ảnh hưởng lớn đến đời sống sinh hoạt.",
+   "expanded": "Nắng nóng gay gắt kéo dài suốt tuần qua đã làm ảnh hưởng lớn đến đời sống sinh hoạt.",
+   "phonemes": [
+    "nˈaɜŋ nˈɔɜŋ ɣˈaj ɣˈaɜt̪ kˈɛɜw zˈaː2j sˈuəɜt̪ t̪wˈə2n kwˈaː ɗˌaː5 lˈaː2m ˈe-4ɲ hˈyə4ŋ lˈəːɜn ɗˌeɜn ɗˈəː2j sˈoɜŋ sˈiɲ hwˈaː6t̪."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Món bún chả với nước dùng ấm nóng và thịt nướng thơm lừng luôn thu hút thực khách.",
+   "expanded": "Món bún chả với nước dùng ấm nóng và thịt nướng thơm lừng luôn thu hút thực khách.",
+   "phonemes": [
+    "mˈɔɜn bˈuɜn tʃˈaː4 vˌəːɜj nˈyəɜc zˈu2ŋ ˈəɜm nˈɔɜŋ vˌaː2 tˈi6t̪ nˈyəɜŋ tˈəːm lˈy2ŋ lˈuən tˈu hˈuɜt̪ tˈy6c xˈe-ɜc."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Các thầy cô giáo luôn nỗ lực đổi mới phương pháp giảng dạy để học sinh dễ hiểu bài.",
+   "expanded": "Các thầy cô giáo luôn nỗ lực đổi mới phương pháp giảng dạy để học sinh dễ hiểu bài.",
+   "phonemes": [
+    "kˌaːɜc tˈəɪ2 kˈo zˈaːɜw lˈuən nˈo5 lˈy6c ɗˈo4j mˈəːɜj fˈyəŋ fˈaːɜp zˈaː4ŋ zˈa6j ɗˌe4 hˈɔ6k sˈiɲ zˈe5 hˈiɛ4w bˈaː2j."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Để hoàn thành đúng hạn hợp đồng này, toàn bộ đội ngũ đã phải làm việc liên tục.",
+   "expanded": "Để hoàn thành đúng hạn hợp đồng này, toàn bộ đội ngũ đã phải làm việc liên tục.",
+   "phonemes": [
+    "ɗˌe4 hwˈaː2n tˈe-2ɲ ɗˈuɜŋ hˈaː6n hˈəː6p ɗˈo2ŋ nˈa2j, t̪wˈaː2n bˈo6 ɗˈo6j ŋˈu5 ɗˌaː5 fˌaː4j lˈaː2m vˈiɛ6c lˈiɛn t̪ˈu6c."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Chuyến tàu hỏa xuyên Việt mang đến cho du khách cơ hội ngắm nhìn vẻ đẹp thiên nhiên.",
+   "expanded": "Chuyến tàu hỏa xuyên Việt mang đến cho du khách cơ hội ngắm nhìn vẻ đẹp thiên nhiên.",
+   "phonemes": [
+    "tʃwˈiɛɜn t̪ˈa2w hwˈaː4 swˈiɛn vˈiɛ6t̪ mˈaːŋ ɗˌeɜn tʃˌɔ zˈu xˈe-ɜc kˈəː hˈo6j ŋˈaɜm ɲˈi2n vˈɛ4 ɗˈɛ6p tˈiɛn ɲˈiɛn."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Việc theo dõi sức khỏe định kỳ giúp phát hiện sớm các dấu hiệu bất thường của cơ thể.",
+   "expanded": "Việc theo dõi sức khỏe định kỳ giúp phát hiện sớm các dấu hiệu bất thường của cơ thể.",
+   "phonemes": [
+    "vˈiɛ6c tˈɛw zˈɔ5j sˈyɜc xwˈɛ4 ɗˈi6ɲ kˈi2 zˈuɜp fˈaːɜt̪ hˈiɛ6n sˈəːɜm kˌaːɜc zˈəɜw hˈiɛ6w bˈəɜt̪ tˈyə2ŋ kˌuə4 kˈəː tˈe4."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Máy tính thế hệ mới có tốc độ xử lý dữ liệu nhanh hơn rất nhiều so với trước.",
+   "expanded": "Máy tính thế hệ mới có tốc độ xử lý dữ liệu nhanh hơn rất nhiều so với trước.",
+   "phonemes": [
+    "mˈaɜj t̪ˈiɜɲ tˈeɜ hˈe6 mˈəːɜj kˈɔɜ t̪ˈoɜk ɗˈo6 sˈy4 lˈiɜ zˈy5 lˈiɛ6w ɲˈe-ɲ hˈəːn zˈəɜt̪ ɲˈiɛ2w sˈɔ vˌəːɜj tʃˈyəɜc."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Sương mù giăng kín các con ngõ nhỏ vào sáng sớm tạo nên vẻ đẹp bình yên vô cùng.",
+   "expanded": "Sương mù giăng kín các con ngõ nhỏ vào sáng sớm tạo nên vẻ đẹp bình yên vô cùng.",
+   "phonemes": [
+    "sˈyəŋ mˈu2 zˈaŋ kˈiɜn kˌaːɜc kˌɔn ŋˈɔ5 ɲˈɔ4 vˈaː2w sˈaːɜŋ sˈəːɜm t̪ˈaː6w nˌen vˈɛ4 ɗˈɛ6p bˈi2ɲ ˈiɛn vˈo kˈu2ŋ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Bánh cuốn nóng ăn kèm với chả quế là món ăn sáng ưa thích của người dân thủ đô.",
+   "expanded": "Bánh cuốn nóng ăn kèm với chả quế là món ăn sáng ưa thích của người dân thủ đô.",
+   "phonemes": [
+    "bˈe-ɜɲ kˈuəɜn nˈɔɜŋ ˈan kˈɛ2m vˌəːɜj tʃˈaː4 kwˈeɜ lˌaː2 mˈɔɜn ˈan sˈaːɜŋ ˈyə tˈiɜc kˌuə4 ŋˈyə2j zˈən tˈu4 ɗˈo."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Việc rèn luyện kỹ năng sống cho trẻ em là điều vô cùng cần thiết trong xã hội ngày nay.",
+   "expanded": "Việc rèn luyện kỹ năng sống cho trẻ em là điều vô cùng cần thiết trong xã hội ngày nay.",
+   "phonemes": [
+    "vˈiɛ6c zˈɛ2n lwˈiɛ6n kˈi5 nˈaŋ sˈoɜŋ tʃˌɔ tʃˈɛ4 ˈɛm lˌaː2 ɗˈiɛ2w vˈo kˈu2ŋ kˈə2n tˈiɛɜt̪ tʃˈɔŋ sˈaː5 hˈo6j ŋˈa2j nˈaj."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Doanh nghiệp cần chú trọng nâng cao chất lượng sản phẩm để tăng sức cạnh tranh trên thị trường.",
+   "expanded": "Doanh nghiệp cần chú trọng nâng cao chất lượng sản phẩm để tăng sức cạnh tranh trên thị trường.",
+   "phonemes": [
+    "zwˈe-ɲ ŋˈiɛ6p kˈə2n tʃˈuɜ tʃˈɔ6ŋ nˈəŋ kˈaːw tʃˈəɜt̪ lˈyə6ŋ sˈaː4n fˈə4m ɗˌe4 t̪ˈaŋ sˈyɜc kˈe-6ɲ tʃˈe-ɲ tʃˈen tˈi6 tʃˈyə2ŋ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Những ruộng bậc thang chín vàng ở Mù Cang Chải luôn làm say đắm biết bao du khách.",
+   "expanded": "Những ruộng bậc thang chín vàng ở Mù Cang Chải luôn làm say đắm biết bao du khách.",
+   "phonemes": [
+    "ɲˌy5ŋ zˈuə6ŋ bˈə6c tˈaːŋ tʃˈiɜn vˈaː2ŋ ˈəː4 mˈu2 kˈaːŋ tʃˈaː4j lˈuən lˈaː2m sˈaj ɗˈaɜm bˈiɛɜt̪ bˈaːw zˈu xˈe-ɜc."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Rèn luyện tư duy tích cực giúp chúng ta dễ dàng vượt qua những khó khăn trong cuộc sống.",
+   "expanded": "Rèn luyện tư duy tích cực giúp chúng ta dễ dàng vượt qua những khó khăn trong cuộc sống.",
+   "phonemes": [
+    "zˈɛ2n lwˈiɛ6n t̪ˈy zwˈi t̪ˈiɜc kˈy6c zˈuɜp tʃˈuɜŋ t̪ˈaː zˈe5 zˈaː2ŋ vˈyə6t̪ kwˈaː ɲˌy5ŋ xˈɔɜ xˈan tʃˈɔŋ kˈuə6c sˈoɜŋ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Hệ thống tự động hóa giúp các nhà máy cắt giảm chi phí và nâng cao năng suất lao động.",
+   "expanded": "Hệ thống tự động hóa giúp các nhà máy cắt giảm chi phí và nâng cao năng suất lao động.",
+   "phonemes": [
+    "hˈe6 tˈoɜŋ t̪ˈy6 ɗˈo6ŋ hwˈaːɜ zˈuɜp kˌaːɜc ɲˈaː2 mˈaɜj kˈaɜt̪ zˈaː4m tʃˈi fˈiɜ vˌaː2 nˈəŋ kˈaːw nˈaŋ swˈəɜt̪ lˈaːw ɗˈo6ŋ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Cơn gió lạnh đầu mùa bất ngờ thổi về khiến ai đi ra đường cũng phải mặc áo ấm.",
+   "expanded": "Cơn gió lạnh đầu mùa bất ngờ thổi về khiến ai đi ra đường cũng phải mặc áo ấm.",
+   "phonemes": [
+    "kˈəːn zˈɔɜ lˈe-6ɲ ɗˈə2w mˈuə2 bˈəɜt̪ ŋˈəː2 tˈo4j vˈe2 xˈiɛɜn ˈaːj ɗˈi zˈaː ɗˈyə2ŋ kˈu5ŋ fˌaː4j mˈa6c ˈaːɜw ˈəɜm."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Quán cà phê nhỏ nằm sâu trong ngõ vắng là nơi lý tưởng để đọc sách vào cuối tuần.",
+   "expanded": "Quán cà phê nhỏ nằm sâu trong ngõ vắng là nơi lý tưởng để đọc sách vào cuối tuần.",
+   "phonemes": [
+    "kwˈaːɜn kˈaː2 fˈe ɲˈɔ4 nˈa2m sˈə1w tʃˈɔŋ ŋˈɔ5 vˈaɜŋ lˌaː2 nˈəːj lˈiɜ t̪ˈyə4ŋ ɗˌe4 ɗˈɔ6k sˈe-ɜc vˈaː2w kˈuəɜj t̪wˈə2n."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Các trường đại học đang mở rộng quy mô tuyển sinh cho các ngành học công nghệ mới.",
+   "expanded": "Các trường đại học đang mở rộng quy mô tuyển sinh cho các ngành học công nghệ mới.",
+   "phonemes": [
+    "kˌaːɜc tʃˈyə2ŋ ɗˈaː6j hˈɔ6k ɗˌaːŋ mˈəː4 zˈo6ŋ kwˈi mˈo t̪wˈiɛ4n sˈiɲ tʃˌɔ kˌaːɜc ŋˈe-2ɲ hˈɔ6k kˈoŋ ŋˈe6 mˈəːɜj."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Cuộc họp hội đồng quản trị sáng nay đã thảo luận về chiến lược mở rộng thị trường.",
+   "expanded": "Cuộc họp hội đồng quản trị sáng nay đã thảo luận về chiến lược mở rộng thị trường.",
+   "phonemes": [
+    "kˈuə6c hˈɔ6p hˈo6j ɗˈo2ŋ kwˈaː4n tʃˈi6 sˈaːɜŋ nˈaj ɗˌaː5 tˈaː4w lwˈə6n vˈe2 tʃˈiɛɜn lˈyə6c mˈəː4 zˈo6ŋ tˈi6 tʃˈyə2ŋ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Chúng tôi đã có một chuyến leo núi tuyệt vời và cắm trại qua đêm trên đỉnh núi.",
+   "expanded": "Chúng tôi đã có một chuyến leo núi tuyệt vời và cắm trại qua đêm trên đỉnh núi.",
+   "phonemes": [
+    "tʃˈuɜŋ t̪ˈoj ɗˌaː5 kˈɔɜ mˈo6t̪ tʃwˈiɛɜn lˈɛw nˈuɜj t̪wˈiɛ6t̪ vˈəː2j vˌaː2 kˈaɜm tʃˈaː6j kwˈaː ɗˈem tʃˈen ɗˈi4ɲ nˈuɜj."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Việc đeo khẩu trang khi đến nơi đông người giúp ngăn ngừa hiệu quả các bệnh đường hô hấp.",
+   "expanded": "Việc đeo khẩu trang khi đến nơi đông người giúp ngăn ngừa hiệu quả các bệnh đường hô hấp.",
+   "phonemes": [
+    "vˈiɛ6c ɗˈɛw xˈə4w tʃˈaːŋ xˌi ɗˌeɜn nˈəːj ɗˈoŋ ŋˈyə2j zˈuɜp ŋˈan ŋˈyə2 hˈiɛ6w kwˈaː4 kˌaːɜc bˈe6ɲ ɗˈyə2ŋ hˈo hˈəɜp."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Thiết bị lưu trữ dữ liệu dung lượng cao giúp người dùng bảo vệ thông tin quan trọng.",
+   "expanded": "Thiết bị lưu trữ dữ liệu dung lượng cao giúp người dùng bảo vệ thông tin quan trọng.",
+   "phonemes": [
+    "tˈiɛɜt̪ bˌi6 lˈiw tʃˈy5 zˈy5 lˈiɛ6w zˈuŋ lˈyə6ŋ kˈaːw zˈuɜp ŋˈyə2j zˈu2ŋ bˈaː4w vˈe6 tˈoŋ t̪ˈin kwˈaːn tʃˈɔ6ŋ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Mùa hè là thời điểm tuyệt vời để các gia đình tổ chức những chuyến dã ngoại ngoại thành.",
+   "expanded": "Mùa hè là thời điểm tuyệt vời để các gia đình tổ chức những chuyến dã ngoại ngoại thành.",
+   "phonemes": [
+    "mˈuə2 hˈɛ2 lˌaː2 tˈəː2j ɗˈiɛ4m t̪wˈiɛ6t̪ vˈəː2j ɗˌe4 kˌaːɜc zˈaː ɗˈi2ɲ t̪ˈo4 tʃˈyɜc ɲˌy5ŋ tʃwˈiɛɜn zˈaː5 ŋwˈaː6j ŋwˈaː6j tˈe-2ɲ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Một bát cháo hành nóng hổi là phương thuốc dân gian hiệu quả để giải cảm lạnh.",
+   "expanded": "Một bát cháo hành nóng hổi là phương thuốc dân gian hiệu quả để giải cảm lạnh.",
+   "phonemes": [
+    "mˈo6t̪ bˈaːɜt̪ tʃˈaːɜw hˈe-2ɲ nˈɔɜŋ hˈo4j lˌaː2 fˈyəŋ tˈuəɜc zˈən zˈaːn hˈiɛ6w kwˈaː4 ɗˌe4 zˈaː4j kˈaː4m lˈe-6ɲ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Sinh viên cần chủ động nghiên cứu tài liệu trước khi đến lớp để đạt kết quả tốt.",
+   "expanded": "Sinh viên cần chủ động nghiên cứu tài liệu trước khi đến lớp để đạt kết quả tốt.",
+   "phonemes": [
+    "sˈiɲ vˈiɛn kˈə2n tʃˈu4 ɗˈo6ŋ ŋˈiɛn kˈiɜw t̪ˈaː2j lˈiɛ6w tʃˈyəɜc xˌi ɗˌeɜn lˈəːɜp ɗˌe4 ɗˈaː6t̪ kˈeɜt̪ kwˈaː4 t̪ˈoɜt̪."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Sự hợp tác giữa hai công ty hứa hẹn sẽ mang lại nhiều sản phẩm chất lượng cao.",
+   "expanded": "Sự hợp tác giữa hai công ty hứa hẹn sẽ mang lại nhiều sản phẩm chất lượng cao.",
+   "phonemes": [
+    "sˈy6 hˈəː6p t̪ˈaːɜc zˈyə5 hˈaːj kˈoŋ t̪ˈi hˈyəɜ hˈɛ6n sˌɛ5 mˈaːŋ lˈaː6j ɲˈiɛ2w sˈaː4n fˈə4m tʃˈəɜt̪ lˈyə6ŋ kˈaːw."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Đảo ngọc Phú Quốc nổi tiếng với những bãi cát trắng mịn và làn nước biển trong xanh.",
+   "expanded": "Đảo ngọc Phú Quốc nổi tiếng với những bãi cát trắng mịn và làn nước biển trong xanh.",
+   "phonemes": [
+    "ɗˈaː4w ŋˈɔ6k fˈuɜ kˈuəɜc nˈo4j t̪ˈiɛɜŋ vˌəːɜj ɲˌy5ŋ bˈaː5j kˈaːɜt̪ tʃˈaɜŋ mˈi6n vˌaː2 lˈaː2n nˈyəɜc bˈiɛ4n tʃˈɔŋ sˈe-ɲ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Thiền định và yoga là những phương pháp hiệu quả giúp giảm bớt căng thẳng thần kinh.",
+   "expanded": "Thiền định và yoga là những phương pháp hiệu quả giúp giảm bớt căng thẳng thần kinh.",
+   "phonemes": [
+    "tˈiɛ2n ɗˈi6ɲ vˌaː2 jˈəʊɡə lˌaː2 ɲˌy5ŋ fˈyəŋ fˈaːɜp hˈiɛ6w kwˈaː4 zˈuɜp zˈaː4m bˈəːɜt̪ kˈaŋ tˈa4ŋ tˈə2n kˈiɲ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Màn hình hiển thị sắc nét giúp người dùng có những trải nghiệm giải trí sống động.",
+   "expanded": "Màn hình hiển thị sắc nét giúp người dùng có những trải nghiệm giải trí sống động.",
+   "phonemes": [
+    "mˈaː2n hˈi2ɲ hˈiɛ4n tˈi6 sˈaɜc nˈɛɜt̪ zˈuɜp ŋˈyə2j zˈu2ŋ kˈɔɜ ɲˌy5ŋ tʃˈaː4j ŋˈiɛ6m zˈaː4j tʃˈiɜ sˈoɜŋ ɗˈo6ŋ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Trời chuyển mây đen u ám và một trận mưa rào lớn bắt đầu trút xuống thành phố.",
+   "expanded": "Trời chuyển mây đen u ám và một trận mưa rào lớn bắt đầu trút xuống thành phố.",
+   "phonemes": [
+    "tʃˈəː2j tʃwˈiɛ4n mˈəɪ ɗˈɛn ˈu ˈaːɜm vˌaː2 mˈo6t̪ tʃˈə6n mˈyə zˈaː2w lˈəːɜn bˈaɜt̪ ɗˈə2w tʃˈuɜt̪ sˈuəɜŋ tˈe-2ɲ fˈoɜ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Món nem rán giòn rụm là thành phần không thể thiếu trong mâm cỗ ngày tết cổ truyền.",
+   "expanded": "Món nem rán giòn rụm là thành phần không thể thiếu trong mâm cỗ ngày tết cổ truyền.",
+   "phonemes": [
+    "mˈɔɜn nˈɛm zˈaːɜn zˈɔ2n zˈu6m lˌaː2 tˈe-2ɲ fˈə2n xˌoŋ tˈe4 tˈiɛɜw tʃˈɔŋ mˈəm kˈo5 ŋˈa2j t̪ˈeɜt̪ kˈo4 tʃwˈiɛ2n."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Phong trào đọc sách đang lan tỏa mạnh mẽ trong các trường học trên toàn quốc.",
+   "expanded": "Phong trào đọc sách đang lan tỏa mạnh mẽ trong các trường học trên toàn quốc.",
+   "phonemes": [
+    "fˈɔŋ tʃˈaː2w ɗˈɔ6k sˈe-ɜc ɗˌaːŋ lˈaːn t̪wˈaː4 mˈe-6ɲ mˈɛ5 tʃˈɔŋ kˌaːɜc tʃˈyə2ŋ hˈɔ6k tʃˈen t̪wˈaː2n kˈuəɜc."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Phòng nhân sự đang tiến hành phỏng vấn các ứng viên tiềm năng cho vị trí quản lý.",
+   "expanded": "Phòng nhân sự đang tiến hành phỏng vấn các ứng viên tiềm năng cho vị trí quản lý.",
+   "phonemes": [
+    "fˈɔ2ŋ ɲˈən sˈy6 ɗˌaːŋ t̪ˈiɛɜn hˈe-2ɲ fˈɔ4ŋ vˈəɜn kˌaːɜc ˈyɜŋ vˈiɛn t̪ˈiɛ2m nˈaŋ tʃˌɔ vˈi6 tʃˈiɜ kwˈaː4n lˈiɜ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Vịnh Hạ Long là một trong những điểm đến hàng đầu được bạn bè quốc tế yêu thích.",
+   "expanded": "Vịnh Hạ Long là một trong những điểm đến hàng đầu được bạn bè quốc tế yêu thích.",
+   "phonemes": [
+    "vˈi6ɲ hˈaː6 lˈɔŋ lˌaː2 mˈo6t̪ tʃˈɔŋ ɲˌy5ŋ ɗˈiɛ4m ɗˌeɜn hˈaː2ŋ ɗˈə2w ɗˌyə6c bˈaː6n bˈɛ2 kˈuəɜc t̪ˈeɜ ˈiɛw tˈiɜc."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Ăn nhiều trái cây tươi giúp bổ sung các loại vitamin và khoáng chất cần thiết.",
+   "expanded": "Ăn nhiều trái cây tươi giúp bổ sung các loại vitamin và khoáng chất cần thiết.",
+   "phonemes": [
+    "ˈan ɲˈiɛ2w tʃˈaːɜj kˈəɪ t̪ˈyəj zˈuɜp bˈo4 sˈuŋ kˌaːɜc lwˈaː6j vˈɪtəmɪn vˌaː2 xwˈaːɜŋ tʃˈəɜt̪ kˈə2n tˈiɛɜt̪."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Công nghệ viễn thông hiện đại giúp mọi người dễ dàng kết nối với nhau dù ở xa.",
+   "expanded": "Công nghệ viễn thông hiện đại giúp mọi người dễ dàng kết nối với nhau dù ở xa.",
+   "phonemes": [
+    "kˈoŋ ŋˈe6 vˈiɛ5n tˈoŋ hˈiɛ6n ɗˈaː6j zˈuɜp mˌɔ6j ŋˈyə2j zˈe5 zˈaː2ŋ kˈeɜt̪ nˈoɜj vˌəːɜj ɲˈaw zˌu2 ˈəː4 sˈaː."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Không khí oi nóng của mùa hè khiến nhu cầu tiêu thụ điện năng tăng cao đột biến.",
+   "expanded": "Không khí oi nóng của mùa hè khiến nhu cầu tiêu thụ điện năng tăng cao đột biến.",
+   "phonemes": [
+    "xˌoŋ xˈiɜ ˈɔj nˈɔɜŋ kˌuə4 mˈuə2 hˈɛ2 xˈiɛɜn ɲˈu kˈə2w t̪ˈiɛw tˈu6 ɗˈiɛ6n nˈaŋ t̪ˈaŋ kˈaːw ɗˈo6t̪ bˈiɛɜn."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Chè hạt sen bọc vải là món ăn giải nhiệt tuyệt vời trong những ngày hè oi ả.",
+   "expanded": "Chè hạt sen bọc vải là món ăn giải nhiệt tuyệt vời trong những ngày hè oi ả.",
+   "phonemes": [
+    "tʃˈɛ2 hˈaː6t̪ sˈɛn bˈɔ6k vˈaː4j lˌaː2 mˈɔɜn ˈan zˈaː4j ɲˈiɛ6t̪ t̪wˈiɛ6t̪ vˈəː2j tʃˈɔŋ ɲˌy5ŋ ŋˈa2j hˈɛ2 ˈɔj ˈaː4."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Giáo dục kỹ năng số cho thế hệ trẻ là nhiệm vụ quan trọng của hệ thống nhà trường.",
+   "expanded": "Giáo dục kỹ năng số cho thế hệ trẻ là nhiệm vụ quan trọng của hệ thống nhà trường.",
+   "phonemes": [
+    "zˈaːɜw zˈu6c kˈi5 nˈaŋ sˈoɜ tʃˌɔ tˈeɜ hˈe6 tʃˈɛ4 lˌaː2 ɲˈiɛ6m vˈu6 kwˈaːn tʃˈɔ6ŋ kˌuə4 hˈe6 tˈoɜŋ ɲˈaː2 tʃˈyə2ŋ."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Kế hoạch tiếp thị mới giúp sản phẩm của công ty tiếp cận được nhiều khách hàng hơn.",
+   "expanded": "Kế hoạch tiếp thị mới giúp sản phẩm của công ty tiếp cận được nhiều khách hàng hơn.",
+   "phonemes": [
+    "kˈeɜ hwˈe-6c t̪ˈiɛɜp tˈi6 mˈəːɜj zˈuɜp sˈaː4n fˈə4m kˌuə4 kˈoŋ t̪ˈi t̪ˈiɛɜp kˈə6n ɗˌyə6c ɲˈiɛ2w xˈe-ɜc hˈaː2ŋ hˈəːn."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Hang Sơn Đoòng là hang động tự nhiên lớn nhất thế giới với hệ sinh thái độc đáo.",
+   "expanded": "Hang Sơn Đoòng là hang động tự nhiên lớn nhất thế giới với hệ sinh thái độc đáo.",
+   "phonemes": [
+    "hˈaːŋ sˈəːn ɗwˈɔ2ŋ lˌaː2 hˈaːŋ ɗˈo6ŋ t̪ˈy6 ɲˈiɛn lˈəːɜn ɲˈəɜt̪ tˈeɜ zˈəːɜj vˌəːɜj hˈe6 sˈiɲ tˈaːɜj ɗˈo6k ɗˈaːɜw."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Tập thể dục buổi sáng giúp tinh thần sảng khoái và bắt đầu ngày mới hiệu quả.",
+   "expanded": "Tập thể dục buổi sáng giúp tinh thần sảng khoái và bắt đầu ngày mới hiệu quả.",
+   "phonemes": [
+    "t̪ˈə6p tˈe4 zˈu6c bˈuə4j sˈaːɜŋ zˈuɜp t̪ˈiɲ tˈə2n sˈaː4ŋ xwˈaːɜj vˌaː2 bˈaɜt̪ ɗˈə2w ŋˈa2j mˈəːɜj hˈiɛ6w kwˈaː4."
+   ]
+  },
+  {
+   "group": "everyday prose",
+   "text": "Các nhà khoa học đang nghiên cứu giải pháp phát triển năng lượng sạch và bền vững.",
+   "expanded": "Các nhà khoa học đang nghiên cứu giải pháp phát triển năng lượng sạch và bền vững.",
+   "phonemes": [
+    "kˌaːɜc ɲˈaː2 xwˈaː hˈɔ6k ɗˌaːŋ ŋˈiɛn kˈiɜw zˈaː4j fˈaːɜp fˈaːɜt̪ tʃˈiɛ4n nˈaŋ lˈyə6ŋ sˈe-6c vˌaː2 bˈe2n vˈy5ŋ."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Năm 1945 là một mốc lịch sử quan trọng của dân tộc Việt Nam.",
+   "expanded": "Năm một nghìn chín trăm bốn mươi lăm là một mốc lịch sử quan trọng của dân tộc Việt Nam.",
+   "phonemes": [
+    "nˈam mˈo6t̪ ŋˈi2n tʃˈiɜn tʃˈam bˈoɜn mˈyəj lˈam lˌaː2 mˈo6t̪ mˈoɜk lˈi6c sˈy4 kwˈaːn tʃˈɔ6ŋ kˌuə4 zˈən t̪ˈo6k vˈiɛ6t̪ nˈaːm."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Mẹ tôi đi chợ mua 3 con cá tươi về nấu canh chua.",
+   "expanded": "Mẹ tôi đi chợ mua ba con cá tươi về nấu canh chua.",
+   "phonemes": [
+    "mˈɛ6 t̪ˈoj ɗˈi tʃˈəː6 mˈuə bˈaː kˌɔn kˈaːɜ t̪ˈyəj vˈe2 nˈəɜw kˈe-ɲ tʃˈuə."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Chiếc xe khách này có thể chở tối đa 45 hành khách.",
+   "expanded": "Chiếc xe khách này có thể chở tối đa bốn mươi lăm hành khách.",
+   "phonemes": [
+    "tʃˈiɛɜc sˈɛ xˈe-ɜc nˈa2j kˈɔɜ tˈe4 tʃˈəː4 t̪ˈoɜj ɗˈaː bˈoɜn mˈyəj lˈam hˈe-2ɲ xˈe-ɜc."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Chúng tôi đã sống ở thành phố này được 15 năm.",
+   "expanded": "Chúng tôi đã sống ở thành phố này được mười lăm năm.",
+   "phonemes": [
+    "tʃˈuɜŋ t̪ˈoj ɗˌaː5 sˈoɜŋ ˈəː4 tˈe-2ɲ fˈoɜ nˈa2j ɗˌyə6c mˈyə2j lˈam nˈam."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Sáng nay tôi thức dậy vào lúc 6 giờ để đi tập thể dục.",
+   "expanded": "Sáng nay tôi thức dậy vào lúc sáu giờ để đi tập thể dục.",
+   "phonemes": [
+    "sˈaːɜŋ nˈaj t̪ˈoj tˈyɜc zˈəɪ6 vˈaː2w lˌuɜc sˈaɜw zˈəː2 ɗˌe4 ɗˈi t̪ˈə6p tˈe4 zˈu6c."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Tỷ lệ thất nghiệp đã giảm 2 phần trăm trong quý này.",
+   "expanded": "Tỷ lệ thất nghiệp đã giảm hai phần trăm trong quý này.",
+   "phonemes": [
+    "t̪ˈi4 lˈe6 tˈəɜt̪ ŋˈiɛ6p ɗˌaː5 zˈaː4m hˈaːj fˈə2n tʃˈam tʃˈɔŋ kwˈiɜ nˈa2j."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Gia đình tôi vừa chuyển đến một căn hộ rộng 85 mét vuông.",
+   "expanded": "Gia đình tôi vừa chuyển đến một căn hộ rộng tám mươi lăm mét vuông.",
+   "phonemes": [
+    "zˈaː ɗˈi2ɲ t̪ˈoj vˈyə2 tʃwˈiɛ4n ɗˌeɜn mˈo6t̪ kˈan hˈo6 zˈo6ŋ t̪ˈaːɜm mˈyəj lˈam mˈɛɜt̪ vˈuəŋ."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Trường học có khoảng 1.200 học sinh đang theo học.",
+   "expanded": "Trường học có khoảng một nghìn hai trăm học sinh đang theo học.",
+   "phonemes": [
+    "tʃˈyə2ŋ hˈɔ6k kˈɔɜ xwˌaː4ŋ mˈo6t̪ ŋˈi2n hˈaːj tʃˈam hˈɔ6k sˈiɲ ɗˌaːŋ tˈɛw hˈɔ6k."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Anh ấy đã hoàn thành cuộc thi chạy dài 42 kilomet.",
+   "expanded": "Anh ấy đã hoàn thành cuộc thi chạy dài bốn mươi hai kilomet.",
+   "phonemes": [
+    "ˈe-ɲ ˈəɪɜ ɗˌaː5 hwˈaː2n tˈe-2ɲ kˈuə6c tˈi tʃˈa6j zˈaː2j bˈoɜn mˈyəj hˈaːj kˈɪləmɪt."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Giá của chiếc áo này là 250.000 đồng.",
+   "expanded": "Giá của chiếc áo này là hai trăm năm mươi nghìn đồng.",
+   "phonemes": [
+    "zˈaːɜ kˌuə4 tʃˈiɛɜc ˈaːɜw nˈa2j lˌaː2 hˈaːj tʃˈam nˈam mˈyəj ŋˈi2n ɗˈo2ŋ."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Chúng tôi hẹn gặp nhau vào lúc 8 giờ tối tại quán ăn.",
+   "expanded": "Chúng tôi hẹn gặp nhau vào lúc tám giờ tối tại quán ăn.",
+   "phonemes": [
+    "tʃˈuɜŋ t̪ˈoj hˈɛ6n ɣˈa6p ɲˈaw vˈaː2w lˌuɜc t̪ˈaːɜm zˈəː2 t̪ˈoɜj t̪ˈaː6j kwˈaːɜn ˈan."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Doanh số bán hàng tháng này đã tăng 15 phần trăm.",
+   "expanded": "Doanh số bán hàng tháng này đã tăng mười lăm phần trăm.",
+   "phonemes": [
+    "zwˈe-ɲ sˈoɜ bˈaːɜn hˈaː2ŋ tˈaːɜŋ nˈa2j ɗˌaː5 t̪ˈaŋ mˈyə2j lˈam fˈə2n tʃˈam."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Năm 2024 hứa hẹn sẽ mang lại nhiều cơ hội mới.",
+   "expanded": "Năm hai nghìn không trăm hai mươi tư hứa hẹn sẽ mang lại nhiều cơ hội mới.",
+   "phonemes": [
+    "nˈam hˈaːj ŋˈi2n xˌoŋ tʃˈam hˈaːj mˈyəj t̪ˈy hˈyəɜ hˈɛ6n sˌɛ5 mˈaːŋ lˈaː6j ɲˈiɛ2w kˈəː hˈo6j mˈəːɜj."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Cuốn sách này dày 320 trang và rất thú vị.",
+   "expanded": "Cuốn sách này dày ba trăm hai mươi trang và rất thú vị.",
+   "phonemes": [
+    "kˈuəɜn sˈe-ɜc nˈa2j zˈa2j bˈaː tʃˈam hˈaːj mˈyəj tʃˈaːŋ vˌaː2 zˈəɜt̪ tˈuɜ vˈi6."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Cửa hàng bán được 50 chiếc máy tính trong ngày hôm nay.",
+   "expanded": "Cửa hàng bán được năm mươi chiếc máy tính trong ngày hôm nay.",
+   "phonemes": [
+    "kˈyə4 hˈaː2ŋ bˈaːɜn ɗˌyə6c nˈam mˈyəj tʃˈiɛɜc mˈaɜj t̪ˈiɜɲ tʃˈɔŋ ŋˈa2j hˈom nˈaj."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Mỗi ngày tôi dành khoảng 2 giờ để đọc sách.",
+   "expanded": "Mỗi ngày tôi dành khoảng hai giờ để đọc sách.",
+   "phonemes": [
+    "mˌo5j ŋˈa2j t̪ˈoj zˈe-2ɲ xwˌaː4ŋ hˈaːj zˈəː2 ɗˌe4 ɗˈɔ6k sˈe-ɜc."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Lớp học của chúng tôi hiện tại có 35 học sinh.",
+   "expanded": "Lớp học của chúng tôi hiện tại có ba mươi lăm học sinh.",
+   "phonemes": [
+    "lˈəːɜp hˈɔ6k kˌuə4 tʃˈuɜŋ t̪ˈoj hˈiɛ6n t̪ˈaː6j kˈɔɜ bˈaː mˈyəj lˈam hˈɔ6k sˈiɲ."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Giá vé xem phim là 90.000 đồng một người.",
+   "expanded": "Giá vé xem phim là chín mươi nghìn đồng một người.",
+   "phonemes": [
+    "zˈaːɜ vˈɛɜ sˈɛm fˈim lˌaː2 tʃˈiɜn mˈyəj ŋˈi2n ɗˈo2ŋ mˈo6t̪ ŋˈyə2j."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Dự án này đã thu hút hơn 500 người tham gia.",
+   "expanded": "Dự án này đã thu hút hơn năm trăm người tham gia.",
+   "phonemes": [
+    "zˈy6 ˈaːɜn nˈa2j ɗˌaː5 tˈu hˈuɜt̪ hˈəːn nˈam tʃˈam ŋˈyə2j tˈaːm zˈaː."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Đội bóng đã ghi được 4 bàn thắng trong trận đấu vừa qua.",
+   "expanded": "Đội bóng đã ghi được bốn bàn thắng trong trận đấu vừa qua.",
+   "phonemes": [
+    "ɗˈo6j bˈɔɜŋ ɗˌaː5 ɣˈi ɗˌyə6c bˈoɜn bˈaː2n tˈaɜŋ tʃˈɔŋ tʃˈə6n ɗˈəɜw vˈyə2 kwˈaː."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Chiếc máy bay dự kiến sẽ hạ cánh vào lúc 10 giờ đêm.",
+   "expanded": "Chiếc máy bay dự kiến sẽ hạ cánh vào lúc mười giờ đêm.",
+   "phonemes": [
+    "tʃˈiɛɜc mˈaɜj bˈaj zˈy6 kˈiɛɜn sˌɛ5 hˈaː6 kˈe-ɜɲ vˈaː2w lˌuɜc mˈyə2j zˈəː2 ɗˈem."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Hơn 80 phần trăm nhân viên đã đồng ý với kế hoạch mới.",
+   "expanded": "Hơn tám mươi phần trăm nhân viên đã đồng ý với kế hoạch mới.",
+   "phonemes": [
+    "hˈəːn t̪ˈaːɜm mˈyəj fˈə2n tʃˈam ɲˈən vˈiɛn ɗˌaː5 ɗˈo2ŋ ˈiɜ vˌəːɜj kˈeɜ hwˈe-6c mˈəːɜj."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Khoản tiền thưởng lần này trị giá 5.000.000 đồng.",
+   "expanded": "Khoản tiền thưởng lần này trị giá năm triệu đồng.",
+   "phonemes": [
+    "xwˈaː4n t̪ˈiɛ2n tˈyə4ŋ lˈə2n nˈa2j tʃˈi6 zˈaːɜ nˈam tʃˈiɛ6w ɗˈo2ŋ."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Tòa nhà cao 30 tầng này vừa mới được hoàn thành.",
+   "expanded": "Tòa nhà cao ba mươi tầng này vừa mới được hoàn thành.",
+   "phonemes": [
+    "t̪wˈaː2 ɲˈaː2 kˈaːw bˈaː mˈyəj t̪ˈə2ŋ nˈa2j vˈyə2 mˈəːɜj ɗˌyə6c hwˈaː2n tˈe-2ɲ."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Bộ phim kéo dài trong 2 giờ và 15 phút.",
+   "expanded": "Bộ phim kéo dài trong hai giờ và mười lăm phút.",
+   "phonemes": [
+    "bˈo6 fˈim kˈɛɜw zˈaː2j tʃˈɔŋ hˈaːj zˈəː2 vˌaː2 mˈyə2j lˈam fˈuɜt̪."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Đoàn khách du lịch gồm có 20 người đến từ phương xa.",
+   "expanded": "Đoàn khách du lịch gồm có hai mươi người đến từ phương xa.",
+   "phonemes": [
+    "ɗwˈaː2n xˈe-ɜc zˈu lˈi6c ɣˈo2m kˈɔɜ hˈaːj mˈyəj ŋˈyə2j ɗˌeɜn t̪ˌy2 fˈyəŋ sˈaː."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Chương trình khuyến mãi này giảm giá đến 50 phần trăm.",
+   "expanded": "Chương trình khuyến mãi này giảm giá đến năm mươi phần trăm.",
+   "phonemes": [
+    "tʃˈyəŋ tʃˈi2ɲ xwˈiɛɜn mˈaː5j nˈa2j zˈaː4m zˈaːɜ ɗˌeɜn nˈam mˈyəj fˈə2n tʃˈam."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Chiếc xe hơi này có vận tốc tối đa 200 kilomet một giờ.",
+   "expanded": "Chiếc xe hơi này có vận tốc tối đa hai trăm kilomet một giờ.",
+   "phonemes": [
+    "tʃˈiɛɜc sˈɛ hˈəːj nˈa2j kˈɔɜ vˈə6n t̪ˈoɜk t̪ˈoɜj ɗˈaː hˈaːj tʃˈam kˈɪləmɪt mˈo6t̪ zˈəː2."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Cuộc họp sẽ chính thức bắt đầu vào lúc 9 giờ sáng.",
+   "expanded": "Cuộc họp sẽ chính thức bắt đầu vào lúc chín giờ sáng.",
+   "phonemes": [
+    "kˈuə6c hˈɔ6p sˌɛ5 tʃˈiɜɲ tˈyɜc bˈaɜt̪ ɗˈə2w vˈaː2w lˌuɜc tʃˈiɜn zˈəː2 sˈaːɜŋ."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Anh ấy đã mua 5 kg cam ở siêu thị.",
+   "expanded": "Anh ấy đã mua năm kg cam ở siêu thị.",
+   "phonemes": [
+    "ˈe-ɲ ˈəɪɜ ɗˌaː5 mˈuə nˈam kˌaːðˈe7 kˈaːm ˈəː4 sˈiɛw tˈi6."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Năm 1954 gắn liền với chiến thắng lịch sử của dân tộc.",
+   "expanded": "Năm một nghìn chín trăm năm mươi tư gắn liền với chiến thắng lịch sử của dân tộc.",
+   "phonemes": [
+    "nˈam mˈo6t̪ ŋˈi2n tʃˈiɜn tʃˈam nˈam mˈyəj t̪ˈy ɣˈaɜn lˈiɛ2n vˌəːɜj tʃˈiɛɜn tˈaɜŋ lˈi6c sˈy4 kˌuə4 zˈən t̪ˈo6k."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Trường đại học này được thành lập vào năm 1995.",
+   "expanded": "Trường đại học này được thành lập vào năm một nghìn chín trăm chín mươi lăm.",
+   "phonemes": [
+    "tʃˈyə2ŋ ɗˈaː6j hˈɔ6k nˈa2j ɗˌyə6c tˈe-2ɲ lˈə6p vˈaː2w nˈam mˈo6t̪ ŋˈi2n tʃˈiɜn tʃˈam tʃˈiɜn mˈyəj lˈam."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Mẹ tôi mua 2 chiếc bánh mì cho bữa sáng.",
+   "expanded": "Mẹ tôi mua hai chiếc bánh mì cho bữa sáng.",
+   "phonemes": [
+    "mˈɛ6 t̪ˈoj mˈuə hˈaːj tʃˈiɛɜc bˈe-ɜɲ mˈi2 tʃˌɔ bˈyə5 sˈaːɜŋ."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Tổng chi phí cho chuyến đi lần này là 3.500.000 đồng.",
+   "expanded": "Tổng chi phí cho chuyến đi lần này là ba triệu năm trăm nghìn đồng.",
+   "phonemes": [
+    "t̪ˈo4ŋ tʃˈi fˈiɜ tʃˌɔ tʃwˈiɛɜn ɗˈi lˈə2n nˈa2j lˌaː2 bˈaː tʃˈiɛ6w nˈam tʃˈam ŋˈi2n ɗˈo2ŋ."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Có 10 câu hỏi trong bài kiểm tra hôm nay.",
+   "expanded": "Có mười câu hỏi trong bài kiểm tra hôm nay.",
+   "phonemes": [
+    "kˈɔɜ mˈyə2j kˈə1w hˈɔ4j tʃˈɔŋ bˈaː2j kˈiɛ4m tʃˈaː hˈom nˈaj."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Hơn 90 phần trăm học sinh đã thi đậu kỳ thi tốt nghiệp.",
+   "expanded": "Hơn chín mươi phần trăm học sinh đã thi đậu kỳ thi tốt nghiệp.",
+   "phonemes": [
+    "hˈəːn tʃˈiɜn mˈyəj fˈə2n tʃˈam hˈɔ6k sˈiɲ ɗˌaː5 tˈi ɗˈə6w kˈi2 tˈi t̪ˈoɜt̪ ŋˈiɛ6p."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Chúng tôi đã đợi xe bus suốt 45 phút.",
+   "expanded": "Chúng tôi đã đợi xe bus suốt bốn mươi lăm phút.",
+   "phonemes": [
+    "tʃˈuɜŋ t̪ˈoj ɗˌaː5 ɗˈəː6j sˈɛ bˈʌs sˈuəɜt̪ bˈoɜn mˈyəj lˈam fˈuɜt̪."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Chiếc bàn làm việc này dài 1.5 mét và rộng 80 centimet.",
+   "expanded": "Chiếc bàn làm việc này dài một.năm mét và rộng tám mươi centimet.",
+   "phonemes": [
+    "tʃˈiɛɜc bˈaː2n lˈaː2m vˈiɛ6c nˈa2j zˈaː2j mˈo6t̪ tʃˈəɜm nˈam mˈɛɜt̪ vˌaː2 zˈo6ŋ t̪ˈaːɜm mˈyəj sˈɛntɪmɪt."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Cửa hàng mở cửa từ 7 giờ sáng đến 9 giờ tối.",
+   "expanded": "Cửa hàng mở cửa từ bảy giờ sáng đến chín giờ tối.",
+   "phonemes": [
+    "kˈyə4 hˈaː2ŋ mˈəː4 kˈyə4 t̪ˌy2 bˈa4j zˈəː2 sˈaːɜŋ ɗˌeɜn tʃˈiɜn zˈəː2 t̪ˈoɜj."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Sản lượng lúa năm nay đã tăng 5 phần trăm so với năm ngoái.",
+   "expanded": "Sản lượng lúa năm nay đã tăng năm phần trăm so với năm ngoái.",
+   "phonemes": [
+    "sˈaː4n lˈyə6ŋ lˈuəɜ nˈam nˈaj ɗˌaː5 t̪ˈaŋ nˈam fˈə2n tʃˈam sˈɔ vˌəːɜj nˈam ŋwˈaːɜj."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Có khoảng 2.000 khán giả đã đến xem buổi biểu diễn.",
+   "expanded": "Có khoảng hai nghìn khán giả đã đến xem buổi biểu diễn.",
+   "phonemes": [
+    "kˈɔɜ xwˌaː4ŋ hˈaːj ŋˈi2n xˈaːɜn zˈaː4 ɗˌaː5 ɗˌeɜn sˈɛm bˈuə4j bˈiɛ4w zˈiɛ5n."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Chú tôi đã nuôi 100 con gà trong trang trại.",
+   "expanded": "Chú tôi đã nuôi một trăm con gà trong trang trại.",
+   "phonemes": [
+    "tʃˈuɜ t̪ˈoj ɗˌaː5 nˈuəj mˈo6t̪ tʃˈam kˌɔn ɣˈaː2 tʃˈɔŋ tʃˈaːŋ tʃˈaː6j."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Trận đấu bóng đá bắt đầu vào lúc 3 giờ chiều.",
+   "expanded": "Trận đấu bóng đá bắt đầu vào lúc ba giờ chiều.",
+   "phonemes": [
+    "tʃˈə6n ɗˈəɜw bˈɔɜŋ ɗˈaːɜ bˈaɜt̪ ɗˈə2w vˈaː2w lˌuɜc bˈaː zˈəː2 tʃˈiɛ2w."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Giá nguyên liệu đầu vào đã tăng 12 phần trăm.",
+   "expanded": "Giá nguyên liệu đầu vào đã tăng mười hai phần trăm.",
+   "phonemes": [
+    "zˈaːɜ ŋwˈiɛn lˈiɛ6w ɗˈə2w vˈaː2w ɗˌaː5 t̪ˈaŋ mˈyə2j hˈaːj fˈə2n tʃˈam."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Căn nhà này được xây dựng từ năm 2010.",
+   "expanded": "Căn nhà này được xây dựng từ năm hai nghìn không trăm mười.",
+   "phonemes": [
+    "kˈan ɲˈaː2 nˈa2j ɗˌyə6c sˈəɪ zˈy6ŋ t̪ˌy2 nˈam hˈaːj ŋˈi2n xˌoŋ tʃˈam mˈyə2j."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Công ty vừa tuyển thêm 8 nhân viên mới.",
+   "expanded": "Công ty vừa tuyển thêm tám nhân viên mới.",
+   "phonemes": [
+    "kˈoŋ t̪ˈi vˈyə2 t̪wˈiɛ4n tˈem t̪ˈaːɜm ɲˈən vˈiɛn mˈəːɜj."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Số tiền tiết kiệm của cô ấy đã đạt 50.000.000 đồng.",
+   "expanded": "Số tiền tiết kiệm của cô ấy đã đạt năm mươi triệu đồng.",
+   "phonemes": [
+    "sˈoɜ t̪ˈiɛ2n t̪ˈiɛɜt̪ kˈiɛ6m kˌuə4 kˈo ˈəɪɜ ɗˌaː5 ɗˈaː6t̪ nˈam mˈyəj tʃˈiɛ6w ɗˈo2ŋ."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Tôi cần mua 4 quyển vở mới để chuẩn bị cho năm học.",
+   "expanded": "Tôi cần mua bốn quyển vở mới để chuẩn bị cho năm học.",
+   "phonemes": [
+    "t̪ˈoj kˈə2n mˈuə bˈoɜn kwˈiɛ4n vˈəː4 mˈəːɜj ɗˌe4 tʃwˈə4n bˌi6 tʃˌɔ nˈam hˈɔ6k."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Hội nghị lần này quy tụ 150 chuyên gia hàng đầu.",
+   "expanded": "Hội nghị lần này quy tụ một trăm năm mươi chuyên gia hàng đầu.",
+   "phonemes": [
+    "hˈo6j ŋˈi6 lˈə2n nˈa2j kwˈi t̪ˈu6 mˈo6t̪ tʃˈam nˈam mˈyəj tʃwˈiɛn zˈaː hˈaː2ŋ ɗˈə2w."
+   ]
+  },
+  {
+   "group": "numbers",
+   "text": "Tàu hỏa sẽ xuất phát vào lúc 11 giờ đêm nay.",
+   "expanded": "Tàu hỏa sẽ xuất phát vào lúc mười một giờ đêm nay.",
+   "phonemes": [
+    "t̪ˈa2w hwˈaː4 sˌɛ5 swˈəɜt̪ fˈaːɜt̪ vˈaː2w lˌuɜc mˈyə2j mˈo6t̪ zˈəː2 ɗˈem nˈaj."
+   ]
+  }
+ ]
+}

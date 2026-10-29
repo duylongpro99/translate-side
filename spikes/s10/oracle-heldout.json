@@ -1,0 +1,972 @@
+{
+ "note": "Dev-time oracle only. Phonemes are espeak-ng output (GPL tool, used as a black box); never shipped.",
+ "voice": "vi",
+ "phonemizer": "piper_phonemize==1.1.0",
+ "crossCheck": {
+  "phonemizer": "piper-tts==1.8.0",
+  "identicalSentences": 120,
+  "total": 120
+ },
+ "entries": [
+  {
+   "group": "news",
+   "text": "Thủ tướng Chính phủ vừa ban hành quyết định phê duyệt đề án phát triển kinh tế vùng duyên hải miền Trung.",
+   "expanded": "Thủ tướng Chính phủ vừa ban hành quyết định phê duyệt đề án phát triển kinh tế vùng duyên hải miền Trung.",
+   "phonemes": [
+    "tˈu4 t̪ˈyəɜŋ tʃˈiɜɲ fˈu4 vˈyə2 bˈaːn hˈe-2ɲ kwˈiɛɜt̪ ɗˈi6ɲ fˈe zwˈiɛ6t̪ ɗˈe2 ˈaːɜn fˈaːɜt̪ tʃˈiɛ4n kˈiɲ t̪ˈeɜ vˈu2ŋ zwˈiɛn hˈaː4j mˈiɛ2n tʃˈuŋ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Chủ tịch Ủy ban nhân dân thành phố Hà Nội đã đi kiểm tra tiến độ các công trình trọng điểm.",
+   "expanded": "Chủ tịch Ủy ban nhân dân thành phố Hà Nội đã đi kiểm tra tiến độ các công trình trọng điểm.",
+   "phonemes": [
+    "tʃˈu4 t̪ˈi6c wˈi4 bˈaːn ɲˈən zˈən tˈe-2ɲ fˈoɜ hˈaː2 nˈo6j ɗˌaː5 ɗˈi kˈiɛ4m tʃˈaː t̪ˈiɛɜn ɗˈo6 kˌaːɜc kˈoŋ tʃˈi2ɲ tʃˈɔ6ŋ ɗˈiɛ4m."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Đoàn đại biểu Quốc hội tỉnh Quảng Nam đã có buổi tiếp xúc cử tri trước kỳ họp mới.",
+   "expanded": "Đoàn đại biểu Quốc hội tỉnh Quảng Nam đã có buổi tiếp xúc cử tri trước kỳ họp mới.",
+   "phonemes": [
+    "ɗwˈaː2n ɗˈaː6j bˈiɛ4w kˈuəɜc hˈo6j t̪ˈi4ɲ kwˈaː4ŋ nˈaːm ɗˌaː5 kˈɔɜ bˈuə4j t̪ˈiɛɜp sˈuɜc kˈy4 tʃˈi tʃˈyəɜc kˈi2 hˈɔ6p mˈəːɜj."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Chính phủ đang tích cực chỉ đạo các bộ ngành triển khai giải pháp kiềm chế lạm phát.",
+   "expanded": "Chính phủ đang tích cực chỉ đạo các bộ ngành triển khai giải pháp kiềm chế lạm phát.",
+   "phonemes": [
+    "tʃˈiɜɲ fˈu4 ɗˌaːŋ t̪ˈiɜc kˈy6c tʃˈi4 ɗˈaː6w kˌaːɜc bˈo6 ŋˈe-2ɲ tʃˈiɛ4n xˈaːj zˈaː4j fˈaːɜp kˈiɛ2m tʃˈeɜ lˈaː6m fˈaːɜt̪."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Nhiều đại biểu đánh giá cao những kết quả đạt được trong việc cải cách thủ tục hành chính.",
+   "expanded": "Nhiều đại biểu đánh giá cao những kết quả đạt được trong việc cải cách thủ tục hành chính.",
+   "phonemes": [
+    "ɲˈiɛ2w ɗˈaː6j bˈiɛ4w ɗˈe-ɜɲ zˈaːɜ kˈaːw ɲˌy5ŋ kˈeɜt̪ kwˈaː4 ɗˈaː6t̪ ɗˌyə6c tʃˈɔŋ vˈiɛ6c kˈaː4j kˈe-ɜc tˈu4 t̪ˈu6c hˈe-2ɲ tʃˈiɜɲ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Hội nghị hợp tác phát triển kinh tế khu vực tam giác phát triển đã diễn ra thành công.",
+   "expanded": "Hội nghị hợp tác phát triển kinh tế khu vực tam giác phát triển đã diễn ra thành công.",
+   "phonemes": [
+    "hˈo6j ŋˈi6 hˈəː6p t̪ˈaːɜc fˈaːɜt̪ tʃˈiɛ4n kˈiɲ t̪ˈeɜ xˈu vˈy6c t̪ˈaːm zˈaːɜc fˈaːɜt̪ tʃˈiɛ4n ɗˌaː5 zˈiɛ5n zˈaː tˈe-2ɲ kˈoŋ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Bộ Tài chính vừa ban hành thông tư mới hướng dẫn về việc quản lý thu chi ngân sách.",
+   "expanded": "Bộ Tài chính vừa ban hành thông tư mới hướng dẫn về việc quản lý thu chi ngân sách.",
+   "phonemes": [
+    "bˈo6 t̪ˈaː2j tʃˈiɜɲ vˈyə2 bˈaːn hˈe-2ɲ tˈoŋ t̪ˈy mˈəːɜj hˈyəɜŋ zˈə5n vˈe2 vˈiɛ6c kwˈaː4n lˈiɜ tˈu tʃˈi ŋˈən sˈe-ɜc."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Chính quyền địa phương đang tích cực hỗ trợ người dân khắc phục hậu quả thiên tai.",
+   "expanded": "Chính quyền địa phương đang tích cực hỗ trợ người dân khắc phục hậu quả thiên tai.",
+   "phonemes": [
+    "tʃˈiɜɲ kwˈiɛ2n ɗˈiə6 fˈyəŋ ɗˌaːŋ t̪ˈiɜc kˈy6c hˈo5 tʃˈəː6 ŋˈyə2j zˈən xˈaɜc fˈu6c hˈə6w kwˈaː4 tˈiɛn t̪ˈaːj."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Các chính sách hỗ trợ doanh nghiệp phục hồi sản xuất đang bắt đầu phát huy hiệu quả.",
+   "expanded": "Các chính sách hỗ trợ doanh nghiệp phục hồi sản xuất đang bắt đầu phát huy hiệu quả.",
+   "phonemes": [
+    "kˌaːɜc tʃˈiɜɲ sˈe-ɜc hˈo5 tʃˈəː6 zwˈe-ɲ ŋˈiɛ6p fˈu6c hˈo2j sˈaː4n swˈəɜt̪ ɗˌaːŋ bˈaɜt̪ ɗˈə2w fˈaːɜt̪ hwˈi hˈiɛ6w kwˈaː4."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Đoàn kiểm tra liên ngành đã phát hiện nhiều vi phạm tại các cơ sở kinh doanh dịch vụ.",
+   "expanded": "Đoàn kiểm tra liên ngành đã phát hiện nhiều vi phạm tại các cơ sở kinh doanh dịch vụ.",
+   "phonemes": [
+    "ɗwˈaː2n kˈiɛ4m tʃˈaː lˈiɛn ŋˈe-2ɲ ɗˌaː5 fˈaːɜt̪ hˈiɛ6n ɲˈiɛ2w vˈi fˈaː6m t̪ˈaː6j kˌaːɜc kˈəː sˈəː4 kˈiɲ zwˈe-ɲ zˈi6c vˈu6."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Ngân hàng Nhà nước vừa quyết định điều chỉnh giảm lãi suất điều hành để hỗ trợ tăng trưởng.",
+   "expanded": "Ngân hàng Nhà nước vừa quyết định điều chỉnh giảm lãi suất điều hành để hỗ trợ tăng trưởng.",
+   "phonemes": [
+    "ŋˈən hˈaː2ŋ ɲˈaː2 nˈyəɜc vˈyə2 kwˈiɛɜt̪ ɗˈi6ɲ ɗˈiɛ2w tʃˈi4ɲ zˈaː4m lˈaː5j swˈəɜt̪ ɗˈiɛ2w hˈe-2ɲ ɗˌe4 hˈo5 tʃˈəː6 t̪ˈaŋ tʃˈyə4ŋ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Thị trường chứng khoán trong phiên giao dịch hôm nay ghi nhận sự tăng giá mạnh của nhóm cổ phiếu ngân hàng.",
+   "expanded": "Thị trường chứng khoán trong phiên giao dịch hôm nay ghi nhận sự tăng giá mạnh của nhóm cổ phiếu ngân hàng.",
+   "phonemes": [
+    "tˈi6 tʃˈyə2ŋ tʃˈyɜŋ xwˈaːɜn tʃˈɔŋ fˈiɛn zˈaːw zˈi6c hˈom nˈaj ɣˈi ɲˈə6n sˈy6 t̪ˈaŋ zˈaːɜ mˈe-6ɲ kˌuə4 ɲˈɔɜm kˈo4 fˈiɛɜw ŋˈən hˈaː2ŋ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Giá gạo xuất khẩu của Việt Nam tiếp tục duy trì ở mức cao nhất trong nhiều năm qua.",
+   "expanded": "Giá gạo xuất khẩu của Việt Nam tiếp tục duy trì ở mức cao nhất trong nhiều năm qua.",
+   "phonemes": [
+    "zˈaːɜ ɣˈaː6w swˈəɜt̪ xˈə4w kˌuə4 vˈiɛ6t̪ nˈaːm t̪ˈiɛɜp t̪ˈu6c zwˈi tʃˈi2 ˈəː4 mˈyɜc kˈaːw ɲˈəɜt̪ tʃˈɔŋ ɲˈiɛ2w nˈam kwˈaː."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Tỉnh Quảng Ngãi đang tập trung thu hút vốn đầu tư vào các khu công nghiệp trọng điểm.",
+   "expanded": "Tỉnh Quảng Ngãi đang tập trung thu hút vốn đầu tư vào các khu công nghiệp trọng điểm.",
+   "phonemes": [
+    "t̪ˈi4ɲ kwˈaː4ŋ ŋˈaː5j ɗˌaːŋ t̪ˈə6p tʃˈuŋ tˈu hˈuɜt̪ vˈoɜn ɗˈə2w t̪ˈy vˈaː2w kˌaːɜc xˈu kˈoŋ ŋˈiɛ6p tʃˈɔ6ŋ ɗˈiɛ4m."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Nông dân tại thành phố Buôn Ma Thuột đang bước vào mùa thu hoạch cà phê với nhiều niềm vui.",
+   "expanded": "Nông dân tại thành phố Buôn Ma Thuột đang bước vào mùa thu hoạch cà phê với nhiều niềm vui.",
+   "phonemes": [
+    "nˈoŋ zˈən t̪ˈaː6j tˈe-2ɲ fˈoɜ bˈuən mˈaː tˈuə6t̪ ɗˌaːŋ bˈyəɜc vˈaː2w mˈuə2 tˈu hwˈe-6c kˈaː2 fˈe vˌəːɜj ɲˈiɛ2w nˈiɛ2m vˈuj."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Hoạt động xuất nhập khẩu hàng hóa qua các cửa khẩu phía bắc đang diễn ra rất thuận lợi.",
+   "expanded": "Hoạt động xuất nhập khẩu hàng hóa qua các cửa khẩu phía bắc đang diễn ra rất thuận lợi.",
+   "phonemes": [
+    "hwˈaː6t̪ ɗˈo6ŋ swˈəɜt̪ ɲˈə6p xˈə4w hˈaː2ŋ hwˈaːɜ kwˈaː kˌaːɜc kˈyə4 xˈə4w fˈiəɜ bˈaɜc ɗˌaːŋ zˈiɛ5n zˈaː zˈəɜt̪ twˈə6n lˈəː6j."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Các doanh nghiệp dệt may đang nỗ lực tìm kiếm thêm các đơn hàng mới từ thị trường nước ngoài.",
+   "expanded": "Các doanh nghiệp dệt may đang nỗ lực tìm kiếm thêm các đơn hàng mới từ thị trường nước ngoài.",
+   "phonemes": [
+    "kˌaːɜc zwˈe-ɲ ŋˈiɛ6p zˈe6t̪ mˈaj ɗˌaːŋ nˈo5 lˈy6c t̪ˈi2m kˈiɛɜm tˈem kˌaːɜc ɗˈəːn hˈaː2ŋ mˈəːɜj t̪ˌy2 tˈi6 tʃˈyə2ŋ nˈyəɜc ŋwˈaː2j."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Ngành du lịch tỉnh Thừa Thiên Huế ghi nhận lượng khách quốc tế tăng trưởng vượt bậc.",
+   "expanded": "Ngành du lịch tỉnh Thừa Thiên Huế ghi nhận lượng khách quốc tế tăng trưởng vượt bậc.",
+   "phonemes": [
+    "ŋˈe-2ɲ zˈu lˈi6c t̪ˈi4ɲ tˈyə2 tˈiɛn hwˈeɜ ɣˈi ɲˈə6n lˈyə6ŋ xˈe-ɜc kˈuəɜc t̪ˈeɜ t̪ˈaŋ tʃˈyə4ŋ vˈyə6t̪ bˈə6c."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Sức mua tại các hệ thống bán lẻ trên địa bàn thành phố Hồ Chí Minh đang dần hồi phục.",
+   "expanded": "Sức mua tại các hệ thống bán lẻ trên địa bàn thành phố Hồ Chí Minh đang dần hồi phục.",
+   "phonemes": [
+    "sˈyɜc mˈuə t̪ˈaː6j kˌaːɜc hˈe6 tˈoɜŋ bˈaːɜn lˈɛ4 tʃˈen ɗˈiə6 bˈaː2n tˈe-2ɲ fˈoɜ hˈo2 tʃˈiɜ mˈiɲ ɗˌaːŋ zˈə2n hˈo2j fˈu6c."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Nhiều dự án bất động sản tại thành phố Đà Nẵng đã bắt đầu tái khởi động sau thời gian tạm dừng.",
+   "expanded": "Nhiều dự án bất động sản tại thành phố Đà Nẵng đã bắt đầu tái khởi động sau thời gian tạm dừng.",
+   "phonemes": [
+    "ɲˈiɛ2w zˈy6 ˈaːɜn bˈəɜt̪ ɗˈo6ŋ sˈaː4n t̪ˈaː6j tˈe-2ɲ fˈoɜ ɗˈaː2 nˈa5ŋ ɗˌaː5 bˈaɜt̪ ɗˈə2w t̪ˈaːɜj xˈəː4j ɗˈo6ŋ sˈaw tˈəː2j zˈaːn t̪ˈaː6m zˈy2ŋ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Đội tuyển bóng đá nam Việt Nam đang tích cực tập luyện để chuẩn bị cho trận đấu sắp tới.",
+   "expanded": "Đội tuyển bóng đá nam Việt Nam đang tích cực tập luyện để chuẩn bị cho trận đấu sắp tới.",
+   "phonemes": [
+    "ɗˈo6j t̪wˈiɛ4n bˈɔɜŋ ɗˈaːɜ nˈaːm vˈiɛ6t̪ nˈaːm ɗˌaːŋ t̪ˈiɜc kˈy6c t̪ˈə6p lwˈiɛ6n ɗˌe4 tʃwˈə4n bˌi6 tʃˌɔ tʃˈə6n ɗˈəɜw sˈaɜp t̪ˌəːɜj."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Thắng lợi thuyết phục giúp vận động viên Nguyễn Văn Hùng giành huy chương vàng môn điền kinh.",
+   "expanded": "Thắng lợi thuyết phục giúp vận động viên Nguyễn Văn Hùng giành huy chương vàng môn điền kinh.",
+   "phonemes": [
+    "tˈaɜŋ lˈəː6j twˈiɛɜt̪ fˈu6c zˈuɜp vˈə6n ɗˈo6ŋ vˈiɛn ŋwˈiɛ5n vˈan hˈu2ŋ zˈe-2ɲ hwˈi tʃˈyəŋ vˈaː2ŋ mˈon ɗˈiɛ2n kˈiɲ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Giải bóng chuyền vô địch quốc gia năm nay thu hút sự tham gia của nhiều đội bóng mạnh.",
+   "expanded": "Giải bóng chuyền vô địch quốc gia năm nay thu hút sự tham gia của nhiều đội bóng mạnh.",
+   "phonemes": [
+    "zˈaː4j bˈɔɜŋ tʃwˈiɛ2n vˈo ɗˈi6c kˈuəɜc zˈaː nˈam nˈaj tˈu hˈuɜt̪ sˈy6 tˈaːm zˈaː kˌuə4 ɲˈiɛ2w ɗˈo6j bˈɔɜŋ mˈe-6ɲ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Các câu lạc bộ bóng đá trong nước đang tích cực bổ sung nhân sự cho mùa giải mới.",
+   "expanded": "Các câu lạc bộ bóng đá trong nước đang tích cực bổ sung nhân sự cho mùa giải mới.",
+   "phonemes": [
+    "kˌaːɜc kˈə1w lˈaː6c bˈo6 bˈɔɜŋ ɗˈaːɜ tʃˈɔŋ nˈyəɜc ɗˌaːŋ t̪ˈiɜc kˈy6c bˈo4 sˈuŋ ɲˈən sˈy6 tʃˌɔ mˈuə2 zˈaː4j mˈəːɜj."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Trận chung kết giải cầu lông mở rộng đã diễn ra kịch tính và vô cùng hấp dẫn.",
+   "expanded": "Trận chung kết giải cầu lông mở rộng đã diễn ra kịch tính và vô cùng hấp dẫn.",
+   "phonemes": [
+    "tʃˈə6n tʃˈuŋ kˈeɜt̪ zˈaː4j kˈə2w lˈoŋ mˈəː4 zˈo6ŋ ɗˌaː5 zˈiɛ5n zˈaː kˈi6c t̪ˈiɜɲ vˌaː2 vˈo kˈu2ŋ hˈəɜp zˈə5n."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Đoàn thể thao Việt Nam đã hoàn thành xuất sắc mục tiêu đề ra tại giải đấu khu vực.",
+   "expanded": "Đoàn thể thao Việt Nam đã hoàn thành xuất sắc mục tiêu đề ra tại giải đấu khu vực.",
+   "phonemes": [
+    "ɗwˈaː2n tˈe4 tˈaːw vˈiɛ6t̪ nˈaːm ɗˌaː5 hwˈaː2n tˈe-2ɲ swˈəɜt̪ sˈaɜc mˈu6c t̪ˈiɛw ɗˈe2 zˈaː t̪ˈaː6j zˈaː4j ɗˈəɜw xˈu vˈy6c."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Vận động viên Trần Thị Mai đã xuất sắc phá kỷ lục quốc gia ở nội dung bơi tự do.",
+   "expanded": "Vận động viên Trần Thị Mai đã xuất sắc phá kỷ lục quốc gia ở nội dung bơi tự do.",
+   "phonemes": [
+    "vˈə6n ɗˈo6ŋ vˈiɛn tʃˈə2n tˈi6 mˈaːj ɗˌaː5 swˈəɜt̪ sˈaɜc fˈaːɜ kˈi4 lˈu6c kˈuəɜc zˈaː ˈəː4 nˈo6j zˈuŋ bˈəːj t̪ˈy6 zˈɔ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Giải chạy việt dã toàn quốc thu hút hàng nghìn vận động viên chuyên nghiệp và phong trào.",
+   "expanded": "Giải chạy việt dã toàn quốc thu hút hàng nghìn vận động viên chuyên nghiệp và phong trào.",
+   "phonemes": [
+    "zˈaː4j tʃˈa6j vˈiɛ6t̪ zˈaː5 t̪wˈaː2n kˈuəɜc tˈu hˈuɜt̪ hˈaː2ŋ ŋˈi2n vˈə6n ɗˈo6ŋ vˈiɛn tʃwˈiɛn ŋˈiɛ6p vˌaː2 fˈɔŋ tʃˈaː2w."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Huấn luyện viên trưởng bày tỏ sự hài lòng với tinh thần thi đấu của các học trò.",
+   "expanded": "Huấn luyện viên trưởng bày tỏ sự hài lòng với tinh thần thi đấu của các học trò.",
+   "phonemes": [
+    "hwˈəɜn lwˈiɛ6n vˈiɛn tʃˈyə4ŋ bˈa2j t̪ˈɔ4 sˈy6 hˈaː2j lˈɔ2ŋ vˌəːɜj t̪ˈiɲ tˈə2n tˈi ɗˈəɜw kˌuə4 kˌaːɜc hˈɔ6k tʃˈɔ2."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Sân vận động quốc gia đã sẵn sàng cho lễ khai mạc giải thi đấu thể thao lớn.",
+   "expanded": "Sân vận động quốc gia đã sẵn sàng cho lễ khai mạc giải thi đấu thể thao lớn.",
+   "phonemes": [
+    "sˈən vˈə6n ɗˈo6ŋ kˈuəɜc zˈaː ɗˌaː5 sˈa5n sˈaː2ŋ tʃˌɔ lˈe5 xˈaːj mˈaː6c zˈaː4j tˈi ɗˈəɜw tˈe4 tˈaːw lˈəːɜn."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Lễ hội chùa Hương thu hút hàng vạn du khách thập phương đến tham quan và lễ Phật.",
+   "expanded": "Lễ hội chùa Hương thu hút hàng vạn du khách thập phương đến tham quan và lễ Phật.",
+   "phonemes": [
+    "lˈe5 hˈo6j tʃˈuə2 hˈyəŋ tˈu hˈuɜt̪ hˈaː2ŋ vˈaː6n zˈu xˈe-ɜc tˈə6p fˈyəŋ ɗˌeɜn tˈaːm kwˈaːn vˌaː2 lˈe5 fˈə6t̪."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Nhà hát Tuổi Trẻ vừa công chiếu tác phẩm sân khấu mới phục vụ khán giả thủ đô.",
+   "expanded": "Nhà hát Tuổi Trẻ vừa công chiếu tác phẩm sân khấu mới phục vụ khán giả thủ đô.",
+   "phonemes": [
+    "ɲˈaː2 hˈaːɜt̪ t̪ˈuə4j tʃˈɛ4 vˈyə2 kˈoŋ tʃˈiɛɜw t̪ˈaːɜc fˈə4m sˈən xˈəɜw mˈəːɜj fˈu6c vˈu6 xˈaːɜn zˈaː4 tˈu4 ɗˈo."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Triển lãm mỹ thuật toàn quốc trưng bày hàng trăm tác phẩm hội họa và sculpture độc đáo.",
+   "expanded": "Triển lãm mỹ thuật toàn quốc trưng bày hàng trăm tác phẩm hội họa và sculpture độc đáo.",
+   "phonemes": [
+    "tʃˈiɛ4n lˈaː5m mˈi5 twˈə6t̪ t̪wˈaː2n kˈuəɜc tʃˈyŋ bˈa2j hˈaː2ŋ tʃˈam t̪ˈaːɜc fˈə4m hˈo6j hˈoaː6 vˌaː2 skˈʌlptʃə ɗˈo6k ɗˈaːɜw."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Đêm nhạc truyền thống tại phố cổ Hà Nội đã mang đến nhiều cảm xúc cho người xem.",
+   "expanded": "Đêm nhạc truyền thống tại phố cổ Hà Nội đã mang đến nhiều cảm xúc cho người xem.",
+   "phonemes": [
+    "ɗˈem ɲˈaː6c tʃwˈiɛ2n tˈoɜŋ t̪ˈaː6j fˈoɜ kˈo4 hˈaː2 nˈo6j ɗˌaː5 mˈaːŋ ɗˌeɜn ɲˈiɛ2w kˈaː4m sˈuɜc tʃˌɔ ŋˈyə2j sˈɛm."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Bảo tàng Lịch sử Quốc gia tiếp nhận nhiều cổ vật quý do các cá nhân hiến tặng.",
+   "expanded": "Bảo tàng Lịch sử Quốc gia tiếp nhận nhiều cổ vật quý do các cá nhân hiến tặng.",
+   "phonemes": [
+    "bˈaː4w t̪ˈaː2ŋ lˈi6c sˈy4 kˈuəɜc zˈaː t̪ˈiɛɜp ɲˈə6n ɲˈiɛ2w kˈo4 vˈə6t̪ kwˈiɜ zˈɔ kˌaːɜc kˈaːɜ ɲˈən hˈiɛɜn t̪ˈa6ŋ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Liên hoan phim Việt Nam lần thứ hai mươi ba sẽ được tổ chức tại thành phố Đà Lạt.",
+   "expanded": "Liên hoan phim Việt Nam lần thứ hai mươi ba sẽ được tổ chức tại thành phố Đà Lạt.",
+   "phonemes": [
+    "lˈiɛn hwˈaːn fˈim vˈiɛ6t̪ nˈaːm lˈə2n tˈyɜ hˈaːj mˈyəj bˈaː sˌɛ5 ɗˌyə6c t̪ˈo4 tʃˈyɜc t̪ˈaː6j tˈe-2ɲ fˈoɜ ɗˈaː2 lˈaː6t̪."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Các nghệ sĩ cải lương đang nỗ lực bảo tồn và phát triển nghệ thuật truyền thống.",
+   "expanded": "Các nghệ sĩ cải lương đang nỗ lực bảo tồn và phát triển nghệ thuật truyền thống.",
+   "phonemes": [
+    "kˌaːɜc ŋˈe6 sˈi5 kˈaː4j lˈyəŋ ɗˌaːŋ nˈo5 lˈy6c bˈaː4w t̪ˈo2n vˌaː2 fˈaːɜt̪ tʃˈiɛ4n ŋˈe6 twˈə6t̪ tʃwˈiɛ2n tˈoɜŋ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Chương trình biểu diễn múa rối nước tại hồ Hoàn Kiếm luôn thu hút đông đảo khách du lịch.",
+   "expanded": "Chương trình biểu diễn múa rối nước tại hồ Hoàn Kiếm luôn thu hút đông đảo khách du lịch.",
+   "phonemes": [
+    "tʃˈyəŋ tʃˈi2ɲ bˈiɛ4w zˈiɛ5n mˈuəɜ zˈoɜj nˈyəɜc t̪ˈaː6j hˈo2 hwˈaː2n kˈiɛɜm lˈuən tˈu hˈuɜt̪ ɗˈoŋ ɗˈaː4w xˈe-ɜc zˈu lˈi6c."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Nhiều di tích lịch sử tại tỉnh Thanh Hóa đang được đầu tư trùng tu và tôn tạo.",
+   "expanded": "Nhiều di tích lịch sử tại tỉnh Thanh Hóa đang được đầu tư trùng tu và tôn tạo.",
+   "phonemes": [
+    "ɲˈiɛ2w zˈi t̪ˈiɜc lˈi6c sˈy4 t̪ˈaː6j t̪ˈi4ɲ tˈe-ɲ hwˈaːɜ ɗˌaːŋ ɗˌyə6c ɗˈə2w t̪ˈy tʃˈu2ŋ t̪ˈu vˌaː2 t̪ˈon t̪ˈaː6w."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Lễ hội cồng chiêng Tây Nguyên tại tỉnh Đắk Lắk được công nhận là di sản văn hóa phi vật thể.",
+   "expanded": "Lễ hội cồng chiêng Tây Nguyên tại tỉnh Đắk Lắk được công nhận là di sản văn hóa phi vật thể.",
+   "phonemes": [
+    "lˈe5 hˈo6j kˈo2ŋ tʃˈiɛŋ t̪ˈəɪ ŋwˈiɛn t̪ˈaː6j t̪ˈi4ɲ ɗˈaɜc lˈaɜc ɗˌyə6c kˈoŋ ɲˈə6n lˌaː2 zˈi sˈaː4n vˈan hwˈaːɜ fˈi vˈə6t̪ tˈe4."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Các nhà khoa học Việt Nam vừa chế tạo thành công vật liệu mới có độ bền cao.",
+   "expanded": "Các nhà khoa học Việt Nam vừa chế tạo thành công vật liệu mới có độ bền cao.",
+   "phonemes": [
+    "kˌaːɜc ɲˈaː2 xwˈaː hˈɔ6k vˈiɛ6t̪ nˈaːm vˈyə2 tʃˈeɜ t̪ˈaː6w tˈe-2ɲ kˈoŋ vˈə6t̪ lˈiɛ6w mˈəːɜj kˈɔɜ ɗˈo6 bˈe2n kˈaːw."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Viện Hàn lâm Khoa học và Công nghệ vừa công bố công trình nghiên cứu về đa dạng sinh học.",
+   "expanded": "Viện Hàn lâm Khoa học và Công nghệ vừa công bố công trình nghiên cứu về đa dạng sinh học.",
+   "phonemes": [
+    "vˈiɛ6n hˈaː2n lˈəm xwˈaː hˈɔ6k vˌaː2 kˈoŋ ŋˈe6 vˈyə2 kˈoŋ bˈoɜ kˈoŋ tʃˈi2ɲ ŋˈiɛn kˈiɜw vˈe2 ɗˈaː zˈaː6ŋ sˈiɲ hˈɔ6k."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Ứng dụng công nghệ thông tin giúp nâng cao hiệu quả quản lý trong ngành y tế.",
+   "expanded": "Ứng dụng công nghệ thông tin giúp nâng cao hiệu quả quản lý trong ngành y tế.",
+   "phonemes": [
+    "ˈyɜŋ zˈu6ŋ kˈoŋ ŋˈe6 tˈoŋ t̪ˈin zˈuɜp nˈəŋ kˈaːw hˈiɛ6w kwˈaː4 kwˈaː4n lˈiɜ tʃˈɔŋ ŋˈe-2ɲ ˈi t̪ˈeɜ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Dự án nghiên cứu nguồn năng lượng tái tạo đã nhận được sự đánh giá cao từ các chuyên gia.",
+   "expanded": "Dự án nghiên cứu nguồn năng lượng tái tạo đã nhận được sự đánh giá cao từ các chuyên gia.",
+   "phonemes": [
+    "zˈy6 ˈaːɜn ŋˈiɛn kˈiɜw ŋˈuə2n nˈaŋ lˈyə6ŋ t̪ˈaːɜj t̪ˈaː6w ɗˌaː5 ɲˈə6n ɗˌyə6c sˈy6 ɗˈe-ɜɲ zˈaːɜ kˈaːw t̪ˌy2 kˌaːɜc tʃwˈiɛn zˈaː."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Các bác sĩ tại bệnh viện lớn đã thực hiện thành công ca phẫu thuật ghép tạng phức tạp.",
+   "expanded": "Các bác sĩ tại bệnh viện lớn đã thực hiện thành công ca phẫu thuật ghép tạng phức tạp.",
+   "phonemes": [
+    "kˌaːɜc bˈaːɜc sˈi5 t̪ˈaː6j bˈe6ɲ vˈiɛ6n lˈəːɜn ɗˌaː5 tˈy6c hˈiɛ6n tˈe-2ɲ kˈoŋ kˈaː fˈə5w twˈə6t̪ ɣˈɛɜp t̪ˈaː6ŋ fˈyɜc t̪ˈaː6p."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Bộ Giáo dục và Đào tạo đang nghiên cứu điều chỉnh chương trình giảng dạy cấp trung học.",
+   "expanded": "Bộ Giáo dục và Đào tạo đang nghiên cứu điều chỉnh chương trình giảng dạy cấp trung học.",
+   "phonemes": [
+    "bˈo6 zˈaːɜw zˈu6c vˌaː2 ɗˈaː2w t̪ˈaː6w ɗˌaːŋ ŋˈiɛn kˈiɜw ɗˈiɛ2w tʃˈi4ɲ tʃˈyəŋ tʃˈi2ɲ zˈaː4ŋ zˈa6j kˈəɜp tʃˈuŋ hˈɔ6k."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Nhiều trường đại học công bố phương thức tuyển sinh mới cho năm học tới.",
+   "expanded": "Nhiều trường đại học công bố phương thức tuyển sinh mới cho năm học tới.",
+   "phonemes": [
+    "ɲˈiɛ2w tʃˈyə2ŋ ɗˈaː6j hˈɔ6k kˈoŋ bˈoɜ fˈyəŋ tˈyɜc t̪wˈiɛ4n sˈiɲ mˈəːɜj tʃˌɔ nˈam hˈɔ6k t̪ˌəːɜj."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Việc đưa công nghệ hiện đại vào sản xuất nông nghiệp giúp tăng năng suất cây trồng.",
+   "expanded": "Việc đưa công nghệ hiện đại vào sản xuất nông nghiệp giúp tăng năng suất cây trồng.",
+   "phonemes": [
+    "vˈiɛ6c ɗˈyə kˈoŋ ŋˈe6 hˈiɛ6n ɗˈaː6j vˈaː2w sˈaː4n swˈəɜt̪ nˈoŋ ŋˈiɛ6p zˈuɜp t̪ˈaŋ nˈaŋ swˈəɜt̪ kˈəɪ tʃˈo2ŋ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Các chuyên gia cảnh báo về tình trạng biến đổi khí hậu đang ảnh hưởng nghiêm trọng đến đồng bằng.",
+   "expanded": "Các chuyên gia cảnh báo về tình trạng biến đổi khí hậu đang ảnh hưởng nghiêm trọng đến đồng bằng.",
+   "phonemes": [
+    "kˌaːɜc tʃwˈiɛn zˈaː kˈe-4ɲ bˈaːɜw vˈe2 t̪ˈi2ɲ tʃˈaː6ŋ bˈiɛɜn ɗˈo4j xˈiɜ hˈə6w ɗˌaːŋ ˈe-4ɲ hˈyə4ŋ ŋˈiɛm tʃˈɔ6ŋ ɗˌeɜn ɗˈo2ŋ bˈa2ŋ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Vệ tinh nhân tạo của Việt Nam đã truyền thành công những hình ảnh đầu tiên về trái đất.",
+   "expanded": "Vệ tinh nhân tạo của Việt Nam đã truyền thành công những hình ảnh đầu tiên về trái đất.",
+   "phonemes": [
+    "vˈe6 t̪ˈiɲ ɲˈən t̪ˈaː6w kˌuə4 vˈiɛ6t̪ nˈaːm ɗˌaː5 tʃwˈiɛ2n tˈe-2ɲ kˈoŋ ɲˌy5ŋ hˈi2ɲ ˈe-4ɲ ɗˈə2w t̪ˈiɛn vˈe2 tʃˈaːɜj ɗˈəɜt̪."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Tỉnh Bình Định đang đẩy mạnh việc xây dựng các tuyến đường giao thông kết nối vùng.",
+   "expanded": "Tỉnh Bình Định đang đẩy mạnh việc xây dựng các tuyến đường giao thông kết nối vùng.",
+   "phonemes": [
+    "t̪ˈi4ɲ bˈi2ɲ ɗˈi6ɲ ɗˌaːŋ ɗˈəɪ4 mˈe-6ɲ vˈiɛ6c sˈəɪ zˈy6ŋ kˌaːɜc t̪wˈiɛɜn ɗˈyə2ŋ zˈaːw tˈoŋ kˈeɜt̪ nˈoɜj vˈu2ŋ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Dự án mở rộng cảng hàng không quốc tế đang được gấp rút hoàn thiện các hạng mục cuối cùng.",
+   "expanded": "Dự án mở rộng cảng hàng không quốc tế đang được gấp rút hoàn thiện các hạng mục cuối cùng.",
+   "phonemes": [
+    "zˈy6 ˈaːɜn mˈəː4 zˈo6ŋ kˈaː4ŋ hˈaː2ŋ xˌoŋ kˈuəɜc t̪ˈeɜ ɗˌaːŋ ɗˌyə6c ɣˈəɜp zˈuɜt̪ hwˈaː2n tˈiɛ6n kˌaːɜc hˈaː6ŋ mˈu6c kˈuəɜj kˈu2ŋ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Thành phố Cần Thơ tập trung phát triển hạ tầng giao thông đường thủy để thúc đẩy thương mại.",
+   "expanded": "Thành phố Cần Thơ tập trung phát triển hạ tầng giao thông đường thủy để thúc đẩy thương mại.",
+   "phonemes": [
+    "tˈe-2ɲ fˈoɜ kˈə2n tˈəː t̪ˈə6p tʃˈuŋ fˈaːɜt̪ tʃˈiɛ4n hˈaː6 t̪ˈə2ŋ zˈaːw tˈoŋ ɗˈyə2ŋ twˈi4 ɗˌe4 tˈuɜc ɗˈəɪ4 tˈyəŋ mˈaː6j."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Công trình cầu vượt tại nút giao thông trọng điểm đã chính thức được thông xe.",
+   "expanded": "Công trình cầu vượt tại nút giao thông trọng điểm đã chính thức được thông xe.",
+   "phonemes": [
+    "kˈoŋ tʃˈi2ɲ kˈə2w vˈyə6t̪ t̪ˈaː6j nˈuɜt̪ zˈaːw tˈoŋ tʃˈɔ6ŋ ɗˈiɛ4m ɗˌaː5 tʃˈiɜɲ tˈyɜc ɗˌyə6c tˈoŋ sˈɛ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Người dân tỉnh Tiền Giang bắt đầu thu hoạch vụ lúa mới với năng suất khá cao.",
+   "expanded": "Người dân tỉnh Tiền Giang bắt đầu thu hoạch vụ lúa mới với năng suất khá cao.",
+   "phonemes": [
+    "ŋˈyə2j zˈən t̪ˈi4ɲ t̪ˈiɛ2n zˈaːŋ bˈaɜt̪ ɗˈə2w tˈu hwˈe-6c vˈu6 lˈuəɜ mˈəːɜj vˌəːɜj nˈaŋ swˈəɜt̪ xˈaːɜ kˈaːw."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Công an tỉnh Ninh Bình vừa triệt phá thành công một đường dây lừa đảo qua mạng.",
+   "expanded": "Công an tỉnh Ninh Bình vừa triệt phá thành công một đường dây lừa đảo qua mạng.",
+   "phonemes": [
+    "kˈoŋ ˈaːn t̪ˈi4ɲ nˈiɲ bˈi2ɲ vˈyə2 tʃˈiɛ6t̪ fˈaːɜ tˈe-2ɲ kˈoŋ mˈo6t̪ ɗˈyə2ŋ zˈəɪ lˈyə2 ɗˈaː4w kwˈaː mˈaː6ŋ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Các lực lượng chức năng đang tích cực triển khai công tác phòng chống cháy rừng mùa khô.",
+   "expanded": "Các lực lượng chức năng đang tích cực triển khai công tác phòng chống cháy rừng mùa khô.",
+   "phonemes": [
+    "kˌaːɜc lˈy6c lˈyə6ŋ tʃˈyɜc nˈaŋ ɗˌaːŋ t̪ˈiɜc kˈy6c tʃˈiɛ4n xˈaːj kˈoŋ t̪ˈaːɜc fˈɔ2ŋ tʃˈoɜŋ tʃˈaɜj zˈy2ŋ mˈuə2 xˈo."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Hệ thống đèn chiếu sáng đô thị tại thành phố Hải Phòng đang được nâng cấp toàn diện.",
+   "expanded": "Hệ thống đèn chiếu sáng đô thị tại thành phố Hải Phòng đang được nâng cấp toàn diện.",
+   "phonemes": [
+    "hˈe6 tˈoɜŋ ɗˈɛ2n tʃˈiɛɜw sˈaːɜŋ ɗˈo tˈi6 t̪ˈaː6j tˈe-2ɲ fˈoɜ hˈaː4j fˈɔ2ŋ ɗˌaːŋ ɗˌyə6c nˈəŋ kˈəɜp t̪wˈaː2n zˈiɛ6n."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Tỉnh An Giang tập trung nâng cao chất lượng nguồn nhân lực phục vụ phát triển kinh tế.",
+   "expanded": "Tỉnh An Giang tập trung nâng cao chất lượng nguồn nhân lực phục vụ phát triển kinh tế.",
+   "phonemes": [
+    "t̪ˈi4ɲ ˈaːn zˈaːŋ t̪ˈə6p tʃˈuŋ nˈəŋ kˈaːw tʃˈəɜt̪ lˈyə6ŋ ŋˈuə2n ɲˈən lˈy6c fˈu6c vˈu6 fˈaːɜt̪ tʃˈiɛ4n kˈiɲ t̪ˈeɜ."
+   ]
+  },
+  {
+   "group": "news",
+   "text": "Các địa phương vùng duyên hải cần chủ động ứng phó với diễn biến phức tạp của triều cường.",
+   "expanded": "Các địa phương vùng duyên hải cần chủ động ứng phó với diễn biến phức tạp của triều cường.",
+   "phonemes": [
+    "kˌaːɜc ɗˈiə6 fˈyəŋ vˈu2ŋ zwˈiɛn hˈaː4j kˈə2n tʃˈu4 ɗˈo6ŋ ˈyɜŋ fˈɔɜ vˌəːɜj zˈiɛ5n bˈiɛɜn fˈyɜc t̪ˈaː6p kˌuə4 tʃˈiɛ2w kˈyə2ŋ."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Hôm nay tôi sẽ hướng dẫn các bạn cách nấu món phở bò gia truyền thơm ngon ngay tại nhà.",
+   "expanded": "Hôm nay tôi sẽ hướng dẫn các bạn cách nấu món phở bò gia truyền thơm ngon ngay tại nhà.",
+   "phonemes": [
+    "hˈom nˈaj t̪ˈoj sˌɛ5 hˈyəɜŋ zˈə5n kˌaːɜc bˈaː6n kˈe-ɜc nˈəɜw mˈɔɜn fˈəː4 bˈɔ2 zˈaː tʃwˈiɛ2n tˈəːm ŋˈɔn ŋˈaj t̪ˈaː6j ɲˈaː2."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Để làm món ăn này, chúng ta cần chuẩn bị khoảng 500 gam thịt bò tươi và các loại gia vị đi kèm.",
+   "expanded": "Để làm món ăn này, chúng ta cần chuẩn bị khoảng năm trăm gam thịt bò tươi và các loại gia vị đi kèm.",
+   "phonemes": [
+    "ɗˌe4 lˈaː2m mˈɔɜn ˈan nˈa2j, tʃˈuɜŋ t̪ˈaː kˈə2n tʃwˈə4n bˌi6 xwˌaː4ŋ nˈam tʃˈam ɣˈaːm tˈi6t̪ bˈɔ2 t̪ˈyəj vˌaː2 kˌaːɜc lwˈaː6j zˈaː vˈi6 ɗˈi kˈɛ2m."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Bạn nên chọn phần thịt nạm hoặc gầu nếu muốn nước dùng có độ béo tự nhiên.",
+   "expanded": "Bạn nên chọn phần thịt nạm hoặc gầu nếu muốn nước dùng có độ béo tự nhiên.",
+   "phonemes": [
+    "bˈaː6n nˌen tʃˈɔ6n fˈə2n tˈi6t̪ nˈaː6m hwˌa6c ɣˈə2w nˌeɜw mˈuəɜn nˈyəɜc zˈu2ŋ kˈɔɜ ɗˈo6 bˈɛɜw t̪ˈy6 ɲˈiɛn."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Bước đầu tiên là rửa sạch xương bò rồi chần qua nước sôi để loại bỏ hết bọt bẩn.",
+   "expanded": "Bước đầu tiên là rửa sạch xương bò rồi chần qua nước sôi để loại bỏ hết bọt bẩn.",
+   "phonemes": [
+    "bˈyəɜc ɗˈə2w t̪ˈiɛn lˌaː2 zˈyə4 sˈe-6c sˈyəŋ bˈɔ2 zˈo2j tʃˈə2n kwˈaː nˈyəɜc sˈoj ɗˌe4 lwˈaː6j bˈɔ4 hˈeɜt̪ bˈɔ6t̪ bˈə4n."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Hành tây và gừng đem nướng xém vỏ trên bếp than để tạo mùi thơm đặc trưng cho nước phở.",
+   "expanded": "Hành tây và gừng đem nướng xém vỏ trên bếp than để tạo mùi thơm đặc trưng cho nước phở.",
+   "phonemes": [
+    "hˈe-2ɲ t̪ˈəɪ vˌaː2 ɣˈy2ŋ ɗˈɛm nˈyəɜŋ sˈɛɜm vˈɔ4 tʃˈen bˈeɜp tˈaːn ɗˌe4 t̪ˈaː6w mˈu2j tˈəːm ɗˈa6c tʃˈyŋ tʃˌɔ nˈyəɜc fˈəː4."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Thời gian ninh xương tối thiểu là 4 tiếng để nước dùng đạt độ ngọt thanh tự nhiên.",
+   "expanded": "Thời gian ninh xương tối thiểu là bốn tiếng để nước dùng đạt độ ngọt thanh tự nhiên.",
+   "phonemes": [
+    "tˈəː2j zˈaːn nˈiɲ sˈyəŋ t̪ˈoɜj tˈiɛ4w lˌaː2 bˈoɜn t̪ˈiɛɜŋ ɗˌe4 nˈyəɜc zˈu2ŋ ɗˈaː6t̪ ɗˈo6 ŋˈɔ6t̪ tˈe-ɲ t̪ˈy6 ɲˈiɛn."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Sau khi nước dùng đã sôi, hãy hạ nhỏ lửa và hớt bọt thường xuyên.",
+   "expanded": "Sau khi nước dùng đã sôi, hãy hạ nhỏ lửa và hớt bọt thường xuyên.",
+   "phonemes": [
+    "sˈaw xˌi nˈyəɜc zˈu2ŋ ɗˌaː5 sˈoj, hˈa5j hˈaː6 ɲˈɔ4 lˈyə4 vˌaː2 hˈəːɜt̪ bˈɔ6t̪ tˈyə2ŋ swˈiɛn."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Món rau xào này rất hợp để thưởng thức trong những ngày thời tiết lạnh giá.",
+   "expanded": "Món rau xào này rất hợp để thưởng thức trong những ngày thời tiết lạnh giá.",
+   "phonemes": [
+    "mˈɔɜn zˈaw sˈaː2w nˈa2j zˈəɜt̪ hˈəː6p ɗˌe4 tˈyə4ŋ tˈyɜc tʃˈɔŋ ɲˌy5ŋ ŋˈa2j tˈəː2j t̪ˈiɛɜt̪ lˈe-6ɲ zˈaːɜ."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Thêm một chút tiêu xay lên trên mặt bát trước khi thưởng thức để tăng thêm hương vị.",
+   "expanded": "Thêm một chút tiêu xay lên trên mặt bát trước khi thưởng thức để tăng thêm hương vị.",
+   "phonemes": [
+    "tˈem mˈo6t̪ tʃˈuɜt̪ t̪ˈiɛw sˈaj lˈen tʃˈen mˈa6t̪ bˈaːɜt̪ tʃˈyəɜc xˌi tˈyə4ŋ tˈyɜc ɗˌe4 t̪ˈaŋ tˈem hˈyəŋ vˈi6."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Chúc các bạn thực hiện thành công món ăn đơn giản mà vô cùng bổ dưỡng này.",
+   "expanded": "Chúc các bạn thực hiện thành công món ăn đơn giản mà vô cùng bổ dưỡng này.",
+   "phonemes": [
+    "tʃˈuɜc kˌaːɜc bˈaː6n tˈy6c hˈiɛ6n tˈe-2ɲ kˈoŋ mˈɔɜn ˈan ɗˈəːn zˈaː4n mˌaː2 vˈo kˈu2ŋ bˈo4 zˈyə5ŋ nˈa2j."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Chiếc máy giặt này được trang bị công nghệ tiết kiệm điện năng hiện đại nhất hiện nay.",
+   "expanded": "Chiếc máy giặt này được trang bị công nghệ tiết kiệm điện năng hiện đại nhất hiện nay.",
+   "phonemes": [
+    "tʃˈiɛɜc mˈaɜj zˈa6t̪ nˈa2j ɗˌyə6c tʃˈaːŋ bˌi6 kˈoŋ ŋˈe6 t̪ˈiɛɜt̪ kˈiɛ6m ɗˈiɛ6n nˈaŋ hˈiɛ6n ɗˈaː6j ɲˈəɜt̪ hˈiɛ6n nˈaj."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Sản phẩm có thiết kế nhỏ gọn, phù hợp với những căn hộ có diện tích khiêm tốn.",
+   "expanded": "Sản phẩm có thiết kế nhỏ gọn, phù hợp với những căn hộ có diện tích khiêm tốn.",
+   "phonemes": [
+    "sˈaː4n fˈə4m kˈɔɜ tˈiɛɜt̪ kˈeɜ ɲˈɔ4 ɣˈɔ6n, fˈu2 hˈəː6p vˌəːɜj ɲˌy5ŋ kˈan hˈo6 kˈɔɜ zˈiɛ6n t̪ˈiɜc xˈiɛm t̪ˈoɜn."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Chất liệu nhựa cao cấp giúp sản phẩm có độ bền cao và dễ dàng vệ sinh sau khi sử dụng.",
+   "expanded": "Chất liệu nhựa cao cấp giúp sản phẩm có độ bền cao và dễ dàng vệ sinh sau khi sử dụng.",
+   "phonemes": [
+    "tʃˈəɜt̪ lˈiɛ6w ɲˈyə6 kˈaːw kˈəɜp zˈuɜp sˈaː4n fˈə4m kˈɔɜ ɗˈo6 bˈe2n kˈaːw vˌaː2 zˈe5 zˈaː2ŋ vˈe6 sˈiɲ sˈaw xˌi sˈy4 zˈu6ŋ."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Khách hàng mua hàng trong tháng này sẽ nhận được phiếu giảm giá 10 phần trăm.",
+   "expanded": "Khách hàng mua hàng trong tháng này sẽ nhận được phiếu giảm giá mười phần trăm.",
+   "phonemes": [
+    "xˈe-ɜc hˈaː2ŋ mˈuə hˈaː2ŋ tʃˈɔŋ tˈaːɜŋ nˈa2j sˌɛ5 ɲˈə6n ɗˌyə6c fˈiɛɜw zˈaː4m zˈaːɜ mˈyə2j fˈə2n tʃˈam."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Chế độ bảo hành 2 năm giúp người tiêu dùng hoàn toàn yên tâm khi sử dụng sản phẩm.",
+   "expanded": "Chế độ bảo hành hai năm giúp người tiêu dùng hoàn toàn yên tâm khi sử dụng sản phẩm.",
+   "phonemes": [
+    "tʃˈeɜ ɗˈo6 bˈaː4w hˈe-2ɲ hˈaːj nˈam zˈuɜp ŋˈyə2j t̪ˈiɛw zˈu2ŋ hwˈaː2n t̪wˈaː2n ˈiɛn t̪ˈəm xˌi sˈy4 zˈu6ŋ sˈaː4n fˈə4m."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Vỏ ngoài của thiết bị được làm bằng hợp kim chống gỉ, chịu lực cực kỳ tốt.",
+   "expanded": "Vỏ ngoài của thiết bị được làm bằng hợp kim chống gỉ, chịu lực cực kỳ tốt.",
+   "phonemes": [
+    "vˈɔ4 ŋwˈaː2j kˌuə4 tˈiɛɜt̪ bˌi6 ɗˌyə6c lˈaː2m bˈa2ŋ hˈəː6p kˈim tʃˈoɜŋ zˈi4, tʃˈi6w lˈy6c kˈy6c kˈi2 t̪ˈoɜt̪."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Màn hình hiển thị sắc nét giúp người dùng dễ dàng theo dõi các thông số kỹ thuật.",
+   "expanded": "Màn hình hiển thị sắc nét giúp người dùng dễ dàng theo dõi các thông số kỹ thuật.",
+   "phonemes": [
+    "mˈaː2n hˈi2ɲ hˈiɛ4n tˈi6 sˈaɜc nˈɛɜt̪ zˈuɜp ŋˈyə2j zˈu2ŋ zˈe5 zˈaː2ŋ tˈɛw zˈɔ5j kˌaːɜc tˈoŋ sˈoɜ kˈi5 twˈə6t̪."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Sản phẩm hiện đang có sẵn tại tất cả các cửa hàng trên toàn quốc.",
+   "expanded": "Sản phẩm hiện đang có sẵn tại tất cả các cửa hàng trên toàn quốc.",
+   "phonemes": [
+    "sˈaː4n fˈə4m hˈiɛ6n ɗˌaːŋ kˈɔɜ sˈa5n t̪ˈaː6j t̪ˈəɜt̪ kˈaː4 kˌaːɜc kˈyə4 hˈaː2ŋ tʃˈen t̪wˈaː2n kˈuəɜc."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Hãy liên hệ ngay với chúng tôi qua đường dây nóng để được tư vấn miễn phí.",
+   "expanded": "Hãy liên hệ ngay với chúng tôi qua đường dây nóng để được tư vấn miễn phí.",
+   "phonemes": [
+    "hˈa5j lˈiɛn hˈe6 ŋˈaj vˌəːɜj tʃˈuɜŋ t̪ˈoj kwˈaː ɗˈyə2ŋ zˈəɪ nˈɔɜŋ ɗˌe4 ɗˌyə6c t̪ˈy vˈəɜn mˈiɛ5n fˈiɜ."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Giao hàng nhanh chóng trong vòng 24 giờ đối với các đơn hàng tại nội thành.",
+   "expanded": "Giao hàng nhanh chóng trong vòng hai mươi tư giờ đối với các đơn hàng tại nội thành.",
+   "phonemes": [
+    "zˈaːw hˈaː2ŋ ɲˈe-ɲ tʃˈɔɜŋ tʃˈɔŋ vˈɔ2ŋ hˈaːj mˈyəj t̪ˈy zˈəː2 ɗˈoɜj vˌəːɜj kˌaːɜc ɗˈəːn hˈaː2ŋ t̪ˈaː6j nˈo6j tˈe-2ɲ."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Đà Lạt là một thành phố thuộc tỉnh Lâm Đồng, nằm trên khu vực Tây Nguyên của Việt Nam.",
+   "expanded": "Đà Lạt là một thành phố thuộc tỉnh Lâm Đồng, nằm trên khu vực Tây Nguyên của Việt Nam.",
+   "phonemes": [
+    "ɗˈaː2 lˈaː6t̪ lˌaː2 mˈo6t̪ tˈe-2ɲ fˈoɜ tˈuə6c t̪ˈi4ɲ lˈəm ɗˈo2ŋ, nˈa2m tʃˈen xˈu vˈy6c t̪ˈəɪ ŋwˈiɛn kˌuə4 vˈiɛ6t̪ nˈaːm."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Nơi đây nổi tiếng với khí hậu mát mẻ quanh năm và cảnh quan thiên nhiên thơ mộng.",
+   "expanded": "Nơi đây nổi tiếng với khí hậu mát mẻ quanh năm và cảnh quan thiên nhiên thơ mộng.",
+   "phonemes": [
+    "nˈəːj ɗˈəɪ nˈo4j t̪ˈiɛɜŋ vˌəːɜj xˈiɜ hˈə6w mˈaːɜt̪ mˈɛ4 kwˈe-ɲ nˈam vˌaː2 kˈe-4ɲ kwˈaːn tˈiɛn ɲˈiɛn tˈəː mˈo6ŋ."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Hoa sen được coi là quốc hoa của Việt Nam, tượng trưng cho sự tinh khiết và nhẫn nại.",
+   "expanded": "Hoa sen được coi là quốc hoa của Việt Nam, tượng trưng cho sự tinh khiết và nhẫn nại.",
+   "phonemes": [
+    "hwˈaː sˈɛn ɗˌyə6c kˈɔj lˌaː2 kˈuəɜc hwˈaː kˌuə4 vˈiɛ6t̪ nˈaːm, t̪ˈyə6ŋ tʃˈyŋ tʃˌɔ sˈy6 t̪ˈiɲ xˈiɛɜt̪ vˌaː2 ɲˈə5n nˈaː6j."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Lịch sử loài người đã trải qua nhiều giai đoạn phát triển rực rỡ khác nhau.",
+   "expanded": "Lịch sử loài người đã trải qua nhiều giai đoạn phát triển rực rỡ khác nhau.",
+   "phonemes": [
+    "lˈi6c sˈy4 lwˈaː2j ŋˈyə2j ɗˌaː5 tʃˈaː4j kwˈaː ɲˈiɛ2w zˈaːj ɗwˈaː6n fˈaːɜt̪ tʃˈiɛ4n zˈy6c zˈəː5 xˈaːɜc ɲˈaw."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Trái Đất là hành tinh thứ 3 tính từ Mặt Trời trong Hệ Mặt Trời.",
+   "expanded": "Trái Đất là hành tinh thứ ba tính từ Mặt Trời trong Hệ Mặt Trời.",
+   "phonemes": [
+    "tʃˈaːɜj ɗˈəɜt̪ lˌaː2 hˈe-2ɲ t̪ˈiɲ tˈyɜ bˈaː t̪ˈiɜɲ t̪ˌy2 mˈa6t̪ tʃˈəː2j tʃˈɔŋ hˈe6 mˈa6t̪ tʃˈəː2j."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Nước chiếm khoảng 71 phần trăm diện tích bề mặt Trái Đất.",
+   "expanded": "Nước chiếm khoảng bảy mươi mốt phần trăm diện tích bề mặt Trái Đất.",
+   "phonemes": [
+    "nˈyəɜc tʃˈiɛɜm xwˌaː4ŋ bˈa4j mˈyəj mˈoɜt̪ fˈə2n tʃˈam zˈiɛ6n t̪ˈiɜc bˈe2 mˈa6t̪ tʃˈaːɜj ɗˈəɜt̪."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Khí hậu nhiệt đới gió mùa mang lại lượng mưa dồi dào cho các tỉnh phía Bắc.",
+   "expanded": "Khí hậu nhiệt đới gió mùa mang lại lượng mưa dồi dào cho các tỉnh phía Bắc.",
+   "phonemes": [
+    "xˈiɜ hˈə6w ɲˈiɛ6t̪ ɗˈəːɜj zˈɔɜ mˈuə2 mˈaːŋ lˈaː6j lˈyə6ŋ mˈyə zˈo2j zˈaː2w tʃˌɔ kˌaːɜc t̪ˈi4ɲ fˈiəɜ bˈaɜc."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Cây xanh đóng vai trò quan trọng trong việc điều hòa không khí và bảo vệ môi trường.",
+   "expanded": "Cây xanh đóng vai trò quan trọng trong việc điều hòa không khí và bảo vệ môi trường.",
+   "phonemes": [
+    "kˈəɪ sˈe-ɲ ɗˈɔɜŋ vˈaːj tʃˈɔ2 kwˈaːn tʃˈɔ6ŋ tʃˈɔŋ vˈiɛ6c ɗˈiɛ2w hwˈaː2 xˌoŋ xˈiɜ vˌaː2 bˈaː4w vˈe6 mˈoj tʃˈyə2ŋ."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Văn miếu Quốc Tử Giám được coi là trường đại học đầu tiên của nước ta.",
+   "expanded": "Văn miếu Quốc Tử Giám được coi là trường đại học đầu tiên của nước ta.",
+   "phonemes": [
+    "vˈan mˈiɛɜw kˈuəɜc t̪ˈy4 zˈaːɜm ɗˌyə6c kˈɔj lˌaː2 tʃˈyə2ŋ ɗˈaː6j hˈɔ6k ɗˈə2w t̪ˈiɛn kˌuə4 nˈyəɜc t̪ˈaː."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Sông Hồng là con sông có vai trò rất quan trọng đối với đời sống cư dân Bắc Bộ.",
+   "expanded": "Sông Hồng là con sông có vai trò rất quan trọng đối với đời sống cư dân Bắc Bộ.",
+   "phonemes": [
+    "sˈoŋ hˈo2ŋ lˌaː2 kˌɔn sˈoŋ kˈɔɜ vˈaːj tʃˈɔ2 zˈəɜt̪ kwˈaːn tʃˈɔ6ŋ ɗˈoɜj vˌəːɜj ɗˈəː2j sˈoɜŋ kˈy zˈən bˈaɜc bˈo6."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Đầu tiên, bạn cần ngắt nguồn điện để đảm bảo an toàn tuyệt đối trong quá trình sửa chữa.",
+   "expanded": "Đầu tiên, bạn cần ngắt nguồn điện để đảm bảo an toàn tuyệt đối trong quá trình sửa chữa.",
+   "phonemes": [
+    "ɗˈə2w t̪ˈiɛn, bˈaː6n kˈə2n ŋˈaɜt̪ ŋˈuə2n ɗˈiɛ6n ɗˌe4 ɗˈaː4m bˈaː4w ˈaːn t̪wˈaː2n t̪wˈiɛ6t̪ ɗˈoɜj tʃˈɔŋ kwˈaːɜ tʃˈi2ɲ sˈyə4 tʃˈyə5."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Hãy lau sạch bụi bẩn trên bề mặt bằng một chiếc khăn mềm và khô.",
+   "expanded": "Hãy lau sạch bụi bẩn trên bề mặt bằng một chiếc khăn mềm và khô.",
+   "phonemes": [
+    "hˈa5j lˈaw sˈe-6c bˈu6j bˈə4n tʃˈen bˈe2 mˈa6t̪ bˈa2ŋ mˈo6t̪ tʃˈiɛɜc xˈan mˈe2m vˌaː2 xˈo."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Thường xuyên kiểm tra định kỳ để phát hiện sớm các dấu hiệu hư hỏng của máy móc.",
+   "expanded": "Thường xuyên kiểm tra định kỳ để phát hiện sớm các dấu hiệu hư hỏng của máy móc.",
+   "phonemes": [
+    "tˈyə2ŋ swˈiɛn kˈiɛ4m tʃˈaː ɗˈi6ɲ kˈi2 ɗˌe4 fˈaːɜt̪ hˈiɛ6n sˈəːɜm kˌaːɜc zˈəɜw hˈiɛ6w hˈy hˈɔ4ŋ kˌuə4 mˈaɜj mˈɔɜk."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Để thay pin mới, bạn dùng tua vít tháo nhẹ các con ốc ở mặt sau của thiết bị.",
+   "expanded": "Để thay pin mới, bạn dùng tua vít tháo nhẹ các con ốc ở mặt sau của thiết bị.",
+   "phonemes": [
+    "ɗˌe4 tˈaj pˈin mˈəːɜj, bˈaː6n zˈu2ŋ t̪ˈuə vˈiɜt̪ tˈaːɜw ɲˈɛ6 kˌaːɜc kˌɔn ˈoɜk ˈəː4 mˈa6t̪ sˈaw kˌuə4 tˈiɛɜt̪ bˌi6."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Hãy cắm dây nguồn vào ổ cắm và nhấn nút khởi động trên thân máy.",
+   "expanded": "Hãy cắm dây nguồn vào ổ cắm và nhấn nút khởi động trên thân máy.",
+   "phonemes": [
+    "hˈa5j kˈaɜm zˈəɪ ŋˈuə2n vˈaː2w ˈo4 kˈaɜm vˌaː2 ɲˈəɜn nˈuɜt̪ xˈəː4j ɗˈo6ŋ tʃˈen tˈən mˈaɜj."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Nếu thiết bị không hoạt động, hãy kiểm tra lại cầu chì hoặc nguồn điện trong nhà.",
+   "expanded": "Nếu thiết bị không hoạt động, hãy kiểm tra lại cầu chì hoặc nguồn điện trong nhà.",
+   "phonemes": [
+    "nˌeɜw tˈiɛɜt̪ bˌi6 xˌoŋ hwˈaː6t̪ ɗˈo6ŋ, hˈa5j kˈiɛ4m tʃˈaː lˈaː6j kˈə2w tʃˈi2 hwˌa6c ŋˈuə2n ɗˈiɛ6n tʃˈɔŋ ɲˈaː2."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Bảo quản sản phẩm ở nơi khô ráo, thoáng mát, tránh ánh nắng trực tiếp từ Mặt Trời.",
+   "expanded": "Bảo quản sản phẩm ở nơi khô ráo, thoáng mát, tránh ánh nắng trực tiếp từ Mặt Trời.",
+   "phonemes": [
+    "bˈaː4w kwˈaː4n sˈaː4n fˈə4m ˈəː4 nˈəːj xˈo zˈaːɜw, twˈaːɜŋ mˈaːɜt̪, tʃˈe-ɜɲ ˈe-ɜɲ nˈaɜŋ tʃˈy6c t̪ˈiɛɜp t̪ˌy2 mˈa6t̪ tʃˈəː2j."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Bạn nên đọc kỹ hướng dẫn sử dụng trước khi vận hành bất kỳ thiết bị nào.",
+   "expanded": "Bạn nên đọc kỹ hướng dẫn sử dụng trước khi vận hành bất kỳ thiết bị nào.",
+   "phonemes": [
+    "bˈaː6n nˌen ɗˈɔ6k kˈi5 hˈyəɜŋ zˈə5n sˈy4 zˈu6ŋ tʃˈyəɜc xˌi vˈə6n hˈe-2ɲ bˈəɜt̪ kˈi2 tˈiɛɜt̪ bˌi6 nˈaː2w."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Tra dầu mỡ định kỳ sẽ giúp động cơ chạy êm ái và kéo dài tuổi thọ.",
+   "expanded": "Tra dầu mỡ định kỳ sẽ giúp động cơ chạy êm ái và kéo dài tuổi thọ.",
+   "phonemes": [
+    "tʃˈaː zˈə2w mˈəː5 ɗˈi6ɲ kˈi2 sˌɛ5 zˈuɜp ɗˈo6ŋ kˈəː tʃˈa6j ˈem ˈaːɜj vˌaː2 kˈɛɜw zˈaː2j t̪ˈuə4j tˈɔ6."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Nếu gặp sự cố phức tạp, bạn nên gọi thợ chuyên nghiệp đến hỗ trợ xử lý.",
+   "expanded": "Nếu gặp sự cố phức tạp, bạn nên gọi thợ chuyên nghiệp đến hỗ trợ xử lý.",
+   "phonemes": [
+    "nˌeɜw ɣˈa6p sˈy6 kˈoɜ fˈyɜc t̪ˈaː6p, bˈaː6n nˌen ɣˈɔ6j tˈəː6 tʃwˈiɛn ŋˈiɛ6p ɗˌeɜn hˈo5 tʃˈəː6 sˈy4 lˈiɜ."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Mùa thu Hà Nội luôn mang đến cho con người những cảm xúc nhẹ nhàng và hoài niệm.",
+   "expanded": "Mùa thu Hà Nội luôn mang đến cho con người những cảm xúc nhẹ nhàng và hoài niệm.",
+   "phonemes": [
+    "mˈuə2 tˈu hˈaː2 nˈo6j lˈuən mˈaːŋ ɗˌeɜn tʃˌɔ kˌɔn ŋˈyə2j ɲˌy5ŋ kˈaː4m sˈuɜc ɲˈɛ6 ɲˈaː2ŋ vˌaː2 hwˈaː2j nˈiɛ6m."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Gió lạnh đầu mùa tràn về làm cho những con phố trở nên vắng vẻ hơn thường lệ.",
+   "expanded": "Gió lạnh đầu mùa tràn về làm cho những con phố trở nên vắng vẻ hơn thường lệ.",
+   "phonemes": [
+    "zˈɔɜ lˈe-6ɲ ɗˈə2w mˈuə2 tʃˈaː2n vˈe2 lˈaː2m tʃˌɔ ɲˌy5ŋ kˌɔn fˈoɜ tʃˈəː4 nˌen vˈaɜŋ vˈɛ4 hˈəːn tˈyə2ŋ lˈe6."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Uống một tách trà nóng vào buổi sáng giúp tinh thần tỉnh táo và sảng khoái cả ngày.",
+   "expanded": "Uống một tách trà nóng vào buổi sáng giúp tinh thần tỉnh táo và sảng khoái cả ngày.",
+   "phonemes": [
+    "ˈuəɜŋ mˈo6t̪ t̪ˈe-ɜc tʃˈaː2 nˈɔɜŋ vˈaː2w bˈuə4j sˈaːɜŋ zˈuɜp t̪ˈiɲ tˈə2n t̪ˈi4ɲ t̪ˈaːɜw vˌaː2 sˈaː4ŋ xwˈaːɜj kˈaː4 ŋˈa2j."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Tôi thích cảm giác ngồi ngắm mưa rơi qua ô cửa kính của một quán cà phê quen thuộc.",
+   "expanded": "Tôi thích cảm giác ngồi ngắm mưa rơi qua ô cửa kính của một quán cà phê quen thuộc.",
+   "phonemes": [
+    "t̪ˈoj tˈiɜc kˈaː4m zˈaːɜc ŋˈo2j ŋˈaɜm mˈyə zˈəːj kwˈaː ˈo kˈyə4 kˈiɜɲ kˌuə4 mˈo6t̪ kwˈaːɜn kˈaː2 fˈe kwˈɛn tˈuə6c."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Mỗi chuyến đi xa là một cơ hội để chúng ta mở rộng tầm mắt và học hỏi điều mới.",
+   "expanded": "Mỗi chuyến đi xa là một cơ hội để chúng ta mở rộng tầm mắt và học hỏi điều mới.",
+   "phonemes": [
+    "mˌo5j tʃwˈiɛɜn ɗˈi sˈaː lˌaː2 mˈo6t̪ kˈəː hˈo6j ɗˌe4 tʃˈuɜŋ t̪ˈaː mˈəː4 zˈo6ŋ t̪ˈə2m mˈaɜt̪ vˌaː2 hˈɔ6k hˈɔ4j ɗˈiɛ2w mˈəːɜj."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Đọc sách là thói quen tốt giúp cải thiện khả năng tập trung và tư duy logic.",
+   "expanded": "Đọc sách là thói quen tốt giúp cải thiện khả năng tập trung và tư duy logic.",
+   "phonemes": [
+    "ɗˈɔ6k sˈe-ɜc lˌaː2 tˈɔɜj kwˈɛn t̪ˈoɜt̪ zˈuɜp kˈaː4j tˈiɛ6n xˈaː4 nˈaŋ t̪ˈə6p tʃˈuŋ vˌaː2 t̪ˈy zwˈi lˈɔzc."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Gia đình luôn là nơi bình yên nhất để chúng ta trở về sau những mệt mỏi.",
+   "expanded": "Gia đình luôn là nơi bình yên nhất để chúng ta trở về sau những mệt mỏi.",
+   "phonemes": [
+    "zˈaː ɗˈi2ɲ lˈuən lˌaː2 nˈəːj bˈi2ɲ ˈiɛn ɲˈəɜt̪ ɗˌe4 tʃˈuɜŋ t̪ˈaː tʃˈəː4 vˈe2 sˈaw ɲˌy5ŋ mˈe6t̪ mˈɔ4j."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Hãy dành thời gian chăm sóc bản thân và lắng nghe cơ thể mình nhiều hơn.",
+   "expanded": "Hãy dành thời gian chăm sóc bản thân và lắng nghe cơ thể mình nhiều hơn.",
+   "phonemes": [
+    "hˈa5j zˈe-2ɲ tˈəː2j zˈaːn tʃˈam sˈɔɜk bˈaː4n tˈən vˌaː2 lˈaɜŋ ŋˈɛ kˈəː tˈe4 mˈi2ɲ ɲˈiɛ2w hˈəːn."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Những kỷ niệm tuổi thơ luôn sống mãi trong tâm trí của mỗi con người.",
+   "expanded": "Những kỷ niệm tuổi thơ luôn sống mãi trong tâm trí của mỗi con người.",
+   "phonemes": [
+    "ɲˌy5ŋ kˈi4 nˈiɛ6m t̪ˈuə4j tˈəː lˈuən sˈoɜŋ mˈaː5j tʃˈɔŋ t̪ˈəm tʃˈiɜ kˌuə4 mˌo5j kˌɔn ŋˈyə2j."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Cuộc sống sẽ trở nên ý nghĩa hơn khi chúng ta biết chia sẻ với những người xung quanh.",
+   "expanded": "Cuộc sống sẽ trở nên ý nghĩa hơn khi chúng ta biết chia sẻ với những người xung quanh.",
+   "phonemes": [
+    "kˈuə6c sˈoɜŋ sˌɛ5 tʃˈəː4 nˌen ˈiɜ ŋˈiə5 hˈəːn xˌi tʃˈuɜŋ t̪ˈaː bˈiɛɜt̪ tʃˈiə sˈɛ4 vˌəːɜj ɲˌy5ŋ ŋˈyə2j sˈuŋ kwˈe-ɲ."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Món ăn này chứa rất nhiều vitamin và khoáng chất tốt cho hệ tiêu hóa.",
+   "expanded": "Món ăn này chứa rất nhiều vitamin và khoáng chất tốt cho hệ tiêu hóa.",
+   "phonemes": [
+    "mˈɔɜn ˈan nˈa2j tʃˈyəɜ zˈəɜt̪ ɲˈiɛ2w vˈɪtəmɪn vˌaː2 xwˈaːɜŋ tʃˈəɜt̪ t̪ˈoɜt̪ tʃˌɔ hˈe6 t̪ˈiɛw hwˈaːɜ."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Uống đủ 2 lít nước mỗi ngày giúp làn da luôn mịn màng và khỏe mạnh.",
+   "expanded": "Uống đủ hai lít nước mỗi ngày giúp làn da luôn mịn màng và khỏe mạnh.",
+   "phonemes": [
+    "ˈuəɜŋ ɗˈu4 hˈaːj lˈiɜt̪ nˈyəɜc mˌo5j ŋˈa2j zˈuɜp lˈaː2n zˈaː lˈuən mˈi6n mˈaː2ŋ vˌaː2 xwˈɛ4 mˈe-6ɲ."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Tập thể dục thường xuyên là giải pháp tốt nhất để nâng cao sức đề kháng.",
+   "expanded": "Tập thể dục thường xuyên là giải pháp tốt nhất để nâng cao sức đề kháng.",
+   "phonemes": [
+    "t̪ˈə6p tˈe4 zˈu6c tˈyə2ŋ swˈiɛn lˌaː2 zˈaː4j fˈaːɜp t̪ˈoɜt̪ ɲˈəɜt̪ ɗˌe4 nˈəŋ kˈaːw sˈyɜc ɗˈe2 xˈaːɜŋ."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Thịt gà kết hợp với nấm hương tạo nên một hương vị đậm đà khó quên.",
+   "expanded": "Thịt gà kết hợp với nấm hương tạo nên một hương vị đậm đà khó quên.",
+   "phonemes": [
+    "tˈi6t̪ ɣˈaː2 kˈeɜt̪ hˈəː6p vˌəːɜj nˈəɜm hˈyəŋ t̪ˈaː6w nˌen mˈo6t̪ hˈyəŋ vˈi6 ɗˈə6m ɗˈaː2 xˈɔɜ kwˈen."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Bánh mì vỉa hè là món ăn đường phố rất phổ biến và được nhiều người yêu thích.",
+   "expanded": "Bánh mì vỉa hè là món ăn đường phố rất phổ biến và được nhiều người yêu thích.",
+   "phonemes": [
+    "bˈe-ɜɲ mˈi2 vˈiə4 hˈɛ2 lˌaː2 mˈɔɜn ˈan ɗˈyə2ŋ fˈoɜ zˈəɜt̪ fˈo4 bˈiɛɜn vˌaː2 ɗˌyə6c ɲˈiɛ2w ŋˈyə2j ˈiɛw tˈiɜc."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Cà phê trứng là một nét văn hóa ẩm thực độc đáo của thủ đô.",
+   "expanded": "Cà phê trứng là một nét văn hóa ẩm thực độc đáo của thủ đô.",
+   "phonemes": [
+    "kˈaː2 fˈe tʃˈyɜŋ lˌaː2 mˈo6t̪ nˈɛɜt̪ vˈan hwˈaːɜ ˈə4m tˈy6c ɗˈo6k ɗˈaːɜw kˌuə4 tˈu4 ɗˈo."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Nước chấm ngon là yếu tố quyết định sự thành công của món nem rán.",
+   "expanded": "Nước chấm ngon là yếu tố quyết định sự thành công của món nem rán.",
+   "phonemes": [
+    "nˈyəɜc tʃˈəɜm ŋˈɔn lˌaː2 ˈiɛɜw t̪ˈoɜ kwˈiɛɜt̪ ɗˈi6ɲ sˈy6 tˈe-2ɲ kˈoŋ kˌuə4 mˈɔɜn nˈɛm zˈaːɜn."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Ăn nhiều rau xanh giúp giảm nguy cơ mắc các bệnh về tim mạch.",
+   "expanded": "Ăn nhiều rau xanh giúp giảm nguy cơ mắc các bệnh về tim mạch.",
+   "phonemes": [
+    "ˈan ɲˈiɛ2w zˈaw sˈe-ɲ zˈuɜp zˈaː4m ŋwˈi kˈəː mˈaɜc kˌaːɜc bˈe6ɲ vˈe2 t̪ˈim mˈe-6c."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Món cá kho riềng phải nấu trong niêu đất thì mới đúng hương vị truyền thống.",
+   "expanded": "Món cá kho riềng phải nấu trong niêu đất thì mới đúng hương vị truyền thống.",
+   "phonemes": [
+    "mˈɔɜn kˈaːɜ xˈɔ zˈiɛ2ŋ fˌaː4j nˈəɜw tʃˈɔŋ nˈiɛw ɗˈəɜt̪ tˌi2 mˈəːɜj ɗˈuɜŋ hˈyəŋ vˈi6 tʃwˈiɛ2n tˈoɜŋ."
+   ]
+  },
+  {
+   "group": "web prose",
+   "text": "Bữa cơm gia đình là thời điểm mọi người quây quần và trò chuyện sau ngày làm việc.",
+   "expanded": "Bữa cơm gia đình là thời điểm mọi người quây quần và trò chuyện sau ngày làm việc.",
+   "phonemes": [
+    "bˈyə5 kˈəːm zˈaː ɗˈi2ɲ lˌaː2 tˈəː2j ɗˈiɛ4m mˌɔ6j ŋˈyə2j kwˈəɪ kwˈə2n vˌaː2 tʃˈɔ2 tʃwˈiɛ6n sˈaw ŋˈa2j lˈaː2m vˈiɛ6c."
+   ]
+  }
+ ]
+}

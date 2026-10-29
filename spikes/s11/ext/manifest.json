@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "S11 cloud TTS probe",
+  "version": "0.0.1",
+  "description": "Spike S11: calls cloud TTS endpoints from an extension page, with host permissions only.",
+  "background": { "service_worker": "background.js" },
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.openai.com/*",
+    "https://openrouter.ai/*",
+    "https://*.tts.speech.microsoft.com/*",
+    "https://*.api.cognitive.microsoft.com/*",
+    "https://api.elevenlabs.io/*",
+    "https://texttospeech.googleapis.com/*",
+    "https://api.vbee.vn/*",
+    "https://api.fpt.ai/*"
+  ]
+}

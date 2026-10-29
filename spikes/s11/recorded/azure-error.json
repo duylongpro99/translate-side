@@ -1,0 +1,114 @@
+{
+  "region": "eastus",
+  "keyHeader": {
+    "recordedAt": "2026-10-26T14:53:05.508Z",
+    "request": {
+      "url": "https://eastus.tts.speech.microsoft.com/cognitiveservices/v1",
+      "method": "POST",
+      "headerNames": [
+        "Ocp-Apim-Subscription-Key",
+        "Content-Type",
+        "X-Microsoft-OutputFormat",
+        "User-Agent"
+      ],
+      "contentType": "application/ssml+xml",
+      "body": "<speak version='1.0' xml:lang='vi-VN'><voice name='vi-VN-HoaiMyNeural'>Xin chào. Đây là đoạn thử giọng đọc tiếng Việt cho tiện ích dịch trang. Hôm nay trời đẹp, chúng ta cùng đọc sách nhé.</voice></speak>"
+    },
+    "response": {
+      "status": 401,
+      "contentType": "",
+      "headers": {
+        "content-length": "0"
+      },
+      "ms": 886,
+      "body": {
+        "base64Head": "",
+        "totalBytes": 0,
+        "note": "first 300 bytes of the real audio"
+      }
+    }
+  },
+  "issueToken": {
+    "recordedAt": "2026-10-26T14:53:08.845Z",
+    "request": {
+      "url": "https://eastus.api.cognitive.microsoft.com/sts/v1.0/issueToken",
+      "method": "POST",
+      "headerNames": [
+        "Ocp-Apim-Subscription-Key",
+        "Content-Length"
+      ]
+    },
+    "response": {
+      "status": 401,
+      "contentType": "application/json",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "224",
+        "apim-request-id": "dd3c1b75-870b-4232-a2d4-578f770d92c0"
+      },
+      "ms": 2544,
+      "body": {
+        "json": {
+          "error": {
+            "code": "401",
+            "message": "Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource."
+          }
+        }
+      }
+    }
+  },
+  "bearer": {
+    "recordedAt": "2026-10-26T14:53:09.087Z",
+    "request": {
+      "url": "https://eastus.tts.speech.microsoft.com/cognitiveservices/v1",
+      "method": "POST",
+      "headerNames": [
+        "Authorization",
+        "Content-Type",
+        "X-Microsoft-OutputFormat",
+        "User-Agent"
+      ],
+      "contentType": "application/ssml+xml",
+      "body": "<speak version='1.0' xml:lang='vi-VN'><voice name='vi-VN-HoaiMyNeural'>Xin chào. Đây là đoạn thử giọng đọc tiếng Việt cho tiện ích dịch trang. Hôm nay trời đẹp, chúng ta cùng đọc sách nhé.</voice></speak>"
+    },
+    "response": {
+      "status": 401,
+      "contentType": "",
+      "headers": {
+        "content-length": "0"
+      },
+      "ms": 242,
+      "body": {
+        "base64Head": "",
+        "totalBytes": 0,
+        "note": "first 300 bytes of the real audio"
+      }
+    }
+  },
+  "voicesList": {
+    "recordedAt": "2026-10-26T14:53:09.402Z",
+    "request": {
+      "url": "https://eastus.tts.speech.microsoft.com/cognitiveservices/voices/list",
+      "method": "GET",
+      "headerNames": [
+        "Ocp-Apim-Subscription-Key"
+      ]
+    },
+    "response": {
+      "status": 401,
+      "contentType": "",
+      "headers": {
+        "content-length": "0"
+      },
+      "ms": 315,
+      "body": {
+        "base64Head": "",
+        "totalBytes": 0,
+        "note": "first 300 bytes of the real audio"
+      }
+    }
+  },
+  "unknownRegion": {
+    "error": "ENOTFOUND"
+  }
+}

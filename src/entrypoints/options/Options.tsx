@@ -41,13 +41,14 @@ import { ProvidersSection, type AdapterFor } from './Providers.tsx';
 import { TransferSection } from './Transfer.tsx';
 import { MemorySection } from './Memory.tsx';
 import { DiagnosticsSection } from './Diagnostics.tsx';
+import { VoiceSection } from './Voice.tsx';
 import { screenReaderNote, shortcutList } from '@/shared/shortcuts';
 import { openShortcutSettings, toggleRow, useToggleShortcut } from '@/shared/toggle-shortcut';
 import { openTranslationCache, type CacheStats, type TranslationCache } from '@/shared/cache';
 import { openTranslationMemory, type TranslationMemory } from '@/shared/memory';
 import { formatUsd } from '@/shared/cost';
 import { pricingFor } from '@/shared/pricing';
-import { estimateSpend, monthKey, readSpend, readSpendLimit, resetSpend, saveSpendLimit, SPEND_KEY, SPEND_LIMIT_KEY, type SpendLimit, type SpendTotals } from '@/shared/spend';
+import { estimateSpend, monthKey, readSpend, readSpendLimit, resetSpend, saveSpendLimit, SPEND_KEY, SPEND_LIMIT_KEY, VOICE_PREP_SPEND_ID, type SpendLimit, type SpendTotals } from '@/shared/spend';
 import { PERSONAL_GLOSSARY_PROMPT_TOKENS, personalGlossaryTokens } from '@/engine/context/budget';
 import type { GlossaryEntry, GlossMode, StyleMode } from '@/engine/types';
 import { holdsBroadAccess, readSelectionEverywhere, requestBroadAccess, SELECTION_EVERYWHERE_KEY, setSelectionEverywhere } from '@/shared/selection-button';
@@ -744,6 +745,7 @@ function SpendSection({ api, now = Date.now }: { api: Browser; now?: () => numbe
   const estimate = estimateSpend(spend ?? undefined, now());
   /** A profile by its settings name (model · connection), or its last model when it is gone. */
   const nameOf = (id: string, model: string) => {
+    if (id === VOICE_PREP_SPEND_ID) return i18n.t('options.spend.voicePrep', [model]);
     const p = providers?.profiles.find((x) => x.id === id);
     if (!p) return i18n.t('options.spend.removed', [model || id]);
     const c = providers?.connections.find((x) => x.id === p.connectionId);
@@ -909,6 +911,7 @@ export function Options({ api, cache = openTranslationCache(), memory = openTran
         <GlossarySection api={api} />
         <SitesSection api={api} />
         <ShortcutsSection api={api} />
+        <VoiceSection api={api} />
         <SpendSection api={api} />
         <CacheSection cache={cache} />
         <MemorySection memory={memory} api={api} />

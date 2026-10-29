@@ -1,0 +1,138 @@
+{
+  "invalidKey": {
+    "recordedAt": "2026-10-26T14:51:19.420Z",
+    "request": {
+      "url": "https://generativelanguage.googleapis.com/v1beta/interactions",
+      "method": "POST",
+      "headerNames": [
+        "Content-Type",
+        "x-goog-api-key"
+      ],
+      "contentType": "application/json",
+      "body": {
+        "model": "gemini-3.8-flash-tts",
+        "input": [
+          {
+            "type": "user_input",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello. This is a short test of the English voice for the page translator. The weather is lovely today, so let's read a book.",
+                "annotations": [
+                  {
+                    "type": "speech_metadata",
+                    "style": "Read clearly and calmly, like a narrator reading an article aloud."
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "response_format": {
+          "type": "audio"
+        },
+        "generation_config": {
+          "speech_config": [
+            {
+              "voice": "Kore"
+            }
+          ]
+        }
+      }
+    },
+    "response": {
+      "status": 400,
+      "contentType": "application/json; charset=UTF-8",
+      "headers": {
+        "content-type": "application/json; charset=UTF-8",
+        "transfer-encoding": "chunked"
+      },
+      "ms": 101,
+      "body": {
+        "json": [
+          {
+            "error": {
+              "code": 400,
+              "message": "API key not valid. Please pass a valid API key.",
+              "status": "INVALID_ARGUMENT",
+              "details": [
+                {
+                  "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                  "reason": "API_KEY_INVALID",
+                  "domain": "googleapis.com",
+                  "metadata": {
+                    "service": "generativelanguage.googleapis.com"
+                  }
+                },
+                {
+                  "@type": "type.googleapis.com/google.rpc.LocalizedMessage",
+                  "locale": "en-US",
+                  "message": "API key not valid. Please pass a valid API key."
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "unknownVoice": {
+    "recordedAt": "2026-10-26T14:51:19.902Z",
+    "request": {
+      "url": "https://generativelanguage.googleapis.com/v1beta/interactions",
+      "method": "POST",
+      "headerNames": [
+        "Content-Type",
+        "x-goog-api-key"
+      ],
+      "contentType": "application/json",
+      "body": {
+        "model": "gemini-3.8-flash-tts",
+        "input": [
+          {
+            "type": "user_input",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello. This is a short test of the English voice for the page translator. The weather is lovely today, so let's read a book.",
+                "annotations": [
+                  {
+                    "type": "speech_metadata",
+                    "style": "Read clearly and calmly, like a narrator reading an article aloud."
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "response_format": {
+          "type": "audio"
+        },
+        "generation_config": {
+          "speech_config": [
+            {
+              "voice": "NoSuchVoice"
+            }
+          ]
+        }
+      }
+    },
+    "response": {
+      "status": 400,
+      "contentType": "application/json; charset=UTF-8",
+      "headers": {
+        "content-type": "application/json; charset=UTF-8",
+        "transfer-encoding": "chunked"
+      },
+      "ms": 482,
+      "body": {
+        "json": {
+          "error": {
+            "message": "No matching speaker voice found for name: NoSuchVoice and language: ",
+            "code": "invalid_request"
+          }
+        }
+      }
+    }
+  }
+}

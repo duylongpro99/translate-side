@@ -1,0 +1,62 @@
+{
+  "synthesize": {
+    "recordedAt": "2026-10-26T14:53:13.090Z",
+    "request": {
+      "url": "https://api.fpt.ai/hmi/tts/v5",
+      "method": "POST",
+      "headerNames": [
+        "api_key",
+        "voice",
+        "speed",
+        "format",
+        "Content-Type"
+      ],
+      "contentType": "text/plain; charset=utf-8",
+      "body": "Xin chào. Đây là đoạn thử giọng đọc tiếng Việt cho tiện ích dịch trang. Hôm nay trời đẹp, chúng ta cùng đọc sách nhé."
+    },
+    "response": {
+      "status": 401,
+      "contentType": "application/json; charset=utf-8",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "48",
+        "access-control-allow-origin": "*"
+      },
+      "ms": 141,
+      "body": {
+        "json": {
+          "message": "Invalid authentication credentials"
+        }
+      }
+    }
+  },
+  "noKey": {
+    "recordedAt": "2026-10-26T14:53:13.176Z",
+    "request": {
+      "url": "https://api.fpt.ai/hmi/tts/v5",
+      "method": "POST",
+      "headerNames": [
+        "voice",
+        "Content-Type"
+      ],
+      "contentType": "text/plain; charset=utf-8",
+      "body": "Xin chào. Đây là đoạn thử giọng đọc tiếng Việt cho tiện ích dịch trang. Hôm nay trời đẹp, chúng ta cùng đọc sách nhé."
+    },
+    "response": {
+      "status": 401,
+      "contentType": "application/json; charset=utf-8",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "41",
+        "www-authenticate": "Key realm=\"kong\"",
+        "access-control-allow-origin": "*"
+      },
+      "ms": 85,
+      "body": {
+        "json": {
+          "message": "No API key found in request"
+        }
+      }
+    }
+  }
+}

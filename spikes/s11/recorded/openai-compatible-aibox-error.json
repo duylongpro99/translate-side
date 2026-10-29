@@ -1,0 +1,69 @@
+{
+  "modelNotAllowed": {
+    "recordedAt": "2026-10-26T14:52:02.773Z",
+    "request": {
+      "url": "https://api.ai-box.vn/v1/audio/speech",
+      "method": "POST",
+      "headerNames": [
+        "Content-Type",
+        "Authorization"
+      ],
+      "contentType": "application/json",
+      "body": {
+        "model": "gpt-4o-mini-tts",
+        "input": "Xin chào. Đây là đoạn thử giọng đọc tiếng Việt cho tiện ích dịch trang. Hôm nay trời đẹp, chúng ta cùng đọc sách nhé.",
+        "voice": "alloy"
+      }
+    },
+    "response": {
+      "status": 403,
+      "contentType": "application/json; charset=utf-8",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "transfer-encoding": "chunked"
+      },
+      "ms": 232,
+      "body": {
+        "json": {
+          "error": {
+            "code": "",
+            "message": "Token này không có quyền truy cập model gpt-4o-mini-tts (request id: 202610261452027286338098268d9d6JyUo3clv)",
+            "type": "new_api_error"
+          }
+        }
+      }
+    }
+  },
+  "unknownRoute": {
+    "recordedAt": "2026-10-26T14:52:03.109Z",
+    "request": {
+      "url": "https://api.ai-box.vn/v1/audio/no-such-route",
+      "method": "POST",
+      "headerNames": [
+        "Content-Type",
+        "Authorization"
+      ],
+      "contentType": "application/json",
+      "body": {}
+    },
+    "response": {
+      "status": 404,
+      "contentType": "application/json; charset=utf-8",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "129"
+      },
+      "ms": 336,
+      "body": {
+        "json": {
+          "error": {
+            "message": "Invalid URL (POST /v1/audio/no-such-route)",
+            "type": "invalid_request_error",
+            "param": "",
+            "code": ""
+          }
+        }
+      }
+    }
+  }
+}

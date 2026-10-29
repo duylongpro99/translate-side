@@ -175,6 +175,14 @@ panel:
     copy: Sao chép chi tiết
     copied: (đã sao chép)
     details: "{app}: {kind} trong {name}"
+  read:
+    now: "Đang đọc to: $1"
+    stop: Dừng
+    started: Đang đọc to
+    stopped: Đã dừng đọc
+    noVoice: Máy tính này không có giọng đọc cho ngôn ngữ này. Hãy thêm giọng đó trong cài đặt giọng nói của hệ thống, hoặc thêm nhà cung cấp giọng nói trong Cài đặt › Giọng nói.
+    failed: "Không đọc to được: $1"
+    settings: Cài đặt giọng nói
   segment:
     waiting: Đang chờ
     region: Bản dịch
@@ -202,6 +210,16 @@ panel:
     copyFailed: Không sao chép được
     copyFor: "Sao chép: \"$1\""
     copyTitle: Sao chép đoạn này dưới dạng văn bản thuần
+    read: Đọc to
+    readFor: "Đọc to: \"$1\""
+    readTitle: Đọc to bản dịch của đoạn này
+    readSourceTitle: Đọc to đoạn này bằng ngôn ngữ gốc
+    readOriginal: Đọc bản gốc
+    readOriginalFor: "Đọc to bản gốc: \"$1\""
+    readOriginalTitle: Đọc to bản gốc của đoạn này
+    stopReading: Dừng đọc
+    stopReadingFor: "Dừng đọc: \"$1\""
+    stopReadingTitle: Dừng đọc to (Esc)
     basic: bản dịch cơ bản
     basicTitle: Được dịch ngay trên thiết bị này bởi $1 vì không kết nối được mô hình nào. Bản dịch này sát từng chữ; hãy dịch lại khi mô hình hoạt động trở lại.
     basicOnDeviceTitle: Được dịch ngay trên thiết bị này bởi trình dịch của Chrome. Bản dịch sát từng chữ; hãy thiết lập nhà cung cấp để có chất lượng tốt hơn.
@@ -542,6 +560,47 @@ options:
     noVersion: "Tệp bộ nhớ dịch này không có phiên bản hợp lệ."
     newerVersion: "Tệp bộ nhớ dịch này được tạo bởi phiên bản Translate Side mới hơn. Hãy cập nhật tiện ích rồi nhập lại."
   reading: "Đang đọc…"
+  voice:
+    title: Giọng nói
+    hint: Đọc to bất kỳ đoạn nào trong bảng bên, bản gốc hay bản dịch. Giọng hệ thống không cần cài đặt; nhà cung cấp giọng nói của riêng bạn nghe tự nhiên hơn. Miễn phí, và tách riêng với nhà cung cấp dịch.
+    engine: Giọng đọc
+    engineSystem: Giọng hệ thống (trên máy này)
+    voiceFor: "Giọng $1"
+    langVi: tiếng Việt
+    langEn: tiếng Anh
+    automatic: Tự động
+    online: "$1 (trực tuyến: gửi văn bản đến Google)"
+    readOn: Đọc xong một đoạn thì đọc tiếp các đoạn sau
+    test: Thử
+    testing: Đang thử…
+    testOk: "$1: đã phát"
+    testFailed: "$1: $2"
+    sendsText: "$1 nhận văn bản của mỗi đoạn được đọc."
+    geminiFreeTier: Gói miễn phí của Gemini cho phép 10 yêu cầu giọng nói mỗi ngày cho mỗi mô hình, mỗi đoạn là một yêu cầu.
+    addProvider: Thêm nhà cung cấp giọng nói
+    provider: Nhà cung cấp
+    viOnly: "$1 (chỉ tiếng Việt)"
+    key: Khóa API
+    keyHelp: Lấy khóa
+    region: Vùng
+    appId: App ID
+    baseUrl: Địa chỉ máy chủ
+    model: Mô hình
+    reuseKey: "Dùng khóa của nhà cung cấp dịch $1"
+    save: Lưu
+    cancel: Hủy
+    remove: Xóa
+    missingField: "Hãy điền: $1"
+    badUrl: Địa chỉ máy chủ không phải URL hợp lệ.
+    permissionDenied: "Chrome không cho phép truy cập $1, nên không dùng được giọng này."
+    errors:
+      noVoice: Không có giọng cho ngôn ngữ này
+      auth: Khóa bị từ chối. Hãy kiểm tra lại hoặc tạo khóa mới.
+      quota: "Đã dùng hết hạn mức của nhà cung cấp: $1"
+      rateLimit: Quá nhiều yêu cầu. Hãy đợi một lát rồi thử lại.
+      network: Không kết nối được tới nhà cung cấp.
+      overloaded: Nhà cung cấp hiện không khả dụng.
+      other: "Không thành công: $1"
   spend:
     title: "Mức sử dụng và chi phí"
     price: "$1: $2 đầu vào, $3 đầu vào đã lưu đệm, $4 đầu ra trên một triệu token."
@@ -558,6 +617,7 @@ options:
     tokensInOut: "Token vào / ra"
     noPriceShort: "chưa có giá"
     removed: "$1 (đã xóa)"
+    voicePrep: "Chuẩn bị giọng đọc ($1)"
     hint: "Đây chỉ là ước tính dựa trên số token mà mỗi phản hồi báo về và mức giá ở trên; hóa đơn của nhà cung cấp mới là con số thực. Việc ghi bộ nhớ đệm được tính như đầu vào thông thường, nên nhà cung cấp tính phí cao hơn cho việc này sẽ bị tính thiếu một chút. Các yêu cầu bị hủy trước khi hoàn tất không được tính. Dữ liệu chỉ nằm trên thiết bị này."
     reset: "Đặt lại tổng"
     limitRemoved: "Đã xóa giới hạn."
@@ -600,6 +660,7 @@ options:
     prefs: "Tùy chọn: các tùy chọn trong tệp sẽ thay thế tùy chọn của bạn."
     quality: "Chất lượng: chế độ và tùy chọn trong tệp sẽ thay thế của bạn."
     reading: "Cài đặt đọc: giao diện, kiểu chữ, cỡ chữ và độ rộng dòng trong tệp sẽ thay thế của bạn."
+    voice: Cài đặt giọng nói và nhà cung cấp giọng nói (không kèm khóa)
     glossary:
       n: "Bảng thuật ngữ: $1 mục được thêm hoặc thay thế; các mục của bạn vẫn được giữ."
     sites: "Trang web: $1 trang luôn dịch (mỗi trang cần được cấp lại quyền trong Quy tắc theo trang web), $2 trang không bao giờ dịch."
@@ -831,6 +892,7 @@ options:
     skipRouting: "Đã bỏ qua phần định tuyến: nó không nêu mô hình hợp lệ nào để dịch."
     skipQuality: "Đã bỏ qua cài đặt chất lượng: không đọc được."
     skipReading: "Đã bỏ qua cài đặt đọc: không đọc được."
+    skipVoice: Một số cài đặt giọng nói trong tệp không đọc được và đã bị bỏ qua.
     dropRoutingIds: "Đã bỏ các mã mô hình không hợp lệ trong phần định tuyến."
     cappedConnections: "Tệp liệt kê {count} kết nối; chỉ {max} kết nối đầu tiên được đọc."
     cappedProfiles: "Tệp liệt kê {count} hồ sơ mô hình; chỉ {max} hồ sơ đầu tiên được đọc."

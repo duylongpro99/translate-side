@@ -1,0 +1,1206 @@
+{
+ "model": "gemini-3.5-flash",
+ "created": "2026-10-26T15:21:56.685Z",
+ "sentences": [
+  {
+   "group": "tones",
+   "text": "Mỗi chiều chị Bảy đều phải đi bán phở."
+  },
+  {
+   "group": "tones",
+   "text": "Em tôi đã hỏi chị về con ma ở bụi chuối."
+  },
+  {
+   "group": "tones",
+   "text": "Chú Bảy sẽ chỉ cho tôi về chỗ bán mạ."
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã bảo anh phải đi cắt cỏ ở bãi."
+  },
+  {
+   "group": "tones",
+   "text": "Con chó cũ của chị Bảy đã chết sáng nay."
+  },
+  {
+   "group": "tones",
+   "text": "Chị đã mở cửa phòng để tìm chiếc ví cũ."
+  },
+  {
+   "group": "tones",
+   "text": "Bà ngoại đã chỉ cho em cách giặt áo may."
+  },
+  {
+   "group": "tones",
+   "text": "Bố tôi đã phải đi mua chiếc quạt máy mới."
+  },
+  {
+   "group": "tones",
+   "text": "Anh Bảy sẽ đến nhà chị để ăn phở bò."
+  },
+  {
+   "group": "tones",
+   "text": "Dù đã muộn nhưng chị vẫn phải đi gặt lúa."
+  },
+  {
+   "group": "tones",
+   "text": "Bãi cỏ rậm này có rất nhiều muỗi độc."
+  },
+  {
+   "group": "tones",
+   "text": "Cụ già đã chỉ cho em con đường về làng."
+  },
+  {
+   "group": "tones",
+   "text": "Chị tôi sẽ đi chợ mua củ xả và ớt."
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã dặn em phải rửa sạch quả táo đỏ."
+  },
+  {
+   "group": "tones",
+   "text": "Chú Bảy đã mua một chiếc bàn gỗ rất đẹp."
+  },
+  {
+   "group": "tones",
+   "text": "Bác sĩ đã bảo anh ấy phải nghỉ ngơi."
+  },
+  {
+   "group": "tones",
+   "text": "Con mèo trắng đã nhảy qua giàn hoa hồng."
+  },
+  {
+   "group": "tones",
+   "text": "Mỗi ngày em đều chăm chỉ đọc sách ở nhà."
+  },
+  {
+   "group": "tones",
+   "text": "Chị Bảy đã phải nghỉ việc ở công ty cũ."
+  },
+  {
+   "group": "tones",
+   "text": "Cô giáo đã chỉ cho em chỗ sai trong bài."
+  },
+  {
+   "group": "tones",
+   "text": "Thầy giáo đã khen em vì có bài viết đẹp."
+  },
+  {
+   "group": "tones",
+   "text": "Chú đã gửi cho tôi một gói kẹo lạc rất ngon."
+  },
+  {
+   "group": "tones",
+   "text": "Bà đã xỏ chỉ vào kim để may áo cho em."
+  },
+  {
+   "group": "tones",
+   "text": "Con quạ đen đã đậu trên cạ cây tre già."
+  },
+  {
+   "group": "tones",
+   "text": "Mỗi buổi sáng chị đều phải đi bộ ra bãi."
+  },
+  {
+   "group": "tones",
+   "text": "Bố đã dặn anh phải giữ gìn chiếc xe cũ."
+  },
+  {
+   "group": "tones",
+   "text": "Chị Bảy đã chỉ cho em cách nấu phở bò."
+  },
+  {
+   "group": "tones",
+   "text": "Con chó nhỏ của chị đã nhảy qua bãi cỏ."
+  },
+  {
+   "group": "tones",
+   "text": "Em đã phải ở lại lớp để học bài cũ."
+  },
+  {
+   "group": "tones",
+   "text": "Bà nội sẽ kể cho em nghe chuyện ma ngày xưa."
+  },
+  {
+   "group": "tones",
+   "text": "Chị Bảy đã mua được một củ cải trắng rất to."
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã bảo em phải đi tắm rửa sạch sẽ."
+  },
+  {
+   "group": "tones",
+   "text": "Bố tôi đã dặn anh phải chăm chỉ làm ăn."
+  },
+  {
+   "group": "tones",
+   "text": "Mỗi tháng chị đều gửi tiền về nhà cho bố."
+  },
+  {
+   "group": "tones",
+   "text": "Chú Bảy đã chỉ cho tôi về chỗ trồng mạ xuân."
+  },
+  {
+   "group": "tones",
+   "text": "Bãi biển này rất đẹp nhưng lại có nhiều muỗi."
+  },
+  {
+   "group": "tones",
+   "text": "Chị đã mua một chiếc nón lá ở chợ cũ."
+  },
+  {
+   "group": "tones",
+   "text": "Em đã phải đi tìm chiếc chìa khóa bị mất."
+  },
+  {
+   "group": "tones",
+   "text": "Cô Bảy sẽ chỉ cho em cách làm bánh bò."
+  },
+  {
+   "group": "tones",
+   "text": "Bố đã phải cắt bỏ cành cây già ở ngoài bãi."
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã mua cho em một chiếc áo mới rất đẹp."
+  },
+  {
+   "group": "tones",
+   "text": "Con mèo đã leo lên bàn gỗ để ăn cá."
+  },
+  {
+   "group": "tones",
+   "text": "Chị Bảy đã phải dậy sớm để đi bán rau."
+  },
+  {
+   "group": "tones",
+   "text": "Em đã chỉ cho anh chỗ mua quạt điện cũ."
+  },
+  {
+   "group": "tones",
+   "text": "Bác đã dặn em phải cẩn thận khi qua đường."
+  },
+  {
+   "group": "tones",
+   "text": "Con chó nhà chị Bảy rất ngoan và biết nghe lời."
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã chỉ cho em cách xỏ chỉ may vạt áo."
+  },
+  {
+   "group": "tones",
+   "text": "Chú tôi đã mua một bầy cừu trắng ở bãi."
+  },
+  {
+   "group": "tones",
+   "text": "Chị Bảy đã phải ngủ lại ở nhà bà nội."
+  },
+  {
+   "group": "tones",
+   "text": "Em đã dặn anh phải mở cửa cho chó vào."
+  },
+  {
+   "group": "tones",
+   "text": "Bố sẽ chỉ cho em cách làm giàn hoa hồng."
+  },
+  {
+   "group": "tones",
+   "text": "Mỗi tuần chị Bảy đều đi chợ mua phở khô."
+  },
+  {
+   "group": "tones",
+   "text": "Bác đã mua một con mã tấu cũ ở bãi rác."
+  },
+  {
+   "group": "tones",
+   "text": "Chị tôi đã chỉ cho em chỗ bán củ xả."
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã dặn anh phải đi gặt lúa ở bãi ngoài."
+  },
+  {
+   "group": "tones",
+   "text": "Con muỗi đã cắn vào má của em bé nhỏ."
+  },
+  {
+   "group": "tones",
+   "text": "Chị Bảy đã hỏi bố về chiếc quạt máy cũ."
+  },
+  {
+   "group": "tones",
+   "text": "Em đã phải đến trường từ rất sớm để trực nhật."
+  },
+  {
+   "group": "tones",
+   "text": "Bố đã chỉ cho chú Bảy chỗ mua mạ xuân."
+  },
+  {
+   "group": "tones",
+   "text": "Mẹ đã mua một quả bưởi rất ngọt ở chợ bãi."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Hôm nay trời nhiều mây và gió thổi rất mạnh qua từng kẽ lá."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chị tôi cẩn thận xếp từng chiếc áo len mới mua vào trong tủ gỗ."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Đoàn khách du lịch thích thú ngắm nhìn dòng sông muôn màu sắc."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chú mèo nhỏ đang nằm ngủ ngon lành bên xô nước ngoài sân sau."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mẹ dặn em phải chăm chỉ học hành để đạt kết quả thật cao."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Cả nhà cùng nhau ăn bữa cơm tối ấm áp sau tuần làm việc vất vả."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Tiếng chim hót líu lo trên cành cây cao làm bừng sáng buổi sáng."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Anh ấy luôn cố gắng vượt qua mọi khó khăn trong cuộc sống thường ngày."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Con đường làng ngoằn ngoèo dẫn chúng tôi về thăm ngôi nhà cũ."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Bà ngoại hay kể cho em nghe những câu chuyện cổ tích ngày xưa."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Màu xanh ngọc bích của nước hồ khiến ai nhìn cũng thấy dễ chịu."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chúng tôi ngồi nói chuyện vui vẻ dưới ánh đèn lung linh huyền ảo."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chiếc lá vàng nhẹ nhàng rơi xuống mặt đường mùa thu vắng vẻ."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Em thích thưởng thức hương thơm tươi mát của hoa lay ơn trắng."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Thầy giáo nhiệt tình giảng bài làm cho giờ học trở nên thú vị."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Những bông hoa huệ nở rộ lan tỏa mùi hương ngào ngạt khắp phòng."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Người nông dân gánh những chấu lúa nặng trĩu về nhà lúc chiều tà."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Trẻ con trong xóm tụ tập chơi nhảy dây ngoài khoảng sân rộng."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Gió biển thổi rì rào mang theo hơi muối mặn mòi của đại dương."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Cô ấy khéo léo thêu từng đường kim mũi chỉ trên tấm vải lụa."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Quả bưởi trên cành đã chín vàng tròn mọng và rất ngọt ngào."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mọi người cùng hăng hái tham gia phong trào dọn dẹp vệ sinh."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Ánh mặt trời buổi sáng chiếu qua màn sương mỏng thật đẹp mắt."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chú chó nhỏ liên tục vẫy đuôi mừng rỡ khi thấy chủ về nhà."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Hương vị đậm đà của bát phở nóng làm ấm lòng người đi xa."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chúng ta nên giữ gìn sức khỏe bằng cách tập thể dục hàng ngày."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Đoàn tàu hỏa chầm chậm tiến vào ga trong tiếng còi vang vọng."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mấy đứa trẻ tung tăng chạy nhảy trên đồng cỏ xanh mướt mát."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chuyến đi thực tế đã mang lại cho học sinh nhiều bài học hay."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Ngôi nhà nhỏ nằm yên bình giữa vườn cây ăn quả sai xum xê."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Bác thợ mộc cặm cụi gọt đẽo chiếc ghế gỗ sao cho thật phẳng."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Trời mưa rào bất ngờ khiến người đi đường phải vội tìm chỗ trú."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Cây ổi sau nhà năm nay ra rất nhiều quả to và ngọt lịm."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Bạn bè lâu ngày gặp lại cùng nhau ôn lại kỷ niệm tuổi thơ."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Nước suối trong róc rách chảy qua từng khe đá mịn màng."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Em luôn tự hào về vẻ đẹp truyền thống của quê hương mình."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chiếc thuyền thuyền buồm lướt nhẹ trên mặt sóng biển lăn tăn."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mái tóc dài của chị dịu dàng bay trong gió chiều thu mát mẻ."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mọi khó khăn rồi sẽ qua đi khi chúng ta luôn giữ niềm tin."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Bữa tiệc sinh nhật tràn ngập tiếng cười và những lời chúc tốt đẹp."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Tiếng ve kêu râm ráo báo hiệu một mùa hè nữa lại về rồi."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Bà cẩn thận nhặt từng hạt gạo trắng nõn chuẩn bị nấu xôi."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Đôi mắt em bé tròn xoe nhìn mọi vật xung quanh đầy tò mò."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mỗi buổi chiều em thường cùng bạn ra bờ sông thả diều bay cao."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Người bán hàng xởi lởi tươi cười chào đón khách vào xem đồ."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chú chim sâu nhỏ nhắn nhanh nhẹn chuyền từ cành này sang cành khác."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mùa thu Hà Nội nổi tiếng với hương hoa sữa thơm nồng nàn."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Những ngôi sao lấp lánh trên bầu trời đêm thật huyền bí."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Anh ấy suy nghĩ rất kỹ trước khi đưa ra quyết định cuối cùng."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Căn phòng nhỏ luôn gọn gàng nhờ sự ngăn nắp của chị gái."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Đường phố rực rỡ cờ hoa mừng ngày lễ lớn của đất nước."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Quả chuối chín cây ngọt lịm là món ăn yêu thích của em."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Sương mù giăng kín lối đi khiến việc di chuyển gặp chút khó khăn."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mọi người cùng vỗ tay khen ngợi tiết mục văn nghệ xuất sắc."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Mẹ cẩn thận may lại chiếc cúc áo bị rớt cho con trai."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Tiếng suối reo như bản nhạc tự nhiên trầm bổng giữa núi rừng."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chú gà trống cất tiếng gáy vang gọi mọi người thức dậy đón bình minh."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Dòng nước chảy xiết cuốn theo những cành lá khô rơi trên mặt hồ."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Chúng tôi hẹn nhau ở quán cà phê quen thuộc vào ngày cuối tuần."
+  },
+  {
+   "group": "vowel clusters",
+   "text": "Sự kiên trì sẽ giúp em vượt qua những thử thách trong tương lai."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Anh ấy đang ngồi đọc sách dưới gốc cây bàng lớn."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Bà nội tôi thường hay đi chùa vào ngày rằm hàng tháng."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Bé Hà thích ăn kem dâu tây và bánh ngọt vào mùa hè."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Các bạn học sinh đang hăng hái tập thể dục giữa sân trường."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Chiếc giường gỗ hương này rất rộng rãi và êm ái."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Chủ nhật tuần này cả gia đình chúng tôi sẽ đi picnic."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Con mèo nhỏ đang nằm ngủ ngon lành trên chiếc ghế bành."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Cống rãnh cần được nạo vét thường xuyên để tránh ngập lụt."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Cụ già thong thả đi dạo quanh hồ Hoàn Kiếm lúc sáng sớm."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Cửa hàng bán đồ gốm sứ nằm ngay ở đầu khu phố cổ."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Dòng sông Hồng cuồn cuộn chảy qua lòng thành phố Hà Nội."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Đàn chim én chao liệng trên bầu trời xanh bao la mát mẻ."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Đêm qua trời mưa to làm gãy một cành cây ngoài vườn."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Đường phố Hà Nội luôn rực rỡ cờ hoa vào ngày quốc khánh."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Em gái tôi có một quyển sổ tay ghi chép rất đẹp."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Gió mùa đông bắc tràn về mang theo không khí lạnh giá."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Hà Nội nổi tiếng với món phở bò truyền thống thơm ngon."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Họ đang cùng nhau bàn bạc về kế hoạch phát triển du lịch."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Hôm nay trời nắng đẹp nên chúng tôi quyết định đi chơi."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Khu vườn nhà em trồng rất nhiều loài hoa tỏa hương thơm."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Khuỷu tay của cậu ấy bị trầy xước nhẹ do ngã xe."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Lá vàng rơi đầy trên các con phố nhỏ vào mùa thu."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Mẹ tôi chuẩn bị một bữa tối vô cùng ấm cúng cho cả nhà."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Mùi hoa sữa nồng nàn lan tỏa khắp các ngõ ngách mùa thu."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Nét chữ ngoằn ngoèo của đứa trẻ làm ai cũng phải cười."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Người bán hàng rong rao rao những tiếng nghe rất quen thuộc."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Nhà thơ đang thả hồn theo những giai điệu êm đềm."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Những chiếc thuyền buồm bơi nhẹ nhàng trên mặt nước xanh."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Những đám mây trắng bồng bềnh puly trôi nhẹ trên tầng cao."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Nước hồ Tây trong xanh và luôn lộng gió vào buổi chiều."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Ông ngoại thích ngồi uống trà nóng và nghe đài đĩa."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Phố phường Hà Nội về đêm tràn ngập ánh đèn lung linh."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Quả hồng chín đỏ mọng trông thật hấp dẫn trên cành cây."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Quốc ca vang lên đầy tự hào trong buổi lễ chào cờ."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Rất nhiều khách du lịch đến tham quan di tích lịch sử."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Sáng nay không khí rất trong lành và dịu mát vô cùng."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Sương mù giăng kín mặt hồ vào những ngày đầu mùa đông."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Tàn thuốc rơi xuống làm cháy một khoảng nhỏ trên bàn."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Tập thể thể thao trường ta vừa giành được giải nhất."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Thầy giáo giảng bài rất hay và dễ hiểu cho học sinh."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Thương xá cũ đã được cải tạo thành trung tâm mua sắm."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Tiếng chim hót lảnh lót trên cành cao chào đón ngày mới."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Tiếng cười nói vui vẻ vang lên từ gian bếp nhỏ xinh."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Tiếng sóng vỗ rì rào vào bờ cát trắng thật êm tai."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Tôi rất thích ngắm nhìn bầu trời buổi chiều tà rực rỡ."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Trẻ em trong làng thích thả diều trên cánh đồng bao la."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Trời mưa rào bất chợt làm mọi người phải trú vội vã."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Trung thu đến các em nhỏ lại cùng nhau rước đèn ông sao."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Trường học của em nằm ở ngay trung tâm phường Hàng Bông."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Từ trên cao nhìn xuống thành phố trông thật lung linh."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Vào mùa thu lá cây chuyển sang màu vàng vô cùng lãng mạn."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Vạn vật như bừng tỉnh sau một trận mưa rào mùa hè."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Xe đạp là phương tiện giao thông rất thân thiện môi trường."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Yêu thương và chia sẻ là những điều vô cùng quý giá."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Ý thức bảo vệ môi trường của người dân ngày càng cao."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Bé ngoan ngoãn khoanh tay chào ông bà khi đi học về."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Đường đi ngoằn ngoèo ngoằn ngoèo qua các sườn núi cao."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Nghiêng nghiêng dòng sông trôi nhẹ qua vùng quê thanh bình."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Nhìn con đường ngoằn ngoèo ngoằn ngoèo chạy lên đỉnh núi."
+  },
+  {
+   "group": "finals and onsets",
+   "text": "Quốc gia chúng ta luôn gìn giữ truyền thống văn hóa tốt."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Thời tiết Hà Nội hôm nay tương đối mát mẻ nhờ có một đợt gió mùa đông bắc tràn về."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Món phở bò gia truyền luôn mang lại hương vị đậm đà đặc trưng của ẩm thực xứ Bắc."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Các bạn học sinh đang tích cực ôn tập để chuẩn bị cho kỳ thi tốt nghiệp trung học phổ thông."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Anh ấy làm việc chăm chỉ tại văn phòng từ sáng sớm cho đến tận muộn mới về nhà."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Chuyến du lịch đến Sa Pa tuần trước đã mang lại cho chúng tôi nhiều trải nghiệm vô cùng thú vị."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Việc tập thể dục đều đặn mỗi ngày giúp nâng cao sức đề kháng và duy trì vóc dáng cân đối."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Công nghệ thông tin ngày càng phát triển và đóng vai trò quan trọng trong đời sống hiện đại."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Mùa thu đến mang theo không khí dịu nhẹ cùng hương hoa sữa nồng nàn trên khắp các con phố."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Mẹ tôi thường đi chợ sớm để mua được những loại thực phẩm tươi ngon nhất cho gia đình."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Nhà trường vừa tổ chức một buổi lễ khen thưởng cho những học sinh có thành tích xuất sắc."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Công ty chúng tôi vừa hoàn thiện kế hoạch phát triển kinh doanh cho năm tài chính tiếp theo."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Vùng núi phía bắc có rất nhiều danh lam thắng cảnh hùng vĩ thu hút khách du lịch trong nước."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Uống đủ nước và ăn nhiều rau xanh là phương pháp đơn giản nhất để bảo vệ sức khỏe."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Các ứng dụng di động thông minh giúp con người xử lý công việc một cách nhanh chóng hơn."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Trận mưa rào đột ngột vào buổi chiều khiến nhiều tuyến đường trong thành phố bị ngập cục bộ."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Thưởng thức một tách trà nóng vào buổi sáng là thói quen quen thuộc của nhiều người lớn tuổi."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Các em nhỏ vô cùng thích thú khi được tham gia những hoạt động ngoại khóa ngoài trời."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Ban giám đốc vừa thông qua dự án đầu tư xây dựng nhà máy sản xuất linh kiện mới."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Chúng tôi dự định sẽ đi nghỉ mát ở biển Nha Trang vào đợt nghỉ lễ sắp tới."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Ngủ đủ giấc mỗi đêm giúp cơ thể phục hồi năng lượng sau một ngày làm việc mệt mỏi."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Trí tuệ nhân tạo đang tạo ra những bước đột phá mạnh mẽ trong nhiều ngành công nghiệp."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Dự báo thời tiết cho biết khu vực đồng bằng sông Hồng sẽ có mưa lớn trong vài ngày tới."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Bữa cơm gia đình là thời điểm mọi người quây quần bên nhau sau giờ làm việc vội vã."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Thư viện thành phố mới trang bị thêm hàng nghìn đầu sách mới phục vụ độc giả trẻ."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Nhân viên mới cần nhanh chóng thích nghi với môi trường làm việc chuyên nghiệp của tập đoàn."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Khám phá di sản văn hóa thế giới tại cố đô Huế luôn là ước mơ của nhiều du khách."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Hạn chế sử dụng thực phẩm chế biến sẵn sẽ giúp giảm thiểu nguy cơ mắc bệnh tim mạch."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Mạng internet băng thông rộng giúp việc truyền tải dữ liệu trở nên vô cùng thuận tiện."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Nắng nóng gay gắt kéo dài suốt tuần qua đã làm ảnh hưởng lớn đến đời sống sinh hoạt."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Món bún chả với nước dùng ấm nóng và thịt nướng thơm lừng luôn thu hút thực khách."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Các thầy cô giáo luôn nỗ lực đổi mới phương pháp giảng dạy để học sinh dễ hiểu bài."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Để hoàn thành đúng hạn hợp đồng này, toàn bộ đội ngũ đã phải làm việc liên tục."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Chuyến tàu hỏa xuyên Việt mang đến cho du khách cơ hội ngắm nhìn vẻ đẹp thiên nhiên."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Việc theo dõi sức khỏe định kỳ giúp phát hiện sớm các dấu hiệu bất thường của cơ thể."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Máy tính thế hệ mới có tốc độ xử lý dữ liệu nhanh hơn rất nhiều so với trước."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Sương mù giăng kín các con ngõ nhỏ vào sáng sớm tạo nên vẻ đẹp bình yên vô cùng."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Bánh cuốn nóng ăn kèm với chả quế là món ăn sáng ưa thích của người dân thủ đô."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Việc rèn luyện kỹ năng sống cho trẻ em là điều vô cùng cần thiết trong xã hội ngày nay."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Doanh nghiệp cần chú trọng nâng cao chất lượng sản phẩm để tăng sức cạnh tranh trên thị trường."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Những ruộng bậc thang chín vàng ở Mù Cang Chải luôn làm say đắm biết bao du khách."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Rèn luyện tư duy tích cực giúp chúng ta dễ dàng vượt qua những khó khăn trong cuộc sống."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Hệ thống tự động hóa giúp các nhà máy cắt giảm chi phí và nâng cao năng suất lao động."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Cơn gió lạnh đầu mùa bất ngờ thổi về khiến ai đi ra đường cũng phải mặc áo ấm."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Quán cà phê nhỏ nằm sâu trong ngõ vắng là nơi lý tưởng để đọc sách vào cuối tuần."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Các trường đại học đang mở rộng quy mô tuyển sinh cho các ngành học công nghệ mới."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Cuộc họp hội đồng quản trị sáng nay đã thảo luận về chiến lược mở rộng thị trường."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Chúng tôi đã có một chuyến leo núi tuyệt vời và cắm trại qua đêm trên đỉnh núi."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Việc đeo khẩu trang khi đến nơi đông người giúp ngăn ngừa hiệu quả các bệnh đường hô hấp."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Thiết bị lưu trữ dữ liệu dung lượng cao giúp người dùng bảo vệ thông tin quan trọng."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Mùa hè là thời điểm tuyệt vời để các gia đình tổ chức những chuyến dã ngoại ngoại thành."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Một bát cháo hành nóng hổi là phương thuốc dân gian hiệu quả để giải cảm lạnh."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Sinh viên cần chủ động nghiên cứu tài liệu trước khi đến lớp để đạt kết quả tốt."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Sự hợp tác giữa hai công ty hứa hẹn sẽ mang lại nhiều sản phẩm chất lượng cao."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Đảo ngọc Phú Quốc nổi tiếng với những bãi cát trắng mịn và làn nước biển trong xanh."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Thiền định và yoga là những phương pháp hiệu quả giúp giảm bớt căng thẳng thần kinh."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Màn hình hiển thị sắc nét giúp người dùng có những trải nghiệm giải trí sống động."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Trời chuyển mây đen u ám và một trận mưa rào lớn bắt đầu trút xuống thành phố."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Món nem rán giòn rụm là thành phần không thể thiếu trong mâm cỗ ngày tết cổ truyền."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Phong trào đọc sách đang lan tỏa mạnh mẽ trong các trường học trên toàn quốc."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Phòng nhân sự đang tiến hành phỏng vấn các ứng viên tiềm năng cho vị trí quản lý."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Vịnh Hạ Long là một trong những điểm đến hàng đầu được bạn bè quốc tế yêu thích."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Ăn nhiều trái cây tươi giúp bổ sung các loại vitamin và khoáng chất cần thiết."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Công nghệ viễn thông hiện đại giúp mọi người dễ dàng kết nối với nhau dù ở xa."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Không khí oi nóng của mùa hè khiến nhu cầu tiêu thụ điện năng tăng cao đột biến."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Chè hạt sen bọc vải là món ăn giải nhiệt tuyệt vời trong những ngày hè oi ả."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Giáo dục kỹ năng số cho thế hệ trẻ là nhiệm vụ quan trọng của hệ thống nhà trường."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Kế hoạch tiếp thị mới giúp sản phẩm của công ty tiếp cận được nhiều khách hàng hơn."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Hang Sơn Đoòng là hang động tự nhiên lớn nhất thế giới với hệ sinh thái độc đáo."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Tập thể dục buổi sáng giúp tinh thần sảng khoái và bắt đầu ngày mới hiệu quả."
+  },
+  {
+   "group": "everyday prose",
+   "text": "Các nhà khoa học đang nghiên cứu giải pháp phát triển năng lượng sạch và bền vững."
+  },
+  {
+   "group": "numbers",
+   "text": "Năm 1945 là một mốc lịch sử quan trọng của dân tộc Việt Nam."
+  },
+  {
+   "group": "numbers",
+   "text": "Mẹ tôi đi chợ mua 3 con cá tươi về nấu canh chua."
+  },
+  {
+   "group": "numbers",
+   "text": "Chiếc xe khách này có thể chở tối đa 45 hành khách."
+  },
+  {
+   "group": "numbers",
+   "text": "Chúng tôi đã sống ở thành phố này được 15 năm."
+  },
+  {
+   "group": "numbers",
+   "text": "Sáng nay tôi thức dậy vào lúc 6 giờ để đi tập thể dục."
+  },
+  {
+   "group": "numbers",
+   "text": "Tỷ lệ thất nghiệp đã giảm 2 phần trăm trong quý này."
+  },
+  {
+   "group": "numbers",
+   "text": "Gia đình tôi vừa chuyển đến một căn hộ rộng 85 mét vuông."
+  },
+  {
+   "group": "numbers",
+   "text": "Trường học có khoảng 1.200 học sinh đang theo học."
+  },
+  {
+   "group": "numbers",
+   "text": "Anh ấy đã hoàn thành cuộc thi chạy dài 42 kilomet."
+  },
+  {
+   "group": "numbers",
+   "text": "Giá của chiếc áo này là 250.000 đồng."
+  },
+  {
+   "group": "numbers",
+   "text": "Chúng tôi hẹn gặp nhau vào lúc 8 giờ tối tại quán ăn."
+  },
+  {
+   "group": "numbers",
+   "text": "Doanh số bán hàng tháng này đã tăng 15 phần trăm."
+  },
+  {
+   "group": "numbers",
+   "text": "Năm 2024 hứa hẹn sẽ mang lại nhiều cơ hội mới."
+  },
+  {
+   "group": "numbers",
+   "text": "Cuốn sách này dày 320 trang và rất thú vị."
+  },
+  {
+   "group": "numbers",
+   "text": "Cửa hàng bán được 50 chiếc máy tính trong ngày hôm nay."
+  },
+  {
+   "group": "numbers",
+   "text": "Mỗi ngày tôi dành khoảng 2 giờ để đọc sách."
+  },
+  {
+   "group": "numbers",
+   "text": "Lớp học của chúng tôi hiện tại có 35 học sinh."
+  },
+  {
+   "group": "numbers",
+   "text": "Giá vé xem phim là 90.000 đồng một người."
+  },
+  {
+   "group": "numbers",
+   "text": "Dự án này đã thu hút hơn 500 người tham gia."
+  },
+  {
+   "group": "numbers",
+   "text": "Đội bóng đã ghi được 4 bàn thắng trong trận đấu vừa qua."
+  },
+  {
+   "group": "numbers",
+   "text": "Chiếc máy bay dự kiến sẽ hạ cánh vào lúc 10 giờ đêm."
+  },
+  {
+   "group": "numbers",
+   "text": "Hơn 80 phần trăm nhân viên đã đồng ý với kế hoạch mới."
+  },
+  {
+   "group": "numbers",
+   "text": "Khoản tiền thưởng lần này trị giá 5.000.000 đồng."
+  },
+  {
+   "group": "numbers",
+   "text": "Tòa nhà cao 30 tầng này vừa mới được hoàn thành."
+  },
+  {
+   "group": "numbers",
+   "text": "Bộ phim kéo dài trong 2 giờ và 15 phút."
+  },
+  {
+   "group": "numbers",
+   "text": "Đoàn khách du lịch gồm có 20 người đến từ phương xa."
+  },
+  {
+   "group": "numbers",
+   "text": "Chương trình khuyến mãi này giảm giá đến 50 phần trăm."
+  },
+  {
+   "group": "numbers",
+   "text": "Chiếc xe hơi này có vận tốc tối đa 200 kilomet một giờ."
+  },
+  {
+   "group": "numbers",
+   "text": "Cuộc họp sẽ chính thức bắt đầu vào lúc 9 giờ sáng."
+  },
+  {
+   "group": "numbers",
+   "text": "Anh ấy đã mua 5 kg cam ở siêu thị."
+  },
+  {
+   "group": "numbers",
+   "text": "Năm 1954 gắn liền với chiến thắng lịch sử của dân tộc."
+  },
+  {
+   "group": "numbers",
+   "text": "Trường đại học này được thành lập vào năm 1995."
+  },
+  {
+   "group": "numbers",
+   "text": "Mẹ tôi mua 2 chiếc bánh mì cho bữa sáng."
+  },
+  {
+   "group": "numbers",
+   "text": "Tổng chi phí cho chuyến đi lần này là 3.500.000 đồng."
+  },
+  {
+   "group": "numbers",
+   "text": "Có 10 câu hỏi trong bài kiểm tra hôm nay."
+  },
+  {
+   "group": "numbers",
+   "text": "Hơn 90 phần trăm học sinh đã thi đậu kỳ thi tốt nghiệp."
+  },
+  {
+   "group": "numbers",
+   "text": "Chúng tôi đã đợi xe bus suốt 45 phút."
+  },
+  {
+   "group": "numbers",
+   "text": "Chiếc bàn làm việc này dài 1.5 mét và rộng 80 centimet."
+  },
+  {
+   "group": "numbers",
+   "text": "Cửa hàng mở cửa từ 7 giờ sáng đến 9 giờ tối."
+  },
+  {
+   "group": "numbers",
+   "text": "Sản lượng lúa năm nay đã tăng 5 phần trăm so với năm ngoái."
+  },
+  {
+   "group": "numbers",
+   "text": "Có khoảng 2.000 khán giả đã đến xem buổi biểu diễn."
+  },
+  {
+   "group": "numbers",
+   "text": "Chú tôi đã nuôi 100 con gà trong trang trại."
+  },
+  {
+   "group": "numbers",
+   "text": "Trận đấu bóng đá bắt đầu vào lúc 3 giờ chiều."
+  },
+  {
+   "group": "numbers",
+   "text": "Giá nguyên liệu đầu vào đã tăng 12 phần trăm."
+  },
+  {
+   "group": "numbers",
+   "text": "Căn nhà này được xây dựng từ năm 2010."
+  },
+  {
+   "group": "numbers",
+   "text": "Công ty vừa tuyển thêm 8 nhân viên mới."
+  },
+  {
+   "group": "numbers",
+   "text": "Số tiền tiết kiệm của cô ấy đã đạt 50.000.000 đồng."
+  },
+  {
+   "group": "numbers",
+   "text": "Tôi cần mua 4 quyển vở mới để chuẩn bị cho năm học."
+  },
+  {
+   "group": "numbers",
+   "text": "Hội nghị lần này quy tụ 150 chuyên gia hàng đầu."
+  },
+  {
+   "group": "numbers",
+   "text": "Tàu hỏa sẽ xuất phát vào lúc 11 giờ đêm nay."
+  }
+ ]
+}

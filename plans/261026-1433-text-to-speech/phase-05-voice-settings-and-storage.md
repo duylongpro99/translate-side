@@ -1,7 +1,7 @@
 ---
 phase: 5
 title: "Voice settings and provider storage"
-status: pending
+status: done
 priority: P1
 effort: "1.5d"
 dependencies: [3]

@@ -20,6 +20,9 @@ import { mirroredReading } from '@/ui/theme';
 import { JobBar, type JobActions } from './JobBar.tsx';
 import type { Jobs, JobView } from './jobs.ts';
 import { SegmentList } from './SegmentList.tsx';
+import { ReadStrip } from './ReadStrip.tsx';
+import { useReadAloud, voicePrepVia } from './read-aloud.ts';
+import { blockFinder } from './follow.ts';
 import { PrivacyNotice } from './PrivacyNotice.tsx';
 import type { PrefsStore } from './prefs.ts';
 import type { Routed, RouteTarget } from './route.ts';
@@ -291,6 +294,25 @@ export function App({ controller, translator }: { controller: PanelController; t
   // The first follow exchange waits for the reading settings, so the panel is in its final layout before it lines up with the page.
   useScrollFollow(translator?.viewports, tabId, pageDoc, follow && !dev && !selecting && readingView.ready, translator?.send);
   useHoverLink(translator?.hovers, tabId, pageDoc, translator?.send, !dev && !selecting);
+  // Read aloud (Settings › Voice): the blocks on screen, stopped when the page, the tab or the view changes.
+  const shownSegments = view.kind === 'ready' ? (job?.segments ?? view.result.segments) : [];
+  // A cloud voice reads only where the page's text may leave the device: not a never-translate site,
+  // not a local-only route. Voice prep only once the page is being translated (its text already goes
+  // to that route).
+  const speechTarget = tabId !== undefined && view.kind === 'ready' ? { tabId, url: view.result.url, ...(job ? { sourceLang: job.sourceLang, targetLang: job.targetLang } : {}) } : undefined;
+  const jobsForSpeech = translator?.jobs;
+  const speech = useReadAloud(browser, { segments: shownSegments, job, pageLang: view.kind === 'ready' ? view.result.lang : undefined }, `${tabId}:${pageDoc}:${selecting}:${dev}`, {
+    voicePrep: jobsForSpeech && speechTarget && job ? voicePrepVia(jobsForSpeech, speechTarget) : undefined,
+    cloudAllowed: async () => offer?.reason !== 'never' && !(jobsForSpeech && speechTarget ? await jobsForSpeech.localOnly(speechTarget) : false),
+  });
+  const readingId = speech.speaking?.id;
+  const findBlock = useRef<((id: string) => HTMLElement | undefined) | undefined>(undefined);
+  useEffect(() => {
+    if (readingId === undefined || !follow) return;
+    findBlock.current ??= blockFinder(document);
+    findBlock.current(readingId)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [readingId, follow]);
+  const openVoiceSettings = () => void browser.tabs.create({ url: `${browser.runtime.getURL('/options.html')}#voice` });
   const toggleFollow = () => {
     writeFollow(!follow);
     setFollow(!follow);
@@ -375,6 +397,7 @@ export function App({ controller, translator }: { controller: PanelController; t
           {view.kind === 'ready' ? view.result.title || i18n.t('panel.appName') : i18n.t('panel.appName')}
         </h1>
         <ProgressBar job={pageJob} />
+        {view.kind === 'ready' && !selecting ? <ReadStrip speech={speech} segments={shownSegments} onSettings={openVoiceSettings} /> : null}
         {showControls ? <HeaderNotices job={job} routedModel={routed?.model} switcher={switcherActions} quality={quality} error={prefsError ? i18n.t('panel.header.prefsFailed') : undefined} /> : null}
       </header>
       {help ? <ShortcutList id="shortcuts" onClose={closeHelp} /> : null}
@@ -405,7 +428,7 @@ export function App({ controller, translator }: { controller: PanelController; t
             </p>
           )}
           {job?.brief ? <AboutDocument brief={job.brief} sourceLang={job.sourceLang} /> : null}
-          <SegmentList reading={readingView.reading} segments={job?.segments ?? view.result.segments} states={job?.segs} busy={job?.status === 'running'} {...(job ? { targetLang: job.targetLang, ...(job.sourceLang ? { sourceLang: job.sourceLang } : {}) } : {})} {...(job?.model ? { model: job.model } : {})} {...(job && pageActions ? { actions: { retry: pageActions.retrySegment, retranslate: pageActions.retranslateSegment, explain: pageActions.explainSegment, ...(pageActions.editSegment ? { edit: pageActions.editSegment } : {}), ...(pageActions.discardEdit ? { discardEdit: pageActions.discardEdit } : {}) } } : {})} />
+          <SegmentList reading={readingView.reading} speech={speech} segments={job?.segments ?? view.result.segments} states={job?.segs} busy={job?.status === 'running'} {...(job ? { targetLang: job.targetLang, ...(job.sourceLang ? { sourceLang: job.sourceLang } : {}) } : {})} {...(job?.model ? { model: job.model } : {})} {...(job && pageActions ? { actions: { retry: pageActions.retrySegment, retranslate: pageActions.retranslateSegment, explain: pageActions.explainSegment, ...(pageActions.editSegment ? { edit: pageActions.editSegment } : {}), ...(pageActions.discardEdit ? { discardEdit: pageActions.discardEdit } : {}) } } : {})} />
         </>
       )}
     </main>

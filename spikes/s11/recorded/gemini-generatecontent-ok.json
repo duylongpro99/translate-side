@@ -1,0 +1,85 @@
+{
+  "recordedAt": "2026-10-26T14:51:12.963Z",
+  "request": {
+    "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-tts:generateContent",
+    "method": "POST",
+    "headerNames": [
+      "Content-Type",
+      "x-goog-api-key"
+    ],
+    "contentType": "application/json",
+    "body": {
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "Read clearly and calmly, like a narrator reading an article aloud.\n\nXin chào. Đây là đoạn thử giọng đọc tiếng Việt cho tiện ích dịch trang. Hôm nay trời đẹp, chúng ta cùng đọc sách nhé."
+            }
+          ]
+        }
+      ],
+      "generationConfig": {
+        "responseModalities": [
+          "AUDIO"
+        ],
+        "speechConfig": {
+          "voiceConfig": {
+            "prebuiltVoiceConfig": {
+              "voiceName": "Kore"
+            }
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "contentType": "application/json; charset=UTF-8",
+    "headers": {
+      "content-type": "application/json; charset=UTF-8",
+      "transfer-encoding": "chunked"
+    },
+    "ms": 5677,
+    "body": {
+      "json": {
+        "candidates": [
+          {
+            "content": {
+              "parts": [
+                {
+                  "inlineData": {
+                    "mimeType": "audio/wav",
+                    "data": "UklGRlw0CQBXQVZFZm10IBAAAAABAAEAwF0AAIC7AAACABAAZGF0YYAcCQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//AAAAAAAA"
+                  }
+                }
+              ],
+              "role": "model"
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 43,
+          "candidatesTokenCount": 311,
+          "totalTokenCount": 354,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 43
+            }
+          ],
+          "candidatesTokensDetails": [
+            {
+              "modality": "AUDIO",
+              "tokenCount": 311
+            }
+          ],
+          "serviceTier": "standard"
+        },
+        "modelVersion": "gemini-3.8-flash-tts",
+        "responseId": "22jfasmSMIaJosUPi42zmAI"
+      }
+    }
+  }
+}

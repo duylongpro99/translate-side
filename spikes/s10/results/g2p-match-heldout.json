@@ -1,0 +1,53 @@
+{
+ "date": "2026-10-26T15:25:03.443Z",
+ "corpus": "corpus-vi-heldout.json",
+ "foreignWords": "built-in fallback",
+ "oraclePhonemizer": "piper_phonemize==1.1.0",
+ "sentences": 120,
+ "syllables": 2160,
+ "exactSyllableMatch": 0.9981,
+ "matchIgnoringStressMark": 0.9981,
+ "toneMatch": 1,
+ "sentencesAllSyllablesExact": 0.975,
+ "sentencesWholeStringExact": 0.975,
+ "byGroup": {
+  "news": {
+   "total": 1120,
+   "exact": 1118,
+   "rate": 0.9982
+  },
+  "web prose": {
+   "total": 1040,
+   "exact": 1038,
+   "rate": 0.9981
+  }
+ },
+ "vietnameseSyllables": 2157,
+ "vietnameseSyllableExactMatch": 0.9995,
+ "mismatches": [
+  {
+   "count": 1,
+   "word": "họa",
+   "ours": "hwˈaː6",
+   "oracle": "hˈoaː6"
+  },
+  {
+   "count": 1,
+   "word": "sculpture",
+   "ours": "zˈɛ",
+   "oracle": "skˈʌlptʃə"
+  },
+  {
+   "count": 1,
+   "word": "logic",
+   "ours": "lˈɔzˈic",
+   "oracle": "lˈɔzc"
+  },
+  {
+   "count": 1,
+   "word": "vitamin",
+   "ours": "vˈit̪ˈaːmˈin",
+   "oracle": "vˈɪtəmɪn"
+  }
+ ]
+}

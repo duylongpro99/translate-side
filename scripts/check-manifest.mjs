@@ -13,7 +13,7 @@ const expectEqual = (key, actual, expected) => {
 };
 
 expectEqual('manifest_version', m.manifest_version, 3);
-expectEqual('permissions', m.permissions, ['sidePanel', 'storage', 'activeTab', 'scripting', 'contextMenus']);
+expectEqual('permissions', m.permissions, ['sidePanel', 'storage', 'activeTab', 'scripting', 'contextMenus', 'tts']);
 expectEqual('optional_host_permissions', m.optional_host_permissions, ['https://*/*', 'http://*/*', 'http://localhost/*', 'http://127.0.0.1/*']);
 expectEqual('host_permissions', m.host_permissions, undefined);
 expectEqual('content_scripts', m.content_scripts, undefined);

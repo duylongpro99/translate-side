@@ -1,7 +1,7 @@
 ---
 phase: 2
 title: "Spike S11: cloud TTS called straight from the extension"
-status: pending
+status: done
 priority: P1
 effort: "1d"
 dependencies: []

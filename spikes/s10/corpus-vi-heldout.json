@@ -1,0 +1,486 @@
+{
+ "model": "gemini-3.5-flash",
+ "created": "2026-10-26T15:24:33.170Z",
+ "sentences": [
+  {
+   "group": "news",
+   "text": "Thủ tướng Chính phủ vừa ban hành quyết định phê duyệt đề án phát triển kinh tế vùng duyên hải miền Trung."
+  },
+  {
+   "group": "news",
+   "text": "Chủ tịch Ủy ban nhân dân thành phố Hà Nội đã đi kiểm tra tiến độ các công trình trọng điểm."
+  },
+  {
+   "group": "news",
+   "text": "Đoàn đại biểu Quốc hội tỉnh Quảng Nam đã có buổi tiếp xúc cử tri trước kỳ họp mới."
+  },
+  {
+   "group": "news",
+   "text": "Chính phủ đang tích cực chỉ đạo các bộ ngành triển khai giải pháp kiềm chế lạm phát."
+  },
+  {
+   "group": "news",
+   "text": "Nhiều đại biểu đánh giá cao những kết quả đạt được trong việc cải cách thủ tục hành chính."
+  },
+  {
+   "group": "news",
+   "text": "Hội nghị hợp tác phát triển kinh tế khu vực tam giác phát triển đã diễn ra thành công."
+  },
+  {
+   "group": "news",
+   "text": "Bộ Tài chính vừa ban hành thông tư mới hướng dẫn về việc quản lý thu chi ngân sách."
+  },
+  {
+   "group": "news",
+   "text": "Chính quyền địa phương đang tích cực hỗ trợ người dân khắc phục hậu quả thiên tai."
+  },
+  {
+   "group": "news",
+   "text": "Các chính sách hỗ trợ doanh nghiệp phục hồi sản xuất đang bắt đầu phát huy hiệu quả."
+  },
+  {
+   "group": "news",
+   "text": "Đoàn kiểm tra liên ngành đã phát hiện nhiều vi phạm tại các cơ sở kinh doanh dịch vụ."
+  },
+  {
+   "group": "news",
+   "text": "Ngân hàng Nhà nước vừa quyết định điều chỉnh giảm lãi suất điều hành để hỗ trợ tăng trưởng."
+  },
+  {
+   "group": "news",
+   "text": "Thị trường chứng khoán trong phiên giao dịch hôm nay ghi nhận sự tăng giá mạnh của nhóm cổ phiếu ngân hàng."
+  },
+  {
+   "group": "news",
+   "text": "Giá gạo xuất khẩu của Việt Nam tiếp tục duy trì ở mức cao nhất trong nhiều năm qua."
+  },
+  {
+   "group": "news",
+   "text": "Tỉnh Quảng Ngãi đang tập trung thu hút vốn đầu tư vào các khu công nghiệp trọng điểm."
+  },
+  {
+   "group": "news",
+   "text": "Nông dân tại thành phố Buôn Ma Thuột đang bước vào mùa thu hoạch cà phê với nhiều niềm vui."
+  },
+  {
+   "group": "news",
+   "text": "Hoạt động xuất nhập khẩu hàng hóa qua các cửa khẩu phía bắc đang diễn ra rất thuận lợi."
+  },
+  {
+   "group": "news",
+   "text": "Các doanh nghiệp dệt may đang nỗ lực tìm kiếm thêm các đơn hàng mới từ thị trường nước ngoài."
+  },
+  {
+   "group": "news",
+   "text": "Ngành du lịch tỉnh Thừa Thiên Huế ghi nhận lượng khách quốc tế tăng trưởng vượt bậc."
+  },
+  {
+   "group": "news",
+   "text": "Sức mua tại các hệ thống bán lẻ trên địa bàn thành phố Hồ Chí Minh đang dần hồi phục."
+  },
+  {
+   "group": "news",
+   "text": "Nhiều dự án bất động sản tại thành phố Đà Nẵng đã bắt đầu tái khởi động sau thời gian tạm dừng."
+  },
+  {
+   "group": "news",
+   "text": "Đội tuyển bóng đá nam Việt Nam đang tích cực tập luyện để chuẩn bị cho trận đấu sắp tới."
+  },
+  {
+   "group": "news",
+   "text": "Thắng lợi thuyết phục giúp vận động viên Nguyễn Văn Hùng giành huy chương vàng môn điền kinh."
+  },
+  {
+   "group": "news",
+   "text": "Giải bóng chuyền vô địch quốc gia năm nay thu hút sự tham gia của nhiều đội bóng mạnh."
+  },
+  {
+   "group": "news",
+   "text": "Các câu lạc bộ bóng đá trong nước đang tích cực bổ sung nhân sự cho mùa giải mới."
+  },
+  {
+   "group": "news",
+   "text": "Trận chung kết giải cầu lông mở rộng đã diễn ra kịch tính và vô cùng hấp dẫn."
+  },
+  {
+   "group": "news",
+   "text": "Đoàn thể thao Việt Nam đã hoàn thành xuất sắc mục tiêu đề ra tại giải đấu khu vực."
+  },
+  {
+   "group": "news",
+   "text": "Vận động viên Trần Thị Mai đã xuất sắc phá kỷ lục quốc gia ở nội dung bơi tự do."
+  },
+  {
+   "group": "news",
+   "text": "Giải chạy việt dã toàn quốc thu hút hàng nghìn vận động viên chuyên nghiệp và phong trào."
+  },
+  {
+   "group": "news",
+   "text": "Huấn luyện viên trưởng bày tỏ sự hài lòng với tinh thần thi đấu của các học trò."
+  },
+  {
+   "group": "news",
+   "text": "Sân vận động quốc gia đã sẵn sàng cho lễ khai mạc giải thi đấu thể thao lớn."
+  },
+  {
+   "group": "news",
+   "text": "Lễ hội chùa Hương thu hút hàng vạn du khách thập phương đến tham quan và lễ Phật."
+  },
+  {
+   "group": "news",
+   "text": "Nhà hát Tuổi Trẻ vừa công chiếu tác phẩm sân khấu mới phục vụ khán giả thủ đô."
+  },
+  {
+   "group": "news",
+   "text": "Triển lãm mỹ thuật toàn quốc trưng bày hàng trăm tác phẩm hội họa và sculpture độc đáo."
+  },
+  {
+   "group": "news",
+   "text": "Đêm nhạc truyền thống tại phố cổ Hà Nội đã mang đến nhiều cảm xúc cho người xem."
+  },
+  {
+   "group": "news",
+   "text": "Bảo tàng Lịch sử Quốc gia tiếp nhận nhiều cổ vật quý do các cá nhân hiến tặng."
+  },
+  {
+   "group": "news",
+   "text": "Liên hoan phim Việt Nam lần thứ hai mươi ba sẽ được tổ chức tại thành phố Đà Lạt."
+  },
+  {
+   "group": "news",
+   "text": "Các nghệ sĩ cải lương đang nỗ lực bảo tồn và phát triển nghệ thuật truyền thống."
+  },
+  {
+   "group": "news",
+   "text": "Chương trình biểu diễn múa rối nước tại hồ Hoàn Kiếm luôn thu hút đông đảo khách du lịch."
+  },
+  {
+   "group": "news",
+   "text": "Nhiều di tích lịch sử tại tỉnh Thanh Hóa đang được đầu tư trùng tu và tôn tạo."
+  },
+  {
+   "group": "news",
+   "text": "Lễ hội cồng chiêng Tây Nguyên tại tỉnh Đắk Lắk được công nhận là di sản văn hóa phi vật thể."
+  },
+  {
+   "group": "news",
+   "text": "Các nhà khoa học Việt Nam vừa chế tạo thành công vật liệu mới có độ bền cao."
+  },
+  {
+   "group": "news",
+   "text": "Viện Hàn lâm Khoa học và Công nghệ vừa công bố công trình nghiên cứu về đa dạng sinh học."
+  },
+  {
+   "group": "news",
+   "text": "Ứng dụng công nghệ thông tin giúp nâng cao hiệu quả quản lý trong ngành y tế."
+  },
+  {
+   "group": "news",
+   "text": "Dự án nghiên cứu nguồn năng lượng tái tạo đã nhận được sự đánh giá cao từ các chuyên gia."
+  },
+  {
+   "group": "news",
+   "text": "Các bác sĩ tại bệnh viện lớn đã thực hiện thành công ca phẫu thuật ghép tạng phức tạp."
+  },
+  {
+   "group": "news",
+   "text": "Bộ Giáo dục và Đào tạo đang nghiên cứu điều chỉnh chương trình giảng dạy cấp trung học."
+  },
+  {
+   "group": "news",
+   "text": "Nhiều trường đại học công bố phương thức tuyển sinh mới cho năm học tới."
+  },
+  {
+   "group": "news",
+   "text": "Việc đưa công nghệ hiện đại vào sản xuất nông nghiệp giúp tăng năng suất cây trồng."
+  },
+  {
+   "group": "news",
+   "text": "Các chuyên gia cảnh báo về tình trạng biến đổi khí hậu đang ảnh hưởng nghiêm trọng đến đồng bằng."
+  },
+  {
+   "group": "news",
+   "text": "Vệ tinh nhân tạo của Việt Nam đã truyền thành công những hình ảnh đầu tiên về trái đất."
+  },
+  {
+   "group": "news",
+   "text": "Tỉnh Bình Định đang đẩy mạnh việc xây dựng các tuyến đường giao thông kết nối vùng."
+  },
+  {
+   "group": "news",
+   "text": "Dự án mở rộng cảng hàng không quốc tế đang được gấp rút hoàn thiện các hạng mục cuối cùng."
+  },
+  {
+   "group": "news",
+   "text": "Thành phố Cần Thơ tập trung phát triển hạ tầng giao thông đường thủy để thúc đẩy thương mại."
+  },
+  {
+   "group": "news",
+   "text": "Công trình cầu vượt tại nút giao thông trọng điểm đã chính thức được thông xe."
+  },
+  {
+   "group": "news",
+   "text": "Người dân tỉnh Tiền Giang bắt đầu thu hoạch vụ lúa mới với năng suất khá cao."
+  },
+  {
+   "group": "news",
+   "text": "Công an tỉnh Ninh Bình vừa triệt phá thành công một đường dây lừa đảo qua mạng."
+  },
+  {
+   "group": "news",
+   "text": "Các lực lượng chức năng đang tích cực triển khai công tác phòng chống cháy rừng mùa khô."
+  },
+  {
+   "group": "news",
+   "text": "Hệ thống đèn chiếu sáng đô thị tại thành phố Hải Phòng đang được nâng cấp toàn diện."
+  },
+  {
+   "group": "news",
+   "text": "Tỉnh An Giang tập trung nâng cao chất lượng nguồn nhân lực phục vụ phát triển kinh tế."
+  },
+  {
+   "group": "news",
+   "text": "Các địa phương vùng duyên hải cần chủ động ứng phó với diễn biến phức tạp của triều cường."
+  },
+  {
+   "group": "web prose",
+   "text": "Hôm nay tôi sẽ hướng dẫn các bạn cách nấu món phở bò gia truyền thơm ngon ngay tại nhà."
+  },
+  {
+   "group": "web prose",
+   "text": "Để làm món ăn này, chúng ta cần chuẩn bị khoảng 500 gam thịt bò tươi và các loại gia vị đi kèm."
+  },
+  {
+   "group": "web prose",
+   "text": "Bạn nên chọn phần thịt nạm hoặc gầu nếu muốn nước dùng có độ béo tự nhiên."
+  },
+  {
+   "group": "web prose",
+   "text": "Bước đầu tiên là rửa sạch xương bò rồi chần qua nước sôi để loại bỏ hết bọt bẩn."
+  },
+  {
+   "group": "web prose",
+   "text": "Hành tây và gừng đem nướng xém vỏ trên bếp than để tạo mùi thơm đặc trưng cho nước phở."
+  },
+  {
+   "group": "web prose",
+   "text": "Thời gian ninh xương tối thiểu là 4 tiếng để nước dùng đạt độ ngọt thanh tự nhiên."
+  },
+  {
+   "group": "web prose",
+   "text": "Sau khi nước dùng đã sôi, hãy hạ nhỏ lửa và hớt bọt thường xuyên."
+  },
+  {
+   "group": "web prose",
+   "text": "Món rau xào này rất hợp để thưởng thức trong những ngày thời tiết lạnh giá."
+  },
+  {
+   "group": "web prose",
+   "text": "Thêm một chút tiêu xay lên trên mặt bát trước khi thưởng thức để tăng thêm hương vị."
+  },
+  {
+   "group": "web prose",
+   "text": "Chúc các bạn thực hiện thành công món ăn đơn giản mà vô cùng bổ dưỡng này."
+  },
+  {
+   "group": "web prose",
+   "text": "Chiếc máy giặt này được trang bị công nghệ tiết kiệm điện năng hiện đại nhất hiện nay."
+  },
+  {
+   "group": "web prose",
+   "text": "Sản phẩm có thiết kế nhỏ gọn, phù hợp với những căn hộ có diện tích khiêm tốn."
+  },
+  {
+   "group": "web prose",
+   "text": "Chất liệu nhựa cao cấp giúp sản phẩm có độ bền cao và dễ dàng vệ sinh sau khi sử dụng."
+  },
+  {
+   "group": "web prose",
+   "text": "Khách hàng mua hàng trong tháng này sẽ nhận được phiếu giảm giá 10 phần trăm."
+  },
+  {
+   "group": "web prose",
+   "text": "Chế độ bảo hành 2 năm giúp người tiêu dùng hoàn toàn yên tâm khi sử dụng sản phẩm."
+  },
+  {
+   "group": "web prose",
+   "text": "Vỏ ngoài của thiết bị được làm bằng hợp kim chống gỉ, chịu lực cực kỳ tốt."
+  },
+  {
+   "group": "web prose",
+   "text": "Màn hình hiển thị sắc nét giúp người dùng dễ dàng theo dõi các thông số kỹ thuật."
+  },
+  {
+   "group": "web prose",
+   "text": "Sản phẩm hiện đang có sẵn tại tất cả các cửa hàng trên toàn quốc."
+  },
+  {
+   "group": "web prose",
+   "text": "Hãy liên hệ ngay với chúng tôi qua đường dây nóng để được tư vấn miễn phí."
+  },
+  {
+   "group": "web prose",
+   "text": "Giao hàng nhanh chóng trong vòng 24 giờ đối với các đơn hàng tại nội thành."
+  },
+  {
+   "group": "web prose",
+   "text": "Đà Lạt là một thành phố thuộc tỉnh Lâm Đồng, nằm trên khu vực Tây Nguyên của Việt Nam."
+  },
+  {
+   "group": "web prose",
+   "text": "Nơi đây nổi tiếng với khí hậu mát mẻ quanh năm và cảnh quan thiên nhiên thơ mộng."
+  },
+  {
+   "group": "web prose",
+   "text": "Hoa sen được coi là quốc hoa của Việt Nam, tượng trưng cho sự tinh khiết và nhẫn nại."
+  },
+  {
+   "group": "web prose",
+   "text": "Lịch sử loài người đã trải qua nhiều giai đoạn phát triển rực rỡ khác nhau."
+  },
+  {
+   "group": "web prose",
+   "text": "Trái Đất là hành tinh thứ 3 tính từ Mặt Trời trong Hệ Mặt Trời."
+  },
+  {
+   "group": "web prose",
+   "text": "Nước chiếm khoảng 71 phần trăm diện tích bề mặt Trái Đất."
+  },
+  {
+   "group": "web prose",
+   "text": "Khí hậu nhiệt đới gió mùa mang lại lượng mưa dồi dào cho các tỉnh phía Bắc."
+  },
+  {
+   "group": "web prose",
+   "text": "Cây xanh đóng vai trò quan trọng trong việc điều hòa không khí và bảo vệ môi trường."
+  },
+  {
+   "group": "web prose",
+   "text": "Văn miếu Quốc Tử Giám được coi là trường đại học đầu tiên của nước ta."
+  },
+  {
+   "group": "web prose",
+   "text": "Sông Hồng là con sông có vai trò rất quan trọng đối với đời sống cư dân Bắc Bộ."
+  },
+  {
+   "group": "web prose",
+   "text": "Đầu tiên, bạn cần ngắt nguồn điện để đảm bảo an toàn tuyệt đối trong quá trình sửa chữa."
+  },
+  {
+   "group": "web prose",
+   "text": "Hãy lau sạch bụi bẩn trên bề mặt bằng một chiếc khăn mềm và khô."
+  },
+  {
+   "group": "web prose",
+   "text": "Thường xuyên kiểm tra định kỳ để phát hiện sớm các dấu hiệu hư hỏng của máy móc."
+  },
+  {
+   "group": "web prose",
+   "text": "Để thay pin mới, bạn dùng tua vít tháo nhẹ các con ốc ở mặt sau của thiết bị."
+  },
+  {
+   "group": "web prose",
+   "text": "Hãy cắm dây nguồn vào ổ cắm và nhấn nút khởi động trên thân máy."
+  },
+  {
+   "group": "web prose",
+   "text": "Nếu thiết bị không hoạt động, hãy kiểm tra lại cầu chì hoặc nguồn điện trong nhà."
+  },
+  {
+   "group": "web prose",
+   "text": "Bảo quản sản phẩm ở nơi khô ráo, thoáng mát, tránh ánh nắng trực tiếp từ Mặt Trời."
+  },
+  {
+   "group": "web prose",
+   "text": "Bạn nên đọc kỹ hướng dẫn sử dụng trước khi vận hành bất kỳ thiết bị nào."
+  },
+  {
+   "group": "web prose",
+   "text": "Tra dầu mỡ định kỳ sẽ giúp động cơ chạy êm ái và kéo dài tuổi thọ."
+  },
+  {
+   "group": "web prose",
+   "text": "Nếu gặp sự cố phức tạp, bạn nên gọi thợ chuyên nghiệp đến hỗ trợ xử lý."
+  },
+  {
+   "group": "web prose",
+   "text": "Mùa thu Hà Nội luôn mang đến cho con người những cảm xúc nhẹ nhàng và hoài niệm."
+  },
+  {
+   "group": "web prose",
+   "text": "Gió lạnh đầu mùa tràn về làm cho những con phố trở nên vắng vẻ hơn thường lệ."
+  },
+  {
+   "group": "web prose",
+   "text": "Uống một tách trà nóng vào buổi sáng giúp tinh thần tỉnh táo và sảng khoái cả ngày."
+  },
+  {
+   "group": "web prose",
+   "text": "Tôi thích cảm giác ngồi ngắm mưa rơi qua ô cửa kính của một quán cà phê quen thuộc."
+  },
+  {
+   "group": "web prose",
+   "text": "Mỗi chuyến đi xa là một cơ hội để chúng ta mở rộng tầm mắt và học hỏi điều mới."
+  },
+  {
+   "group": "web prose",
+   "text": "Đọc sách là thói quen tốt giúp cải thiện khả năng tập trung và tư duy logic."
+  },
+  {
+   "group": "web prose",
+   "text": "Gia đình luôn là nơi bình yên nhất để chúng ta trở về sau những mệt mỏi."
+  },
+  {
+   "group": "web prose",
+   "text": "Hãy dành thời gian chăm sóc bản thân và lắng nghe cơ thể mình nhiều hơn."
+  },
+  {
+   "group": "web prose",
+   "text": "Những kỷ niệm tuổi thơ luôn sống mãi trong tâm trí của mỗi con người."
+  },
+  {
+   "group": "web prose",
+   "text": "Cuộc sống sẽ trở nên ý nghĩa hơn khi chúng ta biết chia sẻ với những người xung quanh."
+  },
+  {
+   "group": "web prose",
+   "text": "Món ăn này chứa rất nhiều vitamin và khoáng chất tốt cho hệ tiêu hóa."
+  },
+  {
+   "group": "web prose",
+   "text": "Uống đủ 2 lít nước mỗi ngày giúp làn da luôn mịn màng và khỏe mạnh."
+  },
+  {
+   "group": "web prose",
+   "text": "Tập thể dục thường xuyên là giải pháp tốt nhất để nâng cao sức đề kháng."
+  },
+  {
+   "group": "web prose",
+   "text": "Thịt gà kết hợp với nấm hương tạo nên một hương vị đậm đà khó quên."
+  },
+  {
+   "group": "web prose",
+   "text": "Bánh mì vỉa hè là món ăn đường phố rất phổ biến và được nhiều người yêu thích."
+  },
+  {
+   "group": "web prose",
+   "text": "Cà phê trứng là một nét văn hóa ẩm thực độc đáo của thủ đô."
+  },
+  {
+   "group": "web prose",
+   "text": "Nước chấm ngon là yếu tố quyết định sự thành công của món nem rán."
+  },
+  {
+   "group": "web prose",
+   "text": "Ăn nhiều rau xanh giúp giảm nguy cơ mắc các bệnh về tim mạch."
+  },
+  {
+   "group": "web prose",
+   "text": "Món cá kho riềng phải nấu trong niêu đất thì mới đúng hương vị truyền thống."
+  },
+  {
+   "group": "web prose",
+   "text": "Bữa cơm gia đình là thời điểm mọi người quây quần và trò chuyện sau ngày làm việc."
+  }
+ ]
+}

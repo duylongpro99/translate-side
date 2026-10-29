@@ -1,7 +1,7 @@
 ---
 phase: 9
 title: "Docs, privacy and release checks"
-status: pending
+status: done
 priority: P1
 effort: "0.5d"
 dependencies: [4, 5, 6, 7, 8]

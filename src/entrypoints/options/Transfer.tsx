@@ -43,6 +43,7 @@ function Summary({ report, keep, onKeep }: { report: ImportReport; keep: Readonl
   if (report.prefs) lines.push(i18n.t('options.transfer.prefs'));
   if (report.quality) lines.push(i18n.t('options.transfer.quality'));
   if (report.reading) lines.push(i18n.t('options.transfer.reading'));
+  if (report.voice) lines.push(i18n.t('options.transfer.voice'));
   if (report.glossary !== null) lines.push(i18n.t('options.transfer.glossary', report.glossary));
   if (report.sites.allow + report.sites.never > 0) lines.push(i18n.t('options.transfer.sites', [String(report.sites.allow), String(report.sites.never)]));
   return (
