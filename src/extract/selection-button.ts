@@ -163,8 +163,10 @@ export interface SelectionPopup {
  * fixed host, built on first use and then only restyled. Once the frame has loaded, the content
  * script hands the page a private MessageChannel port, posted only to the extension's origin with the
  * popup's id, which the page around it never sees; the popup's height and close requests come back on
- * that port alone. The popup stays hidden until it answers there. The popup page never navigates
- * itself, so a second load means some other page is in the frame now: the popup closes.
+ * that port alone. The popup stays invisible until it answers there, but laid out: a frame under
+ * `display: none` renders nothing, so the page in it could never measure itself and answer. The
+ * popup page never navigates itself, so a second load means some other page is in the frame now: the
+ * popup closes.
  */
 export function createSelectionPopup(win: Window, label: string): SelectionPopup {
   const doc = win.document;
@@ -194,7 +196,7 @@ export function createSelectionPopup(win: Window, label: string): SelectionPopup
     if (typeof data.height === 'number' && Number.isFinite(data.height)) {
       open.height = Math.min(POPUP_MAX_HEIGHT, Math.max(POPUP_MIN_HEIGHT, Math.ceil(data.height)));
       place();
-      if (host) host.style.display = 'block';
+      if (host) host.style.visibility = 'visible';
     }
   };
 
@@ -231,6 +233,7 @@ export function createSelectionPopup(win: Window, label: string): SelectionPopup
       open = current;
       root?.append(frame);
       place();
+      if (host) Object.assign(host.style, { display: 'block', visibility: 'hidden' });
     },
     close,
     place,

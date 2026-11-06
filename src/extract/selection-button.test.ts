@@ -316,6 +316,7 @@ describe('createSelectionPopup', () => {
     return r;
   };
   const popupHost = () => document.querySelector<HTMLElement>(POPUP_TAG);
+  const popupShown = () => popupHost()?.style.display === 'block' && popupHost()?.style.visibility === 'visible';
   const frame = () => roots.at(-1)?.querySelector('iframe') ?? undefined;
   /** The frame loads: the content script hands the popup page its port. Returns what it posted, and the page's end of the channel. */
   const load = () => {
@@ -339,13 +340,15 @@ describe('createSelectionPopup', () => {
     expect(frame()?.getAttribute('src')).toBe(`${URL_}#${ID}`);
     expect(frame()?.getAttribute('allow')).toBe('translator; language-detector; language-model');
     expect(frame()?.title).toBe('Translation');
-    expect(popupHost()?.style.display).toBe('none');
+    // Invisible until the page answers, but laid out, so the page in the frame can measure itself.
+    expect(popupHost()?.style.display).toBe('block');
+    expect(popupShown()).toBe(false);
     const { message, origin, port } = load();
     // The port goes to the extension's origin only, with the popup's id, which the page never sees.
     expect(message).toEqual({ type: POPUP_MESSAGE, id: ID });
     expect(origin).toBe('chrome-extension://self');
     await say(port, { type: POPUP_MESSAGE, height: 250.2 });
-    expect(popupHost()?.style.display).toBe('block');
+    expect(popupShown()).toBe(true);
     // Under the last line (20, 30)–(200, 40).
     expect([popupHost()?.style.left, popupHost()?.style.top, popupHost()?.style.height]).toEqual(['20px', '44px', '251px']);
     await say(port, { type: POPUP_MESSAGE, height: 5000 });
@@ -366,7 +369,7 @@ describe('createSelectionPopup', () => {
     await say(port, { type: POPUP_MESSAGE, height: 200 });
     window.dispatchEvent(new MessageEvent('message', { source: frame()?.contentWindow ?? null, data: { type: POPUP_MESSAGE, close: true } }));
     window.dispatchEvent(new MessageEvent('message', { source: window, data: { type: POPUP_MESSAGE, height: 400 } }));
-    expect(popupHost()?.style.display).toBe('block');
+    expect(popupShown()).toBe(true);
     expect(popupHost()?.style.height).toBe('200px');
     popup.stop();
   });
@@ -391,7 +394,7 @@ describe('createSelectionPopup', () => {
     expect(roots.at(-1)?.querySelectorAll('iframe')).toHaveLength(1);
     expect(frame()?.getAttribute('src')).toMatch(/#b$/);
     await say(first, { type: POPUP_MESSAGE, height: 300 });
-    expect(popupHost()?.style.display).toBe('none');
+    expect(popupShown()).toBe(false);
     popup.stop();
   });
 });
