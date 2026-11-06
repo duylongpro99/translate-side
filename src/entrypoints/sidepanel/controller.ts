@@ -17,6 +17,7 @@ import {
   type EventMessage,
   type ExtractResult,
   type PortLike,
+  type SelectedBlock,
   type Viewport,
 } from '@/shared/protocol';
 
@@ -116,6 +117,8 @@ export interface SessionHooks {
   viewport?(tabId: number, docId: string, viewport: Viewport): void;
   /** The pointer moved onto a block of the page, or off every block (plan M5-E1, hover link). */
   hover?(tabId: number, docId: string, id: string | undefined): void;
+  /** The reader's selection on the page reaches into these blocks and sentences, or none (selection link). */
+  selection?(tabId: number, docId: string, blocks: SelectedBlock[]): void;
   /**
    * A new gesture (Alt+T, the toolbar icon) on a page whose document is live and shown (M3 dogfood
    * B5): the page is not read again, but a running job may re-cut around the screen now.
@@ -296,6 +299,7 @@ export class PanelController {
       if (s.generation !== generation || s.docId === undefined) return;
       if (event.name === 'viewport') this.opts.hooks?.viewport?.(tabId, s.docId, event.body);
       else if (event.name === 'hover') this.opts.hooks?.hover?.(tabId, s.docId, (event.body as { id?: string }).id);
+      else if (event.name === 'selection') this.opts.hooks?.selection?.(tabId, s.docId, (event.body as { blocks?: SelectedBlock[] }).blocks ?? []);
       else if (event.name === 'changed') this.changed(tabId, s, event.body);
     };
     const client = createClient<ContentApi>(port, { onEvent, ...(this.opts.requestTimeoutMs ? { timeoutMs: this.opts.requestTimeoutMs } : {}) });

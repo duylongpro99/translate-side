@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createHighlighter, HIGHLIGHT_NAME, indexTargets, placeOf, scrollToSegment, segmentAt, watchHover } from './link.ts';
+import { createHighlighter, HIGHLIGHT_NAME, indexTargets, placeOf, scrollToSegment, segmentAt, selectedBlocks, watchHover, watchSelectionLink } from './link.ts';
 import type { ViewportTarget } from './viewport.ts';
 
 const rect = (top: number, height: number) => ({ top, bottom: top + height, left: 0, right: 300, width: 300, height, x: 0, y: top, toJSON: () => ({}) }) as DOMRect;
@@ -197,5 +197,117 @@ describe('scrollToSegment', () => {
     // The pane starts 60 px down the window: the block's top goes to the pane's edge, not the window's.
     expect(paneBy).toHaveBeenCalledWith({ top: 240, behavior: 'instant' });
     expect(scrollBy).not.toHaveBeenCalled();
+  });
+});
+
+describe('selection link', () => {
+  const el = (id: string) => document.getElementById(id) as Element;
+  const select = (from: Node, fromOffset: number, to: Node, toOffset: number) => {
+    const r = document.createRange();
+    r.setStart(from, fromOffset);
+    r.setEnd(to, toOffset);
+    const sel = window.getSelection() as Selection;
+    sel.removeAllRanges();
+    sel.addRange(r);
+  };
+  afterEach(() => window.getSelection()?.removeAllRanges());
+
+  it('names the blocks a selection reaches into and the sentences it touches in each', () => {
+    document.body.innerHTML = '<p id="a">The cat sat. It was <em>very</em> tired.</p><p id="b">Then it slept. The end.</p><p id="c">Not this.</p>';
+    const index = indexTargets(new Map<string, ViewportTarget>([['a', el('a')], ['b', el('b')], ['c', el('c')]]), ['a', 'b', 'c']);
+    // From "It" in a to "Then" in b.
+    select(el('a').firstChild as Text, 13, el('b').firstChild as Text, 4);
+    expect(selectedBlocks(window, index)).toEqual([
+      { id: 'a', first: 1, last: 1, count: 2, from: 0.419, to: 1 },
+      { id: 'b', first: 0, last: 0, count: 2, from: 0, to: 0.609 },
+    ]);
+  });
+
+  it('counts the deepest of nested blocks, skips a shared element, and works on text ranges', () => {
+    document.body.innerHTML = '<ul id="u"><li id="l">One. Two.</li></ul><div id="d">First. Second.</div><section id="s">Shared.</section>';
+    const text = el('d').firstChild as Text;
+    const second = document.createRange();
+    second.setStart(text, 7);
+    second.setEnd(text, 14);
+    const index = indexTargets(
+      new Map<string, ViewportTarget>([
+        ['ul', el('u')],
+        ['li', el('l')],
+        ['second', second],
+        ['s1', el('s')],
+        ['s2', el('s')],
+      ]),
+      ['ul', 'li', 'second', 's1', 's2'],
+    );
+    select(el('l').firstChild as Text, 5, el('l').firstChild as Text, 8);
+    expect(selectedBlocks(window, index)).toEqual([{ id: 'li', first: 1, last: 1, count: 2, from: 0.556, to: 1 }]);
+    select(text, 8, text, 10);
+    expect(selectedBlocks(window, index)).toEqual([{ id: 'second', first: 0, last: 0, count: 1, from: 0, to: 1 }]);
+    select(el('s').firstChild as Text, 0, el('s').firstChild as Text, 3);
+    expect(selectedBlocks(window, index)).toEqual([]);
+  });
+
+  it("counts an outer block's own text only, without the block nested in it", () => {
+    document.body.innerHTML = '<ul><li id="o">Outer one. Outer two.<ul><li id="n">Inner one. Inner two.</li></ul>Outer three.</li></ul>';
+    const index = indexTargets(new Map<string, ViewportTarget>([['o', el('o')], ['n', el('n')]]), ['o', 'n']);
+    const tail = el('o').lastChild as Text;
+    // "three" in the outer block's text after the nested list: its third sentence of three.
+    select(tail, 6, tail, 11);
+    expect(selectedBlocks(window, index)).toEqual([{ id: 'o', first: 2, last: 2, count: 3, from: 0.647, to: 1 }]);
+    // From the outer block's second sentence into the nested one: both, each in its own text.
+    select(el('o').firstChild as Text, 12, el('n').firstChild as Text, 3);
+    expect(selectedBlocks(window, index)).toEqual([
+      { id: 'o', first: 1, last: 1, count: 3, from: 0.324, to: 0.618 },
+      { id: 'n', first: 0, last: 0, count: 2, from: 0, to: 0.476 },
+    ]);
+  });
+
+  it('takes no line break of the HTML source for the end of a sentence', () => {
+    document.body.innerHTML = '<p id="a">This is a long\n      sentence that wraps. And another one.</p>';
+    const index = indexTargets(new Map<string, ViewportTarget>([['a', el('a')]]), ['a']);
+    const text = el('a').firstChild as Text;
+    select(text, text.data.indexOf('another'), text, text.data.indexOf('another') + 7);
+    expect(selectedBlocks(window, index)).toMatchObject([{ id: 'a', first: 1, last: 1, count: 2 }]);
+  });
+
+  it('ignores a selection in an editable region, and one of only spaces', () => {
+    document.body.innerHTML = '<p id="a">Hello there. More.</p><div id="e" contenteditable="true">Edit me.</div>';
+    const index = indexTargets(new Map<string, ViewportTarget>([['a', el('a')], ['e', el('e')]]), ['a', 'e']);
+    select(el('e').firstChild as Text, 0, el('e').firstChild as Text, 4);
+    expect(selectedBlocks(window, index)).toEqual([]);
+    select(el('a').firstChild as Text, 12, el('a').firstChild as Text, 13);
+    expect(selectedBlocks(window, index)).toEqual([]);
+  });
+
+  it('reports a settled selection once, and its end at once', () => {
+    vi.useFakeTimers();
+    try {
+      document.body.innerHTML = '<p id="a">One. Two.</p>';
+      const index = indexTargets(new Map<string, ViewportTarget>([['a', el('a')]]), ['a']);
+      const seen: unknown[] = [];
+      const watch = watchSelectionLink(window, index, (b) => seen.push(b), 50);
+      // The first report goes out even when empty (a re-read may follow a selection that is gone).
+      expect(seen).toEqual([[]]);
+      seen.length = 0;
+      select(el('a').firstChild as Text, 0, el('a').firstChild as Text, 3);
+      document.dispatchEvent(new Event('selectionchange'));
+      document.dispatchEvent(new Event('selectionchange'));
+      expect(seen).toEqual([]);
+      vi.advanceTimersByTime(50);
+      expect(seen).toEqual([[{ id: 'a', first: 0, last: 0, count: 2, from: 0, to: 0.444 }]]);
+      document.dispatchEvent(new Event('selectionchange'));
+      vi.advanceTimersByTime(50);
+      expect(seen).toHaveLength(1);
+      window.getSelection()?.removeAllRanges();
+      document.dispatchEvent(new Event('selectionchange'));
+      expect(seen[1]).toEqual([]);
+      watch.stop();
+      select(el('a').firstChild as Text, 0, el('a').firstChild as Text, 3);
+      document.dispatchEvent(new Event('selectionchange'));
+      vi.advanceTimersByTime(50);
+      expect(seen).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

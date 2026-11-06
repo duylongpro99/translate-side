@@ -2,12 +2,17 @@
 // sync"), in the content script over the live elements extractPage found for each segment:
 // - hover: which segment's block the pointer is over (`watchHover`), and drawing the highlight the
 //   panel asks for (`createHighlighter`);
-// - scroll: putting a segment's block at the top of the window (`scrollToSegment`).
+// - scroll: putting a segment's block at the top of the window (`scrollToSegment`);
+// - selection: which sentences of which blocks the reader selected (`watchSelectionLink`), so the
+//   panel highlights the matching sentences of their translations.
 // The page's elements are never changed: the highlight is a CSS Custom Highlight (a range painted
 // by a ::highlight() rule), so no class or attribute is added and layout does not move. The one
 // thing added is a <style> in <head> holding that rule, put back if the page drops it and removed
 // when the link ends.
+import { eligibleSelection } from './selection-button.ts';
 import type { ViewportTarget } from './viewport.ts';
+import type { SelectedBlock } from '@/shared/protocol';
+import { touchedSentences } from '@/shared/sentences';
 
 /** The highlight's name in `CSS.highlights`. */
 export const HIGHLIGHT_NAME = 'translate-side-link';
@@ -216,4 +221,129 @@ export function scrollToSegment(win: Window, target: ViewportTarget | undefined,
   if (scroller) scroller.scrollBy({ top: delta, behavior: 'instant' });
   else win.scrollBy({ top: delta, behavior: 'instant' });
   return true;
+}
+
+/** The language a node's text is marked as: the nearest `lang` around it, else the document's. */
+function langAround(doc: Document, node: Node): string | undefined {
+  const el = node.nodeType === 1 ? (node as Element) : node.parentElement;
+  return el?.closest('[lang]')?.getAttribute('lang')?.trim() || doc.documentElement.lang || undefined;
+}
+
+/**
+ * The text of a block that is its own (without the blocks nested in it, `skip`), and where the part
+ * `cut` of it starts and ends in that text. Empty when the cut holds none of the block's own text.
+ */
+function ownText(block: Range, cut: Range, skip: readonly Element[]): { text: string; start: number; end: number } {
+  const common = block.commonAncestorContainer;
+  const root = common.nodeType === 3 ? (common.parentNode ?? common) : common;
+  const walker = (root.ownerDocument ?? (root as Document)).createTreeWalker(root, 4 /* NodeFilter.SHOW_TEXT */);
+  let text = '';
+  let start = -1;
+  let end = -1;
+  // A nested block cut out of the text leaves a space, so the sentences on each side of it stay apart.
+  let gap = false;
+  for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
+    if (!block.intersectsNode(node)) continue;
+    if (skip.some((el) => el.contains(node))) {
+      gap = text.length > 0;
+      continue;
+    }
+    if (gap) text += ' ';
+    gap = false;
+    // The node's part inside the block, then inside the cut. A cut's end that lies in another node
+    // or on an element boundary leaves this node wholly before or after it.
+    const a = node === block.startContainer ? block.startOffset : 0;
+    const b = node === block.endContainer ? block.endOffset : node.data.length;
+    let x = node === cut.startContainer ? Math.max(a, cut.startOffset) : cut.comparePoint(node, a) < 0 ? b : a;
+    const y = node === cut.endContainer ? Math.min(b, cut.endOffset) : cut.comparePoint(node, b) > 0 ? a : b;
+    if (x > y) x = y;
+    if (x < y) {
+      if (start < 0) start = text.length + (x - a);
+      end = text.length + (y - a);
+    }
+    text += node.data.slice(a, b);
+  }
+  return start < 0 ? { text, start: 0, end: 0 } : { text, start, end };
+}
+
+/**
+ * The blocks the window's selection reaches into, in page order, each with the sentences of its
+ * own text that the selection touches. Nothing for a selection the selection button would not
+ * offer (in a form field, an editable region, a frame, without a letter). An element that several
+ * segments share says nothing about which of them is selected; a block's own text leaves out the
+ * blocks nested in it, which count for themselves, so offsets are always within one segment's text.
+ */
+export function selectedBlocks(win: Window, index: LinkIndex): SelectedBlock[] {
+  if (eligibleSelection(win) === undefined) return [];
+  const sel = win.getSelection();
+  if (!sel || sel.rangeCount === 0) return [];
+  const doc = win.document;
+  const blocks: SelectedBlock[] = [];
+  for (let r = 0; r < sel.rangeCount; r++) {
+    const s = sel.getRangeAt(r);
+    for (const [id, target] of index.targets) {
+      const el = (target as Node).nodeType === 1 ? (target as Element) : undefined;
+      if ((el && index.shared.has(el)) || blocks.some((b) => b.id === id)) continue;
+      const block = rangeOf(doc, target);
+      try {
+        // The selection ends before the block starts, or starts after it ends: not this one.
+        if (block.comparePoint(s.endContainer, s.endOffset) < 0 || block.comparePoint(s.startContainer, s.startOffset) > 0) continue;
+      } catch {
+        // In another tree (a shadow root, a detached node): not this one.
+        continue;
+      }
+      // The part of the block selected: the selection's ends where they fall inside it, else the block's.
+      const cut = doc.createRange();
+      if (block.comparePoint(s.startContainer, s.startOffset) === 0) cut.setStart(s.startContainer, s.startOffset);
+      else cut.setStart(block.startContainer, block.startOffset);
+      if (block.comparePoint(s.endContainer, s.endOffset) === 0) cut.setEnd(s.endContainer, s.endOffset);
+      else cut.setEnd(block.endContainer, block.endOffset);
+      if (cut.collapsed) continue;
+      const nested = el ? index.elements.filter((e) => e.el !== el && !index.shared.has(e.el) && el.contains(e.el)).map((e) => e.el) : [];
+      const own = ownText(block, cut, nested);
+      if (own.end <= own.start) continue;
+      const touched = touchedSentences(own.text, own.start, own.end, langAround(doc, block.commonAncestorContainer));
+      if (touched) blocks.push({ id, ...touched });
+    }
+  }
+  return blocks;
+}
+
+export interface SelectionLinkWatch {
+  stop(): void;
+}
+
+/**
+ * Reports the selected blocks (`selectedBlocks`) whenever they change: shortly after the
+ * selection stops moving, and at once when it goes away (an empty list).
+ */
+export function watchSelectionLink(win: Window, index: LinkIndex, onSelect: (blocks: SelectedBlock[]) => void, settleMs = 80): SelectionLinkWatch {
+  const doc = win.document;
+  // Nothing reported yet: the first report goes out even when empty, so a panel still showing the
+  // highlight of a selection made before a re-read (block ids are kept) hears that it is gone.
+  let last: string | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const report = () => {
+    timer = undefined;
+    const blocks = selectedBlocks(win, index);
+    const key = JSON.stringify(blocks);
+    if (key === last) return;
+    last = key;
+    onSelect(blocks);
+  };
+  const onChange = () => {
+    clearTimeout(timer);
+    const sel = win.getSelection();
+    if (!sel || sel.isCollapsed) report();
+    else timer = setTimeout(report, settleMs);
+  };
+  doc.addEventListener('selectionchange', onChange);
+  // A selection made before this read (or kept across a re-read) counts at once.
+  report();
+  return {
+    stop() {
+      clearTimeout(timer);
+      doc.removeEventListener('selectionchange', onChange);
+    },
+  };
 }

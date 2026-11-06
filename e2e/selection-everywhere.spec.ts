@@ -3,7 +3,7 @@
 // not let a navigation carry the panel to another origin. The extension copy here holds both broad
 // patterns (fixtures.ts `broadAccess`), standing in for the user allowing access to all sites.
 import type { Page } from '@playwright/test';
-import { expect, test, type Extension } from './fixtures.ts';
+import { expect, selectionPopup, test, type Extension } from './fixtures.ts';
 
 test.use({ broadAccess: true });
 
@@ -22,7 +22,7 @@ const selectParagraph = async (page: Page) => {
   return (await page.evaluate(() => getSelection()?.toString() ?? '')).trim();
 };
 
-test('off by default; on, a page with no panel shows the button, and its click opens the panel on the selection, sending nothing else; off, it goes', async ({ extension, mock }) => {
+test('off by default; on, a page with no panel shows the button, and its click translates the selection in a popup, sending nothing else; off, it goes', async ({ extension, mock }) => {
   mock.answerWith((text) => `vi:${text}`);
   await extension.seed();
   // Off: nothing is registered, and a page with no panel has no button.
@@ -59,13 +59,10 @@ test('off by default; on, a page with no panel shows the button, and its click o
   await expect.poll(() => buttonBox(page)).not.toBeNull();
   const box = (await buttonBox(page)) as { x: number; y: number };
   await page.mouse.click(box.x, box.y);
-  // The worker opened the panel and left the selection for it, as the context menu does.
-  const tabId = await extension.worker.evaluate(async (url) => (await chrome.tabs.query({ url }))[0]?.id, page.url());
-  await expect.poll(() => extension.worker.evaluate(async (id) => ((await chrome.storage.session.get(`snippet:${id}`))[`snippet:${id}`] as { text?: string } | undefined)?.text, tabId)).toBe(text);
-  const panel = await extension.panel();
-  await extension.worker.evaluate(async (id) => void (await chrome.tabs.update(id as number, { active: true })), tabId);
-  await expect(panel.getByTestId('selection')).toContainText(`vi:${text.slice(0, 20)}`);
-  // Only the selection went out, not the page (each panel open on the tab translates it once).
+  // With no panel at all, the popup next to the selection translates it.
+  const popup = await selectionPopup(page);
+  await expect(popup.getByTestId('selection')).toContainText(`vi:${text.slice(0, 20)}`);
+  // Only the selection went out, not the page.
   await page.waitForTimeout(1000);
   const sent = mock.calls.filter((c) => c.kind === 'translate').flatMap((c) => c.segments);
   expect(sent.length).toBeGreaterThan(0);

@@ -68,7 +68,14 @@ function Text({ seg, state }: { seg: Segment; state: SegState | undefined }) {
   const { target, source } = useContext(Langs);
   const src = state?.text ?? seg.inlineMarkup;
   const nodes = <Markup nodes={parseMarkup(src, markerKinds(seg))} />;
-  if (state?.text !== undefined && target) return <span lang={target}>{nodes}</span>;
+  if (state?.text !== undefined && target) {
+    // `seg__text`: the translation's own text, where the selection link highlights sentences.
+    return (
+      <span class="seg__text" lang={target}>
+        {nodes}
+      </span>
+    );
+  }
   // The original while a block waits: in its own language, so it is spoken and drawn as that.
   if (seg.translate && source) return <span lang={source}>{nodes}</span>;
   return nodes;

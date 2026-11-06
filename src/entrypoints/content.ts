@@ -6,7 +6,7 @@
 // the ids of unchanged blocks kept (stable.ts).
 import { browser } from 'wxt/browser';
 import { extractPage } from '@/extract';
-import { createHighlighter, indexTargets, placeOf, scrollToSegment, watchHover, type HoverWatch, type LinkIndex } from '@/extract/link';
+import { createHighlighter, indexTargets, placeOf, scrollToSegment, watchHover, watchSelectionLink, type HoverWatch, type LinkIndex, type SelectionLinkWatch } from '@/extract/link';
 import { acquireSelectionButton } from '@/extract/selection-button';
 import { watchViewport, type ViewportWatch } from '@/extract/viewport';
 import { watchChanges, type ChangeWatch } from '@/extract/watch';
@@ -69,6 +69,11 @@ export default defineContentScript({
       // The link to the panel (plan M5-E1): the pointer over a block, the highlight the panel asks for,
       // and the scrolls it asks for, whose echoes are tagged so the panel does not follow them back.
       let hover: HoverWatch | undefined;
+      // And the reader's selection: the blocks and sentences it reaches into (selection link).
+      let selected: SelectionLinkWatch | undefined;
+      // What the panel was last told, across re-reads: a selection cleared while no watch ran is
+      // still told (block ids survive a re-read), and an unchanged one is not told again.
+      let toldSelection = '[]';
       let found: LinkIndex = indexTargets(new Map(), []);
       const highlighter = createHighlighter(window);
       const scrolled = createGuard();
@@ -79,17 +84,25 @@ export default defineContentScript({
         watch?.stop();
         changes?.stop();
         hover?.stop();
+        selected?.stop();
         highlighter.dispose();
         leaveSelection();
       });
       const look = (targets: Map<string, Element | Range>, segments: readonly Segment[]) => {
         watch?.stop();
         hover?.stop();
+        selected?.stop();
         const order = segments.map((s) => s.id);
         found = indexTargets(targets, order);
         highlighter.clear();
         watch = watchViewport(window, targets, order, (v) => emit(port, 'viewport', scrolled.active() ? { ...v, echo: true } : v));
         hover = watchHover(window, found, (id) => emit(port, 'hover', id === undefined ? {} : { id }));
+        selected = watchSelectionLink(window, found, (blocks) => {
+          const key = JSON.stringify(blocks);
+          if (key === toldSelection) return;
+          toldSelection = key;
+          emit(port, 'selection', { blocks });
+        });
         return watch.now();
       };
       listen(port, {
@@ -112,6 +125,8 @@ export default defineContentScript({
           watch = undefined;
           hover?.stop();
           hover = undefined;
+          selected?.stop();
+          selected = undefined;
           highlighter.clear();
           emit(port, 'changed', result);
           return;
@@ -131,6 +146,8 @@ export default defineContentScript({
           watch = undefined;
           hover?.stop();
           hover = undefined;
+          selected?.stop();
+          selected = undefined;
           changes ??= watchChanges(window, reread);
           const targets = new Map<string, Element | Range>();
           const { result } = read(targets);

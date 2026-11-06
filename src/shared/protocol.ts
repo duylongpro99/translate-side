@@ -7,6 +7,7 @@
 // the content script pushes `hover` events, and the panel sends one-way commands (`highlight`,
 // `scroll`) that need no answer.
 import type { Segment } from '@/engine/types';
+import type { TouchedSentences } from './sentences.ts';
 
 /** Bump on any incompatible change to the messages below. */
 export const PROTOCOL_VERSION = 3;
@@ -77,6 +78,9 @@ export interface Viewport {
   echo?: true;
 }
 
+/** One block the reader's selection reaches into, and the sentences of its original it touches. */
+export type SelectedBlock = { id: string } & TouchedSentences;
+
 /** Events the content script pushes after `extract`, without a request. */
 export type ContentEvents = {
   viewport: Viewport;
@@ -85,6 +89,12 @@ export type ContentEvents = {
    * the panel highlights that block (plan M5-E1, hover link).
    */
   hover: { id?: string };
+  /**
+   * The blocks the reader's selection on the page reaches into, and which of their sentences
+   * (DESIGN.md §3 "Selection link"): the panel highlights the matching sentences of their
+   * translations. Empty: no selection (or one the link ignores, as in a form field).
+   */
+  selection: { blocks: SelectedBlock[] };
   /**
    * The document changed after it was read (plan M5-E2: an SPA route change, content rendered
    * late): the content script read it again by itself, after the DOM settled. Sent only when the

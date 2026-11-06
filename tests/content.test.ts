@@ -133,6 +133,35 @@ describe('content script', () => {
     await vi.waitFor(() => expect(events).toEqual([{ kind: 'evt', name: 'viewport', body: { visible: ['b'], anchor: { id: 'b', offset: 0.2 } } }]));
   });
 
+  it('pushes the selected sentences when the selection changes, once, and its end (selection link)', async () => {
+    h.state.page = true;
+    main();
+    const events: { name: string; body: unknown }[] = [];
+    const client = createClient<ContentApi>(connect(), { onEvent: (e) => events.push(e as never) });
+    await client.request('hello', { v: PROTOCOL_VERSION });
+    await client.request('extract', {});
+    const a = document.querySelector('p')?.firstChild as Text;
+    const select = () => {
+      const r = document.createRange();
+      r.setStart(a, 0);
+      r.setEnd(a, 3);
+      getSelection()?.removeAllRanges();
+      getSelection()?.addRange(r);
+      document.dispatchEvent(new Event('selectionchange'));
+    };
+    const selections = () => events.filter((e) => e.name === 'selection').map((e) => (e.body as { blocks: { id: string }[] }).blocks.map((b) => b.id));
+    // No selection yet: nothing to tell.
+    expect(selections()).toEqual([]);
+    select();
+    await vi.waitFor(() => expect(selections()).toEqual([['a']]));
+    select();
+    await new Promise((r) => setTimeout(r, 150));
+    expect(selections()).toEqual([['a']]);
+    getSelection()?.removeAllRanges();
+    document.dispatchEvent(new Event('selectionchange'));
+    await vi.waitFor(() => expect(selections()).toEqual([['a'], []]));
+  });
+
   it('reads the page again when it changes and pushes it, keeping the ids of unchanged blocks (plan M5-E2)', async () => {
     h.state.page = true;
     main();

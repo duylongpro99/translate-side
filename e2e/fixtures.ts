@@ -13,7 +13,7 @@ import { PRIVACY_NOTICE_VERSION } from '../src/entrypoints/sidepanel/privacy.ts'
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { test as base, chromium, expect, type ConsoleMessage, type Page, type Worker } from '@playwright/test';
+import { test as base, chromium, expect, type ConsoleMessage, type Frame, type Page, type Worker } from '@playwright/test';
 import { CHROMIUM_ARGS } from './playwright.config.ts';
 import { FIXTURE_ORIGIN, FIXTURE_PORT, MOCK_BASE_URL, MOCK_PORT, fixtureServer, listen, mockServer, type MockControl } from './servers.ts';
 
@@ -273,4 +273,23 @@ export async function jobSettled(panel: Page): Promise<string | null> {
   await expect(job).toHaveAttribute('data-status', /.+/);
   await expect(job).not.toHaveAttribute('data-status', 'running', { timeout: 90_000 });
   return job.getAttribute('data-status');
+}
+
+/**
+ * The selection button's popup once it shows on `page`: its host is visible, which it only becomes
+ * when the page in its frame has measured itself and answered. Returns that frame (the host's shadow
+ * root is closed, so it is found by its address).
+ */
+export async function selectionPopup(page: Page): Promise<Frame> {
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const host = document.querySelector<HTMLElement>('translate-side-popup');
+        return host?.style.display === 'block' && host.style.visibility === 'visible' && host.getBoundingClientRect().height > 0;
+      }),
+    )
+    .toBe(true);
+  const frame = page.frames().find((f) => new URL(f.url()).pathname === '/selection-popup.html');
+  if (!frame) throw new Error('no popup frame');
+  return frame;
 }

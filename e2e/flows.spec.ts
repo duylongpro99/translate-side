@@ -9,7 +9,7 @@ import { PRIVACY_NOTICE_VERSION } from '../src/entrypoints/sidepanel/privacy.ts'
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Locator, Page } from '@playwright/test';
-import { REVIEW_MODEL, blockStatuses, expect, jobSettled, test, type Extension } from './fixtures.ts';
+import { REVIEW_MODEL, blockStatuses, expect, jobSettled, selectionPopup, test, type Extension } from './fixtures.ts';
 import type { MockCall } from './servers.ts';
 import { fakeBuiltinAI } from './builtin-ai.ts';
 
@@ -670,7 +670,7 @@ test.describe('Selection button', () => {
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     });
 
-  test('with the panel open, selecting page text shows the button, and its click translates the selection in the panel', async ({ extension, mock }) => {
+  test('with the panel open, selecting page text shows the button, and its click translates the selection in a popup next to it', async ({ extension, mock }) => {
     mock.answerWith((text) => `vi:${text}`);
     await extension.seed();
     const page = await extension.open('store/article.html');
@@ -691,7 +691,8 @@ test.describe('Selection button', () => {
     // The button goes, and the selection it was about stays.
     await expect.poll(() => buttonBox(page)).toBeNull();
     expect((await page.evaluate(() => getSelection()?.toString() ?? '')).trim()).toBe(sentence);
-    await expect(panel.getByTestId('selection')).toContainText(`vi:${sentence.slice(0, 30)}`);
+    const popup = await selectionPopup(page);
+    await expect(popup.getByTestId('selection')).toContainText(`vi:${sentence.slice(0, 30)}`);
   });
 
   test('no button for a selection in a text field, and none once the panel is gone', async ({ extension }) => {
