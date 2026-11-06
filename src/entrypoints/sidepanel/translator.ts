@@ -34,6 +34,7 @@ import { onListChanged } from '@/shared/sync-quota';
 import { routedSummary, translateClient, type Routed, type RouteTarget } from './route.ts';
 import { ViewportStore } from './viewport.ts';
 import { HoverStore } from './hover.ts';
+import { SelectionStore } from './selection-link.ts';
 import { PrivacyGate } from './privacy.ts';
 import { PrefsStore } from './prefs.ts';
 
@@ -54,6 +55,8 @@ export interface Translator {
   viewports: ViewportStore;
   /** Which block the pointer is over on each tab's page (hover link, plan M5-E1). */
   hovers: HoverStore;
+  /** Which sentences of which blocks the reader has selected on each tab's page (selection link). */
+  selections: SelectionStore;
   /** The first-run privacy notice (plan M3-E10): nothing is sent before it is acknowledged. */
   privacy: PrivacyGate;
   /** The preferences the header shows and switches (plan M3-E6). */
@@ -149,6 +152,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
   const snippetStore = new SnippetStore();
   const viewports = new ViewportStore();
   const hovers = new HoverStore();
+  const selections = new SelectionStore();
   const detector = 'detector' in options ? options.detector : chromeLanguageDetector();
   const mixed = options.mixedLanguage ?? MIXED_LANGUAGE_DETECTION;
   const prefs = new PrefsStore(api);
@@ -464,6 +468,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     },
     gone: (tabId) => {
       hovers.set(tabId, '', undefined);
+      selections.set(tabId, '', []);
       forgetPage(tabId);
       jobs.cancel(tabId);
     },
@@ -476,6 +481,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       snippetStore.clear(tabId);
       viewports.drop(tabId);
       hovers.drop(tabId);
+      selections.drop(tabId);
       used.delete(tabId);
       jobs.drop(tabId);
     },
@@ -489,6 +495,7 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
       }
     },
     hover: (tabId, docId, id) => hovers.set(tabId, docId, id),
+    selection: (tabId, docId, blocks) => selections.set(tabId, docId, blocks),
     viewport: (tabId, docId, viewport) => {
       jobs.setViewport(tabId, docId, viewport.visible, viewport.fixed);
       viewports.set(tabId, docId, viewport);
@@ -725,5 +732,5 @@ export function createTranslator(api: Browser, deps: Partial<JobDeps> = {}, opti
     };
   };
 
-  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet, take: takeSnippet }, viewports, hovers, privacy, prefs, offers, translatePage, allowSite, hooks, actions: pageActions, switcher, routed: (target) => routedSummary(api, target, scope), watch };
+  return { jobs, snippets: { jobs: snippetJobs, store: snippetStore, actions: snippetActions, close: closeSnippet, take: takeSnippet }, viewports, hovers, selections, privacy, prefs, offers, translatePage, allowSite, hooks, actions: pageActions, switcher, routed: (target) => routedSummary(api, target, scope), watch };
 }

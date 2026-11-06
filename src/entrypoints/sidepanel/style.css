@@ -528,6 +528,12 @@
   border-radius: var(--radius-s);
 }
 
+/* The sentences matching the reader's selection on the page (selection link): a CSS Custom Highlight, no DOM change. */
+::highlight(translate-side-sentence) {
+  background-color: var(--sentence);
+  color: inherit;
+}
+
 /* Per-block actions: a popover toolbar just above the block's top end corner on hover or keyboard focus.
    Shown, it is anchored to its block and fixed, so it takes no space in the text and no line moves (it
    covers the end of the previous block's last line instead). It touches the block, so the pointer can

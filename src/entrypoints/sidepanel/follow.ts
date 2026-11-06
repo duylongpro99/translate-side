@@ -202,6 +202,28 @@ export function holdAnchor(doc: Document, guard: Guard = SHARED_GUARD): () => vo
   };
 }
 
+/**
+ * Scrolls the panel just enough to show the block under its sticky chrome, when any of it is out of
+ * view (selection link). The page does not follow: the scroll is made under the follow guard, and
+ * the follow is told where the panel now is (as `holdAnchor` does), so it has nothing to pass on
+ * once the guard has passed either.
+ */
+export function revealBlock(doc: Document, block: HTMLElement, guard: Guard = SHARED_GUARD): void {
+  const win = doc.defaultView;
+  if (!win) return;
+  const rect = block.getBoundingClientRect();
+  const covered = coveredTop(doc);
+  const room = win.innerHeight - covered;
+  let delta = 0;
+  if (rect.top < covered) delta = rect.top - covered;
+  else if (rect.bottom > win.innerHeight) delta = Math.min(rect.bottom - win.innerHeight, rect.top - covered);
+  if (room <= 0 || Math.abs(delta) < 1) return;
+  guard.mark();
+  win.scrollBy({ top: Math.round(delta), behavior: 'instant' });
+  const now = panelAnchor(doc);
+  for (const fn of RESTORED) fn(now);
+}
+
 /** An attribute, not a class: a re-render that changes the block's class leaves it alone. */
 const LINKED = 'data-linked';
 

@@ -5,7 +5,7 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGuard } from '@/shared/guard';
-import { panelAnchor, useHoverLink, useScrollFollow, type SendToPage } from './follow.ts';
+import { panelAnchor, revealBlock, useHoverLink, useScrollFollow, type SendToPage } from './follow.ts';
 import { HoverStore } from './hover.ts';
 import { ViewportStore } from './viewport.ts';
 
@@ -151,6 +151,36 @@ describe('scroll sync both ways', () => {
     await act(() => new Promise((r) => setTimeout(r, 120)));
     expect(sent).toEqual([['scroll', { id: 'c', offset: 0.5 }]]);
     unmount();
+  });
+
+  it('revealing a block (selection link) scrolls the panel and never the page, also once the window has passed', async () => {
+    let t = 0;
+    const guard = createGuard(() => t, 60);
+    const sent: unknown[] = [];
+    const unmount = mount(new ViewportStore(), ((_t: number, name: string, body: unknown) => sent.push([name, body])) as SendToPage, guard);
+    await frame();
+    const height = Object.getOwnPropertyDescriptor(window, 'innerHeight');
+    Object.defineProperty(window, 'innerHeight', { value: 200, configurable: true });
+    window.scrollBy = ((o: { top: number }) => {
+      scrollY += o.top;
+      layout();
+    }) as unknown as typeof window.scrollBy;
+    try {
+      // d runs 340–440, below the 200 px window: the panel scrolls it up into view.
+      revealBlock(document, document.querySelector('[data-id="d"]') as HTMLElement, guard);
+      expect(scrollY).toBe(240);
+      window.dispatchEvent(new Event('scroll'));
+      await frame();
+      t = 100;
+      await act(() => new Promise((r) => setTimeout(r, 120)));
+      expect(sent).toEqual([]);
+      // In view already: no scroll.
+      revealBlock(document, document.querySelector('[data-id="d"]') as HTMLElement, guard);
+      expect(scrollY).toBe(240);
+    } finally {
+      if (height) Object.defineProperty(window, 'innerHeight', height);
+      unmount();
+    }
   });
 
   it('a long run of alternating scrolls settles: no command is sent for a scroll the other side caused', async () => {

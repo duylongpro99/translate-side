@@ -37,6 +37,7 @@ import { StateMessage } from './StateMessage.tsx';
 import type { SnippetStore } from './snippet.ts';
 import { usePrivacy, useJob, useSnippet } from './hooks.ts';
 import type { HoverStore } from './hover.ts';
+import { useSelectionLink, type SelectionStore } from './selection-link.ts';
 import type { ViewportStore } from './viewport.ts';
 
 /** What the panel needs from the translation side (translator.ts). Absent: the original only (M0). */
@@ -47,6 +48,8 @@ export interface TranslatorProps {
   viewports?: ViewportStore;
   /** Which block the pointer is over on the page, and the way to tell the page (plan M5-E1: hover link, scroll sync both ways). */
   hovers?: HoverStore;
+  /** Which sentences of which blocks the reader has selected on the page (selection link). */
+  selections?: SelectionStore;
   send?: SendToPage;
   /** Selection mode (plan M3-E4): the selection of each tab, and the job that translates it. */
   snippets?: { jobs: Jobs; store: SnippetStore; actions(tabId: number): JobActions; close(tabId: number): void };
@@ -294,6 +297,7 @@ export function App({ controller, translator }: { controller: PanelController; t
   // The first follow exchange waits for the reading settings, so the panel is in its final layout before it lines up with the page.
   useScrollFollow(translator?.viewports, tabId, pageDoc, follow && !dev && !selecting && readingView.ready, translator?.send);
   useHoverLink(translator?.hovers, tabId, pageDoc, translator?.send, !dev && !selecting);
+  useSelectionLink(translator?.selections, tabId, pageDoc, !dev && !selecting, follow);
   // Read aloud (Settings › Voice): the blocks on screen, stopped when the page, the tab or the view changes.
   const shownSegments = view.kind === 'ready' ? (job?.segments ?? view.result.segments) : [];
   // A cloud voice reads only where the page's text may leave the device: not a never-translate site,

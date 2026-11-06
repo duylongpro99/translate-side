@@ -21,6 +21,8 @@
   --hidden: #7f6300;
   --quote: #45423d;
   --shadow-overlay: 0 4px 16px rgb(0 0 0 / 0.12);
+  /* The selection link's sentence highlight: the accent, faint; it follows the accent of each theme. */
+  --sentence: color-mix(in srgb, var(--accent) 24%, transparent);
 
   /* Spacing */
   --space-1: 4px;

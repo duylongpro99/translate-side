@@ -74,6 +74,15 @@ terms consistent, and rewrite idioms. That's the core of this design (§5).
 - **Scroll sync** (toggle): scrolling the page scrolls the panel, and the reverse.
 - **Hover link**: hovering a translated paragraph highlights the original in the page, and the
   reverse.
+- **Selection link**: selecting text on the page highlights, in the panel, the sentences of the
+  translation that match the selected ones, for as long as the selection lasts. The content script
+  reports which sentences of which blocks the selection touches; the panel cuts each translation
+  into sentences with `Intl.Segmenter` and pairs them by number when both sides have as many, else
+  by their place in the block (which can be off by one sentence). All on the device, nothing is
+  sent, with every engine. A CSS Custom Highlight paints it, so no block re-renders; a block
+  translated while the selection lasts lights up when its text arrives. With scroll follow on, the
+  panel brings the first matching block into view without moving the page. Page → panel only
+  (`src/extract/link.ts`, `src/shared/sentences.ts`, `src/entrypoints/sidepanel/selection-link.ts`).
 - **Viewport first**: blocks visible on screen are translated first, then the rest of the page,
   reading on from the screen and then the part above it (decision M3-D9).
 - **Selection mode**: select text, then right-click **Translate in side panel**, or click the
