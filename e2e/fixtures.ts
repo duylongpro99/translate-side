@@ -3,9 +3,8 @@
 // - The build in .output/chrome-mv3 is copied to .output/e2e-ext with `http://127.0.0.1/*` added to the
 //   copy's host_permissions: a script cannot answer Chrome's permission prompt. The build stays as built.
 // - Storage is seeded through the service worker: the mock connection, the privacy acknowledgement.
-// - The panel is sidepanel.html in a tab of the page's window. The panel follows the active tab of its
-//   window, so the page tab is made active through the worker and the panel stays in the background
-//   (never bring it to the front: it would bind to itself and pause the job).
+// - The panel is sidepanel.html?tab=<id> in a tab of the page's window, bound to the page's tab as the
+//   worker opens it (decision S12). A bound panel serves that tab only, whatever tab is in front.
 // - `translate(page)` does what the worker's action handler does on Alt+T or the toolbar icon
 //   (src/shared/inject.ts): marks the tab's access, injects the content script, marks it ready.
 // - Console errors from the worker, the panel and the page (content scripts included) fail the test.
@@ -98,8 +97,8 @@ export interface Extension {
   seed(opts?: SeedOptions): Promise<void>;
   /** Opens a fixture (a path under fixtures/) in a new tab; `origin` is the fixture server's other host name (`http://localhost:4173`) when a flow needs a second origin. */
   open(fixture: string, origin?: string): Promise<Page>;
-  /** Opens the panel in a tab of the same window; it stays in the background. */
-  panel(): Promise<Page>;
+  /** Opens the panel for `page`'s tab (sidepanel.html?tab=<id>) in a tab of the same window. */
+  panel(page: Page): Promise<Page>;
   /** Opens the settings page in a tab of the same window, 1280×800. */
   options(): Promise<Page>;
   /** Makes `page` the active tab and does what Alt+T does: inject the content script, mark access ready. */
@@ -200,6 +199,15 @@ export const test = base.extend<Fixtures & Options, { servers: MockControl; extP
   },
   extension: async ({ context }, use) => {
     const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+    /** `page`'s tab id, with the tab made active: two tabs at the same address cannot be mixed up. */
+    const tabOf = async (page: Page): Promise<number> => {
+      await page.bringToFront();
+      return worker.evaluate(async (url) => {
+        const [tab] = await chrome.tabs.query({ active: true, url });
+        if (tab?.id === undefined) throw new Error(`no active tab for ${url}`);
+        return tab.id;
+      }, page.url().replace(/#.*/, ''));
+    };
     const id = new URL(worker.url()).host;
     await use({
       id,
@@ -219,9 +227,10 @@ export const test = base.extend<Fixtures & Options, { servers: MockControl; extP
         await page.goto(`${origin}/${fixture}`);
         return page;
       },
-      async panel() {
+      async panel(page) {
+        const tabId = await tabOf(page);
         const panel = await context.newPage();
-        await panel.goto(`chrome-extension://${id}/sidepanel.html`);
+        await panel.goto(`chrome-extension://${id}/sidepanel.html?tab=${tabId}`);
         await expect(panel.locator('.state, [data-testid=job]').first()).toBeVisible();
         return panel;
       },
@@ -232,22 +241,21 @@ export const test = base.extend<Fixtures & Options, { servers: MockControl; extP
         return options;
       },
       async translate(page) {
-        await worker.evaluate(async (url) => {
-          const [tab] = await chrome.tabs.query({ url });
-          if (tab?.id === undefined) throw new Error(`no tab for ${url}`);
-          await chrome.tabs.update(tab.id, { active: true });
+        const tabId = await tabOf(page);
+        await worker.evaluate(async (tabId) => {
+          const tab = await chrome.tabs.get(tabId);
           // Unhandled rejections in the content script's world reach neither Playwright's pageerror nor
           // CDP: put them on its console first, as for the worker.
           await chrome.scripting.executeScript({
-            target: { tabId: tab.id, frameIds: [0] },
+            target: { tabId, frameIds: [0] },
             func: () => self.addEventListener('unhandledrejection', (e) => console.error(`content script unhandled rejection: ${String(e.reason)}`)),
           });
           // With the origin the gesture granted, as the worker records it (src/shared/inject.ts).
           const origin = tab.url ? new URL(tab.url).origin : undefined;
           await chrome.storage.session.set({ [`access:${tab.id}`]: { status: 'injecting', origin, at: Date.now() } });
-          await chrome.scripting.executeScript({ target: { tabId: tab.id, frameIds: [0] }, files: ['content-scripts/content.js'] });
+          await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, files: ['content-scripts/content.js'] });
           await chrome.storage.session.set({ [`access:${tab.id}`]: { status: 'ready', trigger: 'gesture', origin, at: Date.now() } });
-        }, page.url().replace(/#.*/, ''));
+        }, tabId);
       },
     });
   },

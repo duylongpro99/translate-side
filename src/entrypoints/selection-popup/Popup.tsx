@@ -3,6 +3,7 @@ import type { browser } from 'wxt/browser';
 import { i18n } from '#i18n';
 import { SELECTION_POPUP_PANEL_MESSAGE, type SelectionPopupPanelRequest } from '@/shared/protocol';
 import type { PopupRecord } from '@/shared/snippet';
+import { openTabPanel } from '@/shared/tab-panel';
 import { useJob, usePrivacy, useSnippet } from '../sidepanel/hooks.ts';
 import type { JobActions } from '../sidepanel/JobBar.tsx';
 import { SelectionView } from '../sidepanel/SelectionView.tsx';
@@ -44,12 +45,12 @@ export function Popup({ api, translator, id, onClose }: { api: Browser; translat
   const privacy = usePrivacy(translator.privacy);
   const [panelFailed, setPanelFailed] = useState(false);
 
-  // The panel opens first, in the click (sidePanel.open needs the gesture); once it is open, the
-  // worker injects and hands the selection over, and the popup closes. A panel that did not open gets
-  // no selection, so a later panel never translates it unasked.
+  // The panel opens first, in the click (sidePanel.open needs the gesture), on the popup's tab only; once
+  // it is open, the worker injects and hands the selection over, and the popup closes. A panel that did
+  // not open gets no selection, so a later panel never translates it unasked.
   const openPanel = () => {
     if (!record) return;
-    api.sidePanel.open({ tabId: record.tabId }).then(
+    openTabPanel(api, record.tabId).then(
       () =>
         api.runtime
           .sendMessage({ type: SELECTION_POPUP_PANEL_MESSAGE, id } satisfies SelectionPopupPanelRequest)

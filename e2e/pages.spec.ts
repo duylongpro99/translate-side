@@ -32,7 +32,7 @@ for (const { fixture, mode } of PAGES) {
   test(`${fixture} (${mode})`, async ({ extension }) => {
     await extension.seed();
     const page = await extension.open(fixture);
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await extension.translate(page);
     const job = panel.locator('[data-testid=job]');
     expect(await jobSettled(panel)).toBe('done');

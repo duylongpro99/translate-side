@@ -27,7 +27,7 @@ const clickAction = async (block: Locator, testId: string) => {
 test('the privacy notice blocks sending until it is acknowledged', async ({ extension, mock }) => {
   await extension.seed({ privacy: false });
   const page = await extension.open('sites/goblog-pipelines.html');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await extension.translate(page);
   await expect(panel.getByTestId('privacy-notice')).toBeVisible();
   await expect(panel.getByTestId('privacy-provider')).toHaveText('Mock');
@@ -47,7 +47,7 @@ test('the privacy notice blocks sending until it is acknowledged', async ({ exte
 test('an SPA route change re-extracts the page, and translating it sends only the new segments', async ({ extension, mock }) => {
   await extension.seed();
   const page = await extension.open('spa/docusaurus.html?p=intro');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await extension.translate(page);
   expect(await jobSettled(panel)).toBe('done');
   const first = mock.calls.filter((c) => c.kind === 'translate').flatMap((c) => c.segments);
@@ -80,7 +80,7 @@ test('a rate-limited provider shows the retry state, then recovers', async ({ ex
   await extension.seed();
   mock.rateLimit(1);
   const page = await extension.open('sites/goblog-pipelines.html');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await extension.translate(page);
   const backoff = panel.getByTestId('job-backoff');
   await expect(backoff).toBeVisible();
@@ -96,7 +96,7 @@ test('the header: one row at 320 and 480 px, its overlays inside the panel, and 
   await extension.seed();
   mock.malformed(1);
   const page = await extension.open('spa/docusaurus.html?p=intro');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await extension.translate(page);
   expect(await jobSettled(panel)).toBe('done');
   // A failure is something to say: the job bar shows it, under the header.
@@ -137,7 +137,7 @@ test('a malformed stream fails its blocks, and Retry failed translates them', as
   mock.malformed(1);
   // A one-chunk page: no brief and no revise pass, so the one call is the whole page.
   const page = await extension.open('spa/docusaurus.html?p=intro');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await extension.translate(page);
   expect(await jobSettled(panel)).toBe('done');
   const failed = (await blockStatuses(panel)).failed ?? 0;
@@ -185,7 +185,7 @@ test('a 1,000-entry glossary saves through the options page, stays on this devic
   await options.close();
 
   const page = await extension.open('sites/goblog-pipelines.html');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await extension.translate(page);
   expect(await jobSettled(panel)).toBe('done');
   const translate = mock.calls.filter((c) => c.kind === 'translate');
@@ -198,7 +198,7 @@ test('the diagnostics log records a failed job without the page text the provide
   await extension.seed();
   mock.echoError(1);
   const page = await extension.open('spa/docusaurus.html?p=intro');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await extension.translate(page);
   expect(await jobSettled(panel)).toBe('done');
   expect((await blockStatuses(panel)).failed ?? 0).toBeGreaterThan(0);
@@ -233,7 +233,7 @@ test.describe('Vietnamese UI', () => {
   test('Chrome in Vietnamese shows the panel and the privacy notice in Vietnamese', async ({ extension }) => {
     await extension.seed({ privacy: false });
     const page = await extension.open('sites/goblog-pipelines.html');
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await extension.translate(page);
     await expect(panel.locator('html')).toHaveAttribute('lang', 'vi');
     await expect(panel.getByTestId('privacy-notice')).toBeVisible();
@@ -249,7 +249,7 @@ test.describe('Vietnamese UI', () => {
 test('Balanced sends exactly what it sent before Best existed (e2e/balanced-prompts.json)', async ({ extension, mock }) => {
   await extension.seed();
   const page = await extension.open('sites/goblog-pipelines.html');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await extension.translate(page);
   expect(await jobSettled(panel)).toBe('done');
   // Concurrent requests arrive in any order: compared sorted, each as the kind, status and every message sent.
@@ -266,7 +266,7 @@ test.describe('Best', () => {
   /** Opens the page and the panel, translates, and waits for the run to end. */
   async function translated(extension: Extension, fixture = PAGE): Promise<{ page: Page; panel: Page }> {
     const page = await extension.open(fixture);
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await extension.translate(page);
     expect(await jobSettled(panel)).toBe('done');
     return { page, panel };
@@ -439,7 +439,7 @@ test.describe('Edits', () => {
   /** Translates the page, edits its second paragraph with the keyboard, and returns the block and its source. */
   async function edited(extension: Extension) {
     const page = await extension.open(PAGE);
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await extension.translate(page);
     expect(await jobSettled(panel)).toBe('done');
     const block = panel.locator('.seg--p[data-status=final]').nth(1);
@@ -475,7 +475,7 @@ test.describe('Edits', () => {
 
     const sent = mock.calls.length;
     const page = await extension.open(PAGE);
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await extension.translate(page);
     expect(await jobSettled(panel)).toBe('done');
     const block = panel.locator(`.seg[data-id="${first.id}"]`);
@@ -528,7 +528,7 @@ test.describe('Corrections as examples on later pages', () => {
   /** Translates page A (on `origin`), corrects its second paragraph and closes everything, so page B starts a fresh run. */
   async function correctOnA(extension: Extension, origin?: string) {
     const page = await extension.open('memory/page-a.html', origin);
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await extension.translate(page);
     expect(await jobSettled(panel)).toBe('done');
     // Found by its text first: the editor replaces the text, so it is addressed by id afterwards.
@@ -551,7 +551,7 @@ test.describe('Corrections as examples on later pages', () => {
   async function translateB(extension: Extension, mock: { calls: MockCall[] }) {
     const from = mock.calls.length;
     const page = await extension.open('memory/page-b.html');
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await extension.translate(page);
     expect(await jobSettled(panel)).toBe('done');
     const calls = mock.calls.slice(from).filter((c) => c.kind === 'translate');
@@ -615,7 +615,7 @@ test.describe('On the device, with no API key (Chrome built-in AI, faked: e2e/bu
     await fakeBuiltinAI(context, { pairs: { 'en>vi': 'downloadable' } });
     await extension.seed({ keyless: true, privacy: false });
     const page = await extension.open('sites/goblog-pipelines.html');
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await extension.translate(page);
     await expect(panel.getByTestId('on-device-setup')).toBeVisible();
     await expect(panel.getByTestId('on-device-setup')).toContainText('English → Vietnamese');
@@ -637,7 +637,7 @@ test.describe('On the device, with no API key (Chrome built-in AI, faked: e2e/bu
     await fakeBuiltinAI(context, { none: true });
     await extension.seed({ keyless: true });
     const page = await extension.open('sites/goblog-pipelines.html');
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await extension.translate(page);
     await expect(panel.getByTestId('on-device-unavailable')).toContainText('On-device translation needs desktop Chrome 138 or later');
     await panel.getByTestId('on-device-set-up').click();
@@ -649,7 +649,7 @@ test.describe('On the device, with no API key (Chrome built-in AI, faked: e2e/bu
     await fakeBuiltinAI(context, { pairs: { 'en>vi': 'available' } });
     await extension.seed({ privacy: false });
     const page = await extension.open('sites/goblog-pipelines.html');
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await extension.translate(page);
     await expect(panel.getByTestId('privacy-notice')).toBeVisible();
     expect(mock.calls).toEqual([]);
@@ -674,7 +674,7 @@ test.describe('Selection button', () => {
     mock.answerWith((text) => `vi:${text}`);
     await extension.seed();
     const page = await extension.open('store/article.html');
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await extension.translate(page);
     expect(await jobSettled(panel)).toBe('done');
     // A triple click selects the paragraph, as a reader would. A scroll hides the button, so the page is
@@ -698,7 +698,7 @@ test.describe('Selection button', () => {
   test('no button for a selection in a text field, and none once the panel is gone', async ({ extension }) => {
     await extension.seed();
     const page = await extension.open('store/article.html');
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await extension.translate(page);
     expect(await jobSettled(panel)).toBe('done');
     await page.evaluate(() => {

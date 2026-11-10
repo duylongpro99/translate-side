@@ -81,7 +81,7 @@ test('a never-translate site gets no button, and a navigation does not carry the
   // S9: with access to all sites, a tab read on one origin is not re-read on another after a link.
   await extension.worker.evaluate(() => chrome.storage.sync.set({ siteNever: [] }));
   const page = await extension.open('store/article.html');
-  await extension.panel();
+  await extension.panel(page);
   await extension.translate(page);
   const tabId = await extension.worker.evaluate(async (url) => (await chrome.tabs.query({ url }))[0]?.id, page.url());
   await page.goto('http://localhost:4173/sites/goblog-pipelines.html');

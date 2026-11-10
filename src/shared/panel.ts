@@ -8,6 +8,7 @@ import { isSelectionButtonRequest, isSelectionPopupPanelRequest, SELECTION_POPUP
 import { clearTabOverride } from './providers.ts';
 import { anyDenylisted, clearPopupRecords, clearSnippet, isPopupId, MAX_SELECTION_CHARS, readPopupRecord, writePopupRecord, writeSnippet, type SnippetRecord } from './snippet.ts';
 import { readSiteLists, listedFor } from './sites.ts';
+import { openTabPanel } from './tab-panel.ts';
 
 export const CONTEXT_MENU_ID = 'translate-side.open-panel';
 
@@ -20,14 +21,16 @@ const logError = (what: string) => (err: unknown) => {
 /**
  * The action must NOT open the panel by itself: with openPanelOnActionClick the panel opens
  * without an activeTab grant and action.onClicked never fires (S5 decision 1). The action
- * handler opens the panel and injects instead.
+ * handler opens the panel and injects instead. The window-wide panel is off: each open enables
+ * the panel for its own tab only (S12, src/shared/tab-panel.ts). Run at every worker start.
  */
 export async function setupPanelBehavior(api: Browser): Promise<boolean> {
   if (typeof api.sidePanel?.setPanelBehavior !== 'function') {
     console.warn('[translate-side] sidePanel API unavailable');
     return false;
   }
-  await api.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
+  const globalOff = typeof api.sidePanel.setOptions === 'function' ? api.sidePanel.setOptions({ enabled: false }) : undefined;
+  await Promise.all([api.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }), globalOff]);
   return true;
 }
 
@@ -38,17 +41,18 @@ export async function setupPanelBehavior(api: Browser): Promise<boolean> {
 export function openPanelAndInject(api: Browser, tab: TabRef | undefined, trigger: InjectTrigger = 'gesture'): Promise<void> {
   const tabId = tab?.id;
   if (tabId === undefined) return Promise.resolve();
-  const opened = api.sidePanel?.open({ tabId }).catch(logError('sidePanel.open'));
+  const opened = openTabPanel(api, tabId).catch(logError('sidePanel.open'));
   const injected = injectInto(api, tab ?? {}, trigger).then(() => undefined, logError('injection'));
   return Promise.all([opened, injected]).then(() => undefined);
 }
 
-/** The worker's question to the panels: "is yours in this window? then close". */
+/** The worker's question to the panels: "are you this tab's panel? then close". */
 export const CLOSE_PANEL_MESSAGE = 'translate-side:close-panel';
 
 export interface ClosePanelRequest {
   type: typeof CLOSE_PANEL_MESSAGE;
-  windowId: number | undefined;
+  /** The tab the press was on: only the panel bound to it answers. */
+  tabId: number;
   /** When the worker saw the press (ms since the epoch): the panel the same press opens was created after it. */
   pressedAt: number;
 }
@@ -56,8 +60,8 @@ export interface ClosePanelRequest {
 export const isClosePanelRequest = (m: unknown): m is ClosePanelRequest => typeof m === 'object' && m !== null && (m as { type?: unknown }).type === CLOSE_PANEL_MESSAGE;
 
 /**
- * Toolbar icon and Alt+T (M5-E10): opens the panel, or closes it when it is open in the tab's
- * window. `sidePanel.open` needs the user gesture, so it is still the first call with no await
+ * Toolbar icon and Alt+T (M5-E10): opens the tab's panel, or closes it when that tab's panel is
+ * open; other tabs' panels are left alone. `sidePanel.open` needs the user gesture, so it is still the first call with no await
  * before it (S5); the question "is a panel open here?" is sent in the same tick, ahead of the
  * panel the open creates (which ignores a question asked before it was created, see sidepanel/toggle.ts).
  * A panel that is open closes itself (sidePanel.close from Chrome 141, else window.close), so no
@@ -66,8 +70,8 @@ export const isClosePanelRequest = (m: unknown): m is ClosePanelRequest => typeo
 export function togglePanelAndInject(api: Browser, tab: TabRef | undefined): Promise<void> {
   const tabId = tab?.id;
   if (tabId === undefined) return Promise.resolve();
-  const opened = api.sidePanel?.open({ tabId }).catch(logError('sidePanel.open'));
-  const request: ClosePanelRequest = { type: CLOSE_PANEL_MESSAGE, windowId: tab?.windowId, pressedAt: Date.now() };
+  const opened = openTabPanel(api, tabId).catch(logError('sidePanel.open'));
+  const request: ClosePanelRequest = { type: CLOSE_PANEL_MESSAGE, tabId, pressedAt: Date.now() };
   const closed = api.runtime.sendMessage(request).then(
     (answer: unknown) => typeof answer === 'object' && answer !== null && (answer as { closed?: unknown }).closed === true,
     () => false,
@@ -213,6 +217,7 @@ async function selectionRecord(api: Browser, tab: TabRef | undefined, info: Sele
 /**
  * Tab lifecycle: re-inject when a tab we injected into finishes loading (a reload or a
  * navigation, while the activeTab grant lasts; S5), and drop the record when the tab closes.
+ * Chrome closes a closed tab's panel itself (S12).
  * Injection is idempotent, so the extra `complete` events of hash and pushState changes are harmless.
  */
 export function listenForTabLifecycle(api: Browser): void {

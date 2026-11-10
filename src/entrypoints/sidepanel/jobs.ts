@@ -30,9 +30,11 @@
 //   source and target language are shown first, before the cache and even on a retranslate; the
 //   engine's later events for such a block are ignored and it is never written to the cache.
 //   Retranslate page keeps edited blocks; a block's Retranslate replaces its edit only when asked.
-// - Pause on tab switch (decision S5 R1, M0 D14): only the active tab's job starts new model
+// - The active-tab gate (decision S5 R1, M0 D14): only the active tab's job starts new model
 //   requests. A background job's requests already streaming finish; the next one waits at the
 //   gate until its tab is active again. Repairs and retries wait too, since they are requests.
+//   A panel serves one tab (decision S12), so its active tab never changes: its job keeps
+//   translating while that tab is in the background.
 import { BASIC_ID, BASIC_SWITCH_STAGE, CONTEXT_STAGE, DRAFTS_STAGE, REFINE_ID, REVIEWED_REVISION, basic, briefCacheKey, contextual, estimateTokens, createDefaultPromptRegistry, createEngine, decideRetry, explain, normalizeBrief, refine, singlePass, type DocumentBrief, type EngineEvent, type GlossaryEntry, type GlossMode, type StyleMode, type Segment, type StrategyId, type TranslationEngine, type TranslationJob, type RetryPolicy, type BasicSwitchInfo } from '@/engine/index';
 import type { ReviewReport, SnippetRequest } from '@/engine/types';
 import type { LLMClient, LLMError, LLMErrorKind, MTClient, NormalizedRequest } from '@/llm/types';

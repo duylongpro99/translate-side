@@ -70,7 +70,7 @@ test.describe('English interface', () => {
     fs.mkdirSync(OUT, { recursive: true });
     await prepare({ extension, mock });
     const page = await extension.open('store/article.html');
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await sized(page, PAGE_WIDTH);
     await sized(panel, PANEL_WIDTH);
     await extension.translate(page);
@@ -110,7 +110,7 @@ test.describe('Vietnamese interface', () => {
   test('the panel in Vietnamese', async ({ extension, mock }) => {
     await prepare({ extension, mock });
     const page = await extension.open('store/article.html');
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await sized(page, PAGE_WIDTH);
     await sized(panel, PANEL_WIDTH);
     await extension.translate(page);

@@ -168,11 +168,18 @@ Manifest V3, built with **WXT + TypeScript**. The panel UI uses Preact or Svelte
    - A MutationObserver plus URL-change detection handles SPAs: only new or changed segments are
      sent again.
 2. **Service worker (coordinator)**: handles the toolbar action, `Alt+T` and the context menu,
-   injects the content script, and tracks tab lifecycle. It holds no translation state and never
+   opens the panel for the tab that asked (below), injects the content script, and tracks tab lifecycle. It holds no translation state and never
    awaits a model stream (decision S1: an open Port does not keep a worker alive).
-3. **Side panel** (engine host): owns one job per tab in its window, runs the translation engine
-   and provider calls, caches results (§7), renders segments, settings and glossary, and exchanges
-   segments, viewport, hover and scroll events with the content script directly (`tabs.connect`).
+3. **Side panel** (engine host): runs the translation engine and provider calls, caches results
+   (§7), renders segments, settings and glossary, and exchanges segments, viewport, hover and scroll
+   events with the content script directly (`tabs.connect`).
+   **The panel is per tab** (decision S12). The window-wide panel is off; each open enables the panel
+   for its own tab at `sidepanel.html?tab=<id>`. Chrome shows it on that tab only, keeps it open when
+   the reader comes back, and keeps it running while another tab is in front. A panel serves the tab
+   in its `?tab=` query and never switches to another, so that tab's job keeps translating in the
+   background (this replaces the pause on tab switch, D14). The toolbar icon and `Alt+T` close only
+   the current tab's panel. An allowlisted site is read by itself only in a tab whose panel is open
+   (M5-E3).
 
 ### 4.2 Provider layer: protocols, not vendors
 

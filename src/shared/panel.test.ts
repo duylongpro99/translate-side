@@ -20,6 +20,7 @@ type Listener = (...args: never[]) => void;
 /** A worker-side fake: sidePanel, scripting and storage.session, logging calls in order. */
 function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, unknown>; panelAnswer?: () => Promise<unknown> } = {}) {
   const calls: string[] = [];
+  const options: { tabId?: number; path?: string; enabled: boolean }[] = [];
   const pressedAts: (number | undefined)[] = [];
   const store: Record<string, unknown> = {};
   const sync = opts.sync ?? {};
@@ -27,6 +28,8 @@ function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, 
   const on = (name: string) => ({ addListener: (fn: Listener) => (listeners[name] ??= []).push(fn) });
   const api = {
     sidePanel: {
+      // The per-tab options and the open are logged as one 'open': S12's invariant is that both go out in the gesture's tick.
+      setOptions: (o: { tabId?: number; path?: string; enabled: boolean }) => (options.push(o), Promise.resolve()),
       open: (o: { tabId: number }) => (calls.push(`open:${o.tabId}`), Promise.resolve()),
     },
     scripting: {
@@ -48,8 +51,8 @@ function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, 
       id: 'self',
       getURL: (path: string) => `chrome-extension://self${path}`,
       onMessage: on('message'),
-      sendMessage: (m: { type: string; windowId?: number; pressedAt?: number }) => {
-        calls.push(`ask:${m.type}:${m.windowId}`);
+      sendMessage: (m: { type: string; tabId?: number; pressedAt?: number }) => {
+        calls.push(`ask:${m.type}:${m.tabId}`);
         pressedAts.push(m.pressedAt);
         return (opts.panelAnswer ?? (() => Promise.reject(new Error('Receiving end does not exist.'))))();
       },
@@ -59,7 +62,7 @@ function fakeApi(opts: { inject?: () => Promise<unknown>; sync?: Record<string, 
     tabs: { onUpdated: on('updated'), onRemoved: on('removed') },
   } as unknown as Api;
   const fire = (name: string, ...args: unknown[]) => listeners[name]?.forEach((fn) => (fn as (...a: unknown[]) => void)(...args));
-  return { api, calls, pressedAts, store, fire };
+  return { api, calls, options, pressedAts, store, fire };
 }
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -70,6 +73,13 @@ describe('setupPanelBehavior', () => {
     const api = { sidePanel: { setPanelBehavior } } as unknown as Api;
     expect(await setupPanelBehavior(api)).toBe(true);
     expect(setPanelBehavior).toHaveBeenCalledWith({ openPanelOnActionClick: false });
+  });
+
+  it('turns the window-wide panel off, so a panel shows only on the tab that opened it (S12)', async () => {
+    const setOptions = vi.fn().mockResolvedValue(undefined);
+    const api = { sidePanel: { setPanelBehavior: vi.fn().mockResolvedValue(undefined), setOptions } } as unknown as Api;
+    expect(await setupPanelBehavior(api)).toBe(true);
+    expect(setOptions).toHaveBeenCalledWith({ enabled: false });
   });
 
   it('is gated by availability, not version', async () => {
@@ -84,6 +94,8 @@ describe('openPanelAndInject', () => {
     const done = openPanelAndInject(f.api, { id: 3, url: 'https://example.com/' });
     // sidePanel.open must run inside the gesture: before any await.
     expect(f.calls[0]).toBe('open:3');
+    // In the same tick, the panel is enabled for this tab only, at a path that names it (S12).
+    expect(f.options).toEqual([{ tabId: 3, path: 'sidepanel.html?tab=3', enabled: true }]);
     await done;
     expect(f.calls).toEqual(['open:3', `inject:3:${CONTENT_SCRIPT_FILE}`]);
     expect(f.store[accessKey(3)]).toMatchObject({ status: 'ready' });
@@ -143,14 +155,15 @@ describe('openPanelAndInject', () => {
 });
 
 describe('action and context menu', () => {
-  it('the action click (toolbar or Alt+T) opens first, asks the panel to close in the same tick, and injects when none did', async () => {
+  it("the action click (toolbar or Alt+T) opens first, asks that tab's panel to close in the same tick, and injects when none did", async () => {
     const f = fakeApi();
     listenForActionClicks(f.api);
     f.fire('action', { id: 9, windowId: 4, url: 'https://example.com/' });
     // Nothing is awaited between the click and the two calls: sidePanel.open keeps the user gesture (S5).
-    expect(f.calls).toEqual(['open:9', `ask:${CLOSE_PANEL_MESSAGE}:4`]);
+    // The question names the tab, not the window: another tab's panel stays open.
+    expect(f.calls).toEqual(['open:9', `ask:${CLOSE_PANEL_MESSAGE}:9`]);
     await flush();
-    expect(f.calls).toEqual(['open:9', `ask:${CLOSE_PANEL_MESSAGE}:4`, `inject:9:${CONTENT_SCRIPT_FILE}`]);
+    expect(f.calls).toEqual(['open:9', `ask:${CLOSE_PANEL_MESSAGE}:9`, `inject:9:${CONTENT_SCRIPT_FILE}`]);
   });
 
   it('stamps the question with the time of the press, so the panel can tell the press that opened it', () => {

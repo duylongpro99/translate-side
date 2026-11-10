@@ -107,6 +107,8 @@ mid-page failures. The panel host removes that whole class of problem (finding 6
 - **M0-E2:** use the global `side_panel.default_path` (what S5 tested: it persists across navigations and tab switches).
   Do not give the panel a per-tab path with `sidePanel.setOptions({ tabId, path })`. Per-tab panels were not tested,
   and the review notes they unload on tab switch, which would cancel that tab's translation.
+  **Superseded 2026-11-10 by [S12](S12-per-tab-panel.md):** a hidden per-tab panel stays loaded and keeps running, so
+  the panel is now per tab, with the engine still in the panel page.
 - **M0-E3:** the panel may call `chrome.scripting.executeScript` itself, because the `activeTab` grant belongs to the
   extension (S5: `panel-click-inject-OK` while the grant was alive). The worker still performs the gesture-time
   injection inside `action.onClicked`, and re-injects on `tabs.onUpdated`.

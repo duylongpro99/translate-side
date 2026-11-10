@@ -9,6 +9,7 @@ import { PanelController } from './controller.ts';
 import { createTranslator } from './translator.ts';
 import { injectInto } from '@/shared/inject';
 import { autoTranslates } from '@/shared/sites';
+import { boundTabId } from '@/shared/tab-panel';
 import { closePanel, listenForCloseRequests } from './toggle.ts';
 import './style.css';
 
@@ -20,11 +21,14 @@ followTheme(browser);
 document.title = i18n.t('panel.appName');
 document.documentElement.lang = browser.i18n.getUILanguage();
 
+// The tab this panel is bound to (decision S12): the worker opens each tab's panel at sidepanel.html?tab=<id>.
+const bound = boundTabId(location.search);
 const translator = createTranslator(browser);
 const controller = new PanelController(browser, {
+  tabId: bound,
   hooks: translator.hooks,
-  // A tab this session never read, on an allowlisted site: the open panel reads it by itself (plan
-  // M5-E3). Its URL is visible only with a grant, so any other tab stays "Nothing read yet".
+  // The panel's tab, never read in this session, on an allowlisted site: the panel reads it by itself
+  // (plan M5-E3), also after a navigation there. Its URL is visible only with a grant.
   autoInject: async (tabId) => {
     const tab = await browser.tabs.get(tabId);
     if (!tab.url || !(await autoTranslates(browser, tab.url))) return false;
@@ -32,7 +36,7 @@ const controller = new PanelController(browser, {
     return true;
   },
 });
-listenForCloseRequests(browser, () => void closePanel(browser));
+listenForCloseRequests(browser, () => void closePanel(browser, bound), bound);
 translator.watch(() => controller.tabId);
 controller.start().catch((err: unknown) => {
   console.error('[translate-side] panel start failed', err);
