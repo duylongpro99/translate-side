@@ -207,10 +207,10 @@ Reviewer-only: where each claim is implemented (checked against the source, not 
 relative to the repository root.
 
 Read only on an action, or on an allowlisted site
-- Toolbar, Alt+T, context menu inject on a gesture: src/shared/panel.ts:82 (action.onClicked), :89-102 (context menu),
+- Toolbar, Alt+T, context menu inject on a gesture: src/shared/panel.ts:87 (action.onClicked), :104-114 (context menu),
   src/shared/inject.ts:25 (injectInto, trigger gesture or navigation), wxt.config.ts:18 (activeTab, scripting).
-- Automatic read only for an allowlisted site with its permission held, while the panel is open:
-  src/shared/sites.ts:119 (autoTranslates), src/entrypoints/sidepanel/main.tsx:23 (autoInject).
+- Automatic read only for an allowlisted site with its permission held, in a tab whose panel is open:
+  src/shared/sites.ts:119 (autoTranslates), src/entrypoints/sidepanel/main.tsx:31 (autoInject, the panel's own tab).
 - Site access is requested on a click and given back on removal: src/shared/sites.ts:167 (requestSitePermission),
   :187 (permissions.remove); src/shared/sites.ts:65 (the two origins per site).
 - Selection: 20,000 characters, never stored for a denylisted site: src/shared/snippet.ts:12, :4-6.

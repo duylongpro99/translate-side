@@ -40,7 +40,10 @@ function fakeApi(opts: { acknowledged?: boolean; panelOpens?: boolean } = {}) {
       openOptionsPage: () => Promise.resolve(),
       sendMessage: (m: { type: string; id: string }) => (calls.push(`message:${m.type}:${m.id}`), Promise.resolve()),
     },
-    sidePanel: { open: (o: { tabId: number }) => (calls.push(`open:${o.tabId}`), opts.panelOpens === false ? Promise.reject(new Error('no gesture')) : Promise.resolve()) },
+    sidePanel: {
+      setOptions: (o: { tabId: number; path: string; enabled: boolean }) => (calls.push(`options:${o.tabId}:${o.path}:${o.enabled}`), Promise.resolve()),
+      open: (o: { tabId: number }) => (calls.push(`open:${o.tabId}`), opts.panelOpens === false ? Promise.reject(new Error('no gesture')) : Promise.resolve()),
+    },
     i18n: { getUILanguage: () => 'en' },
   } as unknown as Api;
   return {
@@ -139,10 +142,10 @@ describe('the selection popup', () => {
     const { root, onClose } = mount(f, t);
     await until(() => root.querySelector('[data-testid="popup-open-panel"]') !== null);
     act(() => (root.querySelector('[data-testid="popup-open-panel"]') as HTMLButtonElement).click());
-    // Nothing before sidePanel.open: it needs the click's gesture.
-    expect(f.calls).toEqual(['open:4']);
+    // Nothing awaited before sidePanel.open: it needs the click's gesture. The panel is enabled for the popup's tab only.
+    expect(f.calls).toEqual(['options:4:sidepanel.html?tab=4:true', 'open:4']);
     await until(() => onClose.mock.calls.length > 0);
-    expect(f.calls).toEqual(['open:4', `message:${SELECTION_POPUP_PANEL_MESSAGE}:${ID}`]);
+    expect(f.calls).toEqual(['options:4:sidepanel.html?tab=4:true', 'open:4', `message:${SELECTION_POPUP_PANEL_MESSAGE}:${ID}`]);
   });
 
   it("a panel that did not open gets no selection, and the popup stays and says so", async () => {
@@ -153,7 +156,7 @@ describe('the selection popup', () => {
     await until(() => root.querySelector('[data-testid="popup-open-panel"]') !== null);
     act(() => (root.querySelector('[data-testid="popup-open-panel"]') as HTMLButtonElement).click());
     await until(() => root.querySelector('[data-testid="popup-panel-failed"]') !== null);
-    expect(f.calls).toEqual(['open:4']);
+    expect(f.calls).toEqual(['options:4:sidepanel.html?tab=4:true', 'open:4']);
     expect(onClose).not.toHaveBeenCalled();
   });
 

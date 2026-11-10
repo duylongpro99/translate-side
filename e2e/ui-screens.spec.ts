@@ -30,7 +30,7 @@ for (const theme of THEMES) {
     };
 
     const page = await extension.open('store/article.html');
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await look(panel, WIDTHS[0] as number);
     await extension.translate(page);
     expect(await jobSettled(panel)).toBe('done');

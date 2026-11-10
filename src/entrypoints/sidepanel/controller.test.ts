@@ -199,32 +199,40 @@ describe('PanelController', () => {
     expect(w.connects).toEqual([10]);
   });
 
-  it('routes per tab: each tab keeps its own view, and switching back does not reconnect', async () => {
+  it('serves the tab it is bound to (S12), not the active one, and never switches to another tab', async () => {
+    const w = fakeWorld(); // tab 10 is the window's active tab
+    w.pages[10] = { docId: 'a', result: ok(1) };
+    w.pages[20] = { docId: 'b', result: ok(2) };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    w.store[accessKey(20)] = { status: 'ready', at: 0 };
+    const { c } = await started(w, { tabId: 20 });
+    await wait();
+    expect(c.tabId).toBe(20);
+    expect(c.view).toMatchObject({ kind: 'ready', docId: 'b' });
+    w.fire('activated', { tabId: 10, windowId: 1 });
+    w.setAccess(10, { status: 'ready' });
+    await wait();
+    expect(c.tabId).toBe(20);
+    expect(c.view).toMatchObject({ kind: 'ready', docId: 'b' });
+    expect(w.connects).toEqual([20]);
+  });
+
+  it("an unbound panel serves the window's active tab at start, and does not follow a switch", async () => {
     const w = fakeWorld();
     w.pages[10] = { docId: 'a', result: ok(1) };
     w.pages[20] = { docId: 'b', result: ok(2) };
     w.store[accessKey(10)] = { status: 'ready', at: 0 };
     w.store[accessKey(20)] = { status: 'ready', at: 0 };
-    w.store[accessKey(30)] = { status: 'blocked', reason: 'restricted', at: 0 };
     const { c } = await started(w);
     await wait();
     w.fire('activated', { tabId: 20, windowId: 1 });
     await wait();
-    expect(c.view).toMatchObject({ kind: 'ready', docId: 'b' });
-    w.fire('activated', { tabId: 30, windowId: 1 });
-    await wait();
-    expect(c.view.kind).toBe('blocked');
-    w.fire('activated', { tabId: 10, windowId: 1 });
-    await wait();
+    expect(c.tabId).toBe(10);
     expect(c.view).toMatchObject({ kind: 'ready', docId: 'a' });
-    expect(w.connects).toEqual([10, 20]);
-    // Another window's activation is not ours.
-    w.fire('activated', { tabId: 20, windowId: 2 });
-    await wait();
-    expect(c.view).toMatchObject({ docId: 'a' });
+    expect(w.connects).toEqual([10]);
   });
 
-  it('ignores access changes of background tabs until they are activated', async () => {
+  it('ignores access changes of tabs it does not serve', async () => {
     const w = fakeWorld();
     w.pages[10] = { docId: 'a', result: ok(1) };
     w.store[accessKey(10)] = { status: 'ready', at: 0 };
@@ -466,21 +474,19 @@ describe('PanelController session hooks (plan M1-E8)', () => {
     expect(log.at(-1)).toBe('ready 10 d2');
   });
 
-  it('reports the active tab on a switch, and closed when the tab goes', async () => {
+  it('reports its tab as active once, whatever tab is on screen, and closed when the tab goes', async () => {
     const w = fakeWorld();
     const { log, hooks } = recorder();
     w.pages[10] = { docId: 'a', result: ok(1) };
-    w.pages[20] = { docId: 'b', result: ok(1) };
     w.store[accessKey(10)] = { status: 'ready', at: 0 };
-    w.store[accessKey(20)] = { status: 'ready', at: 0 };
-    await started(w, { hooks });
+    await started(w, { hooks, tabId: 10 });
     await wait();
+    // Another tab on screen does not pause this tab's job: the panel serves this tab only (S12, D14).
     w.fire('activated', { tabId: 20, windowId: 1 });
     await wait();
-    // Switching away does not end tab 10's document (its job pauses, D14; it is not cancelled).
-    expect(log).toEqual(['active 10', 'ready 10 a', 'active 20', 'ready 20 b']);
-    w.fire('removed', 20);
-    expect(log.slice(4)).toEqual(['gone 20', 'closed 20', 'active undefined']);
+    expect(log).toEqual(['active 10', 'ready 10 a']);
+    w.fire('removed', 10);
+    expect(log.slice(2)).toEqual(['gone 10', 'closed 10', 'active undefined']);
   });
 
   it('reports gone when the grant is lost and when a tab moves to another window', async () => {
@@ -495,6 +501,20 @@ describe('PanelController session hooks (plan M1-E8)', () => {
     expect(log).toContain('gone 10');
     w.fire('detached', 10, { oldWindowId: 1 });
     expect(log.at(-2)).toBe('closed 10');
+  });
+
+  it("keeps its own tab when the tab moves to another window: the tab's panel moves with it (S12)", async () => {
+    const w = fakeWorld();
+    const { log, hooks } = recorder();
+    w.pages[10] = { docId: 'd1', result: ok(1) };
+    w.store[accessKey(10)] = { status: 'ready', at: 0 };
+    const { c } = await started(w, { hooks, tabId: 10 });
+    await wait();
+    w.fire('detached', 10, { oldWindowId: 1 });
+    await wait();
+    expect(log).not.toContain('closed 10');
+    expect(c.tabId).toBe(10);
+    expect(c.view).toMatchObject({ kind: 'ready', docId: 'd1' });
   });
 
   it('passes on the viewport events of the live document only (plan M3-E1, E7)', async () => {

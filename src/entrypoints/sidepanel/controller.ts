@@ -1,6 +1,7 @@
-// Tab-scoped routing in the panel (plan M0-E4, decision S1). The panel is global to its window
-// and follows the window's active tab. Per tab it reads the worker's access record, connects to
-// the content script with tabs.connect, says hello, and asks for the page's segments.
+// Tab-scoped routing in the panel (plan M0-E4, decision S1). The panel is per tab (decision S12):
+// it serves the tab named in its `?tab=` query and never switches to another, even while that tab
+// is in the background. It reads the worker's access record, connects to the content script with
+// tabs.connect, says hello, and asks for the page's segments.
 import type { browser } from 'wxt/browser';
 import { readAccess, tabIdFromKey, type AccessReason, type TabAccess } from '@/shared/access';
 import { cleanSiteList, listedFor, SITE_NEVER_KEY } from '@/shared/sites';
@@ -66,6 +67,11 @@ interface TabSession {
 }
 
 export interface ControllerOptions {
+  /**
+   * The tab this panel serves (its `?tab=` query, src/shared/tab-panel.ts). Absent (a panel opened
+   * before the per-tab panel, or the page opened by hand): the window's active tab when it starts.
+   */
+  tabId?: number | undefined;
   /** How long to show "loading" before "idle" when a tab has no access record yet. */
   idleGraceMs?: number;
   requestTimeoutMs?: number;
@@ -111,7 +117,10 @@ export interface SessionHooks {
   navigated?(tabId: number): void;
   /** The tab closed or moved to another window: its job is forgotten. */
   closed?(tabId: number): void;
-  /** The window's active tab (pause on tab switch, D14). */
+  /**
+   * The tab the panel serves, set once at start; undefined once that tab closed. Only its job runs
+   * (D14): a panel serves one tab, so that job keeps running while the tab is in the background.
+   */
   active?(tabId: number | undefined): void;
   /** What is on screen in the document changed (plan M3-E1 priority, M3-E7 scroll follow). */
   viewport?(tabId: number, docId: string, viewport: Viewport): void;
@@ -144,7 +153,7 @@ export class PanelController {
     return () => this.listeners.delete(fn);
   }
 
-  /** The window's active tab. */
+  /** The tab this panel serves. */
   get tabId(): number | undefined {
     return this.activeTabId;
   }
@@ -154,12 +163,11 @@ export class PanelController {
   }
 
   async start(): Promise<void> {
+    const bound = this.opts.tabId;
+    // Known at once, so the close question (sidepanel/toggle.ts) is answered from the first moment.
+    if (bound !== undefined) this.activeTabId = bound;
     const win = await this.api.windows.getCurrent();
     this.windowId = win.id;
-    this.api.tabs.onActivated.addListener(({ tabId, windowId }) => {
-      if (windowId !== this.windowId) return;
-      this.setActive(tabId);
-    });
     this.api.tabs.onUpdated.addListener((tabId, info) => {
       const s = this.sessions.get(tabId);
       if (!s) return;
@@ -168,8 +176,9 @@ export class PanelController {
       else if (info.status === 'complete') this.pageComplete(tabId, s);
     });
     this.api.tabs.onRemoved.addListener((tabId) => this.drop(tabId));
+    // A tab's panel moves with it to another window (S12), so the panel's own tab is never dropped on a move.
     this.api.tabs.onDetached.addListener((tabId, info) => {
-      if (info.oldWindowId === this.windowId) this.drop(tabId);
+      if (tabId !== bound && info.oldWindowId === this.windowId) this.drop(tabId);
     });
     this.api.storage.session.onChanged.addListener((changes) => {
       for (const key of Object.keys(changes)) {
@@ -179,11 +188,12 @@ export class PanelController {
     });
     // The never list as this device keeps it: in sync, or here when too large to sync.
     onListChanged(this.api, [SITE_NEVER_KEY], (_key, never) => this.neverChanged(cleanSiteList(never)));
+    if (bound !== undefined) return this.setActive(bound);
     const [tab] = await this.api.tabs.query({ active: true, windowId: this.windowId });
     if (tab?.id !== undefined) this.setActive(tab.id);
   }
 
-  /** Re-run extraction for the active tab (the error state's "Try again"). */
+  /** Re-run extraction for the panel's tab (the error state's "Try again"). */
   retry(): void {
     if (this.activeTabId === undefined) return;
     this.disconnect(this.activeTabId);

@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "S12 per-tab panel spike",
+  "version": "0.0.1",
+  "minimum_chrome_version": "138",
+  "background": { "service_worker": "sw.js" },
+  "action": {},
+  "side_panel": { "default_path": "panel.html" },
+  "permissions": ["sidePanel", "tabs", "activeTab", "scripting"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"]
+}

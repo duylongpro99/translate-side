@@ -14,6 +14,7 @@ const h = vi.hoisted(() => {
     tabListeners: 0,
     calls: [] as string[],
     setPanelBehavior: (() => Promise.resolve()) as () => Promise<void>,
+    setOptions: (() => Promise.resolve()) as () => Promise<void>,
   };
   const api = {
     runtime: {
@@ -28,6 +29,10 @@ const h = vi.hoisted(() => {
     },
     sidePanel: {
       setPanelBehavior: () => state.setPanelBehavior(),
+      setOptions: (opts: { tabId?: number; enabled: boolean }) => {
+        state.calls.push(`options:${opts.tabId ?? 'global'}:${opts.enabled}`);
+        return state.setOptions();
+      },
       open: (opts: { tabId: number }) => {
         state.calls.push(`open:${opts.tabId}`);
         return Promise.resolve();
@@ -80,6 +85,7 @@ beforeEach(() => {
   h.state.tabListeners = 0;
   h.state.calls.length = 0;
   h.state.setPanelBehavior = () => Promise.resolve();
+  h.state.setOptions = () => Promise.resolve();
 });
 
 describe('background', () => {
@@ -96,27 +102,37 @@ describe('background', () => {
     void background.main(); // a restarted worker: onInstalled does not fire
     h.state.clicked[0]?.({ menuItemId: CONTEXT_MENU_ID }, { id: 7, url: 'https://example.com/' });
     await flush();
-    expect(h.state.calls).toEqual(['open:7', 'inject:7']);
+    expect(h.state.calls).toEqual(['options:global:false', 'options:7:true', 'open:7', 'inject:7']);
   });
 
   it('opens the panel and injects on the action (toolbar icon or Alt+T)', async () => {
     void background.main();
     h.state.action[0]?.({ id: 8, url: 'https://example.com/' });
     await flush();
-    expect(h.state.calls).toEqual(['open:8', 'inject:8']);
+    expect(h.state.calls).toEqual(['options:global:false', 'options:8:true', 'open:8', 'inject:8']);
   });
 
   it('recreates the menu on install/update without duplicate ids', async () => {
     void background.main();
     h.state.installed[0]?.({ reason: 'update' });
     await flush();
-    expect(h.state.calls).toEqual(['removeAll', `create:${CONTEXT_MENU_ID}`]);
+    expect(h.state.calls).toEqual(['options:global:false', 'removeAll', `create:${CONTEXT_MENU_ID}`]);
   });
 
   it('handles a setPanelBehavior failure instead of leaving it unhandled', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     h.state.setPanelBehavior = () => Promise.reject(new Error('boom'));
     void background.main();
+    await flush();
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it('turns the window-wide panel off at every start, and logs a failure of it instead of leaving it unhandled (S12)', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    h.state.setOptions = () => Promise.reject(new Error('boom'));
+    void background.main(); // a restarted worker: onInstalled does not fire
+    expect(h.state.calls).toEqual(['options:global:false']);
     await flush();
     expect(error).toHaveBeenCalled();
     error.mockRestore();

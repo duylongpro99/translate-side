@@ -5,6 +5,7 @@ import type { PanelController, PanelView } from './controller.ts';
 import { AboutDocument } from './AboutDocument.tsx';
 import { DevView } from './DevView.tsx';
 import { closePanel } from './toggle.ts';
+import { boundTabId } from '@/shared/tab-panel';
 import { ShortcutList } from './ShortcutList.tsx';
 import { HeaderControls, HeaderNotices } from './HeaderControls.tsx';
 import { ProgressBar } from './ProgressBar.tsx';
@@ -345,7 +346,7 @@ export function App({ controller, translator }: { controller: PanelController; t
   const openOptions = () => {
     void browser.runtime.openOptionsPage();
   };
-  const closeThisPanel = () => void closePanel(browser);
+  const closeThisPanel = () => void closePanel(browser, boundTabId(location.search));
   const [help, setHelp] = useState(false);
   // The help opens from the More menu, so focus goes back to the menu's trigger when it closes.
   const closeHelp = () => {

@@ -27,7 +27,7 @@ for (const where of ['page', 'panel'] as const) {
   test(`a 100-screen page keeps the ${where} within its long-task and heap budgets`, async ({ extension, context }) => {
     await extension.seed();
     const page = await extension.open('long/long-100-screens.html');
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     const recording = await record(context, where === 'page' ? page : panel, attribute);
     await extension.translate(page);
     const job = panel.locator('[data-testid=job]');

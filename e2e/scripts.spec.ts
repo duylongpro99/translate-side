@@ -31,7 +31,7 @@ test('each target script: lang and direction on every block, its own font rule, 
   mock.answerWith((text) => `${SAMPLES[lang] ?? ''} ${text}`);
   await extension.seed();
   const page = await extension.open('store/article.html');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await extension.translate(page);
   expect(await jobSettled(panel)).toBe('done');
 

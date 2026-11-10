@@ -35,7 +35,7 @@ const highlighted = (panel: Page) =>
 test('a selection on the page lights up the matching sentence of the translation, and goes with it', async ({ extension, mock }) => {
   await extension.seed();
   const page = await extension.open('long/long-100-screens.html');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await extension.translate(page);
   expect(await jobSettled(panel)).toBe('done');
 
@@ -63,7 +63,7 @@ test('a translation that joined two sentences lights up the joined one', async (
   });
   await extension.seed();
   const page = await extension.open('long/long-100-screens.html');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await extension.translate(page);
   expect(await jobSettled(panel)).toBe('done');
 

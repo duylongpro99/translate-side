@@ -84,7 +84,7 @@ test('the gaps between blocks on the store article stay on the spacing scale', a
   mock.answerWith((text) => VI[text] ?? `vi:${text}`);
   await extension.seed();
   const page = await extension.open('store/article.html');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await panel.setViewportSize({ width: 420, height: 800 });
   await extension.translate(page);
   expect(await jobSettled(panel)).toBe('done');
@@ -105,7 +105,7 @@ test('the gaps between blocks on the store article stay on the spacing scale', a
 test('a reading settings change applies at once, sends nothing and leaves the page where it is', async ({ extension, mock }) => {
   await extension.seed();
   const page = await extension.open('long/long-100-screens.html');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await panel.setViewportSize({ width: 420, height: 700 });
   await extension.translate(page);
   expect(await jobSettled(panel)).toBe('done');
@@ -157,7 +157,7 @@ test('each script reaches its own font rule, and Arabic and Hebrew run right to 
   mock.answerWith((text) => `${SAMPLES[lang] ?? ''} ${text}`);
   await extension.seed();
   const page = await extension.open('store/article.html');
-  const panel = await extension.panel();
+  const panel = await extension.panel(page);
   await extension.translate(page);
   expect(await jobSettled(panel)).toBe('done');
   const seen: Record<string, { font: string; lang: string | null; dir: string | null; regionDir: string | null }> = {};
@@ -192,7 +192,7 @@ for (const { target, ui } of [
       await extension.seed();
       if (target !== 'vi') await setTarget(extension, target);
       const page = await extension.open('store/article.html');
-      const panel = await extension.panel();
+      const panel = await extension.panel(page);
       await extension.translate(page);
       expect(await jobSettled(panel)).toBe('done');
       await ownWindow(extension, panel, { width: 360, height: 500 });
@@ -243,7 +243,7 @@ for (const target of ['vi', 'ar']) {
     await extension.seed();
     if (target !== 'vi') await setTarget(extension, target);
     const page = await extension.open('store/article.html');
-    const panel = await extension.panel();
+    const panel = await extension.panel(page);
     await extension.translate(page);
     expect(await jobSettled(panel)).toBe('done');
     await ownWindow(extension, panel, { width: 320, height: 600 });
